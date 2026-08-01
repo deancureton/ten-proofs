@@ -62,7 +62,6 @@ roots = [
   "ComparatorChallenges.B_BinaryCodes",
   "ComparatorChallenges.B_SphericalCodes",
   "ComparatorChallenges.C_PermanentFormulaLowerBound",
-  "ComparatorChallenges.C_PermanentSuperquadraticStandalone",
   "ComparatorChallenges.D_NonSoficGroup",
   "ComparatorChallenges.E_ConnesRigidity",
   "ComparatorChallenges.F_EhrhartVolumeInequality",

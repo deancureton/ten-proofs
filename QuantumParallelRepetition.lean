@@ -38023,7 +38023,10 @@ theorem exactFairAcceptedJointStatistic_reindex
           rw [Finset.mul_sum]
           apply Finset.sum_congr rfl
           intro bobAnswer _
-          split <;> simp_all
+          by_cases accepted : exactHistoryAccepted G n D
+              ⟨seed, history, aliceAnswer, bobAnswer⟩
+          · rw [if_pos accepted, if_pos accepted]
+          · rw [if_neg accepted, if_neg accepted, mul_zero]
     _ = _ := expectation
 
 end
@@ -39286,7 +39289,7 @@ theorem exactReverseAliceLowQuestionPotential_eq_alignedPrefix
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
   · simp [supported]
-  · congr 1
+  · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
     apply Finset.sum_congr rfl
@@ -39349,7 +39352,7 @@ theorem exactReverseBobLowQuestionPotential_eq_alignedPrefix
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
   · simp [supported]
-  · congr 1
+  · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
     apply Finset.sum_congr rfl
@@ -39511,7 +39514,7 @@ theorem exactReverseAliceHighQuestionPotential_eq_alignedPrefix
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
   · simp [supported]
-  · congr 1
+  · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
     apply Finset.sum_congr rfl
@@ -39575,7 +39578,7 @@ theorem exactReverseBobHighQuestionPotential_eq_alignedPrefix
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
   · simp [supported]
-  · congr 1
+  · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
     apply Finset.sum_congr rfl

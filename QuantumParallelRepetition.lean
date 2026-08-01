@@ -23641,11 +23641,10 @@ theorem exactSeedWeight_sum
   apply Finset.sum_congr (by ext; simp)
   intro rightCut _
   simp only [exactSeedWeight]
-  congr 2
-  congr 3
-  · apply congrArg (fun k : ℕ => (k : ℝ))
-    exact exactFintypeCard_eq _ _
-  · exact exactFintypeCard_eq _ _
+  refine congrArg₂ (· * ·) (congrArg₂ (· * ·) (congrArg₂ (· * ·)
+    (congrArg₂ (· * ·) rfl ?_) ?_) rfl) rfl
+  · exact congrArg (fun k : ℕ => 1 / (k : ℝ)) (exactFintypeCard_eq _ _)
+  · exact congrArg (fun k : ℕ => 1 / (k : ℝ)) (exactFintypeCard_eq _ _)
 
 end
 
@@ -27202,7 +27201,7 @@ theorem exactLocallySampleableJA_sum
       simp only [exactLocallySampleableJA,
         Fintype.sum_prod_type]
       simp_rw [← Finset.sum_div]
-      congr 1
+      refine congrArg₂ (· / ·) ?_ rfl
       apply Finset.sum_congr rfl
       intro i _
       apply Finset.sum_congr rfl
@@ -27244,7 +27243,7 @@ theorem exactLocallySampleableJB_sum
       simp only [exactLocallySampleableJB,
         Fintype.sum_prod_type]
       simp_rw [← Finset.sum_div]
-      congr 1
+      refine congrArg₂ (· / ·) ?_ rfl
       apply Finset.sum_congr rfl
       intro i _
       apply Finset.sum_congr rfl
@@ -30040,11 +30039,10 @@ theorem exactSeedCoordinateFiber_sum
   apply Finset.sum_congr (by ext; simp)
   intro rightCut _
   simp only [exactSeedWeight]
-  congr 2
-  congr 3
-  · apply congrArg (fun k : ℕ => (k : ℝ))
-    exact exactFintypeCard_eq _ _
-  · exact exactFintypeCard_eq _ _
+  refine congrArg₂ (· * ·) (congrArg₂ (· * ·) (congrArg₂ (· * ·)
+    (congrArg₂ (· * ·) rfl ?_) ?_) rfl) rfl
+  · exact congrArg (fun k : ℕ => 1 / (k : ℝ)) (exactFintypeCard_eq _ _)
+  · exact congrArg (fun k : ℕ => 1 / (k : ℝ)) (exactFintypeCard_eq _ _)
 
 theorem exactSeedWeight_coordinate_sum
     {M : Type*} [Fintype M] [DecidableEq M]

@@ -38587,8 +38587,7 @@ theorem exactReverseAliceFixedYMask_eq_insert_fair
   unfold exactReverseRightSide
   rw [Finset.image_insert]
   ext j
-  simp only [Finset.mem_union, Finset.mem_insert]
-  tauto
+  simp only [Finset.mem_union, Finset.mem_insert, or_assoc, or_left_comm]
 
 theorem exactReverseBobFixedXMask_eq_insert_fair
     {n : ℕ} (D : Finset (Fin n))
@@ -38605,8 +38604,7 @@ theorem exactReverseBobFixedXMask_eq_insert_fair
   unfold exactReverseLeftSide
   rw [Finset.image_insert]
   ext j
-  simp only [Finset.mem_union, Finset.mem_insert]
-  tauto
+  simp only [Finset.mem_union, Finset.mem_insert, or_assoc, or_left_comm]
 
 theorem exactReverseBobPrefixYMask_eq_fair
     {n : ℕ} (D : Finset (Fin n))

@@ -2976,8 +2976,9 @@ theorem saddleVerticalGamma_continuous {ℓ : ℝ} (hℓ : 0 < ℓ) :
     have hmnonneg : (0 : ℝ) ≤ (m : ℝ) := Nat.cast_nonneg m
     linarith
   have harg : ContinuousAt
-      (fun u : ℝ => ((ℓ : ℂ) - Complex.I * (u : ℂ)) / 2) t := by
-    fun_prop
+      (fun u : ℝ => ((ℓ : ℂ) - Complex.I * (u : ℂ)) / 2) t :=
+    ((continuous_const.sub
+      (Complex.continuous_ofReal.const_mul Complex.I)).div_const 2).continuousAt
   simpa [Function.comp_def] using!
     (Complex.continuousAt_Gamma z hpoles).comp_of_eq harg (by rfl)
 
@@ -5796,8 +5797,8 @@ theorem saddleShiftedGamma_continuousOn
   have harg : ContinuousOn
       (fun a : ℝ =>
         a / 2 + ((k + (m + 3) : ℕ) : ℝ))
-      (Set.Icc A B) := by
-    fun_prop
+      (Set.Icc A B) :=
+    ((continuous_id.div_const 2).add continuous_const).continuousOn
   apply Real.differentiableOn_Gamma_Ioi.continuousOn.comp
     harg
   intro a ha
@@ -5819,8 +5820,9 @@ theorem saddleFixedStripMajorant_continuousOn
       (fun a : ℝ =>
         (1 + |beta ε|) *
           (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3)
-      (Set.Icc A B) := by
-    fun_prop
+      (Set.Icc A B) :=
+    (continuous_const.mul ((continuous_const.add
+      ((continuous_id.sub continuous_const).div_const ℓ).abs).pow 3)).continuousOn
   have hgamma : ContinuousOn
       (fun a : ℝ =>
         (2 : ℝ) ^ (k + (m + 3)) *
@@ -5832,8 +5834,9 @@ theorem saddleFixedStripMajorant_continuousOn
   have hpi : ContinuousOn
       (fun a : ℝ =>
         Real.exp ((ℓ - a) * Real.log Real.pi / 2))
-      (Set.Icc A B) := by
-    fun_prop
+      (Set.Icc A B) :=
+    (((continuous_const.sub continuous_id).mul
+      continuous_const).div_const 2).rexp.continuousOn
   have hshell : ContinuousOn
       (fun _ : ℝ =>
         Real.exp
@@ -6265,8 +6268,9 @@ theorem plusSaddleMellinData_shiftedLine_continuous
     plusSaddleMellinData_differentiableAt_of_not_pole
       hε horder ℓ (saddleShiftedLine_ne_pole hpole t)
   have hline : ContinuousAt
-      (fun u : ℝ => (a : ℂ) + (u : ℂ) * Complex.I) t := by
-    fun_prop
+      (fun u : ℝ => (a : ℂ) + (u : ℂ) * Complex.I) t :=
+    (continuous_const.add
+      (Complex.continuous_ofReal.mul_const Complex.I)).continuousAt
   simpa [Function.comp_def] using!
     hcomplex.continuousAt.comp_of_eq hline (by rfl)
 
@@ -6286,8 +6290,9 @@ theorem minusSaddleMellinData_shiftedLine_continuous
     minusSaddleMellinData_differentiableAt_of_not_pole
       hε horder ℓ (saddleShiftedLine_ne_pole hpole t)
   have hline : ContinuousAt
-      (fun u : ℝ => (a : ℂ) + (u : ℂ) * Complex.I) t := by
-    fun_prop
+      (fun u : ℝ => (a : ℂ) + (u : ℂ) * Complex.I) t :=
+    (continuous_const.add
+      (Complex.continuous_ofReal.mul_const Complex.I)).continuousAt
   simpa [Function.comp_def] using!
     hcomplex.continuousAt.comp_of_eq hline (by rfl)
 
@@ -13939,8 +13944,8 @@ theorem lowerGammaBoundaryLog_continuousOn
         (fun y : ℝ => Complex.Gamma (-Complex.I * (y : ℂ) / 2)) S := by
     intro y hy
     have harg :
-        ContinuousAt (fun u : ℝ => -Complex.I * (u : ℂ) / 2) y := by
-      fun_prop
+        ContinuousAt (fun u : ℝ => -Complex.I * (u : ℂ) / 2) y :=
+      ((Complex.continuous_ofReal.const_mul (-Complex.I)).div_const 2).continuousAt
     apply ContinuousAt.continuousWithinAt
     simpa [Function.comp_def] using!
       (Complex.continuousAt_Gamma
@@ -13953,8 +13958,9 @@ theorem lowerGammaBoundaryLog_continuousOn
     intro y hy
     have harg :
         ContinuousAt
-          (fun u : ℝ => (ℓ : ℂ) + Complex.I * (u : ℂ) / 2) y := by
-      fun_prop
+          (fun u : ℝ => (ℓ : ℂ) + Complex.I * (u : ℂ) / 2) y :=
+      (continuous_const.add
+        ((Complex.continuous_ofReal.const_mul Complex.I).div_const 2)).continuousAt
     apply ContinuousAt.continuousWithinAt
     simpa [Function.comp_def] using!
       (Complex.continuousAt_Gamma
@@ -14230,10 +14236,10 @@ theorem lower_exp_abs_log_div_two_integrableOn_Ioi
           Real.exp ((-a) * y) * |Real.log (y / 2)|)
         (Ioi (0 : ℝ)) := by
     apply ContinuousOn.mul
-    · fun_prop
+    · exact (continuous_id.const_mul (-a)).rexp.continuousOn
     · apply ContinuousOn.abs
       apply ContinuousOn.log
-      · fun_prop
+      · exact (continuous_id.div_const 2).continuousOn
       · intro y hy
         exact div_ne_zero (mem_Ioi.mp hy).ne' (by norm_num)
   apply hmajorant.mono'
@@ -14289,9 +14295,10 @@ theorem lower_exp_log_sqrtFactor_integrableOn_Ioi
           Real.log (Real.sqrt (c ^ 2 + (y / 2) ^ 2)))
         (Ioi (0 : ℝ)) := by
     apply ContinuousOn.mul
-    · fun_prop
+    · exact (continuous_id.const_mul (-a)).rexp.continuousOn
     · apply ContinuousOn.log
-      · fun_prop
+      · exact (continuous_const.add
+          ((continuous_id.div_const 2).pow 2)).sqrt.continuousOn
       · intro y hy
         apply (Real.sqrt_pos.2 ?_).ne'
         have ht : 0 < y / 2 := by
@@ -15097,13 +15104,15 @@ theorem lower_exp_log_coth_div_integrableOn_Ioi
     unfold lowerCoth
     apply ContinuousOn.div
     · apply ContinuousOn.div
-      · fun_prop
-      · fun_prop
+      · exact (Real.continuous_cosh.comp
+          ((continuous_id.const_mul Real.pi).div_const 2)).continuousOn
+      · exact (Real.continuous_sinh.comp
+          ((continuous_id.const_mul Real.pi).div_const 2)).continuousOn
       · intro y hy
         apply Real.sinh_ne_zero.mpr
         have hypos := mem_Ioi.mp hy
         positivity
-    · fun_prop
+    · exact (continuous_id.div_const 2).continuousOn
     · intro y hy
       have hypos := mem_Ioi.mp hy
       positivity

@@ -23199,7 +23199,7 @@ theorem exactPaddedVector_sub
   rcases q with ⟨a, b⟩
   rcases a with a | (a | a) <;>
     rcases b with b | (b | b) <;>
-    simp [exactPaddedVector]
+    simp only [exactPaddedVector, PiLp.sub_apply, sub_zero]
 
 def exactPaddedDefault
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -25875,18 +25875,9 @@ theorem taggedTensorVector_sub
   classical
   ext q
   rcases q with ⟨a, b⟩
-  rcases a with a | ⟨rA, a⟩
-  · rcases b with b | ⟨rB, b⟩ <;>
-      simp [taggedTensorVector]
-  · rcases b with b | ⟨rB, b⟩
-    · simp [taggedTensorVector]
-    · by_cases hA : rA = r
-      · subst rA
-        by_cases hB : rB = r
-        · subst rB
-          simp [taggedTensorVector]
-        · simp [taggedTensorVector, hB]
-      · simp [taggedTensorVector, hA]
+  rcases a with a | ⟨rA, a⟩ <;> rcases b with b | ⟨rB, b⟩ <;>
+    simp only [taggedTensorVector, PiLp.sub_apply, sub_zero]
+  split_ifs <;> simp
 
 end TaggedTensorBlocks
 
@@ -48895,7 +48886,7 @@ theorem exactReverseAliceMaskedProjection_eq_of_history
         have hj :
             j.val ∈ exactRight
               seed.coordinate seed.partition := by
-          simpa [exactReverseAliceContextAt,
+          simpa only [exactReverseAliceContextAt_actual,
             exactReverseAliceContext] using j.property
         exact congrFun hbr ⟨j.val, hj⟩
       funext j
@@ -49064,7 +49055,7 @@ theorem exactReverseBobMaskedProjection_eq_of_history
         have hj :
             j.val ∈ exactLeft
               seed.coordinate seed.partition := by
-          simpa [exactReverseBobContextAt,
+          simpa only [exactReverseBobContextAt_actual,
             exactReverseBobContext] using j.property
         exact congrFun hal ⟨j.val, hj⟩
       funext j
@@ -49530,8 +49521,7 @@ theorem exactReverseAlice_history_of_marked_context
       have hparts :=
         (exactOrderedSidePrefix_mem_iff
           side context.sideRank marker.castSucc j.val).mp
-          (by simpa [exactReverseContextPrefixBefore]
-            using hbefore)
+          hbefore
       let position : Fin side.card :=
         context.sideRank ⟨j.val, hparts.1⟩
       have hlt : position.val < marker.val := by
@@ -49721,8 +49711,7 @@ theorem exactReverseBob_history_of_marked_context
       have hparts :=
         (exactOrderedSidePrefix_mem_iff
           side context.sideRank marker.castSucc j.val).mp
-          (by simpa [exactReverseContextPrefixBefore]
-            using hbefore)
+          hbefore
       let position : Fin side.card :=
         context.sideRank ⟨j.val, hparts.1⟩
       have hlt : position.val < marker.val := by
@@ -55735,7 +55724,7 @@ theorem exactReverseAliceSideMarkedPosteriorConditional_eq_fixedSeedFiber
               outcome.2.1 seed.coordinate.val))
           (repeatedConditionedOutcomeLaw G n S D))
         target := by
-          congr 1
+          refine congrArg (fun j => jointConditional j target) ?_
           apply congrArg
             (fun code =>
               groupedMass code
@@ -56275,7 +56264,7 @@ theorem exactReverseAliceConditionalHistoryIdentification_proved
       G n S D remaining positive default]
   apply Finset.sum_congr rfl
   intro seed _
-  congr 1
+  refine congrArg₂ (· * ·) rfl ?_
   exact
     (exactReverseAliceMarkedContextInformation_eq_source
       G n S D remaining positive default seed).symm
@@ -56955,7 +56944,7 @@ theorem exactConditionedReverseBobNextJoint_marked_conditional_eq_fixedOutcome
               outcome.1 seed.coordinate.val))
           (repeatedConditionedOutcomeLaw G n S D))
         target := by
-          congr 1
+          refine congrArg (fun j => jointConditional j target) ?_
           apply congrArg
             (fun code =>
               groupedMass code
@@ -58188,8 +58177,8 @@ theorem exactPsi_eq_padded_normalizedPureVector_of_ne_zero
   rcases q with ⟨i, j⟩
   rcases i with i | (i | i) <;>
     rcases j with j | (j | j) <;>
-    simp [exactPaddedVector, normalizedPureVector,
-      smul_eq_mul]
+    simp only [exactPaddedVector, normalizedPureVector, PiLp.smul_apply,
+      smul_zero, smul_eq_mul, Complex.real_smul]
 
 theorem exactSourceGlobalCatalystWinningEffect_law_supported_verifier
     [DecidableEq A] [DecidableEq B]

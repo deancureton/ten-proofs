@@ -39,7 +39,7 @@ status:
       comparator_config: "ComparatorChallenges/A_SpherePacking.json"
     - name: "Strict improvement over the MRRW binary-code bound"
       declaration: "MetricCodes.Johnson.binaryRate_lt_mrrw"
-      file: "MetricCodes/Base.lean"
+      file: "MetricCodes.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
       comparator_config: "ComparatorChallenges/B_BinaryCodes.json"

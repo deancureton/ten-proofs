@@ -26345,6 +26345,8 @@ theorem integrable_angularTorusWeightedHolomorphic_pair
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   apply ((continuous_angularTorusWeightedHolomorphicDerivative
     ha2 hF hFp i).mul
       (Complex.continuous_conj.comp
@@ -26373,6 +26375,8 @@ theorem integrable_angularTorusBarPartial_pair
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   apply ((continuous_sourceTorusBarPartial hF hFp i).mul
     (Complex.continuous_conj.comp
       (continuous_sourceTorusBarPartial hG hGp j))).integrable_of_hasCompactSupport
@@ -26400,6 +26404,8 @@ theorem integrable_angularTorusComplexHessian_pair
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hFc := continuous_torusScalarRepresentative_of_periodic
     hF.continuous hFp
   have hGc' := continuous_torusScalarRepresentative_of_periodic
@@ -29714,9 +29720,9 @@ theorem complexHessian_eq_sourceSpatialComplexHessianOfRealBilinear
     (Pi.single j (1 : ℂ)) i,
     fderiv_holomorphicCoordinate_sourceSpatialReal ha z
       (Pi.single j Complex.I) i]
-  ring_nf
-  simp [Complex.I_sq]
-  ring
+  linear_combination
+    (-((((fderiv ℝ (fderiv ℝ a) z) (Pi.single j Complex.I))
+        (Pi.single i Complex.I) : ℝ) : ℂ) / 4) * Complex.I_sq
 
 theorem sourceSpatialComplexHessianOfRealBilinear_isHermitian {n : ℕ}
     (B : TorusCharacters.LogSpace n →L[ℝ]
@@ -30006,9 +30012,15 @@ theorem sourceSpatialComplexHessianOfRealBilinear_quadratic {n : ℕ}
         Complex.I_re, Complex.I_im,
         mul_zero, mul_one,
         add_zero, zero_add, sub_zero]
-      ring_nf
-      simp only [Complex.I_sq]
-      ring
+      linear_combination
+        ((-(((x i).im : ℂ) * ((x j).im : ℂ)) *
+              ((((B (Pi.single i (1 : ℂ))) (Pi.single j (1 : ℂ)) : ℝ) : ℂ) +
+                (((B (Pi.single i Complex.I)) (Pi.single j Complex.I) : ℝ) : ℂ)) +
+            (((x i).re : ℂ) * ((x j).im : ℂ) -
+                ((x i).im : ℂ) * ((x j).re : ℂ)) *
+              ((((B (Pi.single i (1 : ℂ))) (Pi.single j Complex.I) : ℝ) : ℂ) -
+                (((B (Pi.single i Complex.I)) (Pi.single j (1 : ℂ)) : ℝ) : ℂ))) / 4) *
+          Complex.I_sq
 
 theorem sourceCoverComplexHessian_quadratic {n : ℕ}
     {a : TorusCharacters.LogSpace n → ℝ}
@@ -36689,6 +36701,8 @@ theorem complexDeckPeriodization_scalar_memLp
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   exact
     (continuous_torusScalarRepresentative_of_periodic
       (contDiff_complexDeckPeriodization hψ hψcompact).continuous
@@ -36709,6 +36723,8 @@ theorem complexDeckPeriodization_barPartial_memLp
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   apply
     (continuous_torusFunctionBarPartialRepresentative_of_periodic
       ((contDiff_complexDeckPeriodization hψ hψcompact).of_le
@@ -36985,6 +37001,8 @@ theorem angularMemLp_locallyIntegrable_base
     LocallyIntegrable g (sourceTorusBaseMeasure n) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   apply locallyIntegrable_iff.mpr
   intro S hS
   have hweighted : IntegrableOn g S (angularWeightedTorusMeasure a) :=
@@ -42093,6 +42111,8 @@ theorem angularGraphMollifiedPhysicalField_compact_weighted_L2_tendsto_zero
   let μ : Measure (LogTorus n) := angularWeightedTorusMeasure a
   let : IsLocallyFiniteMeasure μ :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts μ :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   let e : Fin n → ℕ → LogTorus n → ℂ :=
     fun j k q =>
       torusScalarRepresentative
@@ -42236,6 +42256,8 @@ theorem angularClosedMollifiedDrift_fixedRadialCutoff_memLp
       2 (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hd : Continuous
       (torusScalarRepresentative
         (angularMollifiedPhysicalAdjointDriftCommutator W ℓ)) :=
@@ -42287,6 +42309,8 @@ theorem angularClosedMollifiedDrift_fixedRadialCutoff_L2_tendsto_zero
     intro ℓ S hS
     let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
       angularWeightedTorusMeasure_isLocallyFinite ha
+    haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+      isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
     have hd : Continuous
         (torusScalarRepresentative
           (angularMollifiedPhysicalAdjointDriftCommutator W ℓ)) :=
@@ -42365,6 +42389,8 @@ theorem angularWeightedScalar_fixedRadialCutoff_mollification_integral_tendsto_z
     let μ : Measure (LogTorus n) := angularWeightedTorusMeasure a
     let : IsLocallyFiniteMeasure μ :=
       angularWeightedTorusMeasure_isLocallyFinite ha
+    haveI : IsFiniteMeasureOnCompacts μ :=
+      isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
     have hc : Continuous
         (torusScalarRepresentative
           (normalizedCoverMollification
@@ -42408,6 +42434,8 @@ theorem angularWeightedScalar_fixedRadialCutoff_mollification_memLp
       2 (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hmoll : Continuous
       (torusScalarRepresentative
         (normalizedCoverMollification
@@ -42494,6 +42522,8 @@ theorem angularClosedMollifiedRadialMatrixCommutator_memLp
       2 (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   exact
     (continuous_sourceCutoffDerivativeCommutator m
       (WeightedTorusScalarCompactGreen.contDiff_angularGraphMollifiedPhysicalField
@@ -42547,6 +42577,8 @@ theorem angularClosedMollifiedRadialMatrixCommutatorL2_sub_norm_sq_le
   have hA : 0 ≤ A := mul_nonneg (by positivity) hB₀
   let : IsLocallyFiniteMeasure μ :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts μ :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hS : IsCompact S :=
     (sourceCutoffBarGradient_hasCompactSupport m).isCompact
   have hV : ContDiff ℝ 2 V :=
@@ -43096,8 +43128,9 @@ theorem angularWeakDolbeaultResolvent_unweighted_translated_bump_green
         rw [← integral_conj]
         apply integral_congr_ae
         filter_upwards [] with y
-        simp [RCLike.inner_apply, d, complexCoverWeight, ψ,
-          map_mul, mul_comm, mul_left_comm]
+        simp only [d, ψ, complexCoverWeight, RCLike.inner_apply,
+          map_mul, Complex.conj_conj, Complex.conj_ofReal]
+        ring
   change
     (∫ y : LogSpace n,
       ∑ j : Fin n,
@@ -43495,6 +43528,8 @@ theorem angularSmoothCompactHessianRootVector_memLp
       2 (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   exact
     (continuous_angularSmoothCompactHessianRootVector
       ha2 hH V hV hVp m).memLp_of_hasCompactSupport
@@ -43716,6 +43751,8 @@ theorem angularClosedMollifiedRadialAdjointCommutator_memLp
       2 (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hc : Continuous
       (angularSourceCutoffAdjointCommutator m
         (angularGraphMollifiedPhysicalField W ℓ)) :=
@@ -43780,6 +43817,8 @@ theorem angularClosedMollifiedRadialAdjointCommutatorL2_sub_norm_sq_le
   have hA : 0 ≤ A := mul_nonneg (by positivity) hB₀
   let : IsLocallyFiniteMeasure μ :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts μ :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hS : IsCompact S :=
     (sourceCutoffBarGradient_hasCompactSupport m).isCompact
   have hV : ContDiff ℝ 2 V :=
@@ -44155,6 +44194,8 @@ theorem angularClosedMollifiedRootVectorL2_sub_norm_sq_le
     angularPhysicalResolventRootCutoffL2 ha2 hH W m
   let : IsLocallyFiniteMeasure μ :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts μ :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   have hS : IsCompact S :=
     (sourceRadialCutoff_hasCompactSupport m).isCompact
   have hV : ContDiff ℝ 2 V :=
@@ -44869,7 +44910,9 @@ theorem angularPhysicalWeakResolventRootCutoffCoercivity
             W hB M).toLp
               (angularWeakSourceCutoffDerivativeCommutator W M)‖ ^ 2)
         atTop (nhds (‖d‖ ^ 2)) := by
-    simpa using hadjnorm.add hmatrixnorm
+    simpa only [Function.comp_apply, norm_neg, norm_zero, ne_eq,
+      OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero,
+      add_zero] using hadjnorm.add hmatrixnorm
   have hbound :
       ∀ᶠ M : ℕ in atTop,
         ‖angularPhysicalResolventRootCutoffL2
@@ -46808,6 +46851,8 @@ theorem angularSourceFreeScalarRadialGraphTest_scalar_memLp
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   apply (continuous_torusScalarRepresentative_of_periodic
     (contDiff_angularSourceFreeScalarRadialGraphTest hU m).continuous
     (angularSourceFreeScalarRadialGraphTest_periodic hperiod m)).memLp_of_hasCompactSupport
@@ -46824,6 +46869,8 @@ theorem angularSourceFreeScalarRadialGraphTest_barPartial_memLp
       (angularWeightedTorusMeasure a) := by
   let : IsLocallyFiniteMeasure (angularWeightedTorusMeasure a) :=
     angularWeightedTorusMeasure_isLocallyFinite ha
+  haveI : IsFiniteMeasureOnCompacts (angularWeightedTorusMeasure a) :=
+    isFiniteMeasureOnCompacts_of_isLocallyFiniteMeasure
   let V : LogSpace n → ℂ := angularSourceFreeScalarRadialGraphTest U m
   have hVp : ∀ d : Fin n → ℤ,
       Function.Periodic V (imaginaryShift d) :=

@@ -7980,7 +7980,7 @@ theorem appendReverseProducts_eval_form {ι : Type*}
     form.eval (appendReverseProducts circuit adjoint left right
       hadjoint hleft hright).values = form.eval circuit.values := by
   simp only [FreeAffineForm.eval]
-  congr 1
+  refine congrArg₂ (· + ·) rfl ?_
   simp only [Finsupp.linearCombination_apply, Finsupp.sum]
   apply Finset.sum_congr rfl
   intro index hindex
@@ -15955,11 +15955,9 @@ theorem partitionIncidenceGlobalColumnLift_aeval
       Ideal.Quotient.mk (partitionIncidenceIdeal t s d) f := by
   classical
   letI := partitionIncidenceGlobalBaseAlgebra t s d
-  letI : IsScalarTower ℂ
-      (MvPolynomial (IncidenceRowBlock t ⊕ (Fin s × Fin (d - 2))) ℂ)
-      (PartitionIncidenceCoordinateRing t s d) :=
-    IsScalarTower.of_algebraMap_eq fun c =>
-      (partitionIncidenceGlobalBaseProjection t s d).commutes c |>.symm
+  haveI : Module (MvPolynomial (IncidenceRowBlock t ⊕ (Fin s × Fin (d - 2))) ℂ)
+      (MvPolynomial (IncidenceCoordinate t s) ℂ ⧸ partitionIncidenceIdeal t s d) :=
+    Algebra.toModule
   induction f using MvPolynomial.induction_on with
   | C c =>
       calc
@@ -16051,6 +16049,9 @@ theorem partitionIncidenceGlobalPowerRemainder_aeval
         (partitionIncidenceGlobalPowerRemainder t s d coordinate) := by
   classical
   letI := partitionIncidenceGlobalBaseAlgebra t s d
+  haveI : Module (MvPolynomial (IncidenceRowBlock t ⊕ (Fin s × Fin (d - 2))) ℂ)
+      (MvPolynomial (IncidenceCoordinate t s) ℂ ⧸ partitionIncidenceIdeal t s d) :=
+    Algebra.toModule
   let q := d - 1
   let k : ℂ := ((t - q : ℕ) : ℂ)
   let a : ℂ := (-1 : ℂ) ^ q * (q.factorial : ℂ)
@@ -17088,6 +17089,12 @@ theorem blockIncidencePowerRemainder_aeval
   classical
   letI := blockIncidenceBaseAlgebra b t s d
   letI := partitionIncidenceGlobalBaseAlgebra t s d
+  haveI : Module (MvPolynomial (BlockIncidenceBaseIndex b t s d) ℂ)
+      (MvPolynomial (BlockIncidenceCoordinate b t s) ℂ ⧸ blockIncidenceIdeal b t s d) :=
+    Algebra.toModule
+  haveI : Module (MvPolynomial (IncidenceRowBlock t ⊕ (Fin s × Fin (d - 2))) ℂ)
+      (MvPolynomial (IncidenceCoordinate t s) ℂ ⧸ partitionIncidenceIdeal t s d) :=
+    Algebra.toModule
   let φ := blockIncidenceSingleBlockInclusion b t s d coordinate.1
   have hcoeff
       (p : MvPolynomial
@@ -17301,8 +17308,7 @@ theorem exists_actual_slicedGradient_freeAffineCircuit
       FreeAffineForm.eval_substituteInputs,
       ReverseAdjoint.CircuitAdjoint.run_inputAdjoints
         circuit output houtput j]
-    congr 1
-    apply MvPolynomial.algHom_ext
+    refine DFunLike.congr_fun (MvPolynomial.algHom_ext ?_) _
     intro row
     simpa using sourceSlicedGradientLinearInput_polynomial W row
 
@@ -18041,7 +18047,11 @@ theorem squareZeroCoefficient_squareZeroBlockSum_pow (r : ℕ)
     MvPolynomial.coeff_linearCombination_X_pow_of_fintype,
     squareFreeExponent_sum, squareFreeExponent_multinomial,
     squareFreeExponent_prod_treeBlockVector]
-  split_ifs with hcard hsubset hboth <;> simp_all
+  by_cases hcard : rows.card = degree
+  · by_cases hsubset : rows ⊆ block
+    · rw [if_pos hcard, if_pos hsubset, if_pos ⟨hsubset, hcard⟩, mul_one, hcard]
+    · rw [if_pos hcard, if_neg hsubset, if_neg fun h => hsubset h.1, mul_zero]
+  · rw [if_neg hcard, if_neg fun h => hcard h.2]
 
 theorem squareZero_fullBlockProduct {r : ℕ} {ι : Type*}
     (blocks : ι → Finset (Fin r))
@@ -18098,7 +18108,12 @@ theorem squareZeroCoefficient_exceptionalBlockProduct
   rw [hscalar, map_smul,
     squareZeroCoefficient_variable_product_mul,
     squareZeroCoefficient_squareZeroBlockSum_pow]
-  split_ifs <;> simp_all
+  by_cases hunion : indices.biUnion blocks ⊆ target
+  · by_cases hrest : target \ indices.biUnion blocks ⊆ blocks exceptional ∧
+        (target \ indices.biUnion blocks).card = t - d
+    · rw [if_pos hunion, if_pos hrest, if_pos ⟨hunion, hrest⟩, smul_eq_mul]
+    · rw [if_pos hunion, if_neg hrest, if_neg fun h => hrest h.2, smul_zero]
+  · rw [if_neg hunion, if_neg fun h => hunion h.1, smul_zero]
 
 theorem sourceRowBlock_biUnion_erase (b t : ℕ) (h : Fin b) :
     ((Finset.univ : Finset (Fin b)).erase h).biUnion
@@ -23979,7 +23994,7 @@ theorem matchingInjectionSum_partition {F : Type*} [CommSemiring F]
           p b ^ (2 ^ (u.1 : ℕ)) *
             matchingAvoidingInjectionSum p (P.erase u.1) b := by
               rw [havoid, hhit]
-              congr 1
+              refine congrArg₂ (· + ·) rfl ?_
               apply Finset.sum_congr rfl
               intro u _
               exact matchingHitFiber_sum p u b
@@ -24433,8 +24448,7 @@ theorem matchingCrossWeight_sum
       (∑ rho : ((↥P ⊕ ↥Q) ↪ {j : Fin m // j ≠ b}), wp rho) =
           ((m - 1 - P.card).descFactorial Q.card : F) *
             matchingAvoidingInjectionSum p P b := by
-              simpa [wp] using
-                matching_leftWeightedAvoidingInjectionSum p P Q b
+              exact matching_leftWeightedAvoidingInjectionSum p P Q b
       _ = ((m - 1 - P.card).descFactorial Q.card : F) *
           (matchingPolynomial p P).eval (p b) := by
             rw [matchingPolynomial_eval]
@@ -24446,8 +24460,7 @@ theorem matchingCrossWeight_sum
       (∑ theta : ((↥P ⊕ ↥Q) ↪ {j : Fin m // j ≠ a}), wq theta) =
           ((m - 1 - Q.card).descFactorial P.card : F) *
             matchingAvoidingInjectionSum q Q a := by
-              simpa [wq] using
-                matching_rightWeightedAvoidingInjectionSum q P Q a
+              exact matching_rightWeightedAvoidingInjectionSum q P Q a
       _ = ((m - 1 - Q.card).descFactorial P.card : F) *
           (matchingPolynomial q Q).eval (q a) := by
             rw [matchingPolynomial_eval]
@@ -24465,7 +24478,7 @@ theorem matchingCrossWeight_sum
         (∑ rho : ((↥P ⊕ ↥Q) ↪ {j : Fin m // j ≠ b}),
           ∑ theta : ((↥P ⊕ ↥Q) ↪ {j : Fin m // j ≠ a}),
             wp rho * wq theta) := by
-              simpa [matchingCrossWeight, wp, wq] using hcross
+              simpa only [matchingCrossWeight, wp, wq] using hcross
     _ = ((m - 1 - P.card - Q.card).factorial : F) *
         ((∑ rho : ((↥P ⊕ ↥Q) ↪ {j : Fin m // j ≠ b}), wp rho) *
           (∑ theta : ((↥P ⊕ ↥Q) ↪ {j : Fin m // j ≠ a}),

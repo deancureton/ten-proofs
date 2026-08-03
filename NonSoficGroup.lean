@@ -4320,7 +4320,10 @@ theorem refinedSourcePrefixCode_complete :
         ((leavittCylinder [1, 1, 1, 0, 0] +
             leavittCylinder [1, 1, 1, 0, 1]) +
           leavittCylinder [1, 1, 1, 1]) := by
-            simp [Fin.sum_univ_succ, refinedSourceWord]
+            simp only [refinedSourceWord, Fin.isValue, Fin.sum_univ_succ,
+              Fin.succ_ne_zero, imp_self, Fin.succ_zero_eq_one,
+              Fin.succ_one_eq_two, Fin.reduceSucc, Finset.univ_unique,
+              Fin.default_eq_zero, Finset.sum_singleton]
             ac_rfl
     _ = leavittCylinder [0, 0, 0] +
           leavittCylinder [1, 0, 0, 0] +
@@ -4334,7 +4337,10 @@ theorem refinedSourcePrefixCode_complete :
             rw [h000, h1000, h1100, h1001, h010, h01,
               h1010, h101, h1110, h111]
     _ = ∑ i : Fin 9, leavittCylinder (nineWord i) := by
-      simp [Fin.sum_univ_succ, nineWord, alphaWord, betaWord, nuWord]
+      simp only [Fin.isValue, nineWord, alphaWord, betaWord, nuWord,
+        Fin.sum_univ_succ, Fin.succ_ne_zero, imp_self, Fin.succ_zero_eq_one,
+        Fin.succ_one_eq_two, Fin.reduceSucc, Finset.univ_unique,
+        Fin.default_eq_zero, Finset.sum_singleton]
       ac_rfl
     _ = 1 := ninePrefixCode_complete
 
@@ -17986,7 +17992,7 @@ theorem exists_expanding_residual_finpartition
               2 * (SoficGroups.boundary σ U : ℝ) ≤
                 4 * α * (C.card : ℝ) := by
             have hscale := mul_le_mul_of_nonneg_left hUcard hα
-            nlinarith
+            linarith only [hscale, hUboundary]
           have hsplit :
               (SoficGroups.boundary σ C : ℝ) +
                   (SoficGroups.boundary σ (R \ C) : ℝ) ≤
@@ -18028,7 +18034,7 @@ theorem exists_expanding_residual_finpartition
                   linarith
             _ = (SoficGroups.boundary σ R : ℝ) +
                   4 * α * (R.card : ℝ) := by
-                  nlinarith [hcard]
+                  linear_combination (4 * α) * hcard
       · refine ⟨Finpartition.indiscrete hR.ne_empty, ?_, ?_⟩
         · intro C hC E hEC _
           have hCR : C = R := by
@@ -18999,8 +19005,10 @@ theorem sourceCompletionBad_good
       p (j * k) x = p j (p k x)) ∧
     (∀ j ∈ F, ∀ k ∈ F, j ≠ k → p j x ≠ p k x) := by
   classical
-  simp [sourceCompletionBad, hx] at hgood
-  aesop
+  simp only [sourceCompletionBad, ne_eq, Finset.union_assoc, Finset.mem_union,
+    Finset.mem_biUnion, Finset.mem_univ, Finset.mem_filter, hx, true_and,
+    not_or, not_exists, Decidable.not_not, not_and] at hgood
+  exact hgood
 
 theorem completedRestriction_mul_of_not_mem_sourceCompletionBad
     {V ι J : Type*} [Fintype V] [DecidableEq V]
@@ -20567,8 +20575,8 @@ theorem high_variation_le_of_markov_square_bounds
       _ = 6 * d ^ 2 * η * t ^ 2 := by ring
   have hsquare : (9 * H) ^ 2 ≤ (2 * α * t) ^ 2 := by
     have hsmall' := mul_le_mul_of_nonneg_right hsmall (sq_nonneg t)
-    nlinarith
-  nlinarith [mul_nonneg hα ht]
+    linarith only [hcauchy', hsmall']
+  nlinarith only [hsquare, mul_nonneg hα ht]
 
 theorem highSupport_variation_le_of_realMarkov_residual_and_highSupport
     {V ι : Type*} [Fintype V]
@@ -22011,14 +22019,14 @@ private theorem rooted_reference_cut_bounds_of_slow_tolerance
     2 * Δ ≤ N ∧
       (h + 8 * d) * e ≤ h * t ∧
       5 * (4 * e + h * Δ) ≤ h * N := by
-  have hden : 0 < h + 8 * d := by nlinarith
+  have hden : 0 < h + 8 * d := by linarith
   have hCt : 5 * (C * t) ≤ N := by
     have hscaled : h * (5 * (C * t)) ≤ h * N := by
-      nlinarith [mul_nonneg (by norm_num : (0 : ℝ) ≤ 20) ht]
+      linarith only [hslow, ht]
     exact le_of_mul_le_mul_left hscaled hh
   have hCtzero : 0 ≤ C * t := mul_nonneg hC ht
-  have hnear : 2 * Δ ≤ N := by nlinarith
-  have hu : u ≤ 2 * N := by nlinarith
+  have hnear : 2 * Δ ≤ N := by linarith only [hdifference, hCt, hCtzero]
+  have hu : u ≤ 2 * N := by linarith only [hcard, hnear, hN]
   have hcoefficient : 0 ≤ h * t / (2 * (h + 8 * d) * N) := by
     positivity
   have he : e ≤ h * t / (h + 8 * d) := by
@@ -22029,11 +22037,11 @@ private theorem rooted_reference_cut_bounds_of_slow_tolerance
       _ = h * t / (h + 8 * d) := by field_simp
   have himprovement : (h + 8 * d) * e ≤ h * t := by
     have he' := (le_div_iff₀ hden).mp he
-    nlinarith
+    linarith only [he']
   have het : e ≤ t := by
     calc
       e ≤ h * t / (h + 8 * d) := he
-      _ ≤ t := (div_le_iff₀ hden).2 (by nlinarith)
+      _ ≤ t := (div_le_iff₀ hden).2 (by linarith only [mul_nonneg hd ht])
   refine ⟨hnear, himprovement, ?_⟩
   calc
     5 * (4 * e + h * Δ) ≤ 5 * (4 * t + h * (C * t)) := by
@@ -22151,7 +22159,7 @@ theorem hasAlmostCentralizerImprovement_of_universal_good_root_thresholds
       exact_mod_cast Nat.le_add_right
         (U \ SoficGroups.permutationGraph p).card
         (SoficGroups.permutationGraph p \ U).card
-    nlinarith [mul_nonneg hpositive.le
+    linarith only [hdistance, mul_nonneg hpositive.le
       (sub_nonneg.mpr hleft)]
 
 end KunUniversalGoodRootReferenceCuts
@@ -22445,16 +22453,15 @@ theorem exists_rooted_word_radius_sparse_cut_of_boundary
       rooted_indicator_defect_sq_le_boundary X.generator T
   have hgaple : 1 - q ≤ 1 := by linarith
   have hgapzero : 0 ≤ 1 - q := hgap.le
-  have hgap_sq_le_one : (1 - q) ^ 2 ≤ 1 := by
-    nlinarith [sq_nonneg (1 - q)]
+  have hgap_sq_le_one : (1 - q) ^ 2 ≤ 1 :=
+    pow_le_one₀ hgapzero hgaple
   have hgamma_degree : 2 * γ ≤ (S.card : ℝ) := by
     have hsmalldegree :
-        (S.card : ℝ) * (1 - q) ^ 2 ≤ (S.card : ℝ) := by
-      nlinarith [mul_nonneg hdegree.le
-        (sub_nonneg.mpr hgap_sq_le_one)]
+        (S.card : ℝ) * (1 - q) ^ 2 ≤ (S.card : ℝ) :=
+      mul_le_of_le_one_right hdegree.le hgap_sq_le_one
     change 216 * γ < (S.card : ℝ) * (1 - q) ^ 2
       at hγsmall
-    nlinarith only [hγsmall, hsmalldegree, _hγ]
+    linarith only [hγsmall, hsmalldegree, _hγ]
   have hbase : b ^ 2 ≤ (T.card : ℝ) := by
     refine hjensen.trans ?_
     apply (div_le_iff₀ hdegree).2
@@ -22468,10 +22475,10 @@ theorem exists_rooted_word_radius_sparse_cut_of_boundary
   have hsmall :
       486 * (Fintype.card (↥S) : ℝ) ^ 2 * η ≤
         4 * α ^ 2 := by
-    dsimp [η]
+    have hne : (486 : ℝ) * (S.card : ℝ) ^ 2 ≠ 0 := by positivity
     rw [Fintype.card_coe]
-    field_simp
-    exact le_rfl
+    show 486 * (S.card : ℝ) ^ 2 * (4 * α ^ 2 / (486 * (S.card : ℝ) ^ 2)) ≤ _
+    rw [mul_div_cancel₀ _ hne]
   have hvariation :=
     SoficGroups.KunActualFinalRestrictedVariation.highSupport_variation_le_of_realMarkov_residual
       X.generator T f α η b hfzero hfone hmass
@@ -23325,12 +23332,12 @@ theorem rooted_graph_boundary_lt_of_slow_tolerance
   have hslowCscaled : h * (5 * C * t) ≤ h * N := by
     have hslow' : 5 * (4 + h * C) * t ≤ h * N := by
       simpa only [C, δ] using hslow
-    nlinarith [mul_pos hh ht]
+    linarith only [hslow', ht]
   have hslowC : 5 * C * t ≤ N :=
     le_of_mul_le_mul_left hslowCscaled hh
   have hb : 2 * b ≤ t / d := by
     apply (le_div_iff₀ hd).2
-    nlinarith [hbad]
+    linarith only [hbad]
   have hgraph : N - t / d ≤ c := by
     linarith
   have hgraphscaled : γ * (N - t / d) ≤ γ * c :=
@@ -23355,7 +23362,7 @@ theorem rooted_graph_boundary_lt_of_slow_tolerance
   have hpositive : 0 ≤ 4 * (γ / d) * t := by
     positivity
   have hstrict : 3 * t < γ * c := by
-    nlinarith [hgraphscaled, hNscaled, hidentity]
+    linarith only [hgraphscaled, hNscaled, hidentity, hpositive, ht]
   simpa only [γ, δ] using lt_of_le_of_lt hboundary hstrict
 
 theorem rooted_graph_coefficient_small
@@ -24363,8 +24370,9 @@ theorem exists_uniform_radius_hasAlmostCentralizerImprovement
         0 ≤ (SoficGroups.boundary
           (fun i : ↥S => (σ i).prodCongr (σ i)) T : ℝ) := by
       positivity
-    have hpositiveT : 0 < (T.card : ℝ) := by
-      nlinarith
+    have hpositiveT : 0 < (T.card : ℝ) :=
+      (mul_pos_iff_of_pos_left hγ).mp
+        (lt_of_le_of_lt hnonnegative hsparse)
     exact_mod_cast hpositiveT
   obtain ⟨U, hreference, _hclose, hcut⟩ :=
     hspectral V σ φ hword hone hgenerator p B hlocal hT hsparse
@@ -27312,7 +27320,7 @@ theorem additive_permutation_small_support_coarea
         mul_le_mul_of_nonneg_left hcut
           (show 0 ≤ 2 * m by positivity)
       rw [hsum, hvariation]
-      nlinarith
+      linarith only [hgbound, hscaled]
     · have hzero : ∀ x, f x = 0 := by
         intro x
         have hx : ¬ 0 < f x := by
@@ -27330,8 +27338,16 @@ theorem positive_negative_abs_eq (a b : ℝ) :
       |max (-a) 0 - max (-b) 0| = |a - b| := by
   rcases le_total 0 a with ha | ha <;>
     rcases le_total 0 b with hb | hb <;>
-    rcases le_total a b with hab | hab <;>
-    simp_all [abs_of_nonneg, abs_of_nonpos] <;> linarith
+    simp only [max_eq_left, max_eq_right, ha, hb, neg_nonneg, neg_nonpos,
+      sub_zero, zero_sub, sub_self, abs_zero, add_zero, zero_add, abs_neg,
+      neg_sub_neg]
+  · rw [abs_of_nonneg ha, abs_of_nonpos hb,
+      abs_of_nonneg (by linarith : (0 : ℝ) ≤ a - b)]
+    ring
+  · rw [abs_of_nonneg hb, abs_of_nonpos ha,
+      abs_of_nonpos (by linarith : a - b ≤ 0)]
+    ring
+  · exact abs_sub_comm b a
 
 theorem permutationRealVariation_positive_negative
     {V ι : Type*} [Fintype V] [Fintype ι]
@@ -29895,7 +29911,8 @@ theorem exists_prescribed_radius_union_source_completed_tolerance
     convert hp using 1
     · funext n
       have hne : δ (m n) ≠ 0 := (hδpositive (m n)).ne'
-      field_simp
+      rw [div_mul_eq_mul_div, mul_comm _ (δ (m n)),
+        mul_div_mul_left _ _ hne]
     · norm_num
   have honeover : Tendsto
       (fun n => (1 : ℝ) / (N n : ℝ))
@@ -29919,7 +29936,7 @@ theorem exists_prescribed_radius_union_source_completed_tolerance
       field_simp [ne_of_gt (hNpositive n)]
     change (rootError n : ℝ) ≤ _
     dsimp [rootError] at hceil ⊢
-    nlinarith
+    linarith only [hceil, hone]
   have hrootlimit : Tendsto
       (fun n => (rootError n : ℝ) / (N n : ℝ))
       atTop (𝓝 0) := by

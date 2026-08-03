@@ -2174,7 +2174,6 @@ lemma kTemplate_adj_color_ne
     kColor u ≠ kColor v := by
   rcases u with ⟨u, (u | u) | u⟩ <;>
     rcases v with ⟨v, (v | v) | v⟩ <;>
-    fin_cases u <;> fin_cases v <;>
     simp_all [kTemplate, SimpleGraph.fromRel_adj,
       kTemplateRelation, kColor, subdivisionColor,
       subdivisionRelation, kSpecifiedCenter]
@@ -3024,18 +3023,23 @@ theorem common_neighbor_unique_of_four_cycle_free
   refine ⟨⟨⟨f, ?_⟩, ?_⟩⟩
   · intro i j hij
     fin_cases i <;> fin_cases j <;>
-      simp_all [f, SimpleGraph.cycleGraph]
-    all_goals
+      simp only [f, Fin.isValue, Fin.zero_eta,
+        Matrix.cons_val_zero] <;>
       first
+      | exact hux
       | exact hux.symm
+      | exact hvx
       | exact hvx.symm
+      | exact huy
       | exact huy.symm
+      | exact hvy
       | exact hvy.symm
       | exact False.elim ((of_decide_eq_false rfl) hij)
   · intro i j hij
     fin_cases i <;> fin_cases j <;>
-      simp_all [f, hux.ne, hux.symm.ne, hvx.ne, hvx.symm.ne,
-        huy.ne, huy.symm.ne, hvy.ne, hvy.symm.ne]
+      simp [f, huv, huv.symm, hxy, Ne.symm hxy,
+        hux.ne, hux.symm.ne, hvx.ne, hvx.symm.ne,
+        huy.ne, huy.symm.ne, hvy.ne, hvy.symm.ne] at hij ⊢
 
 def CommonNeighborRelated {V : Type*} (G : SimpleGraph V)
     (u v : V) : Prop :=
@@ -3109,8 +3113,8 @@ theorem common_neighbors_triangle_eq_of_cycle_free
   refine ⟨⟨⟨f, ?_⟩, ?_⟩⟩
   · intro i j hij
     fin_cases i <;> fin_cases j <;>
-      simp_all [f, SimpleGraph.cycleGraph]
-    all_goals
+      simp only [f, Fin.isValue, Fin.zero_eta,
+        Matrix.cons_val_zero] <;>
       first
       | exact hua
       | exact hua.symm
@@ -3250,7 +3254,10 @@ lemma card_nonbacktrackingFourPath_lower
         Σ b : NonbacktrackingNeighbor G (a : V) (w : V),
           NonbacktrackingNeighbor G (w : V) (b : V))
     hfirst hsecond
-  simpa [pow_succ, mul_assoc] using hcount
+  have hpow : d * (d - 1) ^ 3 =
+      d * ((d - 1) * ((d - 1) * (d - 1))) := by ring
+  rw [hpow]
+  exact hcount
 
 def nonbacktrackingFourPathPair
     (G : SimpleGraph V) {u : V}
@@ -3559,7 +3566,8 @@ lemma card_nonbacktrackingThreePath_lower
       Σ w : NonbacktrackingNeighbor G u (a : V),
         NonbacktrackingNeighbor G (a : V) (w : V))
     hroot hsecond
-  simpa [pow_two] using hcount
+  rw [pow_two]
+  exact hcount
 
 omit [Fintype V] in
 lemma nonbacktrackingThreePathEndpoint_injective
@@ -4678,7 +4686,9 @@ lemma gluedJBase_injective
       (h.trans hsecond.symm)
   intro i j hij
   fin_cases i <;> fin_cases j <;>
-    simp_all [gluedJBase]
+    simp [gluedJBase, hdistinct, hdistinct.symm, h02, h02.symm,
+      h03, h03.symm, h23, h23.symm, h12, h12.symm,
+      h13, h13.symm] at hij ⊢
 
 omit [Fintype V] [DecidableEq V] in
 lemma thetaCopy_base_center_color_eq
@@ -5034,9 +5044,8 @@ lemma four_path_common_second_neighbor_triple_mass_lower
   have hheavy :
       (p : ℝ) / 2 ≤
         finiteHeavyFiberMass weight (Fintype.card V) p := by
-    simpa [weight, p] using
-      (four_path_heavy_common_second_neighbor_mass_lower
-        G hbip hfour hsix d hdegree u)
+    exact four_path_heavy_common_second_neighbor_mass_lower
+      G hbip hfour hsix d hdegree u
   have hpoint (v : UnrelatedFourPathEndpoint G u) :
       R ^ 2 *
           (if R ≤ (weight v : ℝ) then (weight v : ℝ) else 0) / 27 ≤
@@ -5086,7 +5095,7 @@ lemma four_path_common_second_neighbor_triple_mass_lower
           ((weight v).choose 3 : ℝ) :=
       Finset.sum_le_sum fun v _ => hpoint v
     _ = (commonSecondNeighborTripleMass G u : ℝ) := by
-      simp [commonSecondNeighborTripleMass, weight]
+      simp only [commonSecondNeighborTripleMass, weight, Nat.cast_sum]
 
 theorem proposedFamilyFree_four_path_triple_mass_lower
     {n : ℕ} (host : SimpleGraph (Fin n))
@@ -5175,7 +5184,8 @@ lemma gammaGood_of_three_common_centers
   have hcenter : Function.Injective center := by
     intro i j hij
     fin_cases i <;> fin_cases j <;>
-      simp_all [center]
+      simp [center, hfirstne, hfirstne.symm, hsecondne,
+        hsecondne.symm, hdistinct, hdistinct.symm] at hij ⊢
   have hrelated : ∀ i j,
       CommonNeighborRelated G (base i) (center j) := by
     intro i j
@@ -7036,7 +7046,7 @@ lemma symplecticLinePairing_coordinate_expansion
           symplecticLineDualCoordinates K L M hLM y 0 +
         (symplecticLineBasis K L).equivFun x 1 *
           symplecticLineDualCoordinates K L M hLM y 1 := by
-      simp [Fin.sum_univ_two, b,
+      simp only [Fin.sum_univ_two, b,
         symplecticLineDualCoordinates_apply]
 
 lemma symplecticLineCoordinateEquiv_apply_add
@@ -7103,8 +7113,10 @@ lemma symplecticLineCoordinateEquiv_form
           symplecticLineDualCoordinates K L M hLM y' 1 -
         symplecticLineDualCoordinates K L M hLM y 1 *
           (symplecticLineBasis K L).equivFun x' 1) := by
-        simp [symplecticLineCoordinateEquiv_apply_add,
-          standardSymplecticForm]
+        rw [symplecticLineCoordinateEquiv_apply_add,
+          symplecticLineCoordinateEquiv_apply_add]
+        simp only [standardSymplecticForm, Fin.isValue,
+          Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val]
     _ = standardSymplecticForm K
           (x : SymplecticVector K) (y' : SymplecticVector K) -
         standardSymplecticForm K
@@ -7163,7 +7175,8 @@ lemma symplecticLineNormalizer_apply_left
         (symplecticLineBasis K L).equivFun x 1, 0]
   have h := symplecticLineCoordinateEquiv_apply_add K L M hLM
     x (0 : M.1)
-  simpa [standardSymplecticForm] using h
+  simpa only [ZeroMemClass.coe_zero, add_zero, map_zero, Pi.zero_apply]
+    using h
 
 lemma symplecticLineNormalizer_apply_right
     (L M : SymplecticLine K)
@@ -7180,7 +7193,8 @@ lemma symplecticLineNormalizer_apply_right
         0, symplecticLineDualCoordinates K L M hLM y 1]
   have h := symplecticLineCoordinateEquiv_apply_add K L M hLM
     (0 : L.1) y
-  simpa using h
+  simpa only [ZeroMemClass.coe_zero, zero_add, map_zero, Pi.zero_apply]
+    using h
 
 def symplecticVerticalLinearMap :
     (Fin 2 → K) →ₗ[K] SymplecticVector K where
@@ -7232,10 +7246,14 @@ lemma symplecticLineNormalizer_map_left
   · intro v hv
     obtain ⟨z, rfl⟩ := hv
     let x : L.1 := (symplecticLineBasis K L).equivFun.symm z
+    have hx : symplecticLineNormalizer K L M hLM
+        (x : SymplecticVector K) = ![z 0, 0, z 1, 0] := by
+      rw [symplecticLineNormalizer_apply_left K L M hLM x,
+        show (symplecticLineBasis K L).equivFun x = z from
+          (symplecticLineBasis K L).equivFun.apply_symm_apply z]
     refine Submodule.mem_map.mpr
       ⟨(x : SymplecticVector K), x.2, ?_⟩
-    simpa [x, symmetricGraphLinearMap, symmetricGraphVector] using
-      symplecticLineNormalizer_apply_left K L M hLM x
+    simpa [symmetricGraphLinearMap, symmetricGraphVector] using hx
 
 lemma symplecticLineNormalizer_map_right
     (L M : SymplecticLine K)
@@ -7251,9 +7269,13 @@ lemma symplecticLineNormalizer_map_right
   · intro v hv
     obtain ⟨y, hy, rfl⟩ := Submodule.mem_map.mp hv
     refine ⟨symplecticLineDualCoordinates K L M hLM ⟨y, hy⟩, ?_⟩
-    simpa [symplecticVerticalLinearMap] using
-      (symplecticLineNormalizer_apply_right K L M hLM
-        (⟨y, hy⟩ : M.1)).symm
+    change
+      symplecticVerticalLinearMap K
+          (symplecticLineDualCoordinates K L M hLM ⟨y, hy⟩) =
+        symplecticLineNormalizer K L M hLM
+          ((⟨y, hy⟩ : M.1) : SymplecticVector K)
+    rw [symplecticLineNormalizer_apply_right]
+    rfl
   · intro v hv
     obtain ⟨z, rfl⟩ := hv
     let y : M.1 :=

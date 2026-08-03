@@ -5123,10 +5123,19 @@ theorem parkWoodburn_mennicke_identity
   apply Matrix.SpecialLinearGroup.ext
   intro i j
   fin_cases i <;> fin_cases j <;>
-    simp [mennickeWord, mennickeBlock,
-      Matrix.SpecialLinearGroup.transvection_coe,
-      Matrix.mul_apply, Fin.sum_univ_succ,
-      Matrix.one_apply]
+    simp only [mennickeBlock, mennickeWord, Nat.reduceAdd, Fin.zero_eta,
+      Fin.isValue, of_apply, cons_val', cons_val_zero, cons_val_fin_one,
+      neg_mul, Matrix.SpecialLinearGroup.coe_mul,
+      SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, one_ne_zero, false_and,
+      not_false_eq_true, single_apply_of_ne, add_zero, ite_mul, one_mul,
+      zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte,
+      Fin.reduceEq, Fin.sum_univ_three, mul_ite, mul_one, mul_zero,
+      cons_val_one, cons_val, ite_self, and_false, zero_ne_one, zero_add,
+      single_apply_same, mul_neg, add_neg_cancel, add_neg_cancel_left,
+      Finset.sum_ite_eq', left_eq_add, neg_eq_zero, Fin.mk_one, and_true,
+      Fin.reduceFinMk, add_sub_cancel, neg_add_rev, neg_sub, neg_neg,
+      sub_add_cancel, neg_add_cancel]
   · ring
   · ring
   · ring
@@ -5204,10 +5213,20 @@ theorem mennickeBlock_rotation_conjugate
   apply Matrix.SpecialLinearGroup.ext
   intro i j
   fin_cases i <;> fin_cases j <;>
-    simp [mennickeBlock, mennickeRotation, Matrix.mul_apply,
-      Fin.sum_univ_succ, Matrix.SpecialLinearGroup.transvection_coe,
-      Matrix.SpecialLinearGroup.transvection_inv, Matrix.one_apply,
-      Matrix.single_apply]
+    simp only [mennickeRotation, mennickeBlock, Fin.isValue,
+      _root_.mul_inv_rev, SpecialLinearGroup.transvection_inv, neg_neg,
+      Nat.reduceAdd, Fin.zero_eta, Matrix.SpecialLinearGroup.coe_mul,
+      SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, single_apply, true_and,
+      Fin.sum_univ_three, ↓reduceIte, one_ne_zero, add_zero, false_and,
+      mul_ite, mul_one, mul_zero, zero_ne_one, zero_add, one_mul,
+      Fin.reduceEq, ite_self, add_neg_cancel, zero_mul, of_apply,
+      cons_val', cons_val_fin_one, ite_mul, Finset.sum_ite_eq,
+      Finset.mem_univ, cons_val_one, cons_val_zero, and_false,
+      Finset.sum_ite_eq', and_true,
+      cons_val, Fin.mk_one, mul_neg, neg_add_rev, neg_zero,
+      neg_add_cancel, Finset.sum_neg_distrib, Fin.reduceFinMk, neg_mul,
+      neg_add_cancel_comm]
 
 theorem mennicke_swapped_left_factor_det
     (a ap b c d : R) (hdet : a * ap * d - b * c = 1) :
@@ -5549,10 +5568,17 @@ private theorem unitEntry_diagonalUnitPair_apply
         if i = 0 then (a : R) else if i = 1 then (↑a⁻¹ : R) else 1
       else 0 := by
   fin_cases i <;> fin_cases j <;>
-    simp [unitEntry_diagonalUnitPair,
-      Matrix.SpecialLinearGroup.transvection_coe,
-      Matrix.mul_apply, Fin.sum_univ_succ,
-      Matrix.single_apply, Matrix.one_apply]
+    simp only [unitEntry_diagonalUnitPair, Fin.isValue, Nat.reduceAdd,
+      Fin.zero_eta, Matrix.SpecialLinearGroup.coe_mul,
+      Matrix.SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, Matrix.single_apply, true_and,
+      Fin.sum_univ_three, ↓reduceIte, one_ne_zero, add_zero, false_and,
+      mul_ite, mul_one, mul_zero, zero_ne_one, zero_add, Fin.reduceEq,
+      ite_self, mul_neg, Units.mul_inv, add_neg_cancel, zero_mul, ite_mul,
+      Finset.sum_ite_eq, Finset.mem_univ, and_false,
+      Finset.sum_ite_eq', Fin.mk_one, and_true,
+      neg_add_cancel, Fin.reduceFinMk, one_mul, neg_mul, Units.inv_mul,
+      neg_zero, Finset.sum_neg_distrib, neg_add_rev, neg_neg]
 
 theorem stabilizedTwoByTwo_mem_elementaryThree_of_topLeft_isUnit
     {R : Type*} [CommRing R]
@@ -8005,9 +8031,15 @@ theorem upperUnitriangular_factorization (g : IGroup)
   apply Matrix.SpecialLinearGroup.ext
   intro i j
   fin_cases i <;> fin_cases j <;>
-    simp [Matrix.SpecialLinearGroup.transvection_coe,
-      Matrix.mul_apply, Fin.sum_univ_succ,
-      Matrix.single_apply, Matrix.one_apply,
+    simp only [Nat.reduceAdd, Fin.zero_eta, Fin.isValue, Fin.mk_one,
+      Fin.reduceFinMk, Matrix.SpecialLinearGroup.coe_mul,
+      Matrix.SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, Fin.reduceEq, false_and,
+      not_false_eq_true, Matrix.single_apply_of_ne, add_zero,
+      Matrix.single_apply, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq,
+      Finset.mem_univ, ↓reduceIte, one_ne_zero, true_and,
+      Fin.sum_univ_four, zero_ne_one, mul_ite, mul_one, mul_zero,
+      ite_self, zero_add, and_false, Finset.sum_ite_eq', and_true,
       h00, h11, h22, h33, h10, h20, h21, h30, h31, h32]
 
 theorem upperUnitriangular_mem (g : IGroup)
@@ -9301,11 +9333,12 @@ theorem suslinSymbolicPoweredIncrement_of_elementary_dilation
     exact RingHom.congr_fun
       (suslinSymbolic_outer_dilation_eval_mul_X c (d ^ N))
       (suslinDifferencePath a g i j)
-  change Matrix.SpecialLinearGroup.map r
-      (suslinDilation (Polynomial (Polynomial ℤ))
-        (Polynomial.C (Polynomial.C (d ^ N)))
-        (suslinDifferencePath (Polynomial.X : Polynomial ℤ)
-          (suslinSymbolicLift g))) ∈
+  change (Matrix.SpecialLinearGroup.map r
+        (suslinDilation (Polynomial (Polynomial ℤ))
+          (Polynomial.C (Polynomial.C (d ^ N)))
+          (suslinDifferencePath (Polynomial.X : Polynomial ℤ)
+            (suslinSymbolicLift g))) :
+          Matrix.SpecialLinearGroup Index IntegralPolynomial) ∈
       localGlobalElementarySubgroup IntegralPolynomial at hmem
   rw [heval, suslinDifferencePath_eval_mul_X,
     suslinSymbolicDifferenceDilation_integer,
@@ -9806,8 +9839,15 @@ theorem cornulierColumnRootProduct_apply (v : Index → IntegralPolynomial)
           (show (2 : Index) ≠ cornulierLast by decide) (v 2) :
       IntegralSpecialLinearGroup) p q = _
   fin_cases p <;> fin_cases q <;>
-    simp [cornulierLast, Matrix.SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
-      Fin.sum_univ_succ, Matrix.single_apply, Matrix.one_apply]
+    simp only [cornulierLast, Fin.isValue, Nat.reduceAdd, Fin.zero_eta,
+      Matrix.SpecialLinearGroup.coe_mul,
+      Matrix.SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, Matrix.single_apply, true_and,
+      Fin.sum_univ_four, ↓reduceIte, Fin.reduceEq, add_zero, one_ne_zero,
+      false_and, mul_ite, mul_one, mul_zero, zero_ne_one, zero_mul, ite_self,
+      zero_add, and_false,
+      Finset.sum_ite_eq', Finset.mem_univ, Fin.mk_one, Fin.reduceFinMk,
+      and_true, ite_mul, one_mul, Finset.sum_ite_eq]
 
 def cornulierRowRootProduct (v : Index → IntegralPolynomial) :
     integralElementaryGroup :=
@@ -9839,9 +9879,15 @@ theorem cornulierRowRootProduct_apply (v : Index → IntegralPolynomial)
           (show cornulierLast ≠ (2 : Index) by decide) (v 2) :
       IntegralSpecialLinearGroup) p q = _
   fin_cases p <;> fin_cases q <;>
-    simp [cornulierLast, Matrix.SpecialLinearGroup.transvection_coe,
-      Matrix.mul_apply, Fin.sum_univ_succ,
-      Matrix.single_apply, Matrix.one_apply]
+    simp only [cornulierLast, Fin.isValue, Nat.reduceAdd, Fin.zero_eta,
+      Matrix.SpecialLinearGroup.coe_mul,
+      Matrix.SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, Matrix.single_apply, true_and,
+      Fin.sum_univ_four, ↓reduceIte, Fin.reduceEq, add_zero, one_ne_zero,
+      false_and, mul_ite, mul_one, mul_zero, zero_ne_one, zero_mul, ite_self,
+      zero_add, and_false,
+      Finset.sum_ite_eq', Finset.mem_univ, Fin.mk_one, Fin.reduceFinMk,
+      and_true, ite_mul, one_mul, Finset.sum_ite_eq]
 
 theorem cornulier_conjugate_K₁_root_mem
     (h : integralElementaryGroup) (hh : h ∈ cornulierH)
@@ -13061,12 +13107,8 @@ set_option maxHeartbeats 600000 in
   change residualOnB n φ
       (sigmaMultiplicative n (Multiplicative.ofAdd η)) =
     (residualCharacter n φ).toMonoidHom (Multiplicative.ofAdd η)
-  exact (sigmaMultiplicative n).liftOfRightInverseAux_comp_apply
-    (Function.surjInv (sigmaMultiplicative_surjective n))
-    (Function.rightInverse_surjInv (sigmaMultiplicative_surjective n))
-    (residualCharacter n φ).toMonoidHom
-    (residual_ker n φ)
-    (Multiplicative.ofAdd η)
+  unfold residualOnB
+  exact MonoidHom.liftOfRightInverseAux_comp_apply _ _ _ _ _ _
 
 def residualBCharacter (n : ℕ)
     (φ : PontryaginDual (Multiplicative (E n))) :
@@ -28974,7 +29016,7 @@ theorem polynomialCharacterSector_action_gap
         Set (PolynomialRankTwoCharacter → PolynomialRankTwoCharacter)),
       ∃ U : Set PolynomialRankTwoCharacter, MeasurableSet U ∧
         (1 / 5 : ℝ) ≤ |μ.real (shear '' U) - μ.real U| := by
-  exact shalom_three_sector_supported_action_gap μ
+  have hgap := shalom_three_sector_supported_action_gap μ
     (fun shear χ => shear χ) T S N
     polynomialCharacterSectorSupport
     polynomialCharacterSectorA polynomialCharacterSectorB
@@ -28991,6 +29033,7 @@ theorem polynomialCharacterSector_action_gap
     (polynomialCharacterSector_shearT_supported T hT)
     (polynomialCharacterSector_shearS_supported S hS)
     (polynomialCharacterSector_shearN_supported N hN)
+  exact hgap
 
 theorem polynomialCharacter_atom_pos_of_actual_sector_variation
     (μ : Measure PolynomialRankTwoCharacter) [IsProbabilityMeasure μ]
@@ -30792,9 +30835,15 @@ theorem upperUnitriangular_factorization (g : Q)
   apply Matrix.SpecialLinearGroup.ext
   intro i j
   fin_cases i <;> fin_cases j <;>
-    simp [Matrix.SpecialLinearGroup.transvection_coe,
-      Matrix.mul_apply, Fin.sum_univ_succ,
-      Matrix.single_apply, Matrix.one_apply,
+    simp only [Nat.reduceAdd, Fin.zero_eta, Fin.isValue, Fin.mk_one,
+      Fin.reduceFinMk, Matrix.SpecialLinearGroup.coe_mul,
+      Matrix.SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+      Matrix.add_apply, Matrix.one_apply, Fin.reduceEq, false_and,
+      not_false_eq_true, Matrix.single_apply_of_ne, add_zero,
+      Matrix.single_apply, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq,
+      Finset.mem_univ, ↓reduceIte, one_ne_zero, true_and,
+      Fin.sum_univ_four, zero_ne_one, mul_ite, mul_one, mul_zero,
+      ite_self, zero_add, and_false, Finset.sum_ite_eq', and_true,
       h00, h11, h22, h33, h10, h20, h21, h30, h31, h32]
 
 theorem upperUnitriangular_mem (g : Q)

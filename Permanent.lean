@@ -11374,32 +11374,6 @@ theorem square_le_fortyEight_mul_sliceRank {n d : ℕ} (hd : 3 ≤ d)
     (eight_le_blockVariables hd hn)
   omega
 
-theorem exists_eventual_source_parameter_bounds {d : ℕ} (hd : 3 ≤ d) :
-    ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      6 * blockWidth d ≤ n ∧
-      8 * powerSumParameter d ≤ n * blockWidth d ∧
-      4 * powerSumParameter d ≤ blockWidth d * blockColumns n d ∧
-      8 ≤ blockVariables n d := by
-  refine ⟨max (6 * blockWidth d) (8 * powerSumParameter d), ?_⟩
-  intro n hn
-  have hlarge : 6 * blockWidth d ≤ n := le_trans (le_max_left _ _) hn
-  have hrho : 8 * powerSumParameter d ≤ n := le_trans (le_max_right _ _) hn
-  have hwidth : 1 ≤ blockWidth d := by
-    simp only [blockWidth]
-    omega
-  have hwidth_n : n ≤ n * blockWidth d := by
-    simpa only [mul_one] using Nat.mul_le_mul_left n hwidth
-  have hcolumns := le_two_mul_blockColumns n d
-  have hrho_columns : 4 * powerSumParameter d ≤ blockColumns n d := by
-    omega
-  have hscale : 4 * powerSumParameter d ≤ blockWidth d * blockColumns n d := by
-    calc
-      4 * powerSumParameter d ≤ blockColumns n d := hrho_columns
-      _ ≤ blockWidth d * blockColumns n d := by
-        simpa only [mul_comm, one_mul] using Nat.mul_le_mul_right (blockColumns n d) hwidth
-  exact ⟨hlarge, le_trans hrho hwidth_n, hscale,
-    eight_le_blockVariables hd hlarge⟩
-
 theorem logarithmic_lower_bound_of_gradient {n d q : ℕ} (hd : 3 ≤ d)
     (hn : 6 * blockWidth d ≤ n)
     (hgradient : (sliceRank n d : ℝ) * Real.logb 2 ((d : ℝ) - 1) ≤
@@ -11418,54 +11392,6 @@ theorem logarithmic_lower_bound_of_gradient {n d q : ℕ} (hd : 3 ≤ d)
 end Standalone_ParameterBounds
 
 section Standalone_Asymptotics
-
-theorem superquadratic_of_logarithmic_degree_bounds
-    (complexity : ℕ → ℕ)
-    (bound : ∀ d : ℕ, 3 ≤ d → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      (n : ℝ) ^ 2 * Real.logb 2 ((d : ℝ) - 1) / 144 ≤ complexity n) :
-    ∀ C : ℝ, 0 < C → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      C * (n : ℝ) ^ 2 ≤ complexity n := by
-  intro C hC
-  obtain ⟨k, hk⟩ := exists_nat_gt (144 * C + 1)
-  have hk_ne : k ≠ 0 := by
-    intro hzero
-    subst k
-    norm_num at hk
-    nlinarith
-  have hpower : 1 < (2 : ℕ) ^ k := one_lt_pow₀ (by norm_num) hk_ne
-  have hdegree : 3 ≤ 2 ^ k + 1 := by omega
-  obtain ⟨N, hN⟩ := bound (2 ^ k + 1) hdegree
-  refine ⟨N, fun n hn => ?_⟩
-  have hlog : Real.logb 2 (((2 ^ k + 1 : ℕ) : ℝ) - 1) = (k : ℝ) := by
-    norm_num [Nat.cast_add, Nat.cast_pow, Real.logb_pow]
-  have hcoefficient : C ≤ (k : ℝ) / 144 := by nlinarith
-  calc
-    C * (n : ℝ) ^ 2 ≤ ((k : ℝ) / 144) * (n : ℝ) ^ 2 :=
-      mul_le_mul_of_nonneg_right hcoefficient (sq_nonneg (n : ℝ))
-    _ = (n : ℝ) ^ 2 * (k : ℝ) / 144 := by ring
-    _ ≤ complexity n := by
-      have hbound := hN n hn
-      rw [hlog] at hbound
-      exact hbound
-
-theorem complexity_ratio_tendsto_atTop_of_superquadratic
-    (complexity : ℕ → ℕ)
-    (bound : ∀ C : ℝ, 0 < C → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      C * (n : ℝ) ^ 2 ≤ (complexity n : ℝ)) :
-    Filter.Tendsto
-      (fun n : ℕ => (complexity n : ℝ) / (n : ℝ) ^ 2)
-      Filter.atTop Filter.atTop := by
-  apply Filter.tendsto_atTop_atTop.2
-  intro C
-  have hpositive : 0 < max C 1 := lt_max_of_lt_right (by norm_num)
-  obtain ⟨N, hN⟩ := bound (max C 1) hpositive
-  refine ⟨max N 1, fun n hn => ?_⟩
-  have hn_positive : 0 < (n : ℝ) := by
-    exact_mod_cast (le_trans (le_max_right _ _) hn : 1 ≤ n)
-  apply (le_div_iff₀ (sq_pos_of_pos hn_positive)).2
-  exact le_trans
-    (mul_le_mul_of_nonneg_right (le_max_left C 1) (sq_nonneg (n : ℝ)))
-    (hN n (le_trans (le_max_left _ _) hn))
 
 end Standalone_Asymptotics
 
@@ -12454,29 +12380,6 @@ theorem sourceBlockMatrix_permanent_eq_matchingExpansion
 end Standalone_BlockPermanent
 
 section Standalone_CircuitDAG
-
-inductive CircuitInstructionReference {ι : Type} :
-    Instruction ι → ℕ → Prop where
-  | add_left (left right : ℕ) :
-      CircuitInstructionReference (.add left right) left
-  | add_right (left right : ℕ) :
-      CircuitInstructionReference (.add left right) right
-  | sub_left (left right : ℕ) :
-      CircuitInstructionReference (.sub left right) left
-  | sub_right (left right : ℕ) :
-      CircuitInstructionReference (.sub left right) right
-  | mul_left (left right : ℕ) :
-      CircuitInstructionReference (.mul left right) left
-  | mul_right (left right : ℕ) :
-      CircuitInstructionReference (.mul left right) right
-
-theorem CircuitInstructionReference.lt_of_referencesBounded
-    {ι : Type} {instruction : Instruction ι} {index position : ℕ}
-    (hreference : CircuitInstructionReference instruction index)
-    (hvalid : instruction.referencesBounded position) :
-    index < position := by
-  cases hreference <;>
-    simp_all [Instruction.referencesBounded, Bool.and_eq_true]
 
 end Standalone_CircuitDAG
 
@@ -19786,41 +19689,6 @@ end CircuitPrefix
 
 namespace ArithmeticCircuit
 
-theorem values_size {ι : Type} (circuit : ArithmeticCircuit ι) :
-    circuit.values.size = circuit.program.length := by
-  simpa only [values, List.size_toArray, List.length_nil, zero_add] using
-    CircuitPrefix.forwardFold_size circuit.program (#[] : Array (MvPolynomial ι ℂ))
-
-theorem output_lt_values_size {ι : Type}
-    (circuit : ArithmeticCircuit ι) :
-    circuit.output < circuit.values.size := by
-  simpa only [values_size circuit] using circuit.output_lt
-
-theorem polynomial_eq_getElem {ι : Type}
-    (circuit : ArithmeticCircuit ι)
-    (houtput : circuit.output < circuit.values.size) :
-    circuit.polynomial =
-      circuit.values[circuit.output]'houtput := by
-  simp only [polynomial, Array.getD_eq_getD_getElem?, houtput, getElem?_pos, Option.getD_some]
-
-theorem reference_lt_prefix_values_size {ι : Type}
-    (circuit : ArithmeticCircuit ι) (position : Fin circuit.program.length)
-    (index : ℕ)
-    (hreference : CircuitInstructionReference
-      (circuit.program.get position) index) :
-    index <
-      ((circuit.program.take position.val).foldl
-        (fun values instruction => values.push (instruction.eval values))
-        (#[] : Array (MvPolynomial ι ℂ))).size := by
-  have hindex : index < position.val :=
-    hreference.lt_of_referencesBounded (circuit.valid position)
-  have hsize := CircuitPrefix.forwardFold_size
-    (circuit.program.take position.val)
-    (#[] : Array (MvPolynomial ι ℂ))
-  simp only [Array.size_empty, zero_add, List.length_take] at hsize
-  rw [hsize, Nat.min_eq_left (Nat.le_of_lt position.isLt)]
-  exact hindex
-
 end ArithmeticCircuit
 
 theorem exists_arithmeticCircuit_polynomial {ι : Type}
@@ -19834,11 +19702,6 @@ theorem exists_arithmeticCircuit_polynomial {ι : Type}
     ⟨state.program, output, houtput, state.valid⟩
   refine ⟨circuit, ?_⟩
   exact hpolynomial
-
-theorem permanent_representable (n : ℕ) :
-    ∃ circuit : ArithmeticCircuit (Fin n × Fin n),
-      circuit.polynomial = permanent n := by
-  exact exists_arithmeticCircuit_polynomial (permanent n)
 
 theorem circuitComplexity_le_of_circuit {ι : Type}
     {polynomial : MvPolynomial ι ℂ} (circuit : ArithmeticCircuit ι)
@@ -19867,20 +19730,6 @@ theorem circuitComplexity_attained {ι : Type}
         circuit.size = circuitComplexity polynomial := by
   exact circuitComplexity_attained_of_exists polynomial
     (exists_arithmeticCircuit_polynomial polynomial)
-
-theorem le_circuitComplexity_iff {ι : Type}
-    (polynomial : MvPolynomial ι ℂ)
-    (bound : ℕ) :
-    bound ≤ circuitComplexity polynomial ↔
-      ∀ circuit : ArithmeticCircuit ι,
-        circuit.polynomial = polynomial → bound ≤ circuit.size := by
-  constructor
-  · intro hbound circuit hcircuit
-    exact hbound.trans (circuitComplexity_le_of_circuit circuit hcircuit)
-  · intro hbound
-    obtain ⟨circuit, hpolynomial, hsize⟩ :=
-      circuitComplexity_attained polynomial
-    simpa only [hsize] using hbound circuit hpolynomial
 
 theorem real_le_circuitComplexity_iff {ι : Type}
     (polynomial : MvPolynomial ι ℂ)
@@ -20053,46 +19902,6 @@ theorem permanent_circuit_logarithmic_bound_of_gradient
       (circuit.size : ℝ) := by
   exact logarithmic_lower_bound_of_gradient hd hn hgradient
 
-theorem permanent_logarithmic_bounds_of_circuit_gradient
-    (hgradient : ∀ d : ℕ, 3 ≤ d → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      ∀ circuit : ArithmeticCircuit (Fin n × Fin n),
-        circuit.polynomial = permanent n →
-          (sliceRank n d : ℝ) * Real.logb 2 ((d : ℝ) - 1) ≤
-            3 * (circuit.size : ℝ)) :
-    ∀ d : ℕ, 3 ≤ d → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      (n : ℝ) ^ 2 * Real.logb 2 ((d : ℝ) - 1) / 144 ≤
-        (circuitComplexity (permanent n) : ℝ) := by
-  intro d hd
-  obtain ⟨N, hN⟩ := hgradient d hd
-  refine ⟨max N (6 * blockWidth d), fun n hn => ?_⟩
-  have hn_gradient : N ≤ n := le_trans (le_max_left _ _) hn
-  have hn_source : 6 * blockWidth d ≤ n :=
-    le_trans (le_max_right _ _) hn
-  apply (real_le_circuitComplexity_iff (permanent n) _).2
-  intro circuit hcircuit
-  exact permanent_circuit_logarithmic_bound_of_gradient hd hn_source
-    circuit hcircuit (hN n hn_gradient circuit hcircuit)
-
-theorem permanent_superquadratic_of_logarithmic_bounds
-    (hbound : ∀ d : ℕ, 3 ≤ d → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      (n : ℝ) ^ 2 * Real.logb 2 ((d : ℝ) - 1) / 144 ≤
-        (circuitComplexity (permanent n) : ℝ)) :
-    ∀ C : ℝ, 0 < C → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      C * (n : ℝ) ^ 2 ≤ (circuitComplexity (permanent n) : ℝ) := by
-  exact superquadratic_of_logarithmic_degree_bounds
-    (fun n => circuitComplexity (permanent n)) hbound
-
-theorem permanent_superquadratic_of_circuit_gradient
-    (hgradient : ∀ d : ℕ, 3 ≤ d → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      ∀ circuit : ArithmeticCircuit (Fin n × Fin n),
-        circuit.polynomial = permanent n →
-          (sliceRank n d : ℝ) * Real.logb 2 ((d : ℝ) - 1) ≤
-            3 * (circuit.size : ℝ)) :
-    ∀ C : ℝ, 0 < C → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      C * (n : ℝ) ^ 2 ≤ (circuitComplexity (permanent n) : ℝ) := by
-  exact permanent_superquadratic_of_logarithmic_bounds
-    (permanent_logarithmic_bounds_of_circuit_gradient hgradient)
-
 theorem exists_blockTree_leafList {ι : Type*}
     (labels : List ι) (hne : labels ≠ []) :
     ∃ tree : BlockTree ι, tree.leafList = labels := by
@@ -20226,26 +20035,6 @@ theorem permanent_circuit_gradient_bound
   simpa only [ge_iff_le, Nat.cast_mul, Nat.cast_ofNat] using
     (sliced_gradient_logarithmic_bound_of_fiber_cardinalities (k := sliceRank n d) (d := d) (q := 3 * circuit.size)
       (cardinality := (d - 1) ^ sliceRank n d) (by omega) (le_refl _) hpower)
-
-theorem permanent_superquadratic :
-    ∀ C : ℝ, 0 < C → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
-      C * (n : ℝ) ^ 2 ≤ (circuitComplexity (permanent n) : ℝ) := by
-  apply permanent_superquadratic_of_circuit_gradient
-  intro d hd
-  obtain ⟨N, hN⟩ := exists_eventual_source_parameter_bounds hd
-  refine ⟨N, ?_⟩
-  intro n hn circuit hpermanent
-  obtain ⟨hlarge, _, hscale, _⟩ := hN n hn
-  exact permanent_circuit_gradient_bound
-    hd hlarge hscale circuit hpermanent
-
-theorem permanent_complexity_ratio_tendsto_atTop :
-    Filter.Tendsto
-      (fun n : ℕ =>
-        (circuitComplexity (permanent n) : ℝ) / (n : ℝ) ^ 2)
-      Filter.atTop Filter.atTop := by
-  exact complexity_ratio_tendsto_atTop_of_superquadratic
-    (fun n => circuitComplexity (permanent n)) permanent_superquadratic
 
 open scoped LinearAlgebra.Projectivization
 

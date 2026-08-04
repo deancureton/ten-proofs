@@ -13324,9 +13324,6 @@ open Set MeasureTheory Matrix Filter
 open WeightedPoincare
 open scoped BigOperators ENNReal InnerProductSpace
 
-abbrev scalarL2 {n : ℕ} (a : Space n → ℝ) :=
-  MeasureTheory.Lp ℝ 2 (normalizedMeasure a)
-
 def euclideanGradient {n : ℕ}
     (f : Space n → ℝ) (x : Space n) :
     EuclideanSpace ℝ (Fin n) :=
@@ -15734,10 +15731,6 @@ theorem normalizedShrinkingConvolution_periodic {n : ℕ}
       (volume : Measure (TorusCharacters.LogSpace n)))
     (hperiod q)
 
-abbrev coverScalarL2 (n : ℕ) :=
-  MeasureTheory.Lp ℂ 2
-    (volume : Measure (TorusCharacters.LogSpace n))
-
 def coverAdjointScalarTest {n : ℕ}
     (ψ : TorusCharacters.LogSpace n → ℝ)
     (j : Fin n) (z : TorusCharacters.LogSpace n) : ℂ :=
@@ -17595,15 +17588,6 @@ local instance sourceJointCoverVolume_isAddHaar (n : ℕ) :
   Measure.prod.instIsAddHaarMeasure
     (volume : Measure (TorusCharacters.LogSpace n))
     (volume : Measure ℂ)
-
-def sourceJointShrinkingBump (n k : ℕ) :
-    ContDiffBump (0 : SourceJointComplexCover n) where
-  rIn := (1 / ((k : ℝ) + 1)) / 2
-  rOut := 1 / ((k : ℝ) + 1)
-  rIn_pos := by positivity
-  rIn_lt_rOut := by
-    have h : 0 < 1 / ((k : ℝ) + 1) := by positivity
-    exact half_lt_self h
 
 def sourceJointTimeEmbedding {n : ℕ}
     (z : TorusCharacters.LogSpace n) (t : ℝ) :
@@ -35356,12 +35340,6 @@ namespace RadialPartitionBounds
 open Set Function Filter MeasureTheory
 open JetEnvelopeGlobalPlurisubharmonic
 open scoped BigOperators ENNReal NNReal Topology ContDiff
-
-def sourceJointRealLogCoordinateCLM (n : ℕ) :
-    SourceJointComplexCover n →L[ℝ] Space n :=
-  (sourceRealLogCoordinateCLM n).comp
-    (ContinuousLinearMap.fst ℝ
-      (TorusCharacters.LogSpace n) ℂ)
 
 def sourceJointRealTimeCLM (n : ℕ) :
     SourceJointComplexCover n →L[ℝ] ℝ :=

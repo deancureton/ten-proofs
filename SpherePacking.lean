@@ -48564,15 +48564,6 @@ end
 
 section
 
-theorem ENNReal.cancel_common_numerator_in_division_ratio {a b c : ENNReal} (ha : a ≠ 0) (ha' : a ≠ ⊤)
-    (hc : c ≠ ⊤) :
-    (a / b) / (a / c) = c / b := by
-  simp only [div_eq_mul_inv]
-  rw [ENNReal.mul_inv (Or.inl ha) (Or.inr (ENNReal.inv_ne_zero.mpr hc)), inv_inv]
-  calc
-    a * b⁻¹ * (a⁻¹ * c) = (a * a⁻¹) * (c * b⁻¹) := by ac_rfl
-    _ = c * b⁻¹ := by rw [ENNReal.mul_inv_cancel ha ha', one_mul]
-
 theorem ENat.tsum_constant_eq_card_mul {α : Type*} (c : ENat) :
     ∑' (_ : α), c = ENat.card α * c := by
   classical
@@ -48683,14 +48674,6 @@ open ZSpan
 
 variable {E ι K : Type*} [NormedField K] [LinearOrder K] [IsStrictOrderedRing K]
   [NormedAddCommGroup E] [NormedSpace K E] (b : Module.Basis ι K E) [FloorRing K] [Fintype ι]
-
-theorem ZSpan.fundamental_region_iff_coordinate_floor_zero (v : E) : v ∈ fundamentalDomain b ↔ floor b v = 0 := by
-  simp_rw [mem_fundamentalDomain, ← Int.floor_eq_zero_iff]
-  constructor <;> intro h
-  · simp only [floor, h, zero_smul, Finset.sum_const_zero]
-  · intro i
-    exact_mod_cast (by simpa only [Int.floor_eq_zero_iff, Set.mem_Ico, h, ZeroMemClass.coe_zero, map_zero, Finsupp.coe_zero,
-                         Pi.zero_apply, Int.cast_eq_zero] using! (repr_floor_apply b v i).symm)
 
 section BasisIndexEquiv
 
@@ -49377,87 +49360,6 @@ section VolumeBallRatio
 open scoped Topology NNReal
 open Asymptotics Filter ENNReal EuclideanSpace
 
-lemma eventually_ofReal_div_add_one_rpow_mem_Icc {d : ℝ} {ε : ℝ≥0∞} (hd : 0 ≤ d) (hε : 0 < ε) :
-    ∃ k : ℝ, k ≥ 0 ∧ ∀ k' ≥ k, ENNReal.ofReal ((k' / (k' + 1)) ^ d) ∈ Set.Icc (1 - ε) (1 + ε) := by
-  have hshift : Tendsto (fun k : ℝ => k + 1) atTop atTop := by
-    simpa only [id_eq] using (tendsto_atTop_add_const_right atTop (1 : ℝ) tendsto_id)
-  have hzero : Tendsto (fun k : ℝ => 1 / (k + 1)) atTop (𝓝 0) :=
-    tendsto_const_nhds.div_atTop hshift
-  have hratio : Tendsto (fun k : ℝ => k / (k + 1)) atTop (𝓝 1) := by
-    have hone : Tendsto (fun _ : ℝ => (1 : ℝ)) atTop (𝓝 1) :=
-      tendsto_const_nhds
-    have hnear : Tendsto (fun k : ℝ => 1 - 1 / (k + 1)) atTop (𝓝 1) := by
-      simpa only [sub_zero] using hone.sub hzero
-    refine hnear.congr' ?_
-    filter_upwards [eventually_gt_atTop (-1 : ℝ)] with k hk
-    have hne : k + 1 ≠ 0 := by linarith
-    field_simp
-    ring
-  have hrpow : Tendsto (fun k : ℝ => (k / (k + 1)) ^ d) atTop (𝓝 1) := by
-    simpa only [Function.comp_def, Real.one_rpow] using
-      (Real.continuous_rpow_const hd).continuousAt.tendsto.comp hratio
-  have hlimit : Tendsto (fun k : ℝ => ENNReal.ofReal ((k / (k + 1)) ^ d))
-      atTop (𝓝 (1 : ℝ≥0∞)) := by
-    simpa only [Function.comp_def, ENNReal.ofReal_one] using
-      ENNReal.continuous_ofReal.continuousAt.tendsto.comp hrpow
-  have hlower : 1 - ε < (1 : ℝ≥0∞) :=
-    ENNReal.sub_lt_self (by simp only [ne_eq, one_ne_top, not_false_eq_true]) (by simp only [ne_eq, one_ne_zero, not_false_eq_true]) (ne_of_gt hε)
-  have hupper : (1 : ℝ≥0∞) < 1 + ε := by
-    exact ENNReal.lt_add_right (by simp only [ne_eq, one_ne_top, not_false_eq_true]) (ne_of_gt hε)
-  obtain ⟨k, hk⟩ := eventually_atTop.1 (hlimit.eventually (Ioo_mem_nhds hlower hupper))
-  refine ⟨max k 0, le_max_right _ _, ?_⟩
-  intro k' hk'
-  have hmem := hk k' (le_trans (le_max_left _ _) hk')
-  exact ⟨hmem.1.le, hmem.2.le⟩
-
-lemma eventually_ofReal_div_add_one_pow_mem_Icc {ε : ℝ≥0∞} (hε : 0 < ε) :
-    ∃ k : ℝ, k ≥ 0 ∧ ∀ k' ≥ k, ENNReal.ofReal ((k' / (k' + 1)) ^ d) ∈ Set.Icc (1 - ε) (1 + ε) := by
-  simpa only [ge_iff_le, Set.mem_Icc, tsub_le_iff_right, Real.rpow_natCast] using! eventually_ofReal_div_add_one_rpow_mem_Icc (d := d) (Nat.cast_nonneg _) hε
-
-theorem volume_ball_div_volume_ball_add_tendsto_one {C : ℝ} (hd : 0 < d) (hC : 0 ≤ C) :
-    Tendsto (fun R ↦ volume (ball (0 : EuclideanSpace ℝ (Fin d)) R)
-      / volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + C))) atTop (𝓝 1) := by
-  letI : Nonempty (Fin d) := Fin.pos_iff_nonempty.mp hd
-  let c : ℝ≥0∞ := ENNReal.ofReal
-    (Real.sqrt Real.pi ^ d / Real.Gamma ((d : ℝ) / 2 + 1))
-  have hc : c ≠ 0 := by
-    have hb : volume (ball (0 : EuclideanSpace ℝ (Fin d)) 1) ≠ 0 :=
-      ne_of_gt (measure_ball_pos (μ := volume) 0 (by norm_num))
-    rw [EuclideanSpace.volume_ball] at hb
-    simpa [c] using hb
-  have hctop : c ≠ ⊤ := by
-    exact ENNReal.ofReal_ne_top
-  have hshift : Tendsto (fun R : ℝ => R + C) atTop atTop := by
-    simpa only [id_eq] using (tendsto_atTop_add_const_right atTop C tendsto_id)
-  have hzero : Tendsto (fun R : ℝ => C / (R + C)) atTop (𝓝 0) :=
-    tendsto_const_nhds.div_atTop hshift
-  have hratio : Tendsto (fun R : ℝ => R / (R + C)) atTop (𝓝 1) := by
-    have hone : Tendsto (fun _ : ℝ => (1 : ℝ)) atTop (𝓝 1) :=
-      tendsto_const_nhds
-    have hnear : Tendsto (fun R : ℝ => 1 - C / (R + C)) atTop (𝓝 1) := by
-      simpa only [sub_zero] using hone.sub hzero
-    refine hnear.congr' ?_
-    filter_upwards [eventually_gt_atTop (-C)] with R hR
-    have hne : R + C ≠ 0 := by linarith
-    field_simp
-    ring
-  have hpow : Tendsto (fun R : ℝ => (R / (R + C)) ^ d) atTop (𝓝 1) := by
-    simpa only [one_pow] using hratio.pow d
-  have hlimit : Tendsto (fun R : ℝ => ENNReal.ofReal ((R / (R + C)) ^ d))
-      atTop (𝓝 (1 : ℝ≥0∞)) := by
-    simpa only [Function.comp_def, ENNReal.ofReal_one] using
-      ENNReal.continuous_ofReal.continuousAt.tendsto.comp hpow
-  refine hlimit.congr' ?_
-  filter_upwards [eventually_gt_atTop (0 : ℝ)] with R hR
-  have hRC : 0 < R + C := by linarith
-  symm
-  rw [EuclideanSpace.volume_ball, EuclideanSpace.volume_ball]
-  simp only [Fintype.card_fin]
-  change ENNReal.ofReal R ^ d * c / (ENNReal.ofReal (R + C) ^ d * c) = _
-  rw [ENNReal.mul_div_mul_right _ _ hc hctop,
-    ← ENNReal.ofReal_pow hR.le d, ← ENNReal.ofReal_pow hRC.le d,
-    ← ENNReal.ofReal_div_of_pos (pow_pos hRC d), ← div_pow]
-
 theorem volume_ball_add_div_volume_ball_add_tendsto_one_of_nonneg
     {d : ℕ} {C C' : ℝ} (hd : 0 < d) (hC : 0 ≤ C) (hC' : 0 ≤ C') :
       Tendsto (fun R ↦ volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + C))
@@ -49587,18 +49489,6 @@ theorem periodic_packing_supremum_eq_unit_separation :
 end ConstantEqNormalizedConstant
 
 section Disjoint_Covering_of_Centers
-
-theorem PeriodicSpherePacking.center_representatives_cover_uniquely (S : PeriodicSpherePacking d)
-    {D : Set (EuclideanSpace ℝ (Fin d))}
-    (hD_unique_covers : ∀ x, ∃! g : S.lattice, g +ᵥ x ∈ D) :
-    ∀ x : S.centers, ∃! g : S.lattice,
-      (g +ᵥ x : EuclideanSpace ℝ (Fin d)) ∈ S.centers ∩ D := by
-  intro x
-  obtain ⟨g, hg, hunique⟩ := hD_unique_covers (x : EuclideanSpace ℝ (Fin d))
-  refine ⟨g, ⟨?_, hg⟩, ?_⟩
-  · exact S.lattice_action g.property x.property
-  · intro h hh
-    exact hunique h hh.2
 
 end Disjoint_Covering_of_Centers
 
@@ -50554,16 +50444,6 @@ open Filter
 open scoped ENNReal BigOperators
 
 variable {d : ℕ}
-
-lemma cancel_common_denominator_in_product_ratio {a b c : ℝ≥0∞} (hb0 : b ≠ 0) (hb : b ≠ ∞) :
-    ((a * b) / c) / b = a / c := by
-  calc
-    ((a * b) / c) / b = (a * b) * c⁻¹ * b⁻¹ := by
-      simp only [div_eq_mul_inv, mul_assoc]
-    _ = a * c⁻¹ * (b * b⁻¹) := by
-      ac_rfl
-    _ = a / c := by
-      simp only [ENNReal.mul_inv_cancel hb0 hb, mul_one, div_eq_mul_inv]
 
 theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
     (S : SpherePacking d) (hSsep : S.separation = 1) {b : ℝ≥0∞} (hb : b < S.upperPackingDensity) :
@@ -52165,8 +52045,6 @@ section
 variable {d : ℕ} [Fact (0 < d)]
 variable (Λ : Submodule ℤ (EuclideanSpace ℝ (Fin d))) [DiscreteTopology Λ] [IsZLattice ℝ Λ]
 
-instance instNonemptyFinOfPositiveDimension : Nonempty (Fin d) := ⟨0, Fact.out⟩
-
 noncomputable section
 
 open scoped BigOperators FourierTransform
@@ -52201,15 +52079,6 @@ end SchwartzMap
 section Positivity_on_Nhd
 
 variable {E : Type*} [TopologicalSpace E]
-
-theorem Continuous.positive_iff_positive_on_neighborhood {f : E → ℝ} (hf₁ : Continuous f) (x : E) :
-  0 < f x ↔ ∃ U ∈ (nhds x), ∀ y ∈ U, 0 < f y := by
-  constructor
-  · intro hx
-    refine ⟨{y | 0 < f y}, ?_, fun y hy => hy⟩
-    exact (isOpen_lt continuous_const hf₁).mem_nhds hx
-  · rintro ⟨U, hU, hpos⟩
-    exact hpos x (mem_of_mem_nhds hU)
 
 open MeasureTheory
 
@@ -52468,10 +52337,6 @@ lemma origin_character_sum_norm_sq_eq_orbit_count_sq {d : ℕ} (P : PeriodicSphe
   simp only [WithLp.ofLp_zero, RCLike.wInner_zero_right, Complex.ofReal_zero, mul_zero, Complex.exp_zero,
     tsum_fintype, Finset.sum_const, Finset.card_univ, Set.fintypeCard_eq_ncard, nsmul_eq_mul, mul_one,
     RCLike.norm_natCast, PeriodicSpherePacking.boundedCenterRepresentativeCount]
-
-lemma inverse_product_rearrangement {α : Type*} [DivisionCommMonoid α] (c a b : α) :
-    (1 / c) * a * b = b * a / c := by
-  simp only [div_eq_mul_inv, mul_comm, mul_one, mul_left_comm, mul_assoc]
 
 lemma nonnegative_weighted_nonzero_frequency_sum {d : ℕ}
     (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ)) (P : PeriodicSpherePacking d)
@@ -52997,17 +52862,6 @@ variable (hCohnElkies₁ : ∀ x : EuclideanSpace ℝ (Fin d), ‖x‖ ≥ 1 →
 variable (hCohnElkies₂ : ∀ x : EuclideanSpace ℝ (Fin d), (𝓕 f x).re ≥ 0)
 
 section Complex_Function_Helpers
-
-theorem imaginary_part_vanishes_of_real_valued (g : EuclideanSpace ℝ (Fin d) → ℂ) :
-  (∀ x : EuclideanSpace ℝ (Fin d), ↑(g x).re = (g x)) →
-  (∀ x : EuclideanSpace ℝ (Fin d), (g x).im = 0) := by
-  intro hIsReal x
-  simpa only [ofReal_im, eq_comm] using! congrArg Complex.im (hIsReal x)
-
-include hRealFourier in
-@[simp]
-theorem fourier_imaginary_component_vanishes : ∀ x : EuclideanSpace ℝ (Fin d), (𝓕 f x).im = 0 :=
-  imaginary_part_vanishes_of_real_valued (𝓕 ⇑f) hRealFourier
 
 end Complex_Function_Helpers
 
@@ -55039,41 +54893,6 @@ theorem criticalBinaryExponent_eq_three_halves_sub_logFourDivPi :
   field_simp
   ; ring
 
-theorem baseTwo_log_two_gt_d6 :
-    (0.693147 : ℝ) < Real.log 2 := by
-  have h := Real.sum_range_le_log_div
-    (x := (1 / 3 : ℝ)) (by norm_num) (by norm_num) 6
-  norm_num [Finset.sum_range_succ] at h
-  linarith
-
-theorem baseTwo_log_four_div_pi_lt_d7 :
-    Real.log (4 / Real.pi) < (0.2415647 : ℝ) := by
-  have hp : (3.141592 : ℝ) < Real.pi := Real.pi_gt_d6
-  have harg : (4 : ℝ) / Real.pi < 4 / 3.141592 := by
-    apply (div_lt_div_iff₀ Real.pi_pos
-      (by norm_num : (0 : ℝ) < 3.141592)).2
-    linarith
-  have hmono := Real.log_lt_log
-    (by positivity : (0 : ℝ) < 4 / Real.pi) harg
-  have hs := Real.log_div_le_sum_range_add
-    (x := (107301 / 892699 : ℝ)) (by norm_num) (by norm_num) 5
-  norm_num [Finset.sum_range_succ] at hs
-  norm_num at hmono
-  linarith
-
-theorem criticalBinaryExponent_gt_d4 :
-    (0.6044 : ℝ) < criticalBinaryExponent := by
-  rw [criticalBinaryExponent_eq_three_halves_sub_logFourDivPi]
-  have hlogpos : 0 < Real.log (2 : ℝ) :=
-    Real.log_pos (by norm_num : (1 : ℝ) < 2)
-  have hden : 0 < 2 * Real.log (2 : ℝ) := by positivity
-  have hratio :
-      (Real.log (4 / Real.pi) + 1) / (2 * Real.log 2) <
-        (3 / 2 : ℝ) - 0.6044 := by
-    apply (div_lt_iff₀ hden).2
-    linarith [baseTwo_log_two_gt_d6, baseTwo_log_four_div_pi_lt_d7]
-  linarith
-
 theorem baseTwo_log_two_gt_d36 :
     (0.693147180559945309417232121458176568 : ℝ) < Real.log 2 := by
   have h := Real.sum_range_le_log_div
@@ -55448,91 +55267,6 @@ end SpherePacking.Alternative
 
 namespace SpherePacking.Alternative
 
-def schwartzDilation {d : ℕ} (a : ℝ) (ha : a ≠ 0)
-    (f : Schwartz d) : Schwartz d :=
-  SchwartzMap.compCLMOfContinuousLinearEquiv ℂ
-    (ContinuousLinearEquiv.smulLeft (Units.mk0 a ha)) f
-
-@[simp] theorem schwartzDilation_apply {d : ℕ} (a : ℝ) (ha : a ≠ 0)
-    (f : Schwartz d) (x : Ambient d) :
-    schwartzDilation a ha f x = f (a • x) := by
-  rfl
-
-@[simp] theorem schwartzDilation_zero {d : ℕ} (a : ℝ) (ha : a ≠ 0)
-    (f : Schwartz d) :
-    schwartzDilation a ha f 0 = f 0 := by
-  simp only [schwartzDilation_apply, smul_zero]
-
-theorem fourier_schwartzDilation_apply {d : ℕ} (a : ℝ) (ha : 0 < a)
-    (f : Schwartz d) (ξ : Ambient d) :
-    (𝓕 (schwartzDilation a ha.ne' f) : Schwartz d) ξ =
-      (a ^ d)⁻¹ • (𝓕 f : Schwartz d) (a⁻¹ • ξ) := by
-  change 𝓕 (schwartzDilation a ha.ne' f : Ambient d → ℂ) ξ =
-    (a ^ d)⁻¹ • 𝓕 (f : Ambient d → ℂ) (a⁻¹ • ξ)
-  rw [Real.fourier_eq', Real.fourier_eq']
-  let g : Ambient d → ℂ := fun y ↦
-    Complex.exp ((↑(-2 * Real.pi * @inner ℝ _ _ y (a⁻¹ • ξ)) : ℂ) *
-      Complex.I) • f y
-  have hinner (y : Ambient d) :
-      @inner ℝ _ _ (a • y) (a⁻¹ • ξ) = @inner ℝ _ _ y ξ := by
-    rw [real_inner_smul_left, real_inner_smul_right]
-    field_simp
-  calc
-    (∫ y : Ambient d,
-      Complex.exp ((↑(-2 * Real.pi * @inner ℝ _ _ y ξ) : ℂ) *
-        Complex.I) • schwartzDilation a ha.ne' f y) =
-        ∫ y : Ambient d, g (a • y) := by
-          apply integral_congr_ae
-          filter_upwards with y
-          simp only [neg_mul, Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, schwartzDilation_apply,
-            smul_eq_mul, hinner y, g]
-    _ = (a ^ d)⁻¹ • ∫ y : Ambient d, g y := by
-          simpa only [Complex.real_smul, Complex.ofReal_inv, Complex.ofReal_pow, finrank_euclideanSpace,
-            Fintype.card_fin] using
-            (Measure.integral_comp_smul_of_nonneg
-              (volume : Measure (Ambient d)) g a (hR := ha.le))
-    _ = (a ^ d)⁻¹ •
-        ∫ y : Ambient d,
-          Complex.exp
-            ((↑(-2 * Real.pi * @inner ℝ _ _ y (a⁻¹ • ξ)) : ℂ) *
-              Complex.I) • f y := by
-          rfl
-
-theorem fourierReal_schwartzDilation_apply {d : ℕ} (a : ℝ) (ha : 0 < a)
-    (f : Schwartz d) (ξ : Ambient d) :
-    fourierReal (schwartzDilation a ha.ne' f) ξ =
-      (a ^ d)⁻¹ * fourierReal f (a⁻¹ • ξ) := by
-  unfold fourierReal
-  rw [fourier_schwartzDilation_apply a ha f ξ]
-  rw [Complex.smul_re]
-  rfl
-
-theorem fourierReal_schwartzDilation_nonneg {d : ℕ}
-    {f : Schwartz d} (hf : ∀ ξ, 0 ≤ fourierReal f ξ)
-    (a : ℝ) (ha : 0 < a) (ξ : Ambient d) :
-    0 ≤ fourierReal (schwartzDilation a ha.ne' f) ξ := by
-  rw [fourierReal_schwartzDilation_apply a ha f ξ]
-  exact mul_nonneg (by positivity) (hf _)
-
-theorem fourierReal_schwartzDilation_zero_pos {d : ℕ}
-    {f : Schwartz d} (hf : 0 < fourierReal f 0)
-    (a : ℝ) (ha : 0 < a) :
-    0 < fourierReal (schwartzDilation a ha.ne' f) 0 := by
-  rw [fourierReal_schwartzDilation_apply a ha f 0]
-  simp only [smul_zero]
-  exact mul_pos (by positivity) hf
-
-theorem quotient_schwartzDilation {d : ℕ} (a : ℝ) (ha : 0 < a)
-    (f : Schwartz d) :
-    quotient (schwartzDilation a ha.ne' f) =
-      a ^ d * quotient f := by
-  unfold quotient
-  rw [schwartzDilation_zero,
-    fourierReal_schwartzDilation_apply a ha f 0]
-  simp only [smul_zero]
-  have hpow : a ^ d ≠ 0 := pow_ne_zero _ ha.ne'
-  field_simp
-
 end SpherePacking.Alternative
 
 end
@@ -55551,17 +55285,6 @@ theorem FullAdmissible.toAlternative {d : ℕ} (f : FullAdmissible d) :
   fourier_zero_pos := f.fourier_zero_pos
   fourier_nonneg := f.fourier_nonneg
   eventually_nonpos := f.outside_nonpos
-
-def FullAdmissible.ofAlternative {d : ℕ}
-    {f : SpherePacking.Alternative.Schwartz d}
-    (hf : SpherePacking.Alternative.IsUnrestrictedAdmissible f) :
-    FullAdmissible d where
-  function := f
-  real := hf.real_valued
-  fourier_real := hf.fourier_real_valued
-  fourier_nonneg := hf.fourier_nonneg
-  fourier_zero_pos := hf.fourier_zero_pos
-  outside_nonpos := hf.eventually_nonpos
 
 def FullAdmissible.radialization {d : ℕ} (f : FullAdmissible d) :
     CohnElkies.Admissible d :=

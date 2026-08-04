@@ -36107,7 +36107,7 @@ theorem exactAliceQuestionConditionalWeight_sum
             rw [Finset.sum_div]
             apply Finset.sum_congr rfl
             intro q _
-            split <;> simp_all
+            split <;> simp
     _ = exactAliceQuestionMass G n D seed history x /
           exactAliceQuestionMass G n D seed history x := by
             rfl
@@ -36147,7 +36147,7 @@ theorem exactBobQuestionConditionalWeight_sum
             rw [Finset.sum_div]
             apply Finset.sum_congr rfl
             intro q _
-            split <;> simp_all
+            split <;> simp
     _ = exactBobQuestionMass G n D seed history y /
           exactBobQuestionMass G n D seed history y := by
             rfl
@@ -36202,7 +36202,7 @@ theorem exactAliceQuestionFilter_complement_posSemidef
     apply Finset.sum_congr rfl
     intro q _
     dsimp [w, E]
-    split <;> simp_all
+    split <;> simp
   have split :
       1 - (∑ q, w q • E q) =
         (1 - (∑ q, w q)) •
@@ -36265,7 +36265,7 @@ theorem exactBobQuestionFilter_complement_posSemidef
     apply Finset.sum_congr rfl
     intro q _
     dsimp [w, E]
-    split <;> simp_all
+    split <;> simp
   have split :
       1 - (∑ q, w q • E q) =
         (1 - (∑ q, w q)) •

@@ -144,7 +144,7 @@ theorem plusPolynomial_imaginary (ε u : ℝ) :
   push_cast
   try dsimp [plusPolynomial]
   ring_nf
-  simp [Complex.I_sq]; ring
+  simp only [Complex.I_sq, neg_mul, one_mul, Complex.I_pow_four, add_left_inj]; ring
 
 theorem minusPolynomial_imaginary (ε u : ℝ) :
     minusPolynomial ε (Complex.I * (u : ℂ)) =
@@ -152,7 +152,7 @@ theorem minusPolynomial_imaginary (ε u : ℝ) :
   push_cast
   try dsimp [minusPolynomial]
   ring_nf
-  simp [Complex.I_sq]; ring
+  simp only [Complex.I_sq, neg_mul, one_mul, sub_neg_eq_add, Complex.I_pow_four, add_left_inj, sub_left_inj]; ring
 
 theorem plusPolynomial_imaginary_re_pos {ε u : ℝ}
     (hε : 0 < ε) (hu : -1 < u) :
@@ -195,7 +195,9 @@ theorem mellinFrequency_eq_fourier
         Real.exp (-ℓ * u) • profile (Real.exp (-u))))
           (-t / (2 * Real.pi)) := by
   unfold mellinFrequency
-  simpa using!
+  simpa only [neg_mul, Complex.real_smul, Complex.ofReal_exp, Complex.ofReal_neg, Complex.ofReal_mul,
+    Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im, Complex.ofReal_im,
+    mul_zero, sub_self, sub_zero, Complex.sub_im, Complex.mul_im, one_mul, zero_add, zero_sub] using!
     (mellin_eq_fourier profile
       (s := (ℓ : ℂ) - Complex.I * (t : ℂ)))
 
@@ -207,7 +209,8 @@ def mellinMultiplier (ℓ t : ℝ) : ℂ :=
 
 theorem mellinDenominator_re_pos {ℓ : ℝ} (hℓ : 0 < ℓ) (t : ℝ) :
     0 < (((ℓ : ℂ) + Complex.I * (t : ℂ)) / 2).re := by
-  simpa using! (half_pos hℓ)
+  simpa only [Complex.div_ofNat_re, Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul,
+    Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, add_zero, Nat.ofNat_pos, div_pos_iff_of_pos_right] using! (half_pos hℓ)
 
 theorem mellinMultiplier_denominator_ne_zero
     {ℓ : ℝ} (hℓ : 0 < ℓ) (t : ℝ) :
@@ -219,7 +222,7 @@ theorem gamma_add_nat_eq_product (z : ℂ)
     Complex.Gamma (z + (k : ℂ)) =
       Complex.Gamma z * ∏ j ∈ Finset.range k, (z + (j : ℂ)) := by
   induction k with
-  | zero => simp
+  | zero => simp only [CharP.cast_eq_zero, add_zero, Finset.range_zero, Finset.prod_empty, mul_one]
   | succ k ih =>
     rw [Nat.cast_succ, ← add_assoc,
       Complex.Gamma_add_one (z + (k : ℂ)) (hz k), ih,
@@ -238,7 +241,7 @@ theorem integer_gamma_product (k : ℕ) {y : ℝ} (hy : y ≠ 0) :
     try dsimp [z] at him
     norm_num at him
     exact hy (by linarith)
-  simpa [z, add_comm] using! gamma_add_nat_eq_product z hz k
+  simpa only [add_comm] using! gamma_add_nat_eq_product z hz k
 
 theorem half_integer_gamma_product (k : ℕ) (y : ℝ) :
     Complex.Gamma
@@ -270,7 +273,7 @@ def IsEven {d : ℕ} (f : TestFunction d) : Prop :=
 theorem IsRadial.even {d : ℕ} {f : TestFunction d}
     (hf : IsRadial f) : IsEven f := by
   intro x
-  exact hf (-x) x (by simp)
+  exact hf (-x) x (by simp only [norm_neg])
 
 theorem fourierInv_apply_zero {d : ℕ} (f : TestFunction d) :
     (𝓕⁻ f : TestFunction d) (0 : Euclidean d) =
@@ -281,7 +284,7 @@ theorem fourierInv_apply_zero {d : ℕ} (f : TestFunction d) :
       congrFun (SchwartzMap.fourierInv_coe f) 0
     _ = ∫ x : Euclidean d, f x := by
       rw [Real.fourierInv_eq]
-      simp
+      simp only [inner_zero_right, AddChar.map_zero_eq_one, one_smul]
 
 theorem admissible_zero_pos {d : ℕ} (f : Admissible d) :
     0 < (f.function (0 : Euclidean d)).re := by
@@ -337,7 +340,7 @@ theorem fourier_sq_apply {d : ℕ} (f : TestFunction d) (x : Euclidean d) :
         congrFun (SchwartzMap.fourierInv_coe (𝓕 f)) (-x)
       _ = (𝓕 ((𝓕 f : TestFunction d) : Euclidean d → ℂ)) x := by
         rw [Real.fourierInv_eq_fourier_neg]
-        simp
+        simp only [neg_neg]
       _ = ((𝓕 (𝓕 f) : TestFunction d) x) :=
         (congrFun (SchwartzMap.fourier_coe (𝓕 f)) x).symm
   exact hchange ▸ hinv
@@ -356,7 +359,7 @@ theorem fourier_antiFourierPart {d : ℕ} (f : TestFunction d)
     (𝓕 (antiFourierPart f) : TestFunction d) = -antiFourierPart f := by
   rw [antiFourierPart, sub_eq_add_neg, FourierTransform.fourier_add,
     FourierTransform.fourier_neg, fourier_sq_of_radial f hf]
-  simp
+  simp only [neg_add_rev, neg_neg]
 
 theorem antiFourierPart_zero {d : ℕ} (f : TestFunction d)
     (hbalance : (𝓕 f : TestFunction d) (0 : Euclidean d) = f 0) :
@@ -416,7 +419,7 @@ def dilate {d : ℕ} (f : TestFunction d) (a : ℝ) (ha : 0 < a) :
 @[simp] theorem dilate_zero {d : ℕ} (f : TestFunction d)
     (a : ℝ) (ha : 0 < a) :
     dilate f a ha (0 : Euclidean d) = f 0 := by
-  simp
+  simp only [dilate_apply, smul_zero]
 
 theorem IsRealValued.dilate {d : ℕ} {f : TestFunction d}
     (hf : IsRealValued f) (a : ℝ) (ha : 0 < a) :
@@ -429,7 +432,7 @@ theorem IsRadial.dilate {d : ℕ} {f : TestFunction d}
     IsRadial (dilate f a ha) := by
   intro x y hxy
   apply hf
-  simp [norm_smul, hxy]
+  simp only [ContinuousLinearEquiv.coe_coe, dilationEquiv_apply, norm_smul, Real.norm_eq_abs, hxy]
 
 theorem fourier_dilate_apply {d : ℕ} (f : TestFunction d)
     (a : ℝ) (ha : 0 < a) (ξ : Euclidean d) :
@@ -464,7 +467,8 @@ theorem fourier_dilate_apply {d : ℕ} (f : TestFunction d)
             Complex.exp
               ((↑(-2 * Real.pi *
                 @inner ℝ (Euclidean d) _ y (a⁻¹ • ξ)) : ℂ) * Complex.I) • f y := by
-      simpa [finrank_euclideanSpace] using!
+      simpa only [neg_mul, Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, smul_eq_mul,
+        Complex.real_smul, Complex.ofReal_inv, Complex.ofReal_pow, finrank_euclideanSpace, Fintype.card_fin] using!
         (MeasureTheory.Measure.integral_comp_smul_of_nonneg
           (volume : Measure (Euclidean d))
           (fun y : Euclidean d =>
@@ -480,7 +484,7 @@ theorem fourier_dilate_zero {d : ℕ} (f : TestFunction d)
     (a : ℝ) (ha : 0 < a) :
     ((𝓕 (dilate f a ha) : TestFunction d) (0 : Euclidean d)) =
       (a ^ d)⁻¹ • ((𝓕 f : TestFunction d) (0 : Euclidean d)) := by
-  simpa using! fourier_dilate_apply f a ha 0
+  simpa only [Complex.real_smul, Complex.ofReal_inv, Complex.ofReal_pow, smul_zero] using! fourier_dilate_apply f a ha 0
 
 def balancingScale {d : ℕ} (f : Admissible d) : ℝ :=
   (((𝓕 f.function : TestFunction d) (0 : Euclidean d)).re /
@@ -539,14 +543,14 @@ theorem balancedFunction_fourier_real {d : ℕ} (f : Admissible d) :
   unfold balancedFunction
   rw [fourier_dilate_apply, Complex.smul_im,
     f.fourier_real ((balancingScale f)⁻¹ • ξ)]
-  simp
+  simp only [smul_eq_mul, mul_zero]
 
 theorem balancedFunction_fourier_nonneg {d : ℕ} (f : Admissible d)
     (ξ : Euclidean d) :
     0 ≤ ((𝓕 (balancedFunction f) : TestFunction d) ξ).re := by
   unfold balancedFunction
   rw [fourier_dilate_apply, Complex.smul_re]
-  simpa [smul_eq_mul] using!
+  simpa only [smul_eq_mul] using!
     mul_nonneg
       (inv_nonneg.mpr (pow_nonneg (balancingScale_pos f).le d))
       (f.fourier_nonneg ((balancingScale f)⁻¹ • ξ))
@@ -593,7 +597,7 @@ theorem balancedFunction_fourier_zero {d : ℕ} (f : Admissible d)
           ((𝓕 f.function : TestFunction d) (0 : Euclidean d)).im =
         (f.function (0 : Euclidean d)).im
     rw [f.fourier_real, f.real]
-    simp
+    simp only [inv_div, mul_zero]
 
 theorem balancedFunction_outside_nonpos {d : ℕ} (f : Admissible d)
     (x : Euclidean d) (hx : (balancingScale f)⁻¹ ≤ ‖x‖) :
@@ -601,8 +605,7 @@ theorem balancedFunction_outside_nonpos {d : ℕ} (f : Admissible d)
   apply f.outside_nonpos (balancingScale f • x)
   have h := mul_le_mul_of_nonneg_left hx (balancingScale_pos f).le
   rw [mul_inv_cancel₀ (balancingScale_pos f).ne'] at h
-  simpa [norm_smul, Real.norm_eq_abs,
-    abs_of_pos (balancingScale_pos f)] using! h
+  simpa only [norm_smul, Real.norm_eq_abs, abs_of_pos (balancingScale_pos f), ge_iff_le] using! h
 
 def balancedAntiFourierPart {d : ℕ} (f : Admissible d) : TestFunction d :=
   antiFourierPart (balancedFunction f)
@@ -678,8 +681,8 @@ theorem balancedFunction_support_subset_of_anti_zero {d : ℕ}
     le_antisymm hnonpos hnonneg
   apply hx
   apply Complex.ext
-  · simpa using! hre
-  · simpa using! balancedFunction_real f x
+  · simpa only [balancedFunction_apply, Complex.zero_re] using! hre
+  · simpa only [balancedFunction_apply, Complex.zero_im] using! balancedFunction_real f x
 
 theorem balancedFunction_hasCompactSupport_of_anti_zero {d : ℕ}
     (f : Admissible d) (hzero : balancedAntiFourierPart f = 0) :
@@ -721,7 +724,7 @@ theorem integrableExpSet_nonnegativeSchwartzMeasure_eq_univ {d : ℕ}
       HasCompactSupport (fun x : Euclidean d => (g x).re) := by
     change HasCompactSupport (Complex.re ∘
       (g : Euclidean d → ℂ))
-    exact hcompact.comp_left (by simp)
+    exact hcompact.comp_left (by simp only [Complex.zero_re])
   have hcontinuous :
       Continuous (fun x : Euclidean d =>
         (g x).re * Real.exp (t * X x)) := by
@@ -739,7 +742,7 @@ theorem nonnegativeSchwartz_complexMGF_analytic {d : ℕ}
         (nonnegativeSchwartzMeasure g hg)) Set.univ := by
   have hset := integrableExpSet_nonnegativeSchwartzMeasure_eq_univ
     g hg hcompact X hX
-  simpa [hset] using!
+  simpa only [hset, interior_univ, mem_univ, setOf_true] using!
     (ProbabilityTheory.analyticOnNhd_complexMGF
       (X := X) (μ := nonnegativeSchwartzMeasure g hg))
 
@@ -774,8 +777,8 @@ theorem nonnegativeSchwartz_complexMGF_mul_I {d : ℕ}
       filter_upwards [] with x
       have hvalue : (↑((g x).re) : ℂ) = g x := by
         apply Complex.ext
-        · simp
-        · simpa using! (hreal x).symm
+        · simp only [Complex.ofReal_re]
+        · simpa only [Complex.ofReal_im] using! (hreal x).symm
       have hexponent :
           ((t : ℂ) * Complex.I) *
               (↑(-2 * Real.pi *
@@ -837,7 +840,7 @@ theorem nonnegative_compact_fourier_fixed_eq_zero {d : ℕ}
   classical
   letI : Nontrivial (Euclidean d) :=
     Module.nontrivial_of_finrank_pos (R := ℝ) (M := Euclidean d)
-      (by simpa [finrank_euclideanSpace] using! hd)
+      (by simpa only [finrank_euclideanSpace, Fintype.card_fin] using! hd)
   obtain ⟨e, he⟩ :=
     exists_norm_eq (Euclidean d) (by norm_num : (0 : ℝ) ≤ 1)
   obtain ⟨R, hR⟩ :=
@@ -879,7 +882,7 @@ theorem nonnegative_compact_fourier_fixed_eq_zero {d : ℕ}
   have hFzero : F = 0 :=
     analytic_eq_zero_of_imaginary_ray F hanalytic (max R 0) hvanish
   have hFzero_at_zero : F 0 = 0 := by
-    simpa using! congrFun hFzero (0 : ℂ)
+    simpa only [Pi.zero_apply] using! congrFun hFzero (0 : ℂ)
   have hfourierzero :
       ((𝓕 g : TestFunction d) (0 : Euclidean d)) = 0 := by
     have hmomentzero :
@@ -895,15 +898,16 @@ theorem nonnegative_compact_fourier_fixed_eq_zero {d : ℕ}
               -2 * Real.pi * @inner ℝ (Euclidean d) _ x e)
             (nonnegativeSchwartzMeasure g hg)
             ((0 : ℂ) * Complex.I) := by
-        simpa using!
+        simpa only [neg_mul, zero_mul, zero_smul, Complex.ofReal_zero] using!
           (nonnegativeSchwartz_complexMGF_mul_I g hreal hg e 0).symm
-      _ = 0 := by simpa using! hmomentzero
+      _ = 0 := by simpa only [neg_mul, zero_mul] using! hmomentzero
   have hfourier_integral :
       ((𝓕 g : TestFunction d) (0 : Euclidean d)) =
         ∫ x : Euclidean d, g x := by
     change (𝓕 (g : Euclidean d → ℂ)) 0 = _
     rw [Real.fourier_eq']
-    simp
+    simp only [neg_mul, inner_zero_right, mul_zero, Complex.ofReal_zero, zero_mul, Complex.exp_zero, smul_eq_mul,
+      one_mul]
   have hintegral :
       (∫ x : Euclidean d, (g x).re) = 0 := by
     calc
@@ -920,15 +924,15 @@ theorem nonnegative_compact_fourier_fixed_eq_zero {d : ℕ}
     apply hnonzero
     ext x
     apply Complex.ext
-    · simpa using! congrFun hzero x
-    · simpa using! hreal x
+    · simpa only [zero_apply, Complex.zero_re, Pi.zero_apply] using! congrFun hzero x
+    · simpa only [zero_apply, Complex.zero_im] using! hreal x
   obtain ⟨x, hx⟩ :
       ∃ x : Euclidean d, (g x).re ≠ 0 := by
     by_contra hnone
     push Not at hnone
     apply hreal_nonzero
     funext x
-    simpa using! hnone x
+    simpa only [Pi.zero_apply] using! hnone x
   have hpositive :
       0 < ∫ x : Euclidean d, (g x).re :=
     integral_pos_of_integrable_nonneg_nonzero
@@ -954,8 +958,8 @@ theorem balancedAntiFourierPart_ne_zero {d : ℕ}
   have horigin := congrArg
     (fun g : TestFunction d => (g (0 : Euclidean d)).re) hvanish
   have hpos : 0 < (balancedFunction f (0 : Euclidean d)).re := by
-    simpa using! admissible_zero_pos f
-  simpa using! hpos.ne' horigin
+    simpa only [balancedFunction_apply, smul_zero] using! admissible_zero_pos f
+  simpa only  using! hpos.ne' horigin
 
 def AntiFourierWitness.monoRadius {d : ℕ} {R S : ℝ}
     (w : AntiFourierWitness d R) (hRS : R ≤ S) :
@@ -1011,7 +1015,8 @@ theorem volume_unitBall {d : ℕ} (hd : 0 < d) :
     volume (ball (0 : Euclidean d) (1 : ℝ)) =
       ENNReal.ofReal (unitBallVolume d) := by
   letI : Nonempty (Fin d) := Fin.pos_iff_nonempty.mp hd
-  simpa [Fintype.card_fin, unitBallVolume, sqrt_pi_pow_eq_rpow] using!
+  simpa only [unitBallVolume, ENNReal.ofReal_one, Fintype.card_fin, one_pow, sqrt_pi_pow_eq_rpow,
+    one_mul] using!
     (EuclideanSpace.volume_ball (Fin d) (0 : Euclidean d) (1 : ℝ))
 
 theorem unitBallVolume_even (k : ℕ) :
@@ -1046,14 +1051,14 @@ theorem radialProfile_norm {d : ℕ} (hd : 0 < d)
     radialProfile hd f ‖x‖ = f x := by
   unfold radialProfile
   apply hf
-  simp [norm_smul, norm_radialUnitDirection hd]
+  simp only [norm_smul, norm_norm, norm_radialUnitDirection hd, mul_one]
 
 theorem radialProfile_neg {d : ℕ} (hd : 0 < d)
     (f : TestFunction d) (hf : IsRadial f) (r : ℝ) :
     radialProfile hd f (-r) = radialProfile hd f r := by
   unfold radialProfile
   apply hf
-  simp [norm_smul, norm_radialUnitDirection hd]
+  simp only [neg_smul, norm_neg, norm_smul, Real.norm_eq_abs, norm_radialUnitDirection hd, mul_one]
 
 theorem radialProfile_continuous {d : ℕ} (hd : 0 < d)
     (f : TestFunction d) :
@@ -1064,7 +1069,7 @@ theorem radialProfile_continuous {d : ℕ} (hd : 0 < d)
 @[simp] theorem radialProfile_zero {d : ℕ} (hd : 0 < d)
     (f : TestFunction d) :
     radialProfile hd f 0 = f (0 : Euclidean d) := by
-  simp [radialProfile]
+  simp only [radialProfile, zero_smul]
 
 theorem radialProfile_real {d : ℕ} (hd : 0 < d)
     (f : TestFunction d) (hf : IsRealValued f) (r : ℝ) :
@@ -1104,8 +1109,9 @@ theorem integral_radialProfile_mul {d : ℕ} (hd : 0 < d)
     _ = radialSurfaceArea d •
           ∫ r : ℝ in Ioi 0,
             r ^ (d - 1) • (radialProfile hd f r * w r) := by
-      simpa [radialSurfaceArea, volume_real_unitBall hd,
-        nsmul_eq_mul, finrank_euclideanSpace_fin, mul_assoc] using!
+      simpa only [radialSurfaceArea, Complex.real_smul, Complex.ofReal_pow, Complex.ofReal_mul,
+        Complex.ofReal_natCast, mul_assoc, finrank_euclideanSpace, Fintype.card_fin, volume_real_unitBall hd,
+        nsmul_eq_mul] using!
         (integral_fun_norm_addHaar
           (volume : Measure (Euclidean d))
           (fun r : ℝ => radialProfile hd f r * w r))
@@ -1199,8 +1205,8 @@ theorem gaussianMellinWeight_integrable {d : ℕ}
     Integrable (gaussianMellinWeight d a)
       (volume : Measure (Euclidean d)) := by
   have hcomplex : 0 < (a : ℂ).re := by
-    simpa using! ha
-  simpa [gaussianMellinWeight] using!
+    simpa only [Complex.ofReal_re] using! ha
+  simpa only [neg_mul, inner_zero_left, Complex.ofReal_zero, mul_zero, add_zero] using!
     (GaussianFourier.integrable_cexp_neg_mul_sq_norm_add
       (V := Euclidean d) hcomplex (0 : ℂ) (0 : Euclidean d))
 
@@ -1211,8 +1217,8 @@ theorem fourier_gaussianMellinWeight {d : ℕ}
         Complex.exp
           (-((Real.pi : ℂ) ^ 2) * (‖ξ‖ : ℂ) ^ 2 / (a : ℂ)) := by
   have hcomplex : 0 < (a : ℂ).re := by
-    simpa using! ha
-  simpa [gaussianMellinWeight, finrank_euclideanSpace] using!
+    simpa only [Complex.ofReal_re] using! ha
+  simpa only [neg_mul, finrank_euclideanSpace, Fintype.card_fin] using!
     (fourier_gaussian_innerProductSpace (V := Euclidean d)
       hcomplex ξ)
 
@@ -1327,7 +1333,7 @@ theorem schwartz_mul_norm_cpow_integrable {d : ℕ}
         (Metric.isOpen_ball.measurableSet.compl)] with x hx
     have hnorm : 1 ≤ ‖x‖ := by
       have hnot : ¬ ‖x‖ < (1 : ℝ) := by
-        simpa [Metric.mem_ball, dist_zero_right] using! hx
+        simpa only [not_lt, mem_compl_iff, Metric.mem_ball, dist_zero_right] using! hx
       exact le_of_not_gt hnot
     rw [norm_mul,
       Complex.norm_cpow_eq_rpow_re_of_pos
@@ -1377,7 +1383,8 @@ theorem gaussianMellinParameter_integrable
   rw [norm_mul,
     Complex.norm_cpow_eq_rpow_re_of_pos ha,
     Complex.norm_exp]
-  simp
+  simp only [Complex.sub_re, Complex.one_re, Complex.neg_re, Complex.mul_re, Complex.ofReal_re,
+    Complex.ofReal_im, mul_zero, sub_zero]
 
 theorem gaussianMellinParameter_norm_integral
     (b : ℂ) (hb : 0 < b.re) (r : ℝ) (hr : 0 < r) :
@@ -1397,7 +1404,8 @@ theorem gaussianMellinParameter_norm_integral
       rw [norm_mul,
         Complex.norm_cpow_eq_rpow_re_of_pos ha,
         Complex.norm_exp]
-      simp
+      simp only [Complex.sub_re, Complex.one_re, Complex.neg_re, Complex.mul_re, Complex.ofReal_re,
+        Complex.ofReal_im, mul_zero, sub_zero]
     _ = (1 / r) ^ b.re * Real.Gamma b.re :=
       Real.integral_rpow_mul_exp_neg_mul_Ioi hb hr
 
@@ -1408,7 +1416,7 @@ theorem gaussianMellin_inv_sq_rpow
     (1 / r ^ 2) ^ b = (r ^ 2) ^ (-b) := by
       rw [one_div, Real.rpow_neg_eq_inv_rpow]
     _ = r ^ ((2 : ℝ) * (-b)) := by
-      simpa using! (Real.rpow_natCast_mul hr 2 (-b)).symm
+      simpa only [mul_neg, Nat.cast_ofNat] using! (Real.rpow_natCast_mul hr 2 (-b)).symm
     _ = r ^ (-(2 * b)) := by
       congr 1
       ring
@@ -1435,7 +1443,8 @@ theorem gaussianMellin_div_cpow
       (p : ℂ) ^ b * (a : ℂ) ^ (-b) := by
   have hinv :
       (((a⁻¹ : ℝ) : ℂ)) ^ b = (a : ℂ) ^ (-b) := by
-    simpa [Real.rpow_neg_one] using!
+    simpa only [Complex.ofReal_inv, Real.rpow_neg_one, Complex.ofReal_neg, Complex.ofReal_one, neg_mul,
+      one_mul] using!
       (Complex.cpow_mul_ofReal_nonneg ha.le (-1) b).symm
   calc
     ((p : ℂ) / (a : ℂ)) ^ b =
@@ -1455,7 +1464,7 @@ theorem gaussianMellin_pi_coefficient (b q : ℂ) :
   have hsquare :
       (((Real.pi ^ 2 : ℝ) : ℂ) ^ (b - q)) =
         (Real.pi : ℂ) ^ (2 * (b - q)) := by
-    simpa [Real.rpow_two] using!
+    simpa only [Complex.ofReal_pow, Real.rpow_ofNat, Complex.ofReal_ofNat] using!
       (Complex.cpow_mul_ofReal_nonneg Real.pi_pos.le
         (2 : ℝ) (b - q)).symm
   rw [hsquare,
@@ -1522,10 +1531,13 @@ theorem gaussianMellinMixture_integrable {d : ℕ}
   · have hnegative :
         -(d : ℝ) <
           ((-(2 * b.re) : ℝ) : ℂ).re := by
-      simpa using! (show -(d : ℝ) < -(2 * b.re) by linarith)
+      simpa only [Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, Complex.neg_re, Complex.mul_re,
+        Complex.re_ofNat, Complex.ofReal_re, Complex.im_ofNat, Complex.ofReal_im, mul_zero, sub_zero, neg_lt_neg_iff] using! (show -(d : ℝ) < -(2 * b.re) by linarith)
     have hnonpositive :
         ((-(2 * b.re) : ℝ) : ℂ).re ≤ 0 := by
-      simpa using! (show -(2 * b.re) ≤ 0 by linarith)
+      simpa only [Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, Complex.neg_re, Complex.mul_re,
+        Complex.re_ofNat, Complex.ofReal_re, Complex.im_ofNat, Complex.ofReal_im, mul_zero, sub_zero, Left.neg_nonpos_iff,
+        Nat.ofNat_pos, mul_nonneg_iff_of_pos_left] using! (show -(2 * b.re) ≤ 0 by linarith)
     have hrieszComplex :=
       schwartz_mul_norm_cpow_integrable hd f
         ((-(2 * b.re) : ℝ) : ℂ) hnegative hnonpositive
@@ -1541,7 +1553,8 @@ theorem gaussianMellinMixture_integrable {d : ℕ}
       rw [norm_mul,
         Complex.norm_cpow_eq_rpow_re_of_pos
           (norm_pos_iff.mpr hx)]
-      simp
+      simp only [Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, Complex.neg_re, Complex.mul_re,
+        Complex.re_ofNat, Complex.ofReal_re, Complex.im_ofNat, Complex.ofReal_im, mul_zero, sub_zero]
     apply (hriesz.mul_const (Real.Gamma b.re)).congr
     filter_upwards
       [(volume : Measure (Euclidean d)).ae_ne
@@ -1975,7 +1988,8 @@ theorem radialMellinMultiplier {d : ℕ}
   have h := radial_fourier_mellin_strip hd f hf s hs hsd
   rw [hphase, hcomplement] at h
   unfold radialMellinFrequency mellinFrequency mellinMultiplier
-  simpa [s, q, mul_neg, sub_neg_eq_add] using! h
+  simpa only [Complex.ofReal_div, Complex.ofReal_natCast, Complex.ofReal_ofNat, Complex.ofReal_neg, mul_neg,
+    sub_neg_eq_add] using! h
 
 end
 
@@ -1992,7 +2006,8 @@ theorem shellOscillation_eq_sinc (B T : ℝ) :
       1 - Real.sinc (T / 2) * Real.cos ((B + 1 / 2) * T) := by
   unfold shellOscillation
   by_cases hT : T = 0
-  · simp [hT]
+  · simp only [hT, mul_zero, Real.cos_zero, sub_self, intervalIntegral.integral_zero, zero_div, Real.sinc_zero,
+      one_div, mul_one]
   · have hhalf : T / 2 ≠ 0 := by exact div_ne_zero hT (by norm_num)
     have hderiv (a : ℝ) :
         HasDerivAt (fun y : ℝ => y - Real.sin (y * T) / T)
@@ -2019,7 +2034,7 @@ theorem shellOscillation_eq_sinc (B T : ℝ) :
 
 theorem cos_le_quartic {x : ℝ} (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
     Real.cos x ≤ 1 - x ^ 2 / 2 + x ^ 4 * (5 / 96 : ℝ) := by
-  have hbound := Real.cos_bound (show |x| ≤ 1 by simpa [abs_of_nonneg hx0] using! hx1)
+  have hbound := Real.cos_bound (show |x| ≤ 1 by simpa only [abs_of_nonneg hx0] using! hx1)
   rw [abs_of_nonneg hx0] at hbound
   linarith [(le_abs_self (Real.cos x - (1 - x ^ 2 / 2)))]
 
@@ -2038,7 +2053,7 @@ theorem sin_le_quintic {x : ℝ} (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
         (1 - t ^ 2 / 2 + t ^ 4 * (5 / 96 : ℝ)) t := by
     convert! ((hasDerivAt_id t).sub
       (((hasDerivAt_id t).pow 3).div_const 6)).add
-      (((hasDerivAt_id t).pow 5).div_const 96) using 1; simp [id]; ring
+      (((hasDerivAt_id t).pow 5).div_const 96) using 1; simp only [Nat.cast_ofNat, id, Nat.add_one_sub_one, mul_one]; ring
   rw [intervalIntegral.integral_eq_sub_of_hasDerivAt
     (fun t _ => hderiv t) (hpoly.intervalIntegrable 0 x)] at hmono
   norm_num at hmono
@@ -2118,7 +2133,7 @@ theorem sinc_explicit (T : ℝ) :
       1 - |Real.sinc (T / 2)| := by
   have hsinc : Real.sinc (T / 2) = Real.sinc (|T| / 2) := by
     rw [← sinc_abs (T / 2)]
-    simp [abs_div]
+    simp only [abs_div, Nat.abs_ofNat]
   by_cases hsmall : |T| ≤ 1
   · have hxhalf : |T| / 2 ≤ (1 / 2 : ℝ) := by linarith
     have hgap := sinc_quadratic_gap_nonneg
@@ -2370,7 +2385,7 @@ theorem positiveShellRadiusContribution_bounds {ε : ℝ} (hε : 0 < ε) :
       (hright.intervalIntegrable _ _)
       ((continuous_const : Continuous (fun _ : ℝ => K)).intervalIntegrable _ _)
       hpoint
-    simpa using! hmono
+    simpa only [ge_iff_le, intervalIntegral.integral_const, add_sub_cancel_left, smul_eq_mul, one_mul] using! hmono
 
 def shortShellDensity (ε a : ℝ) : ℝ :=
   -(shortMargin ε a * Real.exp (-2 * a) /
@@ -2390,10 +2405,10 @@ theorem mellinShellPhase_neg (ε : ℝ) (z : ℂ) :
   congr 1
   · apply intervalIntegral.integral_congr
     intro a _
-    simp
+    simp only [mul_neg, Complex.cos_neg]
   · apply intervalIntegral.integral_congr
     intro a _
-    simp
+    simp only [mul_neg, Complex.cos_neg]
 
 def realOscillatoryShellPhase (ε t : ℝ) : ℝ :=
   (∫ a in shortCutoff ε..shortEndpoint ε,
@@ -2675,7 +2690,7 @@ theorem complexShellInterval_differentiable
       HasDerivAt (fun u : ℂ => F u x) (F' z x) z := by
     have hlinear : HasDerivAt
         (fun u : ℂ => (x : ℂ) * u) (x : ℂ) z := by
-      simpa using! (hasDerivAt_id z).const_mul (x : ℂ)
+      simpa only [id_eq, mul_one] using! (hasDerivAt_id z).const_mul (x : ℂ)
     have hcos := (Complex.hasDerivAt_cos
       ((x : ℂ) * z)).comp z hlinear
     simpa [F, F', mul_assoc] using!
@@ -2968,7 +2983,8 @@ theorem saddleVerticalGamma_continuous {ℓ : ℝ} (hℓ : 0 < ℓ) :
   let z : ℂ := ((ℓ : ℂ) - Complex.I * (t : ℂ)) / 2
   have hz : 0 < z.re := by
     try dsimp [z]
-    simpa using! half_pos hℓ
+    simpa only [Complex.div_ofNat_re, Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul,
+      Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, sub_zero, Nat.ofNat_pos, div_pos_iff_of_pos_right] using! half_pos hℓ
   have hpoles : ∀ m : ℕ, z ≠ -(m : ℂ) := by
     intro m hm
     have hre := congrArg Complex.re hm
@@ -2979,7 +2995,7 @@ theorem saddleVerticalGamma_continuous {ℓ : ℝ} (hℓ : 0 < ℓ) :
       (fun u : ℝ => ((ℓ : ℂ) - Complex.I * (u : ℂ)) / 2) t :=
     ((continuous_const.sub
       (Complex.continuous_ofReal.const_mul Complex.I)).div_const 2).continuousAt
-  simpa [Function.comp_def] using!
+  simpa only [Function.comp_def] using!
     (Complex.continuousAt_Gamma z hpoles).comp_of_eq harg (by rfl)
 
 theorem saddleShellPhase_continuous {ε : ℝ}
@@ -3184,7 +3200,7 @@ theorem saddleMellinGamma_meromorphic :
     Meromorphic.Gamma (z / 2)
   have ha : AnalyticAt ℂ (fun u : ℂ => u / 2) z := by
     fun_prop
-  simpa [Function.comp_def] using!
+  simpa only [Function.comp_def] using!
     (MeromorphicAt.comp_analyticAt
       (g := fun u : ℂ => u / 2) (x := z) hg ha)
 
@@ -3226,11 +3242,11 @@ theorem saddleMellinGamma_differentiableAt_of_re_pos
     {z : ℂ} (hz : 0 < z.re) :
     DifferentiableAt ℂ (fun w : ℂ => Complex.Gamma (w / 2)) z := by
   have hhalf : 0 < (z / 2).re := by
-    simpa using! half_pos hz
+    simpa only [Complex.div_ofNat_re, Nat.ofNat_pos, div_pos_iff_of_pos_right] using! half_pos hz
   have hg : DifferentiableAt ℂ Complex.Gamma (z / 2) :=
     Complex.differentiableAt_Gamma (z / 2) (by
       intro n hn
-      have hnonpositive : (-(n : ℂ)).re ≤ 0 := by simp
+      have hnonpositive : (-(n : ℂ)).re ≤ 0 := by simp only [Complex.neg_re, Complex.natCast_re, Left.neg_nonpos_iff, Nat.cast_nonneg]
       exact (not_lt_of_ge hnonpositive) (hn ▸ hhalf))
   exact hg.comp z (by fun_prop)
 
@@ -3297,15 +3313,17 @@ theorem mellinShellPhase_neg_I (ε : ℝ) :
         mellinShellPhase ε Complex.I :=
           mellinShellPhase_neg ε Complex.I
     _ = (realHyperbolicShellPhase ε 1 : ℂ) := by
-          simpa using! mellinShellPhase_imaginary ε 1
+          simpa only [Complex.ofReal_one, mul_one] using! mellinShellPhase_imaginary ε 1
 
 theorem plusPolynomial_neg_I (ε : ℝ) :
     plusPolynomial ε (-Complex.I) = (beta ε : ℂ) := by
-  simpa using! plusPolynomial_imaginary ε (-1)
+  simpa only [Complex.ofReal_neg, Complex.ofReal_one, mul_neg, mul_one, sub_neg_eq_add, add_neg_cancel,
+    mul_zero, add_zero] using! plusPolynomial_imaginary ε (-1)
 
 theorem minusPolynomial_neg_I (ε : ℝ) :
     minusPolynomial ε (-Complex.I) = (beta ε : ℂ) := by
-  simpa using! minusPolynomial_imaginary ε (-1)
+  simpa only [Complex.ofReal_neg, Complex.ofReal_one, mul_neg, mul_one, sub_neg_eq_add, add_neg_cancel, ne_eq,
+    OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero, add_zero] using! minusPolynomial_imaginary ε (-1)
 
 theorem saddleRegularMellinFactor_zero
     {ε ℓ : ℝ} (hℓ : 0 < ℓ) :
@@ -3406,7 +3424,8 @@ theorem complexGamma_residue_neg_nat (n : ℕ) :
       (𝓝 (((-1 : ℂ) ^ n) / (n.factorial : ℂ))) := by
   induction n with
   | zero =>
-      simpa using! Complex.tendsto_self_mul_Gamma_nhds_zero
+      simpa only [CharP.cast_eq_zero, add_zero, neg_zero, pow_zero, Nat.factorial_zero, Nat.cast_one, ne_eq,
+        one_ne_zero, not_false_eq_true, div_self] using! Complex.tendsto_self_mul_Gamma_nhds_zero
   | succ n ih =>
       have hshift : Tendsto (fun z : ℂ => z + 1)
           (𝓝[≠] (-((n + 1 : ℕ) : ℂ)))
@@ -3414,7 +3433,7 @@ theorem complexGamma_residue_neg_nat (n : ℕ) :
         rw [tendsto_nhdsWithin_iff]
         constructor
         · convert! ((tendsto_id.add_const (1 : ℂ)).mono_left
-            nhdsWithin_le_nhds) using 1; simp [Nat.cast_add, Nat.cast_one]
+            nhdsWithin_le_nhds) using 1; simp only [Nat.cast_add, Nat.cast_one, neg_add_rev, neg_add_cancel_comm]
         · filter_upwards [self_mem_nhdsWithin] with z hz
           simp only [Set.mem_compl_iff,
             Set.mem_singleton_iff] at hz ⊢
@@ -3470,7 +3489,7 @@ theorem saddleGamma_residue_neg_even (n : ℕ) :
     rw [tendsto_nhdsWithin_iff]
     constructor
     · convert! ((tendsto_id.div_const (2 : ℂ)).mono_left
-        nhdsWithin_le_nhds) using 1; simp [Nat.cast_mul]; ring
+        nhdsWithin_le_nhds) using 1; simp only [Nat.cast_mul, Nat.cast_ofNat, nhds_eq_nhds_iff]; ring
     · filter_upwards [self_mem_nhdsWithin] with z hz
       simp only [Set.mem_compl_iff,
         Set.mem_singleton_iff] at hz ⊢
@@ -3496,7 +3515,7 @@ theorem gamma_add_nat_eq_product_of_lt (z : ℂ) (k : ℕ)
       Complex.Gamma z *
         ∏ j ∈ Finset.range k, (z + (j : ℂ)) := by
   induction k generalizing z with
-  | zero => simp
+  | zero => simp only [CharP.cast_eq_zero, add_zero, Finset.range_zero, Finset.prod_empty, mul_one]
   | succ k ih =>
       have hprevious : ∀ j : ℕ, j < k → z + (j : ℂ) ≠ 0 := by
         intro j hj
@@ -3572,7 +3591,7 @@ theorem saddleGamma_eq_nthPoleNumerator_div
     have hproduct :
         (∏ j ∈ Finset.range n,
           (z / 2 + (j : ℂ))) ≠ 0 := by
-      simpa [saddlePoleLowerProduct] using! hden
+      simpa only [ne_eq, saddlePoleLowerProduct] using! hden
     intro j hj
     exact (Finset.prod_ne_zero_iff.mp hproduct)
       j (Finset.mem_range.mpr hj)
@@ -3612,7 +3631,7 @@ theorem saddleGamma_eq_nthPoleNumerator_div
   have hproduct :
       (∏ j ∈ Finset.range n,
         (z / 2 + (j : ℂ))) ≠ 0 := by
-    simpa [saddlePoleLowerProduct] using! hden
+    simpa only [ne_eq, saddlePoleLowerProduct] using! hden
   have hcancel :
       2 *
         (Complex.Gamma (z / 2) *
@@ -3653,7 +3672,7 @@ theorem saddleNthGammaPoleNumerator_differentiableOn (n : ℕ) :
         (z / 2 + ((n + 1 : ℕ) : ℂ)) :=
     Complex.differentiableAt_Gamma _ (by
       intro m hm
-      have hnonpositive : (-(m : ℂ)).re ≤ 0 := by simp
+      have hnonpositive : (-(m : ℂ)).re ≤ 0 := by simp only [Complex.neg_re, Complex.natCast_re, Left.neg_nonpos_iff, Nat.cast_nonneg]
       exact (not_lt_of_ge hnonpositive) (hm ▸ hpositive))
   have hcompose :
       DifferentiableAt ℂ
@@ -4592,14 +4611,15 @@ theorem saddleGaussianPoleSlope_mul (z : ℂ) :
       Complex.exp (z ^ 2) - 1 := by
   have h := sub_smul_dslope
     (fun w : ℂ => Complex.exp (w ^ 2)) 0 z
-  simpa [saddleGaussianPoleSlope, smul_eq_mul] using! h
+  simpa only [saddleGaussianPoleSlope, sub_zero, smul_eq_mul, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+    zero_pow, Complex.exp_zero] using! h
 
 theorem saddleGaussianPoleSlope_eq_of_ne
     {z : ℂ} (hz : z ≠ 0) :
     saddleGaussianPoleSlope z =
       (Complex.exp (z ^ 2) - 1) / z := by
   apply (eq_div_iff hz).2
-  simpa [mul_comm] using! saddleGaussianPoleSlope_mul z
+  simpa only [mul_comm] using! saddleGaussianPoleSlope_mul z
 
 def saddleGaussianPoleRepresentative
     (n : ℕ) (z : ℂ) : ℂ :=
@@ -4856,7 +4876,7 @@ theorem saddleMellinEnvelope_vertical (ε ℓ t : ℝ) :
           (ℓ : ℂ) = (t : ℂ) / (ℓ : ℂ) := by
     congr 1
     ring_nf
-    simp [Complex.I_sq]
+    simp only [Complex.I_sq, neg_mul, one_mul, neg_neg]
   have hpi :
       (((ℓ : ℂ) - ((ℓ : ℂ) - Complex.I * (t : ℂ))) *
         (Real.log Real.pi : ℂ) / 2) =
@@ -4875,7 +4895,7 @@ theorem plusSaddleMellinData_vertical (ε ℓ t : ℝ) :
           (ℓ : ℂ) = (t : ℂ) / (ℓ : ℂ) := by
     congr 1
     ring_nf
-    simp [Complex.I_sq]
+    simp only [Complex.I_sq, neg_mul, one_mul, neg_neg]
   unfold plusSaddleMellinData plusSaddleSpectrum
   rw [saddleMellinEnvelope_vertical, hfrequency]
 
@@ -4889,7 +4909,7 @@ theorem minusSaddleMellinData_vertical (ε ℓ t : ℝ) :
           (ℓ : ℂ) = (t : ℂ) / (ℓ : ℂ) := by
     congr 1
     ring_nf
-    simp [Complex.I_sq]
+    simp only [Complex.I_sq, neg_mul, one_mul, neg_neg]
   unfold minusSaddleMellinData minusSaddleSpectrum
   rw [saddleMellinEnvelope_vertical, hfrequency]
 
@@ -4920,19 +4940,19 @@ theorem minusSaddleFunction_radial (ε : ℝ) (d : ℕ)
 @[simp] theorem plusSaddleFunction_zero (ε : ℝ) (d : ℕ) :
     plusSaddleFunction ε d (0 : Euclidean d) =
       (saddleOriginValue ε ((d : ℝ) / 2) : ℂ) := by
-  simp [plusSaddleFunction, plusSaddleProfile]
+  simp only [plusSaddleFunction, plusSaddleProfile, norm_zero, ↓reduceIte]
 
 @[simp] theorem minusSaddleFunction_zero (ε : ℝ) (d : ℕ) :
     minusSaddleFunction ε d (0 : Euclidean d) =
       (saddleOriginValue ε ((d : ℝ) / 2) : ℂ) := by
-  simp [minusSaddleFunction, minusSaddleProfile]
+  simp only [minusSaddleFunction, minusSaddleProfile, norm_zero, ↓reduceIte]
 
 theorem saddleFunction_zero_pos {ε : ℝ} (hε : 0 < ε) (d : ℕ) :
     0 < (plusSaddleFunction ε d (0 : Euclidean d)).re ∧
       0 < (minusSaddleFunction ε d (0 : Euclidean d)).re := by
   constructor
-  · simpa using! saddleOriginValue_pos hε ((d : ℝ) / 2)
-  · simpa using! saddleOriginValue_pos hε ((d : ℝ) / 2)
+  · simpa only [plusSaddleFunction_zero, Complex.ofReal_re] using! saddleOriginValue_pos hε ((d : ℝ) / 2)
+  · simpa only [minusSaddleFunction_zero, Complex.ofReal_re] using! saddleOriginValue_pos hε ((d : ℝ) / 2)
 
 theorem minusPolynomial_neg (ε : ℝ) (z : ℂ) :
     minusPolynomial ε (-z) = plusPolynomial ε z := by
@@ -4963,7 +4983,7 @@ theorem norm_plusPolynomial_le (ε : ℝ) (z : ℂ) :
     calc
       ‖(1 : ℂ) + z ^ 2‖ ≤ ‖(1 : ℂ)‖ + ‖z ^ 2‖ :=
         norm_add_le _ _
-      _ = 1 + ‖z‖ ^ 2 := by simp [norm_pow]
+      _ = 1 + ‖z‖ ^ 2 := by simp only [norm_one, norm_pow]
   have hsq : 1 + ‖z‖ ^ 2 ≤ (1 + ‖z‖) ^ 2 := by
     linarith
   have hcube : (1 : ℝ) ≤ (1 + ‖z‖) ^ 3 :=
@@ -4985,7 +5005,7 @@ theorem norm_plusPolynomial_le (ε : ℝ) (z : ℂ) :
                     ‖1 + z ^ 2‖ + ‖(beta ε : ℂ)‖ :=
                       norm_add_le _ _
                 _ ≤ 1 + ‖z‖ ^ 2 + |beta ε| := by
-                      simpa using! add_le_add_right hbase |beta ε|
+                      simpa only [Complex.norm_real, Real.norm_eq_abs, add_le_add_iff_right, add_le_add_iff_left] using! add_le_add_right hbase |beta ε|
             have hsecond :
                 ‖Complex.I * z * (1 + z ^ 2)‖ ≤
                   ‖z‖ * (1 + ‖z‖ ^ 2) := by
@@ -5028,7 +5048,7 @@ theorem norm_complexGamma_le_realGamma {z : ℂ} (hz : 0 < z.re) :
             rw [norm_mul,
               Complex.norm_of_nonneg (Real.exp_pos (-x)).le,
               Complex.norm_cpow_eq_rpow_re_of_pos hx]
-            simp
+            simp only [Complex.sub_re, Complex.one_re]
 
 theorem complexGamma_vertical_polynomial_bound {z : ℂ}
     (hz : 0 < z.re) (k : ℕ) :
@@ -5043,16 +5063,16 @@ theorem complexGamma_vertical_polynomial_bound {z : ℂ}
   have hprod :
       |z.im| ^ k ≤
         ∏ j ∈ Finset.range k, ‖z + (j : ℂ)‖ := by
-    simpa using!
+    simpa only [Finset.prod_const, Finset.card_range] using!
       (Finset.prod_le_prod
         (s := Finset.range k)
         (f := fun _ : ℕ => |z.im|)
         (g := fun j : ℕ => ‖z + (j : ℂ)‖)
         (fun _ _ => abs_nonneg _)
         (fun j _ => by
-          simpa using! Complex.abs_im_le_norm (z + (j : ℂ))))
+          simpa only [Complex.add_im, Complex.natCast_im, add_zero] using! Complex.abs_im_le_norm (z + (j : ℂ))))
   have hshift : 0 < (z + (k : ℂ)).re := by
-    simpa using! add_pos_of_pos_of_nonneg hz (Nat.cast_nonneg k)
+    simpa only [Complex.add_re, Complex.natCast_re] using! add_pos_of_pos_of_nonneg hz (Nat.cast_nonneg k)
   calc
     |z.im| ^ k * ‖Complex.Gamma z‖ ≤
         (∏ j ∈ Finset.range k, ‖z + (j : ℂ)‖) *
@@ -5065,7 +5085,7 @@ theorem complexGamma_vertical_polynomial_bound {z : ℂ}
     _ = ‖Complex.Gamma (z + (k : ℂ))‖ := by
             rw [gamma_add_nat_eq_product z hnonzero k]
     _ ≤ Real.Gamma (z.re + k) := by
-            simpa using! norm_complexGamma_le_realGamma hshift
+            simpa only [Complex.add_re, Complex.natCast_re] using! norm_complexGamma_le_realGamma hshift
 
 theorem complexGamma_shifted_vertical_polynomial_bound
     {z : ℂ} (hz : z.im ≠ 0) (k : ℕ)
@@ -5076,20 +5096,20 @@ theorem complexGamma_shifted_vertical_polynomial_bound
     intro j hzero
     apply hz
     have him := congrArg Complex.im hzero
-    simpa using! him
+    simpa only [Complex.add_im, Complex.natCast_im, add_zero, Complex.zero_im] using! him
   have hprod :
       |z.im| ^ k ≤
         ∏ j ∈ Finset.range k, ‖z + (j : ℂ)‖ := by
-    simpa using!
+    simpa only [Finset.prod_const, Finset.card_range] using!
       (Finset.prod_le_prod
         (s := Finset.range k)
         (f := fun _ : ℕ => |z.im|)
         (g := fun j : ℕ => ‖z + (j : ℂ)‖)
         (fun _ _ => abs_nonneg _)
         (fun j _ => by
-          simpa using! Complex.abs_im_le_norm (z + (j : ℂ))))
+          simpa only [Complex.add_im, Complex.natCast_im, add_zero] using! Complex.abs_im_le_norm (z + (j : ℂ))))
   have hpositive : 0 < (z + (k : ℂ)).re := by
-    simpa using! hshift
+    simpa only [Complex.add_re, Complex.natCast_re] using! hshift
   calc
     |z.im| ^ k * ‖Complex.Gamma z‖ ≤
         (∏ j ∈ Finset.range k, ‖z + (j : ℂ)‖) *
@@ -5102,7 +5122,7 @@ theorem complexGamma_shifted_vertical_polynomial_bound
     _ = ‖Complex.Gamma (z + (k : ℂ))‖ := by
             rw [gamma_add_nat_eq_product z hnonzero k]
     _ ≤ Real.Gamma (z.re + k) := by
-            simpa using! norm_complexGamma_le_realGamma hpositive
+            simpa only [Complex.add_re, Complex.natCast_re] using! norm_complexGamma_le_realGamma hpositive
 
 theorem saddleGamma_shiftedLine_polynomial_bound
     (a : ℝ) {t : ℝ} (ht : 1 ≤ |t|)
@@ -5123,7 +5143,7 @@ theorem saddleGamma_shiftedLine_polynomial_bound
   have htzero : t ≠ 0 := by
     intro hzero
     have himpossible : (1 : ℝ) ≤ 0 := by
-      simpa [hzero] using! ht
+      simpa only [hzero, abs_zero] using! ht
     norm_num at himpossible
   have hnonzero : z.im ≠ 0 := by
     rw [him]
@@ -5138,7 +5158,7 @@ theorem saddleGamma_shiftedLine_polynomial_bound
           ‖Complex.Gamma z‖ ≤
         Real.Gamma
           (a / 2 + ((k + m : ℕ) : ℝ)) := by
-    simpa [hre, him, abs_div] using!
+    simpa only [Nat.cast_add, him, abs_div, Nat.abs_ofNat, hre] using!
       (complexGamma_shifted_vertical_polynomial_bound
         hnonzero (k + m) hpositive)
   have hpow : |t| ^ m ≤ |t| ^ (k + m) :=
@@ -5177,7 +5197,8 @@ theorem norm_complexCos_le_cosh_im (z : ℂ) :
     _ = Real.cosh z.im := by
           rw [Complex.norm_exp, Complex.norm_exp,
             Real.cosh_eq]
-          simp [Complex.mul_re, add_comm]
+          simp only [Complex.mul_re, Complex.I_re, mul_zero, Complex.I_im, mul_one, zero_sub, neg_mul, Complex.neg_re,
+            neg_neg, add_comm]
 
 def saddleHorizontalShellVariation (ε H : ℝ) : ℝ :=
   (∫ a in shortCutoff ε..shortEndpoint ε,
@@ -5345,7 +5366,7 @@ theorem saddleMellinShellArgument_shiftedLine
   push_cast
   field_simp [hnonzero]
   ring_nf
-  simp [Complex.I_sq]; ring
+  simp only [Complex.I_sq, neg_mul, one_mul]; ring
 
 theorem saddleMellinPiFactor_shiftedLine_norm
     (ℓ a t : ℝ) :
@@ -5356,7 +5377,9 @@ theorem saddleMellinPiFactor_shiftedLine_norm
       Real.exp ((ℓ - a) * Real.log Real.pi / 2) := by
   rw [Complex.norm_exp]
   congr 1
-  simp [Complex.mul_re, Complex.mul_im]
+  simp only [Complex.div_ofNat_re, Complex.mul_re, Complex.sub_re, Complex.ofReal_re, Complex.add_re,
+    Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, add_zero, Complex.sub_im,
+    Complex.add_im, Complex.mul_im, zero_add, zero_sub, sub_zero]
 
 theorem norm_saddleShellExponential_shiftedLine_le
     {ε ℓ : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
@@ -5380,7 +5403,10 @@ theorem norm_saddleShellExponential_shiftedLine_le
         hε horder ℓ _
     _ = _ := by
       rw [saddleMellinShellArgument_shiftedLine hℓ a t]
-      simp [Complex.mul_im, abs_of_pos hℓ]
+      simp only [abs_of_pos hℓ, Complex.ofReal_div, Complex.ofReal_neg, Complex.ofReal_sub, Complex.add_im,
+        Complex.div_ofReal_im, Complex.neg_im, Complex.ofReal_im, neg_zero, zero_div, Complex.mul_im, Complex.I_re,
+        Complex.sub_im, sub_self, mul_zero, Complex.I_im, Complex.div_ofReal_re, Complex.sub_re, Complex.ofReal_re, one_mul,
+        zero_add]
 
 theorem saddleMellinShellArgument_shiftedLine_norm_le
     {ℓ : ℝ} (hℓ : 0 < ℓ) (a t : ℝ) :
@@ -5397,9 +5423,9 @@ theorem saddleMellinShellArgument_shiftedLine_norm_le
             (((a - ℓ) / ℓ : ℝ) : ℂ)‖ :=
       norm_add_le _ _
     _ = |t| / ℓ + |(a - ℓ) / ℓ| := by
-      simp [Complex.norm_real,
-        Real.norm_eq_abs, abs_div,
-        abs_of_pos hℓ]
+      simp only [Complex.ofReal_div, Complex.ofReal_neg, Complex.norm_div, norm_neg, Complex.norm_real,
+        Real.norm_eq_abs, abs_of_pos hℓ, Complex.ofReal_sub, Complex.norm_mul, Complex.norm_I, one_mul, abs_div,
+        add_right_inj]
       rw [← Complex.ofReal_sub, Complex.norm_real,
         Real.norm_eq_abs]
 
@@ -5539,7 +5565,7 @@ theorem plusSaddleMellinData_shiftedLine_polynomial_bound
         a ht k (m + 3) hshift)
   have hpoly :
       ‖plusPolynomial ε q‖ ≤ C * |t| ^ 3 := by
-    simpa [q, z, C] using!
+    simpa only  using!
       (norm_plusPolynomial_shiftedLine_le
         (ε := ε) hℓ a ht)
   have hpi :
@@ -5547,7 +5573,7 @@ theorem plusSaddleMellinData_shiftedLine_polynomial_bound
         (((ℓ : ℂ) - z) *
           (Real.log Real.pi : ℂ) / 2)‖ =
         Real.exp ((ℓ - a) * Real.log Real.pi / 2) := by
-    simpa [z] using!
+    simpa only  using!
       saddleMellinPiFactor_shiftedLine_norm ℓ a t
   have hshell :
       ‖Complex.exp
@@ -5555,7 +5581,7 @@ theorem plusSaddleMellinData_shiftedLine_polynomial_bound
         Real.exp
           (ℓ * saddleHorizontalShellVariation ε
             |(a - ℓ) / ℓ|) := by
-    simpa [q, z] using!
+    simpa only  using!
       norm_saddleShellExponential_shiftedLine_le
         hε hℓ horder a t
   change |t| ^ m *
@@ -5651,7 +5677,7 @@ theorem minusSaddleMellinData_shiftedLine_polynomial_bound
         a ht k (m + 3) hshift)
   have hpoly :
       ‖minusPolynomial ε q‖ ≤ C * |t| ^ 3 := by
-    simpa [q, z, C] using!
+    simpa only  using!
       (norm_minusPolynomial_shiftedLine_le
         (ε := ε) hℓ a ht)
   have hpi :
@@ -5659,7 +5685,7 @@ theorem minusSaddleMellinData_shiftedLine_polynomial_bound
         (((ℓ : ℂ) - z) *
           (Real.log Real.pi : ℂ) / 2)‖ =
         Real.exp ((ℓ - a) * Real.log Real.pi / 2) := by
-    simpa [z] using!
+    simpa only  using!
       saddleMellinPiFactor_shiftedLine_norm ℓ a t
   have hshell :
       ‖Complex.exp
@@ -5667,7 +5693,7 @@ theorem minusSaddleMellinData_shiftedLine_polynomial_bound
         Real.exp
           (ℓ * saddleHorizontalShellVariation ε
             |(a - ℓ) / ℓ|) := by
-    simpa [q, z] using!
+    simpa only  using!
       norm_saddleShellExponential_shiftedLine_le
         hε hℓ horder a t
   change |t| ^ m *
@@ -6009,7 +6035,8 @@ theorem saddleEnvelope_vertical_polynomial_bound {ε ℓ : ℝ}
   let z : ℂ := ((ℓ : ℂ) - Complex.I * (t : ℂ)) / 2
   have hz : 0 < z.re := by
     try dsimp [z]
-    simpa using! half_pos hℓ
+    simpa only [Complex.div_ofNat_re, Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul,
+      Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, sub_zero, Nat.ofNat_pos, div_pos_iff_of_pos_right] using! half_pos hℓ
   have hgamma :
       (|t| / 2) ^ k * ‖Complex.Gamma z‖ ≤
         Real.Gamma (ℓ / 2 + k) := by
@@ -6030,7 +6057,8 @@ theorem saddleEnvelope_vertical_polynomial_bound {ε ℓ : ℝ}
       ‖Complex.exp
         (Complex.I * (t : ℂ) * (Real.log Real.pi : ℂ) / 2)‖ = 1 := by
     rw [Complex.norm_exp]
-    simp
+    simp only [Complex.div_ofNat_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, Complex.mul_im, one_mul, zero_add, zero_div, Real.exp_zero]
   calc
     |t| ^ k * ‖saddleEnvelope ε ℓ t‖ =
         (|t| ^ k * ‖Complex.Gamma z‖) *
@@ -6051,7 +6079,7 @@ theorem norm_plusPolynomial_scaled_le {ε ℓ t : ℝ}
       (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
   have hnorm : ‖(t : ℂ) / (ℓ : ℂ)‖ = |t| / ℓ := by
     rw [norm_div]
-    simp [abs_of_pos hℓ]
+    simp only [Complex.norm_real, Real.norm_eq_abs, abs_of_pos hℓ]
   have hlinear :
       1 + |t| / ℓ ≤ (1 + ℓ⁻¹) * |t| := by
     rw [inv_eq_one_div]
@@ -6076,7 +6104,7 @@ theorem norm_minusPolynomial_scaled_le {ε ℓ t : ℝ}
       (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
   have hnorm : ‖(t : ℂ) / (ℓ : ℂ)‖ = |t| / ℓ := by
     rw [norm_div]
-    simp [abs_of_pos hℓ]
+    simp only [Complex.norm_real, Real.norm_eq_abs, abs_of_pos hℓ]
   have hlinear :
       1 + |t| / ℓ ≤ (1 + ℓ⁻¹) * |t| := by
     rw [inv_eq_one_div]
@@ -6250,7 +6278,9 @@ theorem saddleShiftedLine_ne_pole
   intro heq
   apply hpole n
   have hre := congrArg Complex.re heq
-  simpa using! hre
+  simpa only [Nat.cast_mul, Nat.cast_ofNat, Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re,
+    mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, add_zero, Complex.neg_re, Complex.re_ofNat,
+    Complex.natCast_re, Complex.im_ofNat, Complex.natCast_im, sub_zero] using! hre
 
 theorem plusSaddleMellinData_shiftedLine_continuous
     {ε a : ℝ} (hε : 0 < ε)
@@ -6271,7 +6301,7 @@ theorem plusSaddleMellinData_shiftedLine_continuous
       (fun u : ℝ => (a : ℂ) + (u : ℂ) * Complex.I) t :=
     (continuous_const.add
       (Complex.continuous_ofReal.mul_const Complex.I)).continuousAt
-  simpa [Function.comp_def] using!
+  simpa only [Function.comp_def] using!
     hcomplex.continuousAt.comp_of_eq hline (by rfl)
 
 theorem minusSaddleMellinData_shiftedLine_continuous
@@ -6293,7 +6323,7 @@ theorem minusSaddleMellinData_shiftedLine_continuous
       (fun u : ℝ => (a : ℂ) + (u : ℂ) * Complex.I) t :=
     (continuous_const.add
       (Complex.continuous_ofReal.mul_const Complex.I)).continuousAt
-  simpa [Function.comp_def] using!
+  simpa only [Function.comp_def] using!
     hcomplex.continuousAt.comp_of_eq hline (by rfl)
 
 theorem plusSaddleMellinData_shiftedLine_moment_integrable
@@ -6345,7 +6375,8 @@ theorem saddleMellinInversePower_shiftedLine_norm
       r ^ (-a) := by
   unfold saddleMellinInversePower
   rw [Complex.norm_cpow_eq_rpow_re_of_pos hr]
-  simp
+  simp only [neg_add_rev, Complex.add_re, Complex.neg_re, Complex.mul_re, Complex.ofReal_re, Complex.I_re,
+    mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, neg_zero, zero_add]
 
 theorem saddleMellinInversePower_shiftedLine_continuous
     {r : ℝ} (hr : 0 < r) (a : ℝ) :
@@ -6407,7 +6438,7 @@ theorem plusSaddleMellinData_shiftedLine_weighted_integrable
         ((a : ℂ) + (t : ℂ) * Complex.I) *
         plusSaddleMellinData ε ℓ
           ((a : ℂ) + (t : ℂ) * Complex.I)) := by
-  simpa using!
+  simpa only [pow_zero, one_mul] using!
     plusSaddleMellinData_shiftedLine_weighted_moment_integrable
       hε hℓ horder hpole hr 0
 
@@ -6421,7 +6452,7 @@ theorem minusSaddleMellinData_shiftedLine_weighted_integrable
         ((a : ℂ) + (t : ℂ) * Complex.I) *
         minusSaddleMellinData ε ℓ
           ((a : ℂ) + (t : ℂ) * Complex.I)) := by
-  simpa using!
+  simpa only [pow_zero, one_mul] using!
     minusSaddleMellinData_shiftedLine_weighted_moment_integrable
       hε hℓ horder hpole hr 0
 
@@ -6436,7 +6467,10 @@ theorem saddleGaussianPoleRepresentative_shiftedLine_norm
   unfold saddleGaussianPoleRepresentative
   rw [norm_div, Complex.norm_exp]
   congr 1
-  simp [pow_two, Complex.mul_re, Complex.mul_im]
+  simp only [Nat.cast_mul, Nat.cast_ofNat, pow_two, Complex.mul_re, Complex.add_re, Complex.ofReal_re,
+    Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, add_zero, Complex.re_ofNat,
+    Complex.natCast_re, Complex.im_ofNat, Complex.natCast_im, sub_zero, Complex.add_im, Complex.mul_im, zero_add,
+    zero_mul]
 
 theorem saddleGaussianPoleRepresentative_shiftedLine_continuous
     {a : ℝ} (n : ℕ)
@@ -6480,7 +6514,9 @@ theorem saddleGaussianPoleRepresentative_shiftedLine_bound
       |a + ((2 * n : ℕ) : ℝ)| ≤
         ‖(a : ℂ) + (t : ℂ) * Complex.I +
           ((2 * n : ℕ) : ℂ)‖ := by
-    simpa [Complex.mul_re] using!
+    simpa only [Nat.cast_mul, Nat.cast_ofNat, Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re,
+      mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, add_zero, Complex.re_ofNat, Complex.natCast_re,
+      Complex.im_ofNat, Complex.natCast_im, sub_zero] using!
       (Complex.abs_re_le_norm
         ((a : ℂ) + (t : ℂ) * Complex.I +
           ((2 * n : ℕ) : ℂ)))
@@ -6508,7 +6544,7 @@ theorem saddleGaussianPoleRepresentative_shiftedLine_integrable
         ((a : ℂ) + (t : ℂ) * Complex.I)) := by
   have hgaussian : Integrable
       (fun t : ℝ => Real.exp (-t ^ 2)) := by
-    simpa using!
+    simpa only [neg_mul, one_mul] using!
       (integrable_exp_neg_mul_sq (b := (1 : ℝ))
         (by norm_num : (0 : ℝ) < 1))
   let C : ℝ :=
@@ -6577,7 +6613,8 @@ theorem plusSaddleFiniteRapidContourIntegrand_shiftedLine_integrable
     change
       -(2 * ((N : ℝ) + 1)) <
         ((a : ℂ) + (t : ℂ) * Complex.I).re
-    simpa [Complex.mul_re] using! hhalf
+    simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+      Complex.I_im, mul_one, sub_self, add_zero] using! hhalf
   unfold plusSaddleFiniteRapidContourIntegrand
   rw [plusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
     hε horder ℓ N hz (saddleShiftedLine_ne_pole hpole t)]
@@ -6621,7 +6658,8 @@ theorem minusSaddleFiniteRapidContourIntegrand_shiftedLine_integrable
     change
       -(2 * ((N : ℝ) + 1)) <
         ((a : ℂ) + (t : ℂ) * Complex.I).re
-    simpa [Complex.mul_re] using! hhalf
+    simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+      Complex.I_im, mul_one, sub_self, add_zero] using! hhalf
   unfold minusSaddleFiniteRapidContourIntegrand
   rw [minusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
     hε horder ℓ N hz (saddleShiftedLine_ne_pole hpole t)]
@@ -6745,7 +6783,7 @@ theorem saddleHorizontalIntegral_tendsto_zero
   have hmajor : Tendsto
       (fun T : ℝ => C / T * |B - A|)
       Filter.atTop (𝓝 0) := by
-    simpa using! hdiv.mul_const |B - A|
+    simpa only [zero_mul] using! hdiv.mul_const |B - A|
   apply squeeze_zero_norm' (a := fun T : ℝ =>
     C / T * |B - A|) ?_ hmajor
   filter_upwards [eventually_ge_atTop (1 : ℝ)] with T hT
@@ -6759,7 +6797,7 @@ theorem saddleHorizontalIntegral_tendsto_zero
   have htail := hdecay a ha' (s * T) (by rw [habs]; exact hT)
   rw [habs] at htail
   apply (le_div_iff₀ hTpos).2
-  simpa [mul_comm] using! htail
+  simpa only [Complex.ofReal_mul, mul_comm] using! htail
 
 theorem plusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
     {ε ℓ r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
@@ -6783,7 +6821,7 @@ theorem plusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
       saddleMellinInversePower r z *
         plusSaddleMellinData ε ℓ z)
     hAB (C := C) ?_ s hs
-  simpa using! hbound
+  simpa only [mem_Icc, Complex.norm_mul, and_imp, pow_one] using! hbound
 
 theorem minusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
     {ε ℓ r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
@@ -6807,7 +6845,7 @@ theorem minusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
       saddleMellinInversePower r z *
         minusSaddleMellinData ε ℓ z)
     hAB (C := C) ?_ s hs
-  simpa using! hbound
+  simpa only [mem_Icc, Complex.norm_mul, and_imp, pow_one] using! hbound
 
 theorem saddleGaussianPoleRepresentative_weighted_horizontalStrip_bound
     {r A B : ℝ} (hr : 0 < r) (hAB : A ≤ B)
@@ -6848,7 +6886,9 @@ theorem saddleGaussianPoleRepresentative_weighted_horizontalStrip_bound
       |t| ≤
         ‖(a : ℂ) + (t : ℂ) * Complex.I +
           ((2 * n : ℕ) : ℂ)‖ := by
-    simpa [Complex.mul_im] using!
+    simpa only [Nat.cast_mul, Nat.cast_ofNat, Complex.add_im, Complex.ofReal_im, Complex.mul_im,
+      Complex.ofReal_re, Complex.I_im, mul_one, Complex.I_re, mul_zero, add_zero, zero_add, Complex.re_ofNat,
+      Complex.natCast_im, Complex.im_ofNat, Complex.natCast_re, zero_mul] using!
       (Complex.abs_im_le_norm
         ((a : ℂ) + (t : ℂ) * Complex.I +
           ((2 * n : ℕ) : ℂ)))
@@ -6954,7 +6994,7 @@ theorem saddleFiniteGaussianPoleWeighted_horizontalStrip_bound
         apply Finset.sum_le_sum
         intro n _
         exact mul_le_mul_of_nonneg_left
-          (by simpa [z] using! hbound n a ha t ht)
+          (by simpa only [Complex.norm_mul, z] using! hbound n a ha t ht)
           (norm_nonneg _)
     _ = C := rfl
 
@@ -6995,7 +7035,8 @@ theorem plusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
   have hz : z ∈ saddleFinitePoleHalfPlane N := by
     change -(2 * ((N : ℝ) + 1)) < z.re
     try dsimp [z]
-    simpa [Complex.mul_re] using! hhalf.trans_le ha.1
+    simpa only [Complex.mul_re, Complex.ofReal_re, Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im,
+      mul_one, sub_self, add_zero] using! hhalf.trans_le ha.1
   have hpoles : ∀ n : ℕ,
       z ≠ (-((2 * n : ℕ) : ℂ)) := by
     intro n
@@ -7037,8 +7078,8 @@ theorem plusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
         ring
     _ ≤ D + G := by
       apply add_le_add
-      · simpa [z] using! hdata a ha t ht
-      · simpa [z] using! hgaussian a ha t ht
+      · simpa only [Complex.norm_mul, pow_one, z] using! hdata a ha t ht
+      · simpa only [Complex.norm_mul, z] using! hgaussian a ha t ht
 
 theorem minusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
     {ε ℓ r A B : ℝ}
@@ -7068,7 +7109,8 @@ theorem minusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
   have hz : z ∈ saddleFinitePoleHalfPlane N := by
     change -(2 * ((N : ℝ) + 1)) < z.re
     try dsimp [z]
-    simpa [Complex.mul_re] using! hhalf.trans_le ha.1
+    simpa only [Complex.mul_re, Complex.ofReal_re, Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im,
+      mul_one, sub_self, add_zero] using! hhalf.trans_le ha.1
   have hpoles : ∀ n : ℕ,
       z ≠ (-((2 * n : ℕ) : ℂ)) := by
     intro n
@@ -7110,8 +7152,8 @@ theorem minusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
         ring
     _ ≤ D + G := by
       apply add_le_add
-      · simpa [z] using! hdata a ha t ht
-      · simpa [z] using! hgaussian a ha t ht
+      · simpa only [Complex.norm_mul, pow_one, z] using! hdata a ha t ht
+      · simpa only [Complex.norm_mul, z] using! hgaussian a ha t ht
 
 theorem plusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
     {ε ℓ r A B : ℝ}
@@ -7177,7 +7219,7 @@ theorem saddleCauchyPolePrimitive_hasDerivAt
       (fun y : ℝ => a ^ 2 + y ^ 2)
       (2 * t) t := by
     convert! ((hasDerivAt_id t).pow 2).const_add
-      (a ^ 2) using 1; simp [id]
+      (a ^ 2) using 1; simp only [Nat.cast_ofNat, id, Nat.add_one_sub_one, pow_one, mul_one]
   have hlog : HasDerivAt
       (fun y : ℝ => Real.log (a ^ 2 + y ^ 2) / 2)
       (t / (a ^ 2 + t ^ 2)) t := by
@@ -7193,14 +7235,15 @@ theorem saddleCauchyPolePrimitive_hasDerivAt
       intro hz
       apply ha
       have hre := congrArg Complex.re hz
-      simpa [Complex.mul_re] using! hre
+      simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+        Complex.I_im, mul_one, sub_self, add_zero, Complex.zero_re] using! hre
     have hcden : ((a ^ 2 + t ^ 2 : ℝ) : ℂ) ≠ 0 := by
       exact_mod_cast hden
     have hcden' : (a : ℂ) ^ 2 + (t : ℂ) ^ 2 ≠ 0 := by
-      simpa using! hcden
+      simpa only [ne_eq, Complex.ofReal_add, Complex.ofReal_pow] using! hcden
     apply (mul_eq_one_iff_eq_inv₀ hz).mp
     push_cast
-    field_simp [hcden', Complex.I_sq]; ring_nf; simp [Complex.I_sq]
+    field_simp [hcden', Complex.I_sq]; ring_nf; simp only [Complex.I_sq, mul_neg, mul_one, sub_neg_eq_add]
   rw [← hvalue]
   exact hatan.ofReal_comp.sub
     (hlog.ofReal_comp.mul_const Complex.I)
@@ -7218,7 +7261,8 @@ theorem saddleCauchyPole_symmetric_intervalIntegral
     intro t hzero
     apply ha
     have hre := congrArg Complex.re hzero
-    simpa [Complex.mul_re] using! hre
+    simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+      Complex.I_im, mul_one, sub_self, add_zero, Complex.zero_re] using! hre
   have hint : IntervalIntegrable
       (fun t : ℝ =>
         ((a : ℂ) + (t : ℂ) * Complex.I)⁻¹)
@@ -7228,7 +7272,8 @@ theorem saddleCauchyPole_symmetric_intervalIntegral
     (fun t _ => saddleCauchyPolePrimitive_hasDerivAt ha t)
       hint]
   unfold saddleCauchyPolePrimitive
-  simp [neg_div, Real.arctan_neg, pow_two]; ring
+  simp only [Complex.ofReal_arctan, Complex.ofReal_div, pow_two, Complex.ofReal_ofNat, neg_div, Real.arctan_neg,
+    Complex.ofReal_neg, mul_neg, neg_mul, neg_neg, sub_sub_sub_cancel_right, sub_neg_eq_add, Complex.ofReal_mul]; ring
 
 theorem saddleInfiniteRectangle_vertical_integral_eq
     {F : ℂ → ℂ} {A B : ℝ}
@@ -7298,7 +7343,7 @@ theorem saddleInfiniteRectangle_vertical_integral_eq
         Complex.I *
         (∫ t : ℝ,
           F ((A : ℂ) + (t : ℂ) * Complex.I)))) := by
-    simpa using!
+    simpa only [Complex.ofReal_neg, neg_mul, sub_self, zero_add] using!
       (((hlower.sub hupper).add
         (tendsto_const_nhds.mul hright)).sub
           (tendsto_const_nhds.mul hleft))
@@ -7326,7 +7371,7 @@ theorem saddleInfiniteRectangle_vertical_integral_eq
           F ((B : ℂ) + (t : ℂ) * Complex.I)) -
           (∫ t : ℝ,
             F ((A : ℂ) + (t : ℂ) * Complex.I))) = 0 := by
-    simpa [mul_sub] using!
+    simpa only [mul_sub] using!
       (tendsto_nhds_unique hlimit hzero)
   exact sub_eq_zero.mp
     ((mul_eq_zero.mp hidentity).resolve_left
@@ -7361,7 +7406,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
           plusSaddleFiniteRapidContourIntegrand ε ℓ N r
             ((a : ℂ) + ((-T : ℝ) : ℂ) * Complex.I))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [Complex.ofReal_neg, neg_mul, one_mul] using!
       plusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
         hε hℓ horder hr N hhalf hAB
           (-1 : ℝ) (by norm_num)
@@ -7371,7 +7416,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
           plusSaddleFiniteRapidContourIntegrand ε ℓ N r
             ((a : ℂ) + (T : ℂ) * Complex.I))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [one_mul] using!
       plusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
         hε hℓ horder hr N hhalf hAB
           (1 : ℝ) (by norm_num)
@@ -7420,7 +7465,7 @@ theorem minusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
           minusSaddleFiniteRapidContourIntegrand ε ℓ N r
             ((a : ℂ) + ((-T : ℝ) : ℂ) * Complex.I))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [Complex.ofReal_neg, neg_mul, one_mul] using!
       minusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
         hε hℓ horder hr N hhalf hAB
           (-1 : ℝ) (by norm_num)
@@ -7430,7 +7475,7 @@ theorem minusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
           minusSaddleFiniteRapidContourIntegrand ε ℓ N r
             ((a : ℂ) + (T : ℂ) * Complex.I))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [one_mul] using!
       minusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
         hε hℓ horder hr N hhalf hAB
           (1 : ℝ) (by norm_num)
@@ -7493,8 +7538,7 @@ theorem plusSaddleSpectrum_norm_moment_integrable {ε ℓ : ℝ}
     (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
     Integrable (fun t : ℝ =>
       |t| ^ k * ‖plusSaddleSpectrum ε ℓ t‖) := by
-  simpa [norm_mul, norm_pow, Complex.norm_real,
-    Real.norm_eq_abs] using!
+  simpa only [Complex.norm_mul, norm_pow, Complex.norm_real, Real.norm_eq_abs] using!
       (plusSaddleSpectrum_moment_integrable
         hε hℓ horder k).norm
 
@@ -7503,8 +7547,7 @@ theorem minusSaddleSpectrum_norm_moment_integrable {ε ℓ : ℝ}
     (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
     Integrable (fun t : ℝ =>
       |t| ^ k * ‖minusSaddleSpectrum ε ℓ t‖) := by
-  simpa [norm_mul, norm_pow, Complex.norm_real,
-    Real.norm_eq_abs] using!
+  simpa only [Complex.norm_mul, norm_pow, Complex.norm_real, Real.norm_eq_abs] using!
       (minusSaddleSpectrum_moment_integrable
         hε hℓ horder k).norm
 
@@ -7643,7 +7686,7 @@ theorem plusSaddleProfile_eq_fourier (ε ℓ : ℝ)
   simp only [neg_neg, smul_eq_mul]
   have hpow :
       (r : ℂ) ^ (-(ℓ : ℂ)) = ((r ^ (-ℓ) : ℝ) : ℂ) := by
-    simpa using! (Complex.ofReal_cpow hr.le (-ℓ)).symm
+    simpa only [Complex.ofReal_neg] using! (Complex.ofReal_cpow hr.le (-ℓ)).symm
   rw [hpow]
 
 theorem minusSaddleProfile_eq_fourier (ε ℓ : ℝ)
@@ -7664,7 +7707,7 @@ theorem minusSaddleProfile_eq_fourier (ε ℓ : ℝ)
   simp only [neg_neg, smul_eq_mul]
   have hpow :
       (r : ℂ) ^ (-(ℓ : ℂ)) = ((r ^ (-ℓ) : ℝ) : ℂ) := by
-    simpa using! (Complex.ofReal_cpow hr.le (-ℓ)).symm
+    simpa only [Complex.ofReal_neg] using! (Complex.ofReal_cpow hr.le (-ℓ)).symm
   rw [hpow]
 
 theorem plusSaddleProfile_contDiffOn {ε ℓ : ℝ}
@@ -7778,7 +7821,7 @@ theorem plusSaddleSpectrum_conj (ε ℓ t : ℝ) :
     push_cast
     ring
   rw [hneg]
-  simpa using!
+  simpa only [neg_neg] using!
     (minusPolynomial_neg ε (-((t : ℂ) / (ℓ : ℂ))))
 
 theorem minusSaddleSpectrum_conj (ε ℓ t : ℝ) :
@@ -7808,8 +7851,8 @@ theorem mellinInversePower_conj {r : ℝ} (hr : 0 < r)
   have hpower :=
     (Complex.cpow_conj (r : ℂ)
       (-((σ : ℂ) + (t : ℂ) * Complex.I)) harg).symm
-  simpa [map_neg, map_add, map_mul, Complex.conj_ofReal,
-    Complex.conj_I] using! hpower
+  simpa only [neg_add_rev, Complex.ofReal_neg, neg_mul, neg_neg, Complex.conj_ofReal, map_add, map_neg, map_mul,
+    Complex.conj_I, mul_neg] using! hpower
 
 theorem mellinInv_real_of_hermitian (σ : ℝ) (F : ℂ → ℂ)
     (hF : ∀ t : ℝ,
@@ -7864,7 +7907,7 @@ theorem plusSaddleMellinData_conj_vertical (ε ℓ t : ℝ) :
     ring
   rw [hleft, plusSaddleMellinData_vertical,
     hright, plusSaddleMellinData_vertical]
-  simpa using! plusSaddleSpectrum_conj ε ℓ (-t)
+  simpa only [neg_neg] using! plusSaddleSpectrum_conj ε ℓ (-t)
 
 theorem minusSaddleMellinData_conj_vertical (ε ℓ t : ℝ) :
     starRingEnd ℂ
@@ -7884,12 +7927,12 @@ theorem minusSaddleMellinData_conj_vertical (ε ℓ t : ℝ) :
     ring
   rw [hleft, minusSaddleMellinData_vertical,
     hright, minusSaddleMellinData_vertical]
-  simpa using! minusSaddleSpectrum_conj ε ℓ (-t)
+  simpa only [neg_neg] using! minusSaddleSpectrum_conj ε ℓ (-t)
 
 theorem plusSaddleProfile_real (ε ℓ : ℝ) {r : ℝ} (hr : 0 ≤ r) :
     (plusSaddleProfile ε ℓ r).im = 0 := by
   by_cases hzero : r = 0
-  · simp [plusSaddleProfile, hzero]
+  · simp only [plusSaddleProfile, hzero, ↓reduceIte, Complex.ofReal_im]
   · have hpos : 0 < r := lt_of_le_of_ne hr (Ne.symm hzero)
     simp only [plusSaddleProfile, if_neg hzero]
     exact mellinInv_real_of_hermitian ℓ
@@ -7899,7 +7942,7 @@ theorem plusSaddleProfile_real (ε ℓ : ℝ) {r : ℝ} (hr : 0 ≤ r) :
 theorem minusSaddleProfile_real (ε ℓ : ℝ) {r : ℝ} (hr : 0 ≤ r) :
     (minusSaddleProfile ε ℓ r).im = 0 := by
   by_cases hzero : r = 0
-  · simp [minusSaddleProfile, hzero]
+  · simp only [minusSaddleProfile, hzero, ↓reduceIte, Complex.ofReal_im]
   · have hpos : 0 < r := lt_of_le_of_ne hr (Ne.symm hzero)
     simp only [minusSaddleProfile, if_neg hzero]
     exact mellinInv_real_of_hermitian ℓ
@@ -8131,7 +8174,9 @@ theorem saddleGaussianPoleShiftedSlope_boundary_rectangle
       ((B : ℂ) + (T : ℂ) * Complex.I)
       (saddleGaussianPoleShiftedSlope_differentiable
         n).differentiableOn
-  simpa [Complex.mul_re, Complex.mul_im, smul_eq_mul] using! hrectangle
+  simpa only [Complex.ofReal_neg, neg_mul, Nat.cast_mul, Nat.cast_ofNat, Complex.add_im, Complex.ofReal_im,
+    Complex.neg_im, Complex.mul_im, Complex.ofReal_re, Complex.I_im, mul_one, Complex.I_re, mul_zero, add_zero,
+    zero_add, Complex.add_re, Complex.neg_re, Complex.mul_re, sub_self, neg_zero, smul_eq_mul] using! hrectangle
 
 theorem saddleGaussianPoleShiftedSlope_horizontalIntegral_tendsto_zero
     {A B : ℝ} (hAB : A ≤ B)
@@ -8157,7 +8202,9 @@ theorem saddleGaussianPoleShiftedSlope_horizontalIntegral_tendsto_zero
   let q : ℂ := z + ((2 * n : ℕ) : ℂ)
   have hden : |t| ≤ ‖q‖ := by
     try dsimp [q, z]
-    simpa [Complex.mul_im] using!
+    simpa only [Nat.cast_mul, Nat.cast_ofNat, Complex.add_im, Complex.ofReal_im, Complex.mul_im,
+      Complex.ofReal_re, Complex.I_im, mul_one, Complex.I_re, mul_zero, add_zero, zero_add, Complex.re_ofNat,
+      Complex.natCast_im, Complex.im_ofNat, Complex.natCast_re, zero_mul] using!
       (Complex.abs_im_le_norm
         ((a : ℂ) + (t : ℂ) * Complex.I +
           ((2 * n : ℕ) : ℂ)))
@@ -8169,7 +8216,7 @@ theorem saddleGaussianPoleShiftedSlope_horizontalIntegral_tendsto_zero
     exact (div_le_one hqpos).2 hden
   have hgaussian' :
       |t| * ‖saddleGaussianPoleRepresentative n z‖ ≤ C := by
-    simpa [saddleMellinInversePower, z] using!
+    simpa only [saddleMellinInversePower, Complex.ofReal_one, neg_add_rev, Complex.one_cpow, one_mul] using!
       hgaussian a ha t ht
   have hslope :
       saddleGaussianPoleSlope q =
@@ -8181,7 +8228,7 @@ theorem saddleGaussianPoleShiftedSlope_horizontalIntegral_tendsto_zero
     change saddleGaussianPoleRepresentative n z =
       q⁻¹ + saddleGaussianPoleSlope q at hsplit
     apply (eq_sub_iff_add_eq).2
-    simpa [add_comm, q, z] using! hsplit.symm
+    simpa only [Nat.cast_mul, Nat.cast_ofNat, add_comm] using! hsplit.symm
   change |t| * ‖saddleGaussianPoleSlope q‖ ≤ C + 1
   rw [hslope]
   calc
@@ -8244,7 +8291,7 @@ theorem saddleInfiniteRectangle_vertical_limit_eq
           (∫ t in -T..T,
             F ((A : ℂ) + (t : ℂ) * Complex.I)))
       Filter.atTop (𝓝 (Complex.I * v - Complex.I * u)) := by
-    simpa using!
+    simpa only [Complex.ofReal_neg, neg_mul, sub_self, zero_add] using!
       (((hlower.sub hupper).add
         (tendsto_const_nhds.mul hright)).sub
           (tendsto_const_nhds.mul hleft))
@@ -8267,7 +8314,7 @@ theorem saddleInfiniteRectangle_vertical_limit_eq
           (Filter.Eventually.of_forall
             (fun T : ℝ => (hrectangle T).symm))
   have hidentity : Complex.I * (v - u) = 0 := by
-    simpa [mul_sub] using!
+    simpa only [mul_sub] using!
       (tendsto_nhds_unique hlimit hzero)
   exact sub_eq_zero.mp
     ((mul_eq_zero.mp hidentity).resolve_left
@@ -8320,7 +8367,7 @@ theorem saddleGaussianPoleShiftedSlope_symmetric_intervalIntegral
     saddleGaussianPoleRepresentative_eq_inv_add_slope
       n (hnonzero t)
   apply (eq_sub_iff_add_eq).2
-  simpa [add_comm] using! hsplit.symm
+  simpa only [Nat.cast_mul, Nat.cast_ofNat, add_comm] using! hsplit.symm
 
 theorem saddleGaussianPoleShiftedSlope_symmetric_intervalIntegral_tendsto_pos
     (n : ℕ) {a : ℝ}
@@ -8423,7 +8470,7 @@ theorem saddleGaussianPoleRepresentative_vertical_integral_jump
             ((a : ℂ) + ((-T : ℝ) : ℂ) * Complex.I +
               ((2 * n : ℕ) : ℂ)))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [Complex.ofReal_neg, neg_mul, Nat.cast_mul, Nat.cast_ofNat, one_mul] using!
       saddleGaussianPoleShiftedSlope_horizontalIntegral_tendsto_zero
         hAB n (-1) (by norm_num)
   have hupper : Tendsto
@@ -8433,7 +8480,7 @@ theorem saddleGaussianPoleRepresentative_vertical_integral_jump
             ((a : ℂ) + (T : ℂ) * Complex.I +
               ((2 * n : ℕ) : ℂ)))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [Nat.cast_mul, Nat.cast_ofNat, one_mul] using!
       saddleGaussianPoleShiftedSlope_horizontalIntegral_tendsto_zero
         hAB n 1 (by norm_num)
   have hidentity :=
@@ -8520,7 +8567,7 @@ theorem saddleGaussianPoleWeightedRepresentative_eq_pole_add_correction
     change dslope (saddleMellinInversePower r) p z * q =
       saddleMellinInversePower r z -
         saddleMellinInversePower r p
-    simpa [mul_comm] using! hslope
+    simpa only [mul_comm] using! hslope
   unfold saddleGaussianPoleRepresentative
     saddleGaussianPoleWeightedCorrection
   change saddleMellinInversePower r z *
@@ -8559,7 +8606,7 @@ theorem saddleGaussianPoleWeightedCorrection_eq_sub
     saddleGaussianPoleWeightedRepresentative_eq_pole_add_correction
       (r := r) n hz
   apply (eq_sub_iff_add_eq).2
-  simpa [add_comm] using! hsplit.symm
+  simpa only [Nat.cast_mul, Nat.cast_ofNat, add_comm] using! hsplit.symm
 
 theorem saddleGaussianPoleWeightedCorrection_shiftedLine_integrable
     {r a : ℝ} (hr : 0 < r)
@@ -8606,7 +8653,9 @@ theorem saddleGaussianPoleWeightedCorrection_horizontalStrip_bound
   let q : ℂ := z + ((2 * n : ℕ) : ℂ)
   have hden : |t| ≤ ‖q‖ := by
     try dsimp [q, z]
-    simpa [Complex.mul_im] using!
+    simpa only [Nat.cast_mul, Nat.cast_ofNat, Complex.add_im, Complex.ofReal_im, Complex.mul_im,
+      Complex.ofReal_re, Complex.I_im, mul_one, Complex.I_re, mul_zero, add_zero, zero_add, Complex.re_ofNat,
+      Complex.natCast_im, Complex.im_ofNat, Complex.natCast_re, zero_mul] using!
       (Complex.abs_im_le_norm
         ((a : ℂ) + (t : ℂ) * Complex.I +
           ((2 * n : ℕ) : ℂ)))
@@ -8617,10 +8666,10 @@ theorem saddleGaussianPoleWeightedCorrection_horizontalStrip_bound
       |t| *
         ‖saddleMellinInversePower r z *
           saddleGaussianPoleRepresentative n z‖ ≤ Cw := by
-    simpa [z] using! hweighted a ha t ht
+    simpa only [Complex.norm_mul] using! hweighted a ha t ht
   have hunweighted' :
       |t| * ‖saddleGaussianPoleRepresentative n z‖ ≤ Cu := by
-    simpa [saddleMellinInversePower, z] using!
+    simpa only [saddleMellinInversePower, Complex.ofReal_one, neg_add_rev, Complex.one_cpow, one_mul] using!
       hunweighted a ha t ht
   have hscaled :
       |t| *
@@ -8715,7 +8764,9 @@ theorem saddleGaussianPoleWeightedCorrection_boundary_rectangle
       ((B : ℂ) + (T : ℂ) * Complex.I)
       (saddleGaussianPoleWeightedCorrection_differentiable
         hr n).differentiableOn
-  simpa [Complex.mul_re, Complex.mul_im, smul_eq_mul] using! hrectangle
+  simpa only [Complex.ofReal_neg, neg_mul, Complex.add_im, Complex.ofReal_im, Complex.neg_im, Complex.mul_im,
+    Complex.ofReal_re, Complex.I_im, mul_one, Complex.I_re, mul_zero, add_zero, zero_add, Complex.add_re,
+    Complex.neg_re, Complex.mul_re, sub_self, neg_zero, smul_eq_mul] using! hrectangle
 
 theorem saddleGaussianPoleWeightedCorrection_vertical_integral_eq
     {r A B : ℝ} (hr : 0 < r)
@@ -8740,7 +8791,7 @@ theorem saddleGaussianPoleWeightedCorrection_vertical_integral_eq
           saddleGaussianPoleWeightedCorrection r n
             ((a : ℂ) + ((-T : ℝ) : ℂ) * Complex.I))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [Complex.ofReal_neg, neg_mul, one_mul] using!
       saddleGaussianPoleWeightedCorrection_horizontalIntegral_tendsto_zero
         hr hAB n (-1) (by norm_num)
   have hupper : Tendsto
@@ -8749,7 +8800,7 @@ theorem saddleGaussianPoleWeightedCorrection_vertical_integral_eq
           saddleGaussianPoleWeightedCorrection r n
             ((a : ℂ) + (T : ℂ) * Complex.I))
       Filter.atTop (𝓝 0) := by
-    simpa using!
+    simpa only [one_mul] using!
       saddleGaussianPoleWeightedCorrection_horizontalIntegral_tendsto_zero
         hr hAB n 1 (by norm_num)
   exact saddleInfiniteRectangle_vertical_integral_eq
@@ -9025,7 +9076,8 @@ theorem plusSaddleFiniteRapidContourIntegrand_shiftedLine_integral_eq
                 saddleFinitePoleHalfPlane N := by
             change -(2 * ((N : ℝ) + 1)) <
               ((a : ℂ) + (t : ℂ) * Complex.I).re
-            simpa [Complex.mul_re] using! hhalf
+            simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+              Complex.I_im, mul_one, sub_self, add_zero] using! hhalf
           unfold plusSaddleFiniteRapidContourIntegrand
           rw [plusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
             hε horder ℓ N hz
@@ -9112,7 +9164,8 @@ theorem minusSaddleFiniteRapidContourIntegrand_shiftedLine_integral_eq
                 saddleFinitePoleHalfPlane N := by
             change -(2 * ((N : ℝ) + 1)) <
               ((a : ℂ) + (t : ℂ) * Complex.I).re
-            simpa [Complex.mul_re] using! hhalf
+            simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+              Complex.I_im, mul_one, sub_self, add_zero] using! hhalf
           unfold minusSaddleFiniteRapidContourIntegrand
           rw [minusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
             hε horder ℓ N hz
@@ -9482,7 +9535,8 @@ theorem plusSaddlePoleResidue_zero
     {ε ℓ : ℝ} (hℓ : 0 < ℓ) :
     plusSaddlePoleResidue ε ℓ 0 =
       (saddleOriginValue ε ℓ : ℂ) := by
-  simpa [plusSaddlePoleResidue] using!
+  simpa only [plusSaddlePoleResidue, pow_zero, mul_one, Nat.factorial_zero, Nat.cast_one, div_one, mul_zero,
+    CharP.cast_eq_zero, neg_zero] using!
     (two_mul_plusSaddleRegularMellinFactor_zero
       (ε := ε) hℓ)
 
@@ -9490,7 +9544,8 @@ theorem minusSaddlePoleResidue_zero
     {ε ℓ : ℝ} (hℓ : 0 < ℓ) :
     minusSaddlePoleResidue ε ℓ 0 =
       (saddleOriginValue ε ℓ : ℂ) := by
-  simpa [minusSaddlePoleResidue] using!
+  simpa only [minusSaddlePoleResidue, pow_zero, mul_one, Nat.factorial_zero, Nat.cast_one, div_one, mul_zero,
+    CharP.cast_eq_zero, neg_zero] using!
     (two_mul_minusSaddleRegularMellinFactor_zero
       (ε := ε) hℓ)
 
@@ -9626,7 +9681,7 @@ theorem laplaceKernel_integrable {a : ℝ} (ha : 0 < a) :
 
 theorem integral_laplaceKernel {a : ℝ} (ha : 0 < a) :
     (∫ x : ℝ in Ioi 0, Real.exp (-a * x)) = a⁻¹ := by
-  simpa using! (integral_exp_mul_Ioi (by linarith : -a < 0) 0)
+  simpa only [neg_mul, mul_zero, Real.exp_zero, neg_div_neg_eq, one_div] using! (integral_exp_mul_Ioi (by linarith : -a < 0) 0)
 
 theorem intervalIntegral_laplaceKernel {x : ℝ} (hx : x ≠ 0)
     (a b : ℝ) :
@@ -9781,7 +9836,7 @@ theorem wallisPairFactor_pos (n : ℕ) : 0 < wallisPairFactor n := by
 theorem wallisProduct_succ (n : ℕ) :
     wallisProduct (n + 1) =
       wallisProduct n * wallisPairFactor n := by
-  simpa [wallisProduct, wallisPairFactor] using! Real.Wallis.W_succ n
+  simpa only [wallisProduct, wallisPairFactor] using! Real.Wallis.W_succ n
 
 def wallisPartialKernel (n : ℕ) (x : ℝ) : ℝ :=
   ∑ k ∈ Finset.range n, wallisPairKernel k x
@@ -9796,14 +9851,15 @@ theorem integral_wallisPartialKernel (n : ℕ) :
       Real.log (wallisProduct n) := by
   induction n with
   | zero =>
-      simp [wallisPartialKernel, wallisProduct, Real.Wallis.W]
+      simp only [wallisPartialKernel, Finset.range_zero, Finset.sum_empty, integral_zero, wallisProduct,
+        Real.Wallis.W, Finset.prod_empty, Real.log_one]
   | succ n ih =>
       have hpartial :
           (fun x : ℝ => wallisPartialKernel (n + 1) x) =
             fun x : ℝ =>
               wallisPartialKernel n x + wallisPairKernel n x := by
         funext x
-        simp [wallisPartialKernel, Finset.sum_range_succ]
+        simp only [wallisPartialKernel, Finset.sum_range_succ]
       rw [hpartial, integral_add (wallisPartialKernel_integrable n)
         (wallisPairKernel_integrable n), ih,
         integral_wallisPairKernel, wallisProduct_succ,
@@ -9819,11 +9875,12 @@ theorem wallisPartialKernel_eq (n : ℕ) {x : ℝ} (hx : x ≠ 0) :
       wallisLaplaceKernel x *
         (1 - Real.exp (-(2 * (n : ℝ)) * x)) := by
   induction n with
-  | zero => simp [wallisPartialKernel]
+  | zero => simp only [wallisPartialKernel, Finset.range_zero, Finset.sum_empty, CharP.cast_eq_zero, mul_zero, neg_zero,
+              zero_mul, Real.exp_zero, sub_self]
   | succ n ih =>
       rw [show wallisPartialKernel (n + 1) x =
           wallisPartialKernel n x + wallisPairKernel n x by
-        simp [wallisPartialKernel, Finset.sum_range_succ],
+        simp only [wallisPartialKernel, Finset.sum_range_succ],
         ih, wallisPairKernel_eq]
       have htwo :
           Real.exp (-(2 * ((n + 1 : ℕ) : ℝ)) * x) =
@@ -9872,7 +9929,7 @@ theorem wallisLaplaceKernel_integrable :
     IntegrableOn wallisLaplaceKernel (Ioi 0) := by
   have hbound :
       IntegrableOn (fun x : ℝ => Real.exp (-x)) (Ioi 0) := by
-    simpa using! laplaceKernel_integrable (a := (1 : ℝ)) zero_lt_one
+    simpa only [neg_mul, one_mul] using! laplaceKernel_integrable (a := (1 : ℝ)) zero_lt_one
   refine hbound.mono' ?_ ?_
   · unfold wallisLaplaceKernel
     exact (by fun_prop : Measurable
@@ -9912,7 +9969,7 @@ theorem tendsto_wallisPartialKernel {x : ℝ} (hx : 0 < x) :
   have hfactor :
       Tendsto (fun n : ℕ =>
         1 - Real.exp (-(2 * (n : ℝ)) * x)) atTop (nhds 1) := by
-    simpa using! tendsto_const_nhds.sub hexp
+    simpa only [neg_mul, sub_zero] using! tendsto_const_nhds.sub hexp
   have hproduct :=
     (tendsto_const_nhds (x := wallisLaplaceKernel x)).mul hfactor
   simpa only [mul_one, wallisPartialKernel_eq _ hx.ne'] using! hproduct
@@ -9957,13 +10014,14 @@ theorem tendsto_cubic_gaussian_atTop :
   have hpoly :
       Tendsto (fun x : ℝ => x ^ 3 * Real.exp (-(1 / 8 : ℝ) * x))
         atTop (nhds 0) := by
-    simpa [Real.rpow_natCast] using!
+    simpa only [one_div, neg_mul, Real.rpow_ofNat] using!
       (tendsto_rpow_mul_exp_neg_mul_atTop_nhds_zero
         (3 : ℝ) (1 / 8 : ℝ) (by norm_num))
   have hone :
       Tendsto (fun x : ℝ => Real.exp (-(1 / 8 : ℝ) * x))
         atTop (nhds 0) := by
-    simpa using!
+    simpa only [one_div, neg_mul, Real.tendsto_exp_comp_nhds_zero, tendsto_neg_atBot_iff, Real.rpow_zero,
+      one_mul] using!
       (tendsto_rpow_mul_exp_neg_mul_atTop_nhds_zero
         (0 : ℝ) (1 / 8 : ℝ) (by norm_num))
   have hlinear :
@@ -10010,7 +10068,7 @@ theorem tendsto_shellRadiusMajorant :
     convert! tendsto_inv_atTop_zero.div_const (4 : ℝ) using 1; norm_num
   have hexp :
       Tendsto (fun x : ℝ => Real.exp (x⁻¹ / 4)) atTop (nhds 1) := by
-    simpa using! hsmall.rexp
+    simpa only [Real.exp_zero] using! hsmall.rexp
   have hproduct := tendsto_cubic_gaussian_atTop.mul hexp
   have hzero :
       Tendsto
@@ -10018,7 +10076,7 @@ theorem tendsto_shellRadiusMajorant :
           ((x ^ 3 + 1) * Real.exp (-(x ^ 2) / 8)) *
             Real.exp (x⁻¹ / 4))
         atTop (nhds 0) := by
-    simpa using! hproduct
+    simpa only [mul_one] using! hproduct
   refine hzero.congr' ?_
   filter_upwards [eventually_ne_atTop (0 : ℝ)] with x hx
   exact (shellRadiusMajorant_inv hx).symm
@@ -10043,7 +10101,7 @@ theorem sinh_le_mul_cosh {a : ℝ} (ha : 0 ≤ a) :
     convert! ((hasDerivAt_id x).mul
       (Real.hasDerivAt_cosh x)).sub
       (Real.hasDerivAt_sinh x) using 1;
-      simp [id]
+      simp only [one_mul, id, add_sub_cancel_left]
   have hdiff : Differentiable ℝ f :=
     fun x => (hderiv x).differentiableAt
   have hmono : MonotoneOn f (Set.Ici (0 : ℝ)) := by
@@ -10053,7 +10111,7 @@ theorem sinh_le_mul_cosh {a : ℝ} (ha : 0 ≤ a) :
     rw [interior_Ici] at hx
     rw [(hderiv x).deriv]
     exact mul_nonneg hx.le (Real.sinh_nonneg_iff.mpr hx.le)
-  have h := hmono (show (0 : ℝ) ∈ Set.Ici 0 by simp)
+  have h := hmono (show (0 : ℝ) ∈ Set.Ici 0 by simp only [Set.mem_Ici, Std.le_refl])
     (show a ∈ Set.Ici 0 from ha) ha
   try dsimp [f] at h
   norm_num at h
@@ -10083,7 +10141,7 @@ theorem tendsto_shortShellRadiusIntegrand {a : ℝ} (ha : 0 < a) :
     rw [Real.tanh_eq_sinh_div_cosh]
     field_simp [ha.ne', (Real.cosh_pos a).ne']
     ring_nf
-  simpa [hvalue] using! ht
+  simpa only [hvalue] using! ht
 
 theorem shortMargin_abs_le_exp {ε a : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε ≤ 1) (ha : 0 ≤ a) :
@@ -10193,7 +10251,7 @@ theorem tendsto_shortCutoff :
   have ht : Tendsto (fun ε : ℝ => ε)
       (𝓝[>] (0 : ℝ)) (nhds 0) :=
     tendsto_id.mono_left (nhdsWithin_le_nhds (s := Set.Ioi (0 : ℝ)))
-  simpa [shortCutoff] using! ht.pow 3
+  simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow] using! ht.pow 3
 
 theorem tendsto_shortEndpoint :
     Tendsto shortEndpoint (𝓝[>] (0 : ℝ)) atTop := by
@@ -10228,7 +10286,7 @@ theorem tendsto_supportedShortShellRadiusIntegrand {a : ℝ} (ha : 0 < a) :
     with ε hlower hupper
   have hmem : a ∈ Set.Ioc (shortCutoff ε) (shortEndpoint ε) :=
     ⟨hlower, hupper⟩
-  simp [supportedShortShellRadiusIntegrand, Set.indicator_of_mem hmem]
+  simp only [supportedShortShellRadiusIntegrand, Set.indicator_of_mem hmem]
 
 theorem tendsto_supportedShortShellRadiusIntegral :
     Tendsto
@@ -10299,7 +10357,8 @@ theorem tendsto_shortShellRadiusContribution :
 theorem wallisRadiusIntegrand_eq_laplace (a : ℝ) :
     wallisRadiusIntegrand a = -wallisLaplaceKernel (2 * a) := by
   by_cases ha : a = 0
-  · simp [wallisRadiusIntegrand, wallisLaplaceKernel, ha]
+  · simp only [wallisRadiusIntegrand, ha, mul_zero, Real.exp_zero, Real.tanh_zero, div_zero, neg_zero,
+      wallisLaplaceKernel, sub_self, zero_mul]
   · have hexp :
         Real.exp (-2 * a) = Real.exp (-a) / Real.exp a := by
         rw [← Real.exp_sub]
@@ -10321,7 +10380,7 @@ theorem integral_wallisRadiusIntegrand :
   have hscale :
       (∫ a in Set.Ioi (0 : ℝ), wallisLaplaceKernel (2 * a)) =
         (2 : ℝ)⁻¹ * Real.log (Real.pi / 2) := by
-    simpa [smul_eq_mul, integral_wallisLaplaceKernel] using!
+    simpa only [mul_zero, integral_wallisLaplaceKernel, smul_eq_mul] using!
       (integral_comp_mul_left_Ioi wallisLaplaceKernel 0
         (by norm_num : (0 : ℝ) < 2))
   calc
@@ -10350,7 +10409,7 @@ theorem tendsto_limitingSaddleRadius_wallisIntegral :
     tendsto_id.mono_left (nhdsWithin_le_nhds (s := Set.Ioi (0 : ℝ)))
   have hnum : Tendsto (fun ε : ℝ => 2 + ε / 4)
       (𝓝[>] (0 : ℝ)) (nhds (2 : ℝ)) := by
-    simpa using! (tendsto_const_nhds (x := (2 : ℝ))).add
+    simpa only [zero_div, add_zero] using! (tendsto_const_nhds (x := (2 : ℝ))).add
       (hε.div_const 4)
   have hratio : Tendsto
       (fun ε : ℝ => (2 + ε / 4) / (4 * Real.pi))
@@ -10369,7 +10428,7 @@ theorem tendsto_limitingSaddleRadius_wallisIntegral :
         positiveShellRadiusContribution ε)
       (𝓝[>] (0 : ℝ))
       (nhds (∫ a in Set.Ioi (0 : ℝ), wallisRadiusIntegrand a)) := by
-    simpa using! tendsto_shortShellRadiusContribution.add
+    simpa only [add_zero] using! tendsto_shortShellRadiusContribution.add
       tendsto_positiveShellRadiusContribution
   exact hfactor.mul hshell.rexp
 
@@ -10431,7 +10490,7 @@ theorem radialL1Mass_pos {d : ℕ} (g : TestFunction d)
     push Not at h
     apply hg
     ext x
-    simpa using! h x
+    simpa only [zero_apply] using! h x
   unfold radialL1Mass
   exact integral_pos_of_integrable_nonneg_nonzero
     g.continuous.norm g.integrable.norm (fun _ => norm_nonneg _)
@@ -10465,7 +10524,7 @@ theorem integral_scaled_exp_change_Ioi {E : Type*}
     integral_image_eq_integral_abs_deriv_smul
       (f := F) (f' := fun x => R * Real.exp x)
       MeasurableSet.univ hderiv hinj f
-  simpa [himage, F, abs_of_pos (mul_pos hR (Real.exp_pos _))] using! h
+  simpa only [himage, Measure.restrict_univ, abs_of_pos (mul_pos hR (Real.exp_pos _))] using! h
 
 theorem integrable_scaled_exp_change_Ioi {E : Type*}
     [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -10492,7 +10551,7 @@ theorem integrable_scaled_exp_change_Ioi {E : Type*}
   have hinj : Set.InjOn F (Set.univ : Set ℝ) := by
     intro x _ y _ hxy
     exact Real.exp_injective (mul_left_cancel₀ hR.ne' hxy)
-  simpa [himage, F, abs_of_pos (mul_pos hR (Real.exp_pos _))] using!
+  simpa only [himage, abs_of_pos (mul_pos hR (Real.exp_pos _)), integrableOn_univ] using!
       (integrableOn_image_iff_integrableOn_abs_deriv_smul
         (f := F) (f' := fun x => R * Real.exp x)
         MeasurableSet.univ hderiv hinj f)
@@ -10514,9 +10573,8 @@ theorem radialL1Mass_eq {d : ℕ} (hd : 0 < d)
     _ = radialSurfaceArea d *
         ∫ r : ℝ in Ioi 0,
           r ^ (d - 1) * ‖radialProfile hd g r‖ := by
-      simpa [radialSurfaceArea, volume_real_unitBall hd,
-        nsmul_eq_mul, finrank_euclideanSpace_fin, mul_assoc,
-        smul_eq_mul] using!
+      simpa only [radialSurfaceArea, mul_assoc, finrank_euclideanSpace, Fintype.card_fin, volume_real_unitBall hd,
+        smul_eq_mul, nsmul_eq_mul] using!
         (integral_fun_norm_addHaar
           (volume : Measure (Euclidean d))
           (fun r : ℝ => ‖radialProfile hd g r‖))
@@ -10535,14 +10593,14 @@ theorem norm_radialProfile_eq_abs_re {d : ℕ} (hd : 0 < d)
       radialProfile hd g r =
         ((radialProfile hd g r).re : ℂ) := by
     apply Complex.ext
-    · simp
-    · simpa using! radialProfile_real hd g hg r
+    · simp only [Complex.ofReal_re]
+    · simpa only [Complex.ofReal_im] using! radialProfile_real hd g hg r
   calc
     ‖radialProfile hd g r‖ =
         ‖((radialProfile hd g r).re : ℂ)‖ :=
       congrArg Norm.norm hvalue
     _ = |(radialProfile hd g r).re| := by
-      simp [Complex.norm_real, Real.norm_eq_abs]
+      simp only [Complex.norm_real, Real.norm_eq_abs]
 
 theorem radialProfile_re_weight_integrable {d : ℕ} (hd : 0 < d)
     (g : TestFunction d) (hg : IsRadial g) :
@@ -10557,7 +10615,7 @@ theorem radialProfile_re_weight_integrable {d : ℕ} (hd : 0 < d)
     filter_upwards [] with x
     change (g x).re = (radialProfile hd g ‖x‖).re
     rw [radialProfile_norm hd g hg x]
-  simpa [finrank_euclideanSpace_fin, smul_eq_mul] using!
+  simpa only [finrank_euclideanSpace, Fintype.card_fin, smul_eq_mul] using!
     (integrable_fun_norm_addHaar
       (volume : Measure (Euclidean d))
       (f := fun r : ℝ => (radialProfile hd g r).re)).mp hre
@@ -10578,9 +10636,8 @@ theorem integral_radialProfile_re {d : ℕ} (hd : 0 < d)
     _ = radialSurfaceArea d *
         ∫ r : ℝ in Ioi 0,
           r ^ (d - 1) * (radialProfile hd g r).re := by
-      simpa [radialSurfaceArea, volume_real_unitBall hd,
-        nsmul_eq_mul, finrank_euclideanSpace_fin, mul_assoc,
-        smul_eq_mul] using!
+      simpa only [radialSurfaceArea, mul_assoc, finrank_euclideanSpace, Fintype.card_fin, volume_real_unitBall hd,
+        smul_eq_mul, nsmul_eq_mul] using!
         (integral_fun_norm_addHaar
           (volume : Measure (Euclidean d))
           (fun r : ℝ => (radialProfile hd g r).re))
@@ -10615,7 +10672,7 @@ theorem normalizedRadialLogProfile_integrable {d : ℕ} (hd : 0 < d)
     hexp.const_mul (radialSurfaceArea d / radialL1Mass g)
   apply hscaled.congr
   filter_upwards [] with v
-  simpa [smul_eq_mul] using!
+  simpa only [smul_eq_mul] using!
     (normalizedRadialLogProfile_eq hd g R v).symm
 
 theorem integral_normalizedRadialLogProfile {d : ℕ} (hd : 0 < d)
@@ -10645,7 +10702,7 @@ theorem integral_normalizedRadialLogProfile {d : ℕ} (hd : 0 < d)
       rw [integral_scaled_exp_change_Ioi hR
         (fun r : ℝ => r ^ (d - 1) *
           (radialProfile hd g r).re)]
-      simp [smul_eq_mul]
+      simp only [smul_eq_mul]
     _ = (∫ x : Euclidean d, (g x).re) / radialL1Mass g := by
       rw [integral_radialProfile_re hd g hg]
       ring
@@ -10667,7 +10724,7 @@ theorem abs_normalizedRadialLogProfile {d : ℕ} (hd : 0 < d)
         |radialSurfaceArea d / radialL1Mass g| *
           |(R * Real.exp v) ^ d| *
             |(radialProfile hd g (R * Real.exp v)).re| := by
-      simp [normalizedRadialLogProfile, abs_mul, mul_assoc]
+      simp only [normalizedRadialLogProfile, mul_assoc, abs_mul, abs_pow, Real.abs_exp]
     _ = (radialSurfaceArea d / radialL1Mass g) *
           ((R * Real.exp v) *
             ((R * Real.exp v) ^ (d - 1) *
@@ -10704,7 +10761,7 @@ theorem integral_abs_normalizedRadialLogProfile {d : ℕ} (hd : 0 < d)
             r ^ (d - 1) * ‖radialProfile hd g r‖ := by
       rw [integral_scaled_exp_change_Ioi hR
         (fun r : ℝ => r ^ (d - 1) * ‖radialProfile hd g r‖)]
-      simp [smul_eq_mul]
+      simp only [smul_eq_mul]
     _ = (radialSurfaceArea d *
           ∫ r : ℝ in Ioi 0,
             r ^ (d - 1) * ‖radialProfile hd g r‖) /
@@ -10722,13 +10779,14 @@ theorem integral_re_eq_zero_of_antiFourier {d : ℕ}
   have hfourierzero :
       ((𝓕 g : TestFunction d) (0 : Euclidean d)) = 0 := by
     rw [hanti]
-    simpa using! hzero
+    simpa only [neg_apply, neg_eq_zero] using! hzero
   have hfourier_integral :
       ((𝓕 g : TestFunction d) (0 : Euclidean d)) =
         ∫ x : Euclidean d, g x := by
     change (𝓕 (g : Euclidean d → ℂ)) 0 = _
     rw [Real.fourier_eq']
-    simp
+    simp only [neg_mul, inner_zero_right, mul_zero, Complex.ofReal_zero, zero_mul, Complex.exp_zero, smul_eq_mul,
+      one_mul]
   calc
     (∫ x : Euclidean d, (g x).re) =
         (∫ x : Euclidean d, g x).re :=
@@ -10748,7 +10806,7 @@ theorem integral_normalizedRadialLogProfile_eq_zero_of_antiFourier
     (∫ v : ℝ, normalizedRadialLogProfile hd g R v) = 0 := by
   rw [integral_normalizedRadialLogProfile hd g hradial hR,
     integral_re_eq_zero_of_antiFourier g hanti hzero]
-  simp
+  simp only [zero_div]
 
 theorem normalizedRadialLogProfile_nonneg_of_exterior
     {d : ℕ} (hd : 0 < d) (g : TestFunction d)
@@ -10819,7 +10877,7 @@ def radialSchwartzProfile {d : ℕ}
 theorem radialProfile_smooth {d : ℕ}
     (hd : 0 < d) (f : TestFunction d) (n : ℕ∞) :
     ContDiff ℝ n (radialProfile hd f) := by
-  simpa using! (radialSchwartzProfile hd f).smooth n
+  simpa only  using! (radialSchwartzProfile hd f).smooth n
 
 theorem radialProfile_deriv_zero {d : ℕ}
     (hd : 0 < d) (f : TestFunction d) (hf : IsRadial f) :
@@ -10856,15 +10914,16 @@ theorem radialProfile_quadratic_bound {d : ℕ}
     rw [DifferentiableAt.derivWithin
       ((radialProfile_smooth hd f 1).differentiable
         one_ne_zero 0)
-      (uniqueDiffOn_Icc_zero_one 0 (by simp))]
+      (uniqueDiffOn_Icc_zero_one 0 (by simp only [mem_Icc, Std.le_refl, zero_le_one, and_self]))]
     exact radialProfile_deriv_zero hd f hf
   have htaylor :
       taylorWithinEval (radialProfile hd f) 1
         (Icc (0 : ℝ) 1) 0 r = 0 := by
     rw [show (1 : ℕ) = 0 + 1 by rfl,
       taylorWithinEval_succ]
-    simp [radialProfile_zero, hzero,
-      iteratedDerivWithin_one, hderivWithin]
+    simp only [taylor_within_zero_eval, radialProfile_zero, hzero, CharP.cast_eq_zero, zero_add,
+      Nat.factorial_zero, Nat.cast_one, mul_one, inv_one, sub_zero, pow_one, one_mul, iteratedDerivWithin_one,
+      hderivWithin, smul_zero, add_zero]
   calc
     ‖radialProfile hd f r‖ =
         ‖radialProfile hd f r -
@@ -10901,7 +10960,7 @@ theorem radialProfile_isBigO_rpow_atTop {d : ℕ}
     (Eventually.of_forall
       (fun r : ℝ => radialSchwartzProfile_apply hd f r)) ?_
   filter_upwards [eventually_gt_atTop (0 : ℝ)] with r hr
-  simp [Real.norm_eq_abs, abs_of_pos hr]
+  simp only [Real.norm_eq_abs, abs_of_pos hr]
 
 theorem radialProfile_locallyIntegrableOn {d : ℕ}
     (hd : 0 < d) (f : TestFunction d) :
@@ -10919,7 +10978,7 @@ theorem radialProfile_mellinConvergent {d : ℕ}
     (radialProfile_locallyIntegrableOn hd f)
     (radialProfile_isBigO_rpow_atTop hd f (s.re + 1))
     (by linarith)
-  · simpa using! radialProfile_isBigO_rpow_two_zero hd f hf hzero
+  · simpa only [neg_neg, Real.rpow_ofNat] using! radialProfile_isBigO_rpow_two_zero hd f hf hzero
   · exact hs
 
 theorem radialProfile_mellin_differentiableAt {d : ℕ}
@@ -10932,7 +10991,7 @@ theorem radialProfile_mellin_differentiableAt {d : ℕ}
     (radialProfile_locallyIntegrableOn hd f)
     (radialProfile_isBigO_rpow_atTop hd f (s.re + 1))
     (by linarith)
-  · simpa using! radialProfile_isBigO_rpow_two_zero hd f hf hzero
+  · simpa only [neg_neg, Real.rpow_ofNat] using! radialProfile_isBigO_rpow_two_zero hd f hf hzero
   · exact hs
 
 def radialMellinStrip {d : ℕ}
@@ -11015,7 +11074,7 @@ theorem norm_nonnegative_imaginary_cpow_le_one
     ‖(r : ℂ) ^ (-(Complex.I * (t : ℂ)))‖ ≤ 1 := by
   rcases eq_or_lt_of_le hr with rfl | hrpos
   · by_cases ht : t = 0
-    · simp [ht]
+    · simp only [Complex.ofReal_zero, ht, mul_zero, neg_zero, Complex.cpow_zero, norm_one, Std.le_refl]
     · have hexponent :
           -(Complex.I * (t : ℂ)) ≠ 0 := by
         exact neg_ne_zero.mpr
@@ -11023,7 +11082,7 @@ theorem norm_nonnegative_imaginary_cpow_le_one
             (Complex.ofReal_ne_zero.mpr ht))
       change ‖(0 : ℂ) ^ (-(Complex.I * (t : ℂ)))‖ ≤ 1
       rw [Complex.zero_cpow hexponent]
-      simp
+      simp only [norm_zero, zero_le_one]
   · rw [Complex.norm_cpow_eq_rpow_re_of_pos hrpos]
     norm_num
 
@@ -11085,7 +11144,7 @@ theorem normalizedRadialMellinStrip_top_norm_le_one {d : ℕ}
       (d : ℂ) / 2 - Complex.I * z = s := by
     try dsimp [z, s]
     push_cast
-    simp [mul_add, ← mul_assoc, Complex.I_mul_I]; ring
+    simp only [mul_add, ← mul_assoc, Complex.I_mul_I, neg_mul, one_mul]; ring
   have hphase :
       ((((d : ℂ) / 2 + Complex.I * z) *
         (Real.log R : ℂ))).re = 0 := by
@@ -11237,7 +11296,7 @@ theorem radial_fourier_mellin_antifourier_boundary {d : ℕ}
   have hhatZero :
       (𝓕 f : TestFunction d) (0 : Euclidean d) = 0 := by
     rw [hanti]
-    simpa using! congrArg Neg.neg hzero
+    simpa only [neg_apply, neg_eq_zero, neg_zero] using! congrArg Neg.neg hzero
   have hs : 0 ≤ s.re := by
     try dsimp [s]
     norm_num
@@ -11263,7 +11322,7 @@ theorem radial_fourier_mellin_antifourier_boundary {d : ℕ}
       mellin (radialProfile hd (𝓕 f : TestFunction d)) s =
         -(mellin (radialProfile hd f) s) := by
     rw [hanti]
-    simp [radialProfile, mellin, integral_neg]
+    simp only [mellin, radialProfile, neg_apply, smul_eq_mul, mul_neg, integral_neg]
   rw [hprofile] at heq
   have hcross :
       Complex.Gamma (((d : ℂ) - s) / 2) *
@@ -11343,7 +11402,7 @@ theorem normalizedRadialMellinStrip_top_norm_eq {d : ℕ}
         (d : ℂ) - Complex.I * (y : ℂ) := by
     try dsimp [z]
     push_cast
-    simp [mul_add, ← mul_assoc, Complex.I_mul_I]; ring
+    simp only [mul_add, ← mul_assoc, Complex.I_mul_I, neg_mul, one_mul]; ring
   have hphase :
       ((((d : ℂ) / 2 + Complex.I * z) *
         (Real.log R : ℂ))).re = 0 := by
@@ -11378,7 +11437,7 @@ theorem normalizedRadialMellinStrip_bottom_norm_eq {d : ℕ}
         -(Complex.I * (y : ℂ)) := by
     try dsimp [z]
     push_cast
-    simp [mul_sub, ← mul_assoc, Complex.I_mul_I]
+    simp only [mul_sub, ← mul_assoc, Complex.I_mul_I, neg_mul, one_mul, sub_neg_eq_add, sub_add_cancel_right]
   have hphase :
       ((((d : ℂ) / 2 + Complex.I * z) *
         (Real.log R : ℂ))).re =
@@ -11474,7 +11533,7 @@ theorem normalizedRadialMellinStrip_bottom_norm_le_gamma {d : ℕ}
       (radialSurfaceArea d / radialL1Mass f) *
         ‖mellin (radialProfile hd f)
           ((d : ℂ) + Complex.I * (y : ℂ))‖ ≤ 1 := by
-    simpa using! htop
+    simpa only [Complex.ofReal_neg, mul_neg, sub_neg_eq_add] using! htop
   have hboundary :=
     radial_fourier_mellin_antifourier_boundary_norm
       hd f hf hzero hanti y hy
@@ -11551,7 +11610,7 @@ theorem radialProfile_mellin_uniform_strip_bound {d : ℕ}
         ‖radialProfile hd f r‖) (Ioi (0 : ℝ)) := by
     have hconv := radialProfile_mellinConvergent
       hd f hf hzero (0 : ℂ) (by norm_num)
-    simpa using!
+    simpa only [Complex.zero_re, zero_sub] using!
       (mellin_convergent_iff_norm
         (T := Ioi (0 : ℝ)) Subset.rfl
         measurableSet_Ioi hmeas).mp hconv
@@ -11563,7 +11622,7 @@ theorem radialProfile_mellin_uniform_strip_bound {d : ℕ}
       linarith [show (0 : ℝ) ≤ (d : ℝ) from Nat.cast_nonneg d]
     have hconv := radialProfile_mellinConvergent
       hd f hf hzero (d : ℂ) hre
-    simpa using!
+    simpa only [Complex.natCast_re] using!
       (mellin_convergent_iff_norm
         (T := Ioi (0 : ℝ)) Subset.rfl
         measurableSet_Ioi hmeas).mp hconv
@@ -11571,7 +11630,7 @@ theorem radialProfile_mellin_uniform_strip_bound {d : ℕ}
       (fun r : ℝ =>
         (r ^ (-(1 : ℝ)) + r ^ ((d : ℝ) - 1)) *
           ‖radialProfile hd f r‖) (Ioi (0 : ℝ)) := by
-    simpa [Pi.add_apply, add_mul] using!
+    simpa only [add_mul] using!
       hzeroWeight.add hdimensionWeight
   let B : ℝ :=
     ∫ r : ℝ in Ioi (0 : ℝ),
@@ -11685,8 +11744,8 @@ theorem normalizedRadialLogProfile_ofReal {d : ℕ}
       radialProfile hd f (R * Real.exp v) =
         (((radialProfile hd f (R * Real.exp v)).re : ℝ) : ℂ) := by
     apply Complex.ext
-    · simp
-    · simpa using! radialProfile_real hd f hreal (R * Real.exp v)
+    · simp only [Complex.ofReal_re]
+    · simpa only [Complex.ofReal_im] using! radialProfile_real hd f hreal (R * Real.exp v)
   unfold normalizedRadialLogProfile
   rw [hvalue]
   simp only [Complex.ofReal_re]
@@ -11758,7 +11817,8 @@ theorem normalizedRadialMellinStrip_shifted_eq_fourier {d : ℕ}
             (Real.exp (((d : ℝ) - a) * v) : ℂ) *
             radialProfile hd f (R * Real.exp v) := hv
       _ = c * g (-v) := by
-        simp [c, g, Complex.real_smul, mul_neg]
+        simp only [Complex.ofReal_mul, Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_exp, Complex.ofReal_sub,
+          Complex.ofReal_natCast, neg_sub, Complex.real_smul, Complex.ofReal_neg, mul_neg, neg_neg, c, g]
         ring_nf
   have hmellin :
       mellin (fun r : ℝ => radialProfile hd f (R * r)) s =
@@ -11844,14 +11904,14 @@ theorem normalizedRadialMellinStrip_shifted_eq_fourier {d : ℕ}
           ((((d : ℝ) / 2 - a : ℝ) : ℂ))) = s := by
     try dsimp [s]
     push_cast
-    simp [mul_add, ← mul_assoc, Complex.I_mul_I]; ring
+    simp only [mul_add, ← mul_assoc, Complex.I_mul_I, neg_mul, one_mul, neg_sub]; ring
   have hphase :
       (d : ℂ) / 2 + Complex.I *
         ((t : ℂ) + Complex.I *
           ((((d : ℝ) / 2 - a : ℝ) : ℂ))) =
         (a : ℂ) + Complex.I * (t : ℂ) := by
     push_cast
-    simp [mul_add, ← mul_assoc, Complex.I_mul_I]; ring
+    simp only [mul_add, ← mul_assoc, Complex.I_mul_I, neg_mul, one_mul, neg_sub]; ring
   unfold normalizedRadialMellinStrip radialMellinStrip
   rw [harg, hphase]
   exact hscale.symm.trans hfourier.symm
@@ -11872,7 +11932,7 @@ theorem normalizedRadialLogProfile_weighted_integrable {d : ℕ}
   have hconv : MellinConvergent
       (radialProfile hd f) (κ : ℂ) := by
     apply radialProfile_mellinConvergent hd f hf hzero
-    simpa using! hκ
+    simpa only [Complex.ofReal_re] using! hκ
   have hscaled : MellinConvergent
       (fun r : ℝ => radialProfile hd f (R * r)) (κ : ℂ) :=
     (MellinConvergent.comp_mul_left hR).mpr hconv
@@ -11970,8 +12030,8 @@ theorem integrable_fourier_of_integrable_two_derivatives
       ‖(2 * (Real.pi : ℂ) * Complex.I * (t : ℂ)) ^ 2‖ =
         p ^ 2 * t ^ 2 := by
     try dsimp [p]
-    simp [norm_pow, Complex.norm_real,
-      Real.norm_eq_abs, abs_of_pos Real.pi_pos]
+    simp only [norm_pow, Complex.norm_mul, Complex.norm_ofNat, Complex.norm_real, Real.norm_eq_abs,
+      abs_of_pos Real.pi_pos, Complex.norm_I, mul_one]
     rw [mul_pow, sq_abs]
   have hsecond (t : ℝ) :
       p ^ 2 * t ^ 2 * ‖(𝓕 g : ℝ → ℂ) t‖ ≤ D := by
@@ -12014,16 +12074,16 @@ theorem schwartzRealLine_mellinConvergent_of_re_pos
         atTop_le_cocompact
     refine h.congr' (Eventually.of_forall (fun _ => rfl)) ?_
     filter_upwards [eventually_gt_atTop (0 : ℝ)] with r hr
-    simp [Real.norm_eq_abs, abs_of_pos hr]
+    simp only [Real.norm_eq_abs, abs_of_pos hr, neg_add_rev]
   obtain ⟨C, _hC, hdecay⟩ := g.decay 0 0
   have hbounded (r : ℝ) : ‖g r‖ ≤ C := by
-    simpa using! hdecay r
+    simpa only [Real.norm_eq_abs, pow_zero, norm_iteratedFDeriv_zero, one_mul] using! hdecay r
   have hzero :
       (g : ℝ → ℂ) =O[𝓝[>] (0 : ℝ)]
         (fun r : ℝ => r ^ (-(0 : ℝ))) := by
     apply IsBigO.of_bound C
     filter_upwards [] with r
-    simpa using! hbounded r
+    simpa only [neg_zero, Real.rpow_zero, norm_one, mul_one] using! hbounded r
   exact mellinConvergent_of_isBigO_rpow
     (a := s.re + 1) (b := (0 : ℝ)) hlocal htop
     (by linarith) hzero hs
@@ -12039,7 +12099,7 @@ theorem schwartzExponentialTilt_integrable
   have hconv : MellinConvergent
       (g : ℝ → ℂ) (κ : ℂ) := by
     apply schwartzRealLine_mellinConvergent_of_re_pos
-    simpa using! hκ
+    simpa only [Complex.ofReal_re] using! hκ
   have hscaled : MellinConvergent
       (fun r : ℝ => g (R * r)) (κ : ℂ) :=
     (MellinConvergent.comp_mul_left hR).mpr hconv
@@ -12112,12 +12172,12 @@ theorem schwartzExponentialTilt_deriv
             (κ + 1) R v := by
   have hlinear :
       HasDerivAt (fun u : ℝ => κ * u) κ v := by
-    simpa using! (hasDerivAt_id v).const_mul κ
+    simpa only [id_eq, mul_one] using! (hasDerivAt_id v).const_mul κ
   have hexpreal :
       HasDerivAt (fun u : ℝ => Real.exp (κ * u))
         (κ * Real.exp (κ * v)) v := by
     convert! (Real.hasDerivAt_exp (κ * v)).comp v hlinear
-      using 1; simp [mul_comm]
+      using 1; simp only [mul_comm]
   have hexp :
       HasDerivAt (fun u : ℝ =>
         (Real.exp (κ * u) : ℂ))
@@ -12131,7 +12191,7 @@ theorem schwartzExponentialTilt_deriv
       HasDerivAt (fun u : ℝ => g (R * Real.exp u))
         ((R * Real.exp v) •
           deriv (g : ℝ → ℂ) (R * Real.exp v)) v := by
-    simpa [Function.comp_def] using!
+    simpa only [Complex.real_smul, Complex.ofReal_mul, Complex.ofReal_exp, comp_def] using!
       (g.hasDerivAt (R * Real.exp v)).scomp v hradius
   have hder := (hexp.mul hprofile).deriv
   change deriv
@@ -12144,8 +12204,8 @@ theorem schwartzExponentialTilt_deriv
     rw [← Real.exp_add]
     congr 1
     ring
-  simp [schwartzExponentialTilt, SchwartzMap.derivCLM_apply,
-    Complex.real_smul, hexpadd]
+  simp only [Complex.ofReal_mul, Complex.ofReal_exp, Complex.real_smul, schwartzExponentialTilt, hexpadd,
+    SchwartzMap.derivCLM_apply]
   ring
 
 theorem schwartzExponentialTilt_deriv_integrable
@@ -12284,7 +12344,8 @@ theorem normalizedRadialLogProfile_weighted_fourier_integrable
     funext v
     rw [normalizedRadialLogProfile_weighted_ofReal
       hd f hreal R a v]
-    simp [c, g, κ, schwartzExponentialTilt]
+    simp only [Complex.ofReal_mul, Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_exp, Complex.ofReal_sub,
+      Complex.ofReal_natCast, schwartzExponentialTilt, radialSchwartzProfile_apply, c, κ, g]
     ring
   have hfourier :=
     (schwartzExponentialTilt_fourier_integrable
@@ -12326,7 +12387,8 @@ theorem normalizedRadialMellinStrip_shifted_integrable
   have hscaled := hfourier.comp_mul_right' hscale
   apply hscaled.congr
   filter_upwards [] with t
-  simpa [div_eq_mul_inv] using!
+  simpa only [neg_mul, Complex.ofReal_exp, Complex.ofReal_neg, Complex.ofReal_mul, mul_inv_rev, div_eq_mul_inv,
+    Complex.ofReal_sub, Complex.ofReal_natCast, Complex.ofReal_inv, Complex.ofReal_ofNat] using!
     (normalizedRadialMellinStrip_shifted_eq_fourier
       hd f hreal R hR a t).symm
 
@@ -12367,7 +12429,8 @@ theorem normalizedRadialMellinStrip_shifted_fourier_inversion
     try dsimp [W]
     rw [normalizedRadialLogProfile_weighted_ofReal
       hd f hreal R a u]
-    simp [c, g, κ, schwartzExponentialTilt]
+    simp only [Complex.ofReal_mul, Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_exp, Complex.ofReal_sub,
+      Complex.ofReal_natCast, schwartzExponentialTilt, radialSchwartzProfile_apply, c, κ, g]
     ring
   have hcontinuous : Continuous W := by
     rw [hweight]
@@ -12458,7 +12521,7 @@ theorem stripPoissonKernel_pos {σ : ℝ}
   have hcos : Real.cos (stripAngle σ) < 1 := by
     have h := Real.cos_lt_cos_of_nonneg_of_le_pi
       (x := 0) (y := stripAngle σ) (by norm_num) hangle'.le hangle
-    simpa using! h
+    simpa only [gt_iff_lt, Real.cos_zero] using! h
   have hden : 0 < Real.cosh (Real.pi * T / 2) -
       Real.cos (stripAngle σ) := by
     linarith [Real.one_le_cosh (Real.pi * T / 2)]
@@ -12509,7 +12572,7 @@ theorem stripPoissonPrimitive_hasDerivAt {σ : ℝ}
       (((Real.hasDerivAt_exp (Real.pi * T / 2)).comp T
         ((hasDerivAt_id T).const_mul Real.pi |>.div_const 2)).sub_const
         (Real.cos (stripAngle σ))).div_const (Real.sin (stripAngle σ)) using 1
-    all_goals simp [mul_comm]
+    all_goals simp only [mul_comm, mul_one]
   convert!
     ((Real.hasDerivAt_arctan _).comp T hderiv).div_const Real.pi
       using 1
@@ -12571,7 +12634,7 @@ theorem stripPoissonPrimitive_tendsto_atTop {σ : ℝ}
   have hshift : Tendsto
       (fun T : ℝ => Real.exp (Real.pi * T / 2) -
         Real.cos (stripAngle σ)) atTop atTop := by
-    simpa [sub_eq_add_neg] using!
+    simpa only [sub_eq_add_neg] using!
       (tendsto_atTop_add_const_right atTop
         (-Real.cos (stripAngle σ)) hexp)
   have hratio : Tendsto
@@ -12658,7 +12721,7 @@ theorem stripPoissonKernel_antitone_abs
     have h := Real.cos_lt_cos_of_nonneg_of_le_pi
       (x := 0) (y := stripAngle σ)
       (by norm_num) hangle'.le hangle
-    simpa using! h
+    simpa only [gt_iff_lt, Real.cos_zero] using! h
   have hxden :
       0 < 4 *
         (Real.cosh (Real.pi * x / 2) -
@@ -12696,7 +12759,7 @@ theorem stripPoissonPrimitive_centered_hasDerivAt
     (stripPoissonPrimitive_hasDerivAt hbelow habove (x - r)).comp x
       ((hasDerivAt_id x).sub_const r)
   convert! hplus.sub hminus using 1
-  all_goals simp
+  all_goals simp only [mul_one]
 
 theorem stripPoissonPrimitive_centered_antitoneOn
     {σ : ℝ} (hbelow : -1 < σ) (habove : σ < 1)
@@ -12717,7 +12780,7 @@ theorem stripPoissonPrimitive_centered_antitoneOn
         hbelow habove r x).differentiableAt.differentiableWithinAt
   · intro x hx
     have hxpos : 0 ≤ x := by
-      have hx' : 0 < x := by simpa using! hx
+      have hx' : 0 < x := by simpa only [nonempty_Iio, interior_Ici', mem_Ioi] using! hx
       exact hx'.le
     rw [(stripPoissonPrimitive_centered_hasDerivAt
       hbelow habove r x).deriv]
@@ -12765,13 +12828,13 @@ theorem stripPoissonPrimitive_centered_le
     stripPoissonPrimitive_centered_antitoneOn
       hbelow habove hr
   by_cases hs : 0 ≤ s
-  · convert! hanti (show (0 : ℝ) ∈ Ici 0 by simp)
+  · convert! hanti (show (0 : ℝ) ∈ Ici 0 by simp only [mem_Ici, Std.le_refl])
       (show s ∈ Ici 0 from hs) hs using 1
     all_goals ring_nf
   · have hsneg : 0 ≤ -s := by linarith
     rw [← stripPoissonPrimitive_centered_neg
       hbelow habove r s]
-    convert! hanti (show (0 : ℝ) ∈ Ici 0 by simp)
+    convert! hanti (show (0 : ℝ) ∈ Ici 0 by simp only [mem_Ici, Std.le_refl])
       (show -s ∈ Ici 0 from hsneg) hsneg using 1
     all_goals ring_nf
 
@@ -12850,7 +12913,7 @@ theorem stripSchwarzExponential_hasDerivAt
       (2 * (ℓ : ℂ))
   unfold stripSchwarzExponential
   convert! haffine.cexp using 1
-  all_goals simp
+  all_goals simp only [id_eq, mul_one]
 
 theorem norm_stripSchwarzExponential (ℓ : ℝ) (z : ℂ) (y : ℝ) :
     ‖stripSchwarzExponential ℓ z y‖ =
@@ -12860,7 +12923,9 @@ theorem norm_stripSchwarzExponential (ℓ : ℝ) (z : ℂ) (y : ℝ) :
     show (2 * (ℓ : ℂ)) = ((2 * ℓ : ℝ) : ℂ) by push_cast; rfl,
     Complex.div_ofReal_re]
   congr 1
-  simp [Complex.mul_re]
+  simp only [Complex.mul_re, Complex.ofReal_re, Complex.add_re, Complex.sub_re, Complex.I_re, zero_mul,
+    Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, add_zero, Complex.add_im, Complex.sub_im, sub_zero,
+    Complex.mul_im, one_mul, zero_add]
 
 theorem stripSchwarzExponential_re (ℓ : ℝ) (z : ℂ) (y : ℝ) :
     (stripSchwarzExponential ℓ z y).re =
@@ -12964,7 +13029,9 @@ theorem stripHolomorphicPoissonKernel_denominator_ne_zero
         Real.pi * (z.im + ℓ) / (2 * ℓ) := by
     rw [show (2 * (ℓ : ℂ)) = ((2 * ℓ : ℝ) : ℂ) by push_cast; rfl,
       Complex.div_ofReal_im]
-    simp [Complex.mul_im]
+    simp only [Complex.mul_im, Complex.ofReal_re, Complex.add_im, Complex.sub_im, Complex.ofReal_im, sub_zero,
+      Complex.I_re, mul_zero, Complex.I_im, one_mul, zero_add, Complex.add_re, Complex.sub_re, Complex.mul_re, zero_mul,
+      sub_self, add_zero]
   have hpositive : 0 < Real.pi * (z.im + ℓ) / (2 * ℓ) := by
     exact div_pos (mul_pos Real.pi_pos (by linarith))
       (mul_pos (by norm_num) hℓ)
@@ -13027,7 +13094,7 @@ theorem stripRegularizedHolomorphicPoissonKernel_hasDerivAt
   have hℓc : (ℓ : ℂ) ≠ 0 :=
     Complex.ofReal_ne_zero.mpr hℓ.ne'
   have hden : stripSchwarzExponential ℓ z y - 1 ≠ 0 := by
-    simpa [stripSchwarzExponential] using!
+    simpa only [stripSchwarzExponential, ne_eq] using!
       stripHolomorphicPoissonKernel_denominator_ne_zero hℓ hz y
   have hexp := stripSchwarzExponential_hasDerivAt ℓ z y
   have hratio :=
@@ -13056,7 +13123,7 @@ theorem stripRegularizedHolomorphicPoissonKernel_hasDerivAt_deriv
     HasDerivAt
       (fun w : ℂ => stripRegularizedHolomorphicPoissonKernel ℓ w y)
       (stripRegularizedHolomorphicPoissonKernelDeriv ℓ z y) z := by
-  simpa [stripRegularizedHolomorphicPoissonKernelDeriv] using!
+  simpa only [stripRegularizedHolomorphicPoissonKernelDeriv] using!
     stripRegularizedHolomorphicPoissonKernel_hasDerivAt hℓ hz y
 
 theorem norm_stripRegularizedHolomorphicPoissonKernelDeriv_pos
@@ -13086,8 +13153,8 @@ theorem norm_stripRegularizedHolomorphicPoissonKernelDeriv_pos
       rw [norm_div, norm_neg, norm_mul, norm_mul,
         norm_mul, norm_mul, norm_pow, norm_pow,
         norm_stripSchwarzExponential]
-      simp [Real.norm_eq_abs, abs_of_pos hℓ,
-        abs_of_pos Real.pi_pos]
+      simp only [Complex.norm_I, Complex.norm_real, Real.norm_eq_abs, abs_of_pos Real.pi_pos, one_mul,
+        Complex.norm_ofNat, abs_of_pos hℓ]
     _ ≤ Real.pi * Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) /
         (4 * ℓ ^ 2 *
           Real.sin (Real.pi * (z.im + ℓ) / (2 * ℓ)) ^ 2) := by
@@ -13129,8 +13196,8 @@ theorem norm_stripRegularizedHolomorphicPoissonKernelDeriv_neg
       rw [norm_div, norm_neg, norm_mul, norm_mul,
         norm_mul, norm_mul, norm_pow, norm_pow,
         norm_stripSchwarzExponential]
-      simp [Real.norm_eq_abs, abs_of_pos hℓ,
-        abs_of_pos Real.pi_pos]
+      simp only [Complex.norm_I, Complex.norm_real, Real.norm_eq_abs, abs_of_pos Real.pi_pos, one_mul,
+        Complex.norm_ofNat, abs_of_pos hℓ]
     _ ≤ Real.pi * Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) /
         (4 * ℓ ^ 2 *
           (Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) *
@@ -13162,7 +13229,7 @@ theorem stripRegularizedHolomorphicPoissonKernelDeriv_continuous
     · exact mul_ne_zero (by norm_num)
         (pow_ne_zero 2 (Complex.ofReal_ne_zero.mpr hℓ.ne'))
     · apply pow_ne_zero
-      simpa [stripSchwarzExponential] using!
+      simpa only [stripSchwarzExponential, ne_eq] using!
         stripHolomorphicPoissonKernel_denominator_ne_zero hℓ hz y
 
 theorem stripRegularizedHolomorphicPoissonKernelDeriv_local_bound
@@ -13216,7 +13283,7 @@ theorem stripRegularizedHolomorphicPoissonKernelDeriv_local_bound
   intro w hw y
   obtain ⟨⟨hwball, hwstrip⟩, hwsin⟩ := hw
   have hdist : ‖w - z‖ < (1 : ℝ) := by
-    simpa [Metric.mem_ball, dist_eq_norm, norm_sub_rev] using! hwball
+    simpa only [norm_sub_rev, Metric.mem_ball, dist_eq_norm] using! hwball
   have hreabs := Complex.abs_re_le_norm (w - z)
   simp only [Complex.sub_re] at hreabs
   have hreupper : w.re ≤ z.re + 1 := by
@@ -13336,7 +13403,7 @@ theorem stripRegularizedHolomorphicPoissonKernel_of_nonneg
     hℓ hz y
   let w := stripSchwarzExponential ℓ z y
   have hw : w - 1 ≠ 0 := by
-    simpa [w, stripSchwarzExponential] using! hden
+    simpa only [stripSchwarzExponential, ne_eq] using! hden
   unfold stripRegularizedHolomorphicPoissonKernel
     stripHolomorphicPoissonKernel
   rw [if_pos hy]
@@ -13361,7 +13428,7 @@ theorem stripRegularizedHolomorphicPoissonKernel_of_neg
     hℓ hz y
   let w := stripSchwarzExponential ℓ z y
   have hw : w - 1 ≠ 0 := by
-    simpa [w, stripSchwarzExponential] using! hden
+    simpa only [stripSchwarzExponential, ne_eq] using! hden
   unfold stripRegularizedHolomorphicPoissonKernel
     stripHolomorphicPoissonKernel
   rw [if_neg (not_le.mpr hy)]
@@ -13393,7 +13460,8 @@ theorem norm_stripRegularizedHolomorphicPoissonKernel_of_nonneg
       rw [stripRegularizedHolomorphicPoissonKernel_of_nonneg
         hℓ hz hy, norm_div, norm_mul, norm_mul,
         norm_stripSchwarzExponential]
-      simp [abs_of_pos hℓ]
+      simp only [Complex.norm_I, one_mul, Complex.norm_mul, Complex.norm_ofNat, Complex.norm_real, Real.norm_eq_abs,
+        abs_of_pos hℓ]
     _ ≤ Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) /
         (2 * ℓ * Real.sin (Real.pi * (z.im + ℓ) / (2 * ℓ))) := by
       apply div_le_div_of_nonneg_left (Real.exp_pos _).le
@@ -13421,7 +13489,8 @@ theorem norm_stripRegularizedHolomorphicPoissonKernel_of_neg
       1 / (2 * ℓ * ‖stripSchwarzExponential ℓ z y - 1‖) := by
       rw [stripRegularizedHolomorphicPoissonKernel_of_neg
         hℓ hz hy, norm_div, norm_mul, norm_mul]
-      simp [abs_of_pos hℓ]
+      simp only [Complex.norm_I, Complex.norm_ofNat, Complex.norm_real, Real.norm_eq_abs, abs_of_pos hℓ, one_div,
+        mul_inv_rev]
     _ ≤ 1 /
         (2 * ℓ *
           (Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) *
@@ -13446,7 +13515,7 @@ theorem stripRegularizedHolomorphicPoissonKernel_continuousOn_Ioi
   have hden : ∀ y : ℝ,
       stripSchwarzExponential ℓ z y - 1 ≠ 0 := by
     intro y
-    simpa [stripSchwarzExponential] using!
+    simpa only [stripSchwarzExponential, ne_eq] using!
       stripHolomorphicPoissonKernel_denominator_ne_zero hℓ hz y
   have hform :
       Continuous (fun y : ℝ =>
@@ -13475,7 +13544,7 @@ theorem stripRegularizedHolomorphicPoissonKernel_continuousOn_Iio
   have hden : ∀ y : ℝ,
       stripSchwarzExponential ℓ z y - 1 ≠ 0 := by
     intro y
-    simpa [stripSchwarzExponential] using!
+    simpa only [stripSchwarzExponential, ne_eq] using!
       stripHolomorphicPoissonKernel_denominator_ne_zero hℓ hz y
   have hform :
       Continuous (fun y : ℝ =>
@@ -13510,8 +13579,7 @@ theorem strip_exp_abs_integrable {a : ℝ} (ha : 0 < a) :
         ((fun y : ℝ => Real.exp ((-a) * |y|)) ∘
           (fun y : ℝ => -y))
         ((fun y : ℝ => -y) ⁻¹' Iio (0 : ℝ)) := by
-    simpa [Function.comp_def, neg_preimage, neg_Iio,
-      abs_neg] using! hright
+    simpa only [neg_mul, Function.comp_def, abs_neg, neg_preimage, neg_Iio, neg_zero] using! hright
   have hleft :
       IntegrableOn (fun y : ℝ => Real.exp ((-a) * |y|))
         (Iio (0 : ℝ)) :=
@@ -13542,7 +13610,7 @@ theorem strip_exp_abs_log_integrableOn_Ioi {a : ℝ} (ha : 0 < a) :
   have hlinear :
       IntegrableOn (fun x : ℝ =>
         x * Real.exp ((-a) * x)) (Ioi (0 : ℝ)) := by
-    simpa [Real.rpow_one] using!
+    simpa only [neg_mul, Real.rpow_one] using!
       (integrableOn_rpow_mul_exp_neg_mul_rpow
         (p := (1 : ℝ)) (s := (1 : ℝ)) (b := a)
         (by norm_num) (by norm_num) ha)
@@ -13550,7 +13618,7 @@ theorem strip_exp_abs_log_integrableOn_Ioi {a : ℝ} (ha : 0 < a) :
       IntegrableOn (fun x : ℝ =>
         x ^ (-(1 / 2 : ℝ)) * Real.exp ((-a) * x))
         (Ioi (0 : ℝ)) := by
-    simpa [Real.rpow_one] using!
+    simpa only [one_div, neg_mul, Real.rpow_one] using!
       (integrableOn_rpow_mul_exp_neg_mul_rpow
         (p := (1 : ℝ)) (s := -(1 / 2 : ℝ)) (b := a)
         (by norm_num) (by norm_num) ha)
@@ -13593,8 +13661,7 @@ theorem strip_exp_abs_log_integrableOn_Iio {a : ℝ} (ha : 0 < a) :
         ((fun x : ℝ => Real.exp (a * x) * |Real.log (-x)|) ∘
           (fun x : ℝ => -x))
         ((fun x : ℝ => -x) ⁻¹' Iio (0 : ℝ)) := by
-    simpa [Function.comp_def, neg_preimage, neg_Iio, mul_neg,
-      neg_mul] using! hright
+    simpa only [Real.log_neg_eq_log, Function.comp_def, mul_neg, neg_preimage, neg_Iio, neg_zero, neg_mul] using! hright
   exact
     ((Measure.measurePreserving_neg (volume : Measure ℝ)).integrableOn_comp_preimage
       (Homeomorph.neg ℝ).measurableEmbedding).mp hreflected
@@ -13623,7 +13690,7 @@ theorem strip_exp_abs_log_abs_integrable {a : ℝ} (ha : 0 < a) :
     intro x hx
     try dsimp
     rw [abs_of_neg (mem_Iio.mp hx)]
-    simp [mul_neg, neg_mul]
+    simp only [Real.log_neg_eq_log, mul_neg, neg_mul, neg_neg]
   rw [← integrableOn_univ, ← @Iio_union_Ici _ _ (0 : ℝ),
     integrableOn_union, integrableOn_Ici_iff_integrableOn_Ioi]
   exact ⟨hleft, hright⟩
@@ -13690,7 +13757,7 @@ theorem profileNegativePart_setIntegral_Iic_eq_integral {φ : ℝ → ℝ}
       ∫ v : ℝ, profileNegativePart φ v := by
   apply setIntegral_eq_integral_of_forall_compl_eq_zero
   intro v hv
-  have hvpos : 0 < v := by simpa using! hv
+  have hvpos : 0 < v := by simpa only [mem_Iic, not_le] using! hv
   unfold profileNegativePart
   exact max_eq_right (by linarith [hsign v hvpos.le])
 
@@ -13730,7 +13797,7 @@ theorem normalizedProfile_negativeHalfline_le_of_exp_majorant
         measurableSet_Iic (fun v hv => hbound v hv)
     _ = B / a := by
       rw [integral_const_mul, integral_exp_mul_Iic ha 0]
-      simp [div_eq_mul_inv]
+      simp only [mul_zero, Real.exp_zero, div_eq_mul_inv, one_mul]
 
 theorem norm_fourierInv_le_integral_norm (F : ℝ → ℂ) (v : ℝ) :
     ‖((𝓕⁻ F : ℝ → ℂ) v)‖ ≤ ∫ s : ℝ, ‖F s‖ := by
@@ -13763,7 +13830,7 @@ theorem negativeHalfline_le_of_fourierInversion
   apply normalizedProfile_negativeHalfline_le_of_exp_majorant hφ ha
   intro v _
   calc
-    |φ v| = ‖(φ v : ℂ)‖ := by simp
+    |φ v| = ‖(φ v : ℂ)‖ := by simp only [Complex.norm_real, Real.norm_eq_abs]
     _ = ‖(Real.exp (a * v) : ℂ) *
         ((𝓕⁻ (fun ξ : ℝ => Z (2 * Real.pi * ξ)) : ℝ → ℂ) v)‖ := by
       rw [hinversion v]
@@ -13913,7 +13980,8 @@ theorem no_antiFourierWitness_of_interiorMellinL1_lt_half
     ring
   apply no_antiFourierWitness_of_shiftedMellinL1_lt_half
     hd hR w ha haless
-  simpa [hheight] using! hsmall
+  simpa only [mul_inv_rev, hheight, Complex.ofReal_mul, Complex.ofReal_div, Complex.ofReal_natCast,
+    Complex.ofReal_ofNat, one_div] using! hsmall
 
 def lowerGammaBoundaryLog (ℓ R y : ℝ) : ℝ :=
   ℓ * Real.log (Real.pi * R ^ 2) +
@@ -13947,7 +14015,7 @@ theorem lowerGammaBoundaryLog_continuousOn
         ContinuousAt (fun u : ℝ => -Complex.I * (u : ℂ) / 2) y :=
       ((Complex.continuous_ofReal.const_mul (-Complex.I)).div_const 2).continuousAt
     apply ContinuousAt.continuousWithinAt
-    simpa [Function.comp_def] using!
+    simpa only [neg_mul, Function.comp_def] using!
       (Complex.continuousAt_Gamma
         (-Complex.I * (y : ℂ) / 2) (hnumPole y hy)).comp_of_eq
         harg (by rfl)
@@ -13962,7 +14030,7 @@ theorem lowerGammaBoundaryLog_continuousOn
       (continuous_const.add
         ((Complex.continuous_ofReal.const_mul Complex.I).div_const 2)).continuousAt
     apply ContinuousAt.continuousWithinAt
-    simpa [Function.comp_def] using!
+    simpa only [Function.comp_def] using!
       (Complex.continuousAt_Gamma
         ((ℓ : ℂ) + Complex.I * (y : ℂ) / 2) (hdenPole y)).comp_of_eq
         harg (by rfl)
@@ -13997,7 +14065,7 @@ theorem lowerGammaBoundaryLog_measurable
   apply measurable_of_continuousOn_compl_singleton (0 : ℝ)
   apply lowerGammaBoundaryLog_continuousOn hℓ R
   intro y hy
-  simpa using! hy
+  simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using! hy
 
 theorem antiFourierWitness_normalizedMellinStrip_bottom_norm_le_gamma
     {d : ℕ} (hd : 0 < d) {R : ℝ} (hR : 0 < R)
@@ -14006,7 +14074,8 @@ theorem antiFourierWitness_normalizedMellinStrip_bottom_norm_le_gamma
         ((y : ℂ) -
           Complex.I * (((d : ℝ) / 2 : ℝ) : ℂ))‖ ≤
       Real.exp (lowerGammaBoundaryLog ((d : ℝ) / 2) R y) := by
-  simpa [lowerGammaBoundaryLog] using!
+  simpa only [Complex.ofReal_div, Complex.ofReal_natCast, Complex.ofReal_ofNat, lowerGammaBoundaryLog,
+    neg_mul] using!
     normalizedRadialMellinStrip_bottom_norm_le_gamma
       hd w.function w.radial w.zero_value
       w.anti_fourier w.nonzero R hR y hy
@@ -14029,8 +14098,7 @@ theorem stripPoisson_integral_changeVariables
     have hraw := Measure.integral_comp_mul_left
       (fun u : ℝ => G (s + u)) (-ℓ)
     rw [integral_add_left_eq_self G s] at hraw
-    simpa [sub_eq_add_neg, neg_mul, inv_neg, abs_neg,
-      abs_of_pos (inv_pos.mpr hℓ), smul_eq_mul] using! hraw
+    simpa only [sub_eq_add_neg, neg_mul, inv_neg, abs_neg, abs_of_pos (inv_pos.mpr hℓ), smul_eq_mul] using! hraw
   have hrewrite :
       (∫ T : ℝ, G (s - ℓ * T)) =
         ℓ⁻¹ *
@@ -14061,7 +14129,9 @@ theorem norm_integerGammaFactor (j : ℕ) (y : ℝ) :
       Real.sqrt ((j : ℝ) ^ 2 + (y / 2) ^ 2) := by
   rw [Complex.norm_def, Complex.normSq_apply]
   congr 1
-  simp
+  simp only [Complex.add_re, Complex.natCast_re, Complex.div_ofNat_re, Complex.mul_re, Complex.I_re,
+    Complex.ofReal_re, zero_mul, Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, zero_div, add_zero,
+    Complex.add_im, Complex.natCast_im, Complex.div_ofNat_im, Complex.mul_im, one_mul, zero_add]
   ring
 
 theorem integerGammaFactor_ne_zero
@@ -14148,7 +14218,7 @@ theorem lowerGammaBoundaryLog_integer_log_tail
     calc
       (k : ℝ) * Real.log (|y| / 2) =
           ∑ j ∈ Finset.range k,
-            Real.log (|y| / 2) := by simp
+            Real.log (|y| / 2) := by simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
       _ ≤ ∑ j ∈ Finset.range k,
           Real.log
             (Real.sqrt ((j : ℝ) ^ 2 + (y / 2) ^ 2)) := by
@@ -14276,7 +14346,7 @@ theorem lower_exp_log_sqrtFactor_integrableOn_Ioi
       IntegrableOn
         (fun y : ℝ => y * Real.exp ((-a) * y))
         (Ioi (0 : ℝ)) := by
-    simpa [Real.rpow_one] using!
+    simpa only [neg_mul, Real.rpow_one] using!
       (integrableOn_rpow_mul_exp_neg_mul_rpow
         (p := (1 : ℝ)) (s := (1 : ℝ)) (b := a)
         (by norm_num) (by norm_num) ha)
@@ -14344,8 +14414,8 @@ theorem lower_exp_log_sqrtFactor_integrable
           Real.log (Real.sqrt (c ^ 2 + (y / 2) ^ 2))) ∘
             (fun y : ℝ => -y))
         ((fun y : ℝ => -y) ⁻¹' Iio (0 : ℝ)) := by
-    simpa [Function.comp_def, neg_preimage, neg_Iio,
-      abs_neg, neg_div] using! hright
+    simpa only [neg_mul, Function.comp_def, abs_neg, neg_div, even_two, Even.neg_pow, neg_preimage, neg_Iio,
+      neg_zero] using! hright
   have hleft :
       IntegrableOn
         (fun y : ℝ => Real.exp ((-a) * |y|) *
@@ -14424,8 +14494,7 @@ theorem lowerStripGammaOuter_integrable_of_exp_integrable
       Integrable
         (fun y : ℝ =>
           Real.exp ((-a) * |y|) * |lowerGammaBoundaryLog ℓ R y|) := by
-    simpa [Real.norm_eq_abs, abs_mul,
-      abs_of_pos (Real.exp_pos _)] using! hgamma.norm
+    simpa only [neg_mul, norm_mul, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)] using! hgamma.norm
   have hposfactor (y : ℝ) :
       Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) / D =
         Cpos * Real.exp ((-a) * y) := by
@@ -14460,7 +14529,7 @@ theorem lowerStripGammaOuter_integrable_of_exp_integrable
       ContinuousOn
         (fun y : ℝ => (lowerGammaBoundaryLog ℓ R y : ℂ))
         (Ioi (0 : ℝ)) := by
-    simpa [Function.comp_def] using!
+    simpa only [Function.comp_def] using!
       Complex.continuous_ofReal.comp_continuousOn hgammaRight
   have hcontinuousRight :
       ContinuousOn
@@ -14520,7 +14589,7 @@ theorem lowerStripGammaOuter_integrable_of_exp_integrable
       ContinuousOn
         (fun y : ℝ => (lowerGammaBoundaryLog ℓ R y : ℂ))
         (Iio (0 : ℝ)) := by
-    simpa [Function.comp_def] using!
+    simpa only [Function.comp_def] using!
       Complex.continuous_ofReal.comp_continuousOn hgammaLeft
   have hcontinuousLeft :
       ContinuousOn
@@ -14571,7 +14640,7 @@ theorem lowerStripGammaOuter_integrable_of_exp_integrable
           (Real.exp ((-a) * |y|) *
             |lowerGammaBoundaryLog ℓ R y|) := by
         rw [abs_of_neg (mem_Iio.mp hy), hnegfactor]
-        simp [mul_neg, neg_mul]
+        simp only [mul_neg, neg_mul, neg_neg]
         ring
   rw [← integrableOn_univ, ← @Iio_union_Ici _ _ (0 : ℝ),
     integrableOn_union, integrableOn_Ici_iff_integrableOn_Ioi]
@@ -14582,7 +14651,11 @@ theorem norm_halfIntegerGammaFactor (j : ℕ) (y : ℝ) :
       Real.sqrt (((j : ℝ) + 1 / 2) ^ 2 + (y / 2) ^ 2) := by
   rw [Complex.norm_def, Complex.normSq_apply]
   congr 1
-  simp
+  simp only [one_div, Complex.add_re, Complex.natCast_re, Complex.inv_re, Complex.re_ofNat,
+    Complex.normSq_ofNat, div_self_mul_self', Complex.div_ofNat_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re,
+    zero_mul, Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, zero_div, add_zero, Complex.add_im,
+    Complex.natCast_im, Complex.inv_im, Complex.im_ofNat, neg_zero, Complex.div_ofNat_im, Complex.mul_im, one_mul,
+    zero_add]
   ring
 
 theorem norm_gamma_half_add_imaginary_sq (x : ℝ) :
@@ -14688,7 +14761,7 @@ theorem norm_gamma_imaginary_sq {x : ℝ} (hx : x ≠ 0) :
         try dsimp [z]
         rw [Complex.ofReal_mul]
         ring_nf
-        simp [Complex.I_sq]
+        simp only [Complex.ofReal_sinh, Complex.ofReal_mul, Complex.I_sq, neg_mul, one_mul, neg_neg]
       _ = ((Real.pi : ℂ) /
           ((Real.sinh (Real.pi * x) : ℂ) * Complex.I)) *
             ((Real.sinh (Real.pi * x) : ℂ) * Complex.I) := by
@@ -14808,10 +14881,10 @@ theorem lowerCoth_antitoneOn :
   · intro x hx
     exact (lowerCoth_hasDerivAt hx).continuousAt.continuousWithinAt
   · intro x hx
-    have hx' : 0 < x := by simpa using! hx
+    have hx' : 0 < x := by simpa only [interior_Ioi, mem_Ioi] using! hx
     exact (lowerCoth_hasDerivAt hx').differentiableAt.differentiableWithinAt
   · intro x hx
-    have hx' : 0 < x := by simpa using! hx
+    have hx' : 0 < x := by simpa only [interior_Ioi, mem_Ioi] using! hx
     rw [(lowerCoth_hasDerivAt hx').deriv]
     exact neg_nonpos.mpr (sq_nonneg _)
 
@@ -14841,7 +14914,7 @@ theorem lower_abs_log_cosh_le {x : ℝ} (hx : 0 ≤ x) :
   rw [abs_of_nonneg (Real.log_nonneg (Real.one_le_cosh x))]
   have hlog := Real.log_le_log
     (Real.cosh_pos x) (lower_cosh_le_exp hx)
-  simpa using! hlog
+  simpa only [ge_iff_le, Real.log_exp] using! hlog
 
 theorem lower_abs_log_sinh_le {x : ℝ} (hx : 0 < x) :
     |Real.log (Real.sinh x)| ≤ x + |Real.log x| := by
@@ -14874,7 +14947,7 @@ theorem lower_abs_log_coth_div_le {x : ℝ} (hx : 0 < x) :
       |Real.log (Real.pi * x)| ≤
         |Real.log Real.pi| + |Real.log x| := by
     rw [Real.log_mul Real.pi_ne_zero hx.ne']
-    simpa [sub_neg_eq_add] using!
+    simpa only [sub_neg_eq_add, abs_neg] using!
       (abs_sub (Real.log Real.pi) (-(Real.log x)))
   have hcoshbound := lower_abs_log_cosh_le ht.le
   have hsinhbound := lower_abs_log_sinh_le ht
@@ -15014,7 +15087,8 @@ theorem lowerCoth_log_abs_integrable :
   · filter_upwards [] with y
     by_cases hy : y = 0
     · subst y
-      simp [lowerCoth, A]
+      simp only [lowerCoth, abs_zero, mul_zero, zero_div, Real.cosh_zero, Real.sinh_zero, div_zero, Real.log_zero,
+        norm_zero, Real.exp_zero, mul_one, add_zero, A]
       positivity
     · have hlognonneg :
           0 ≤ Real.log (lowerCoth (Real.pi * |y| / 2)) :=
@@ -15082,7 +15156,7 @@ theorem lower_exp_log_coth_div_integrableOn_Ioi
       IntegrableOn
         (fun y : ℝ => y * Real.exp ((-a) * y))
         (Ioi (0 : ℝ)) := by
-    simpa [Real.rpow_one] using!
+    simpa only [neg_mul, Real.rpow_one] using!
       (integrableOn_rpow_mul_exp_neg_mul_rpow
         (p := (1 : ℝ)) (s := (1 : ℝ)) (b := a)
         (by norm_num) (by norm_num) ha)
@@ -15191,8 +15265,7 @@ theorem lower_exp_log_coth_div_integrable
               (lowerCoth (Real.pi * |y| / 2) / (|y| / 2))) ∘
           (fun y : ℝ => -y))
         ((fun y : ℝ => -y) ⁻¹' Iio (0 : ℝ)) := by
-    simpa [Function.comp_def, neg_preimage, neg_Iio,
-      abs_neg] using! hright
+    simpa only [neg_mul, Function.comp_def, abs_neg, neg_preimage, neg_Iio, neg_zero] using! hright
   have hleft :
       IntegrableOn
         (fun y : ℝ =>
@@ -15310,7 +15383,7 @@ theorem lowerGammaBoundaryLog_halfInteger
           Real.log
             (lowerCoth (Real.pi * |y| / 2) / (|y| / 2)) := by
       congr 1
-      simpa [abs_div, mul_div_assoc] using!
+      simpa only [mul_div_assoc, one_div, Complex.ofReal_div, Complex.ofReal_ofNat, abs_div, Nat.abs_ofNat] using!
         (gamma_log_coth_ratio
           (x := y / 2) (div_ne_zero hy (by norm_num)))
 
@@ -15331,7 +15404,7 @@ theorem lowerGammaBoundaryLog_halfInteger_log_tail
     calc
       (k : ℝ) * Real.log (|y| / 2) =
           ∑ j ∈ Finset.range k,
-            Real.log (|y| / 2) := by simp
+            Real.log (|y| / 2) := by simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
       _ ≤ ∑ j ∈ Finset.range k,
           Real.log
             (Real.sqrt
@@ -15498,7 +15571,7 @@ theorem lower_positiveLogRatio_integrable
     rw [Real.norm_eq_abs, abs_of_nonneg (le_max_right _ _)]
     by_cases hy : y = 0
     · subst y
-      simp
+      simp only [abs_zero, div_zero, Real.log_zero, max_self, mul_zero, Real.exp_zero, mul_one, add_zero]
       positivity
     · by_cases hsmall : |y| ≤ B
       · have habslog :
@@ -15697,7 +15770,7 @@ theorem lowerGammaBoundaryLog_dimension_scaled_nonpos_of_large
         linarith
       _ = (Real.exp (3 : ℝ))⁻¹ := Real.exp_neg 3
       _ ≤ (1 / 4 : ℝ) := by
-        simpa [one_div] using!
+        simpa only [one_div] using!
           (one_div_le_one_div_of_le
             (by norm_num : (0 : ℝ) < 4) hexpthree)
   have hcoth := lowerCoth_log_le_four_exp_neg_two harg
@@ -15774,7 +15847,8 @@ theorem exists_lowerGammaScaledPositivePart_uniform_bound
     apply integral_nonneg
     intro Y
     by_cases hY : Y = 0
-    · simp [hY, lowerCoth]
+    · simp only [Pi.zero_apply, lowerCoth, hY, abs_zero, mul_zero, zero_div, Real.cosh_zero, Real.sinh_zero,
+        div_zero, Real.log_zero, Std.le_refl]
     · exact lowerCoth_log_nonneg (by positivity)
   refine ⟨C, by linarith, ?_⟩
   intro d hd
@@ -15813,7 +15887,7 @@ theorem lowerGammaBoundaryLog_integer_neg
       lowerGammaBoundaryLog (k : ℝ) R y := by
   rw [lowerGammaBoundaryLog_integer k R (neg_ne_zero.mpr hy),
     lowerGammaBoundaryLog_integer k R hy]
-  simp [div_pow]
+  simp only [div_pow, even_two, Even.neg_pow]
 
 theorem lowerGammaBoundaryLog_halfInteger_neg
     (k : ℕ) (R : ℝ) {y : ℝ} (hy : y ≠ 0) :
@@ -15821,7 +15895,7 @@ theorem lowerGammaBoundaryLog_halfInteger_neg
       lowerGammaBoundaryLog ((k : ℝ) + 1 / 2) R y := by
   rw [lowerGammaBoundaryLog_halfInteger k R (neg_ne_zero.mpr hy),
     lowerGammaBoundaryLog_halfInteger k R hy]
-  simp [div_pow]
+  simp only [one_div, div_pow, even_two, Even.neg_pow, abs_neg]
 
 theorem lowerGammaBoundaryLog_dimension_neg
     {d : ℕ} (R : ℝ) {y : ℝ} (hy : y ≠ 0) :
@@ -15990,7 +16064,7 @@ theorem even_antitone_superlevel_interval
       have hxle : |x| ≤ r := le_csSup hbdd hxS
       exact (abs_le.mp hxle)
   · refine ⟨0, le_rfl, ?_, ?_⟩
-    · simp
+    · simp only [neg_zero, lt_self_iff_false, not_false_eq_true, Ioo_eq_empty, empty_subset]
     · intro x hx
       exfalso
       apply hS
@@ -16123,23 +16197,24 @@ theorem monotone_leftRiemann_error
   have hscaled' :
       MonotoneOn (fun x : ℝ => f (x / (k : ℝ)))
         (Icc (0 : ℝ) (0 + (k : ℝ))) := by
-    simpa using! hscaled
+    simpa only [zero_add] using! hscaled
   have hleft :
       (∑ j ∈ Finset.range k, f ((j : ℝ) / (k : ℝ))) ≤
         ∫ x in (0 : ℝ)..(k : ℝ), f (x / (k : ℝ)) := by
-    simpa using! (MonotoneOn.sum_le_integral
+    simpa only [zero_add] using! (MonotoneOn.sum_le_integral
       (x₀ := (0 : ℝ)) (a := k) hscaled')
   have hright :
       (∫ x in (0 : ℝ)..(k : ℝ), f (x / (k : ℝ))) ≤
         ∑ j ∈ Finset.range k,
           f (((j : ℝ) + 1) / (k : ℝ)) := by
-    simpa [Nat.cast_add, Nat.cast_one] using!
+    simpa only [zero_add, Nat.cast_add, Nat.cast_one] using!
       (MonotoneOn.integral_le_sum
         (x₀ := (0 : ℝ)) (a := k) hscaled')
   have hintegral :
       (∫ x in (0 : ℝ)..(k : ℝ), f (x / (k : ℝ))) =
         (k : ℝ) * ∫ x in (0 : ℝ)..1, f x := by
-    simp [hkne]
+    simp only [ne_eq, hkne, not_false_eq_true, intervalIntegral.integral_comp_div, zero_div, div_self,
+      smul_eq_mul]
   have hshift :
       (∑ j ∈ Finset.range k,
         f (((j : ℝ) + 1) / (k : ℝ))) -
@@ -16150,8 +16225,8 @@ theorem monotone_leftRiemann_error
       (fun j : ℕ => f ((j : ℝ) / (k : ℝ))) k using 1
     · apply Finset.sum_congr rfl
       intro j _
-      simp [Nat.cast_add, Nat.cast_one]
-    · simp [hkne]
+      simp only [Nat.cast_add, Nat.cast_one]
+    · simp only [ne_eq, hkne, not_false_eq_true, div_self, CharP.cast_eq_zero, zero_div]
   constructor
   · rw [← hintegral]
     linarith
@@ -16178,16 +16253,16 @@ theorem monotone_midpointIntegral_error
         ∑ j ∈ Finset.range k, f ((j : ℝ) + 1 / 2)| ≤
       f (k : ℝ) - f 0 := by
   have hf' : MonotoneOn f (Icc (0 : ℝ) (0 + (k : ℝ))) := by
-    simpa using! hf
+    simpa only [zero_add] using! hf
   have hleft :
       (∑ j ∈ Finset.range k, f (j : ℝ)) ≤
         ∫ x in (0 : ℝ)..(k : ℝ), f x := by
-    simpa using!
+    simpa only [zero_add] using!
       (MonotoneOn.sum_le_integral (x₀ := (0 : ℝ)) (a := k) hf')
   have hright :
       (∫ x in (0 : ℝ)..(k : ℝ), f x) ≤
         ∑ j ∈ Finset.range k, f ((j : ℝ) + 1) := by
-    simpa [Nat.cast_add, Nat.cast_one] using!
+    simpa only [zero_add, Nat.cast_add, Nat.cast_one] using!
       (MonotoneOn.integral_le_sum (x₀ := (0 : ℝ)) (a := k) hf')
   have hmidleft :
       (∑ j ∈ Finset.range k, f (j : ℝ)) ≤
@@ -16219,8 +16294,8 @@ theorem monotone_midpointIntegral_error
     convert! Finset.sum_range_sub (fun j : ℕ => f (j : ℝ)) k using 1
     · apply Finset.sum_congr rfl
       intro j _
-      simp [Nat.cast_add, Nat.cast_one]
-    · simp
+      simp only [Nat.cast_add, Nat.cast_one]
+    · simp only [CharP.cast_eq_zero]
   apply (abs_le).2
   constructor <;> linarith
 
@@ -16245,12 +16320,12 @@ theorem lower_halfInteger_midpointRiemann_error
       (∫ x in (0 : ℝ)..(k : ℝ), lowerRiemannLog T (x / ℓ)) =
         ℓ * ∫ x in (0 : ℝ)..((k : ℝ) / ℓ),
           lowerRiemannLog T x := by
-    simpa using!
+    simpa only [zero_div, smul_eq_mul] using!
       (intervalIntegral.integral_comp_div
         (a := (0 : ℝ)) (b := (k : ℝ))
         (lowerRiemannLog T) hℓ.ne')
   rw [hscale] at hmid
-  simpa using! hmid
+  simpa only [one_div, ge_iff_le, zero_div] using! hmid
 
 def lowerEndpointPhase (T : ℝ) : ℝ :=
   -Real.pi * |T| / 4 - (1 / 2 : ℝ) * Real.log (1 + T ^ 2 / 4) +
@@ -16270,7 +16345,7 @@ theorem lowerRiemannLogPrimitive_hasDerivAt
   have hquad :
       HasDerivAt (fun u : ℝ => u ^ 2 + T ^ 2 / 4) (2 * x) x := by
     convert! ((hasDerivAt_id x).pow 2).add_const (T ^ 2 / 4)
-      using 1; simp [id_eq]
+      using 1; simp only [Nat.cast_ofNat, id_eq, Nat.add_one_sub_one, pow_one, mul_one]
   have hlog := hquad.log hrad.ne'
   have hfirst := ((hasDerivAt_id x).div_const 2).mul hlog
   have hatan := (Real.hasDerivAt_arctan (x / (|T| / 2))).comp x
@@ -16295,7 +16370,7 @@ theorem integral_lowerRiemannLog
       (by intro x hx; exact hx.1)
   have hmono' : MonotoneOn (lowerRiemannLog T)
       ([[0, 1]] : Set ℝ) := by
-    simpa using! hmono
+    simpa only [zero_le_one, uIcc_of_le] using! hmono
   have hint :
       IntervalIntegrable (lowerRiemannLog T) volume (0 : ℝ) 1 :=
     hmono'.intervalIntegrable
@@ -16309,7 +16384,7 @@ theorem integral_lowerRiemannLog
   have hatan :
       Real.arctan (1 / (|T| / 2)) =
         Real.pi / 2 - Real.arctan (|T| / 2) := by
-    simpa [one_div] using! Real.arctan_inv_of_pos ha
+    simpa only [one_div, inv_div] using! Real.arctan_inv_of_pos ha
   rw [hFTC]
   unfold lowerRiemannLogPrimitive lowerEndpointPhase
   simp only [one_pow, zero_pow (by norm_num : 2 ≠ 0), zero_add,
@@ -16327,15 +16402,16 @@ open scoped Topology
 theorem complexLaplaceKernel_integrable {z : ℂ} (hz : 0 < z.re) :
     IntegrableOn (fun x : ℝ => Complex.exp (-z * (x : ℂ))) (Ioi 0) := by
   have hneg : (-z).re < 0 := by
-    simpa using! hz
+    simpa only [Complex.neg_re, Left.neg_neg_iff] using! hz
   simpa only [neg_mul] using!
     (integrableOn_exp_mul_complex_Ioi (a := -z) hneg 0)
 
 theorem integral_complexLaplaceKernel {z : ℂ} (hz : 0 < z.re) :
     (∫ x : ℝ in Ioi 0, Complex.exp (-z * (x : ℂ))) = z⁻¹ := by
   have hneg : (-z).re < 0 := by
-    simpa using! hz
-  simpa [div_eq_mul_inv] using!
+    simpa only [Complex.neg_re, Left.neg_neg_iff] using! hz
+  simpa only [neg_mul, Complex.ofReal_zero, mul_zero, Complex.exp_zero, div_eq_mul_inv, inv_neg, mul_neg,
+    one_mul, neg_neg] using!
     (integral_exp_mul_complex_Ioi (a := -z) hneg 0)
 
 def complexFrullaniSegment (z w : ℂ) (s : ℝ) : ℂ :=
@@ -16349,7 +16425,7 @@ theorem complexFrullaniSegment_re_pos {z w : ℂ}
     Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im,
     Complex.sub_re, zero_mul, sub_zero]
   by_cases hzero : s = 0
-  · simpa [hzero] using! hz
+  · simpa only [hzero, zero_mul, add_zero] using! hz
   · have hspos : 0 < s := lt_of_le_of_ne hs.1 (Ne.symm hzero)
     have hfirst : 0 ≤ (1 - s) * z.re :=
       mul_nonneg (sub_nonneg.mpr hs.2) hz.le
@@ -16368,7 +16444,7 @@ theorem complexFrullaniSegment_hasDerivAt
         (w - z) (s : ℂ) := by
     convert! (hasDerivAt_const (s : ℂ) z).add
       ((hasDerivAt_id (s : ℂ)).mul_const (w - z)) using 1
-    all_goals simp
+    all_goals simp only [one_mul, zero_add]
   change HasDerivAt
     (fun r : ℝ => z + (r : ℂ) * (w - z)) (w - z) s
   exact hcomplex.comp_ofReal
@@ -16416,7 +16492,7 @@ theorem norm_complexLaplaceKernel (z : ℂ) (x : ℝ) :
       Real.exp (-z.re * x) := by
   rw [Complex.norm_exp]
   congr 1
-  simp [Complex.mul_re]
+  simp only [neg_mul, Complex.neg_re, Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero]
 
 theorem complexFrullaniSegment_min_re_le
     (z w : ℂ) {s : ℝ} (hs : s ∈ Icc (0 : ℝ) 1) :
@@ -16459,7 +16535,8 @@ theorem complexFrullaniKernel_norm_le_exp
     have hminimum :=
       complexFrullaniSegment_min_re_le z w hclosed
     nlinarith
-  simpa using! hbound
+  simpa only [neg_mul, intervalIntegral.integral_const_mul, Complex.norm_mul, ge_iff_le, sub_zero, abs_one,
+    mul_one] using! hbound
 
 theorem integral_norm_complexFrullaniSegment
     {z w : ℂ} (hz : 0 < z.re) (hw : 0 < w.re)
@@ -16610,11 +16687,12 @@ theorem intervalIntegral_complexFrullaniLogDerivative
         complexFrullaniSegment z w s ∈ Complex.slitPlane :=
       Complex.mem_slitPlane_iff.mpr
         (Or.inl (complexFrullaniSegment_re_pos hz hw hs))
-    simpa [div_eq_mul_inv] using!
+    simpa only [div_eq_mul_inv] using!
       (complexFrullaniSegment_hasDerivAt z w s).clog_real hslit
   rw [intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv
     hcontinuous.intervalIntegrable]
-  simp [complexFrullaniSegment]
+  simp only [complexFrullaniSegment, Complex.ofReal_one, one_mul, add_sub_cancel, Complex.ofReal_zero, zero_mul,
+    add_zero]
 
 theorem integral_complexFrullaniKernel
     {z w : ℂ} (hz : 0 < z.re) (hw : 0 < w.re) :
@@ -16865,8 +16943,8 @@ theorem complexWallisTranslatedSegment_hasDerivAt
     HasDerivAt (fun r : ℝ => z + (r : ℂ)) (1 : ℂ) s := by
   have hreal :
       HasDerivAt (fun r : ℝ => (r : ℂ)) (1 : ℂ) s := by
-    simpa using! Complex.ofRealCLM.hasDerivAt
-  simpa using! hreal.const_add z
+    simpa only [Complex.ofRealCLM_apply, Complex.ofReal_one] using! Complex.ofRealCLM.hasDerivAt
+  simpa only [hasDerivAt_const_add_iff] using! hreal.const_add z
 
 theorem complexWallisLogPrimitive_hasDerivAt
     {z : ℂ} (hz : 0 < z.re)
@@ -16886,7 +16964,7 @@ theorem complexWallisLogPrimitive_hasDerivAt
     Complex.slitPlane_ne_zero hslit
   have hlog := hline.clog_real hslit
   convert! (hline.mul hlog).sub hline using 1
-  simp [div_eq_mul_inv, hnonzero]
+  simp only [one_mul, div_eq_mul_inv, ne_eq, hnonzero, not_false_eq_true, mul_inv_cancel₀, add_sub_cancel_right]
 
 theorem intervalIntegral_complexWallisLog
     {z : ℂ} (hz : 0 < z.re) :
@@ -16949,7 +17027,7 @@ theorem integral_complexWallisPhaseKernel
           -Complex.log (z + (s : ℂ))
       rw [integral_complexFrullaniKernel
         hspositive (by norm_num : 0 < (1 : ℂ).re)]
-      simp
+      simp only [Complex.log_one, zero_sub]
     _ = -(∫ s in (0 : ℝ)..1,
           Complex.log (z + (s : ℂ))) := by
       rw [intervalIntegral.integral_neg]
@@ -17003,7 +17081,7 @@ theorem stripNormalizedPoissonKernel_eq_extension
         have h := Real.cos_lt_cos_of_nonneg_of_le_pi
           (x := 0) (y := stripAngle σ)
           (by norm_num) hangle.2.le hangle.1
-        simpa using! h
+        simpa only [gt_iff_lt, Real.cos_zero] using! h
       linarith [Real.one_le_cosh (Real.pi * T / 2)]
     rw [stripAngle_eq_pi_sub, Real.cos_pi_sub] at horiginal
     have hpositive :
@@ -17091,7 +17169,7 @@ theorem inv_cosh_le_two_exp_neg_abs (u : ℝ) :
       calc
         (1 : ℝ) = Real.exp (-|u|) * Real.exp |u| := by
           rw [← Real.exp_add]
-          simp
+          simp only [neg_add_cancel, Real.exp_zero]
         _ = (2 * Real.exp (-|u|)) * (Real.exp |u| / 2) := by
           ring
     _ ≤ (2 * Real.exp (-|u|)) * Real.cosh u :=
@@ -17118,7 +17196,7 @@ theorem stripNormalizedPoissonExtension_le_majorant
       ⟨by linarith [Real.pi_pos], hqlarge⟩
   have hsinc : 0 ≤ Real.sinc q := by
     by_cases hq : q = 0
-    · simp [hq]
+    · simp only [hq, Real.sinc_zero, zero_le_one]
     · rw [Real.sinc_of_ne_zero hq]
       exact div_nonneg
         (Real.sin_nonneg_of_nonneg_of_le_pi hqzero hqpi) hqzero
@@ -17151,7 +17229,7 @@ theorem stripNormalizedPoissonExtension_le_majorant
           · exact Real.sinc_le_one q
           · exact le_add_of_nonneg_right hcos
       _ = (Real.pi / 4) * (Real.cosh u)⁻¹ := by
-        simp [div_eq_mul_inv]
+        simp only [div_eq_mul_inv, mul_one]
       _ ≤ (Real.pi / 4) * (2 * Real.exp (-|u|)) :=
         mul_le_mul_of_nonneg_left
           (inv_cosh_le_two_exp_neg_abs u) hcoefficient.le
@@ -17204,7 +17282,7 @@ theorem integrable_abs_pow_mul_exp_neg_mul_abs
       (p := (1 : ℝ)) (s := (n : ℝ)) (b := a)
       (by exact_mod_cast (show (-(1 : ℤ) < (n : ℤ)) by omega))
       (by norm_num) ha
-    simpa [Real.rpow_natCast, Real.rpow_one] using! h
+    simpa only [neg_mul, Real.rpow_natCast, Real.rpow_one] using! h
   have hright :
       IntegrableOn
         (fun T : ℝ => |T| ^ n * Real.exp (-a * |T|))
@@ -17386,8 +17464,7 @@ theorem integral_poissonLogistic_change_Ioo {E : Type*}
     (f := poissonLogistic) (f' := poissonLogisticDensity)
     MeasurableSet.univ hderiv
     poissonLogistic_injective.injOn f
-  simpa [hrange,
-    abs_of_pos (hpositive _)] using! h
+  simpa only [image_univ, hrange, Measure.restrict_univ, abs_of_pos (hpositive _)] using! h
 
 theorem poissonLogisticDensity_integrable :
     Integrable poissonLogisticDensity := by
@@ -17402,7 +17479,8 @@ theorem integral_poissonLogisticDensity :
     (∫ u : ℝ, poissonLogisticDensity u) = 1 := by
   have h := integral_poissonLogistic_change_Ioo
     (fun _ : ℝ => (1 : ℝ))
-  simpa [smul_eq_mul] using! h.symm
+  simpa only [smul_eq_mul, mul_one, integral_const, MeasurableSet.univ, measureReal_restrict_apply, univ_inter,
+    Real.volume_real_Ioo, sub_zero, zero_le_one, sup_of_le_left] using! h.symm
 
 theorem poissonLogistic_betaIntegral (w : ℂ) :
     Complex.betaIntegral (1 + w) (1 - w) =
@@ -17483,7 +17561,7 @@ theorem gamma_one_add_imaginary_mul_gamma_one_sub
         (Complex.Gamma z * Complex.Gamma (-z)) := by
           try dsimp [z]
           ring_nf
-          simp [Complex.I_sq]
+          simp only [Complex.I_sq, neg_mul, one_mul, neg_neg, Complex.ofReal_pow]
           ring
     _ = ((x ^ 2 * ‖Complex.Gamma z‖ ^ 2 : ℝ) : ℂ) := by
       rw [hgammaprod]
@@ -17570,7 +17648,7 @@ theorem poissonLogistic_characteristic (t : ℝ) :
       _ = 1 := by
         rw [hm]
         norm_num
-  · simpa [ht] using!
+  · simpa only [ht, ↓reduceIte, Complex.ofReal_div, Complex.ofReal_sinh] using!
       poissonLogistic_characteristic_of_ne_zero ht
 
 theorem poissonLogistic_characteristic_integrable (t : ℝ) :
@@ -17604,7 +17682,7 @@ theorem poissonLogistic_characteristic_integrable (t : ℝ) :
     push_cast
     ring
   rw [hphase, Complex.norm_exp_I_mul_ofReal]
-  simp
+  simp only [mul_one, Std.le_refl]
 
 theorem poissonLogistic_cosine_transform (t : ℝ) :
     (∫ u : ℝ,
@@ -17637,7 +17715,7 @@ theorem poissonLogistic_cosine_transform (t : ℝ) :
     _ = if t = 0 then 1 else t / Real.sinh t := by
       rw [poissonLogistic_characteristic t]
       split
-      · simp
+      · simp only [Complex.one_re]
       · exact Complex.ofReal_re (t / Real.sinh t)
 
 theorem lowerEndpointPhase_continuous :
@@ -17892,16 +17970,16 @@ theorem lowerWallisPhaseKernel_abs_le_moment
   have hcos :
       |Real.cos (u * t) - 1| ≤ |u| * t := by
     have h := Real.abs_cos_sub_cos_le (u * t) 0
-    simpa [abs_mul, abs_of_pos ht] using! h
+    simpa only [ge_iff_le, Real.cos_zero, sub_zero, abs_mul, abs_of_pos ht] using! h
   have hqproduct : (1 + t) * q ≤ 1 := by
     calc
       (1 + t) * q ≤ Real.exp t * q := by
         apply mul_le_mul_of_nonneg_right _ hqpos.le
-        simpa [add_comm] using! Real.add_one_le_exp t
+        simpa only [add_comm] using! Real.add_one_le_exp t
       _ = 1 := by
         try dsimp [q]
         rw [← Real.exp_add]
-        simp
+        simp only [add_neg_cancel, Real.exp_zero]
   have hcancel_nonneg : 0 ≤ 1 - q - t * q := by
     linarith
   have hcancel_upper : 1 - q - t * q ≤ t ^ 2 := by
@@ -17986,7 +18064,7 @@ theorem lowerWallisPhaseKernel_abs_le_tail
             (1 - q) * 1 :=
             mul_le_mul_of_nonneg_left hcos hone
           _ ≤ 1 := by
-            simpa using! hone_upper
+            simpa only [mul_one, tsub_le_iff_right, le_add_iff_nonneg_right] using! hone_upper
       linarith
     _ ≤ 1 + q * t ^ 2 := by
       linarith [mul_nonneg hqpos.le
@@ -18011,7 +18089,7 @@ theorem lowerWallisPhaseTail_integrable :
       lt_trans zero_lt_one (show 1 < t from ht)
     change t ^ (-(2 : ℝ)) = 1 / t ^ 2
     rw [Real.rpow_neg htpos.le, Real.rpow_ofNat]
-    simp [one_div]
+    simp only [one_div]
   have hexponential :
       IntegrableOn (fun t : ℝ => Real.exp (-t)) (Ioi 1) := by
     have h := laplaceKernel_integrable
@@ -18021,7 +18099,7 @@ theorem lowerWallisPhaseTail_integrable :
         fun t ht => by
           change 0 < t
           exact lt_trans zero_lt_one (show 1 < t from ht))
-    simpa using! hrestrict
+    simpa only [neg_mul, one_mul] using! hrestrict
   exact hinverse.add hexponential
 
 theorem poissonLogistic_lowerWallisPhase_product_integrable :
@@ -18044,7 +18122,7 @@ theorem poissonLogistic_lowerWallisPhase_product_integrable :
     have h :=
       (poissonLogisticDensity_abs_moment_integrable 1).add
         poissonLogisticDensity_integrable
-    simpa [Pi.add_apply, pow_one, mul_add] using! h
+    simpa only [mul_add, mul_one, pow_one] using! h
   have hnearConstant :
       Integrable (fun _ : ℝ => (1 : ℝ))
         (volume.restrict (Ioc (0 : ℝ) 1)) :=
@@ -18209,7 +18287,7 @@ theorem integral_poissonLogistic_mul_lowerWallisPhaseKernel
       rw [Real.sinh_eq]
       have hexp : Real.exp t * Real.exp (-t) = 1 := by
         rw [← Real.exp_add]
-        simp
+        simp only [add_neg_cancel, Real.exp_zero]
       unfold wallisLaplaceKernel
       field_simp [htne, hpositive, hdiff, hden]; linarith [hexp]
 
@@ -18224,7 +18302,10 @@ theorem complexWallisPhaseKernel_re (a u t : ℝ) :
   unfold complexWallisPhaseKernel lowerWallisRegularizedPhaseKernel
   rw [← Complex.ofReal_pow]
   rw [Complex.div_ofReal_re]
-  simp [Complex.mul_re, Complex.exp_re, Complex.exp_im]
+  simp only [neg_sub, Complex.sub_re, Complex.mul_re, Complex.one_re, Complex.exp_re, Complex.neg_re,
+    Complex.ofReal_re, Complex.neg_im, Complex.ofReal_im, neg_zero, Real.cos_zero, mul_one, Complex.I_re, zero_mul,
+    Complex.I_im, mul_zero, sub_self, zero_sub, neg_mul, Complex.sub_im, Complex.mul_im, one_mul, zero_add, sub_zero,
+    Complex.one_im, Complex.exp_im, Real.sin_zero]
   ring
 
 theorem lowerWallisRegularizedPhaseKernel_eq_add
@@ -18369,15 +18450,14 @@ theorem lowerWallisRegularizedPhaseMajorant_integrable (u : ℝ) :
       integrableOn_const measure_Ioc_lt_top.ne
     apply hconstant.congr_fun _ measurableSet_Ioc
     intro t ht
-    simp [lowerWallisRegularizedPhaseMajorant, ht.2]
+    simp only [lowerWallisRegularizedPhaseMajorant, ht.2, ↓reduceIte]
   have hfar :
       IntegrableOn (lowerWallisRegularizedPhaseMajorant u)
         (Ioi (1 : ℝ)) := by
     apply lowerWallisPhaseTail_integrable.congr_fun _
       measurableSet_Ioi
     intro t ht
-    simp [lowerWallisRegularizedPhaseMajorant,
-      not_le.mpr (show 1 < t from ht)]
+    simp only [one_div, lowerWallisRegularizedPhaseMajorant, not_le.mpr (show 1 < t from ht), ↓reduceIte]
   rw [← Ioc_union_Ioi_eq_Ioi (show (0 : ℝ) ≤ 1 by norm_num)]
   exact hnear.union hfar
 
@@ -18431,7 +18511,7 @@ theorem tendsto_integral_lowerWallisRegularizedPhaseKernel
           lowerWallisPhaseKernel u t := by
       unfold lowerWallisRegularizedPhaseKernel
         lowerWallisPhaseKernel
-      simp
+      simp only [neg_zero, zero_mul, Real.exp_zero, mul_one]
     rw [← hzero]
     exact hcontinuous.continuousAt.tendsto.comp
       tendsto_one_div_add_atTop_nhds_zero_nat
@@ -18447,7 +18527,8 @@ theorem integral_lowerWallisRegularizedPhaseKernel
   let z : ℂ := (a : ℂ) - Complex.I * (u : ℂ)
   have hz : 0 < z.re := by
     try dsimp [z]
-    simpa using! ha
+    simpa only [Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im, Complex.ofReal_im,
+      mul_zero, sub_self, sub_zero] using! ha
   calc
     (∫ t : ℝ in Ioi 0,
       lowerWallisRegularizedPhaseKernel a u t) =
@@ -18469,11 +18550,14 @@ theorem lowerWallis_arg_one_sub_I_mul (u : ℝ) :
   let z : ℂ := 1 - Complex.I * (u : ℂ)
   have hre : 0 < z.re := by
     try dsimp [z]
-    simp
+    simp only [Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im, Complex.ofReal_im,
+      mul_zero, sub_self, sub_zero, zero_lt_one]
   have hrange : |Complex.arg z| < Real.pi / 2 :=
     Complex.abs_arg_lt_pi_div_two_iff.mpr (Or.inl hre)
   have htan : Real.tan (Complex.arg z) = -u := by
-    simp [z]
+    simp only [Complex.tan_arg, Complex.sub_im, Complex.one_im, Complex.mul_im, Complex.I_re, Complex.ofReal_im,
+      mul_zero, Complex.I_im, Complex.ofReal_re, one_mul, zero_add, zero_sub, Complex.sub_re, Complex.one_re,
+      Complex.mul_re, zero_mul, sub_self, sub_zero, div_one, z]
   calc
     Complex.arg (1 - Complex.I * (u : ℂ)) =
         Real.arctan (Real.tan (Complex.arg z)) := by
@@ -18490,29 +18574,37 @@ theorem lowerWallis_imaginary_log_mul_re (u : ℝ) :
         -Real.pi * |u| / 2 := by
   by_cases hzero : u = 0
   · subst u
-    simp
+    simp only [Complex.ofReal_zero, mul_zero, Complex.log_zero, Complex.zero_re, abs_zero, zero_div]
   rcases lt_or_gt_of_ne hzero with hnegative | hpositive
   · have harg :
         Complex.arg (-Complex.I * (u : ℂ)) =
           Real.pi / 2 := by
       apply Complex.arg_eq_pi_div_two_iff.mpr
       constructor
-      · simp
-      · simpa using! (neg_pos.mpr hnegative)
+      · simp only [neg_mul, Complex.neg_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im,
+          Complex.ofReal_im, mul_zero, sub_self, neg_zero]
+      · simpa only [neg_mul, Complex.neg_im, Complex.mul_im, Complex.I_re, Complex.ofReal_im, mul_zero, Complex.I_im,
+          Complex.ofReal_re, one_mul, zero_add, Left.neg_pos_iff] using! (neg_pos.mpr hnegative)
     rw [Complex.mul_re, Complex.log_im, harg,
       abs_of_neg hnegative]
-    simp
+    simp only [neg_mul, Complex.neg_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, neg_zero, Complex.neg_im, Complex.mul_im, one_mul, zero_add, sub_neg_eq_add,
+      mul_neg, neg_neg]
     ring
   · have harg :
         Complex.arg (-Complex.I * (u : ℂ)) =
           -(Real.pi / 2) := by
       apply Complex.arg_eq_neg_pi_div_two_iff.mpr
       constructor
-      · simp
-      · simpa using! (neg_neg_of_pos hpositive)
+      · simp only [neg_mul, Complex.neg_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im,
+          Complex.ofReal_im, mul_zero, sub_self, neg_zero]
+      · simpa only [neg_mul, Complex.neg_im, Complex.mul_im, Complex.I_re, Complex.ofReal_im, mul_zero, Complex.I_im,
+          Complex.ofReal_re, one_mul, zero_add, Left.neg_neg_iff] using! (neg_neg_of_pos hpositive)
     rw [Complex.mul_re, Complex.log_im, harg,
       abs_of_pos hpositive]
-    simp
+    simp only [neg_mul, Complex.neg_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, neg_zero, Complex.neg_im, Complex.mul_im, one_mul, zero_add, mul_neg,
+      neg_neg, zero_sub]
     ring
 
 theorem lowerWallis_norm_one_sub_I_mul (u : ℝ) :
@@ -18520,7 +18612,9 @@ theorem lowerWallis_norm_one_sub_I_mul (u : ℝ) :
       Real.sqrt (1 + u ^ 2) := by
   rw [Complex.norm_def, Complex.normSq_apply]
   congr 1
-  simp
+  simp only [Complex.sub_re, Complex.one_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul,
+    Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, sub_zero, mul_one, Complex.sub_im, Complex.one_im,
+    Complex.mul_im, one_mul, zero_add, zero_sub, mul_neg, neg_mul, neg_neg, add_right_inj]
   ring
 
 theorem lowerWallis_shifted_log_mul_re (u : ℝ) :
@@ -18532,12 +18626,14 @@ theorem lowerWallis_shifted_log_mul_re (u : ℝ) :
     lowerWallis_norm_one_sub_I_mul,
     lowerWallis_arg_one_sub_I_mul,
     Real.log_sqrt (show 0 ≤ 1 + u ^ 2 by positivity)]
-  simp
+  simp only [Complex.sub_re, Complex.one_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul,
+    Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, sub_zero, one_mul, Complex.sub_im, Complex.one_im,
+    Complex.mul_im, zero_add, zero_sub, mul_neg, neg_mul, neg_neg]
 
 theorem lowerWallis_abs_mul_arctan_abs (u : ℝ) :
     |u| * Real.arctan |u| = u * Real.arctan u := by
   by_cases hu : 0 ≤ u
-  · simp [abs_of_nonneg hu]
+  · simp only [abs_of_nonneg hu]
   · have hnegative : u < 0 := lt_of_not_ge hu
     rw [abs_of_neg hnegative, Real.arctan_neg]
     ring
@@ -18583,8 +18679,9 @@ theorem lowerWallisComplexLogPhase_ofReal
     rw [hcast, Complex.norm_real, Real.norm_eq_abs,
       abs_of_nonneg (show 0 ≤ a + 1 by linarith)]
   unfold lowerWallisComplexLogPhase
-  simp [Complex.mul_re, Complex.log_re, hnorm,
-    abs_of_nonneg ha]
+  simp only [Complex.sub_re, Complex.add_re, Complex.one_re, Complex.mul_re, Complex.ofReal_re, Complex.log_re,
+    Complex.norm_real, Real.norm_eq_abs, abs_of_nonneg ha, Complex.ofReal_im, zero_mul, sub_zero, hnorm, Complex.add_im,
+    Complex.one_im, add_zero]
 
 theorem tendsto_lowerWallisComplexLogPhase_regularized (u : ℝ) :
     Tendsto
@@ -18633,7 +18730,9 @@ theorem tendsto_lowerWallisComplexLogPhase_regularized (u : ℝ) :
         (lowerWallisComplexLogPhase_ofReal
           (show 0 ≤ (1 / ((n : ℝ) + 1) : ℝ) by
             positivity)).symm
-    simpa [lowerEndpointPhase] using! hcomputed
+    simpa only [one_div, Complex.ofReal_inv, Complex.ofReal_add, Complex.ofReal_natCast, Complex.ofReal_one,
+      Complex.ofReal_zero, mul_zero, sub_zero, lowerEndpointPhase, abs_zero, zero_div, ne_eq, OfNat.ofNat_ne_zero,
+      not_false_eq_true, zero_pow, add_zero, Real.log_one, sub_self, Real.arctan_zero] using! hcomputed
   · let z : ℂ := -Complex.I * (u : ℂ)
     have hcast :
         Tendsto
@@ -18648,19 +18747,22 @@ theorem tendsto_lowerWallisComplexLogPhase_regularized (u : ℝ) :
               Complex.I * (u : ℂ)))
           atTop (𝓝 z) := by
       try dsimp [z]
-      simpa using!
+      simpa only [one_div, Complex.ofReal_inv, Complex.ofReal_add, Complex.ofReal_natCast, Complex.ofReal_one,
+        neg_mul, zero_sub] using!
         hcast.sub (tendsto_const_nhds
           (x := Complex.I * (u : ℂ)))
     have hslit : z ∈ Complex.slitPlane := by
       apply Complex.mem_slitPlane_iff.mpr
       right
       try dsimp [z]
-      simpa using! hzero
+      simpa only [neg_mul, Complex.neg_im, Complex.mul_im, Complex.I_re, Complex.ofReal_im, mul_zero, Complex.I_im,
+        Complex.ofReal_re, one_mul, zero_add, neg_eq_zero] using! hzero
     have hshift : z + 1 ∈ Complex.slitPlane := by
       apply Complex.mem_slitPlane_iff.mpr
       left
       try dsimp [z]
-      simp
+      simp only [neg_mul, Complex.neg_re, Complex.mul_re, Complex.I_re, Complex.ofReal_re, zero_mul, Complex.I_im,
+        Complex.ofReal_im, mul_zero, sub_self, neg_zero, zero_add, zero_lt_one]
     let w : ℕ → ℂ := fun n =>
       (((1 / ((n : ℝ) + 1) : ℝ) : ℂ) -
         Complex.I * (u : ℂ))
@@ -18819,8 +18921,7 @@ theorem limitingPoissonEndpointExpectation_eq_log_pi_div_two_sub_one :
       (fun T : ℝ =>
         limitingStripPoissonDensity T * lowerEndpointPhase T)
       (2 : ℝ)
-    simpa [smul_eq_mul,
-      abs_of_pos (show (0 : ℝ) < (2 : ℝ)⁻¹ by positivity)] using! h
+    simpa only [one_div, abs_of_pos (show (0 : ℝ) < (2 : ℝ)⁻¹ by positivity), smul_eq_mul] using! h
   have hlogistic :
       (∫ u : ℝ,
         poissonLogisticDensity u *
@@ -18885,7 +18986,7 @@ theorem lowerPoissonEndpointSharpCoefficient_neg
   rw [lowerPoissonEndpointSharpCoefficient_eq hc]
   have hproduct : Real.pi * c < 1 := by
     have hdiv : c < 1 / Real.pi := by
-      simpa [one_div] using! hsharp
+      simpa only [one_div] using! hsharp
     have h := (lt_div_iff₀ Real.pi_pos).mp hdiv
     linarith
   have hpositive : 0 < Real.pi * c :=
@@ -19133,7 +19234,7 @@ theorem saddle_complex_frequency_norm_le (T u : ℝ) :
         ‖(T : ℂ)‖ + ‖Complex.I * (u : ℂ)‖ :=
       norm_add_le _ _
     _ = |T| + |u| := by
-      simp [Complex.norm_real, Real.norm_eq_abs]
+      simp only [Complex.norm_real, Real.norm_eq_abs, Complex.norm_mul, Complex.norm_I, one_mul]
 
 theorem exists_plusPolynomial_uniform_norm_ratio
     {ε : ℝ} (hε : 0 < ε) :
@@ -19266,14 +19367,14 @@ theorem plusSaddleLinearCoefficient_norm_le (z : ℂ) :
           ‖(1 : ℂ)‖ + ‖(3 : ℂ) * z ^ 2‖ :=
         norm_add_le _ _
       _ = 1 + 3 * ‖z‖ ^ 2 := by
-        simp [norm_pow]
+        simp only [norm_one, Complex.norm_mul, Complex.norm_ofNat, norm_pow]
   calc
     ‖2 * z + Complex.I * (1 + 3 * z ^ 2)‖ ≤
         ‖(2 : ℂ) * z‖ +
           ‖Complex.I * (1 + 3 * z ^ 2)‖ :=
       norm_add_le _ _
     _ = 2 * ‖z‖ + ‖(1 : ℂ) + 3 * z ^ 2‖ := by
-      simp
+      simp only [Complex.norm_mul, Complex.norm_ofNat, Complex.norm_I, one_mul]
     _ ≤ 2 * ‖z‖ + (1 + 3 * ‖z‖ ^ 2) := by
       gcongr
     _ ≤ 3 * (1 + ‖z‖) ^ 2 := by
@@ -19289,14 +19390,14 @@ theorem minusSaddleLinearCoefficient_norm_le (z : ℂ) :
           ‖(1 : ℂ)‖ + ‖(3 : ℂ) * z ^ 2‖ :=
         norm_add_le _ _
       _ = 1 + 3 * ‖z‖ ^ 2 := by
-        simp [norm_pow]
+        simp only [norm_one, Complex.norm_mul, Complex.norm_ofNat, norm_pow]
   calc
     ‖2 * z - Complex.I * (1 + 3 * z ^ 2)‖ ≤
         ‖(2 : ℂ) * z‖ +
           ‖Complex.I * (1 + 3 * z ^ 2)‖ :=
       norm_sub_le _ _
     _ = 2 * ‖z‖ + ‖(1 : ℂ) + 3 * z ^ 2‖ := by
-      simp
+      simp only [Complex.norm_mul, Complex.norm_ofNat, Complex.norm_I, one_mul]
     _ ≤ 2 * ‖z‖ + (1 + 3 * ‖z‖ ^ 2) := by
       gcongr
     _ ≤ 3 * (1 + ‖z‖) ^ 2 := by
@@ -19310,7 +19411,7 @@ theorem plusSaddleQuadraticCoefficient_norm_le (z : ℂ) :
         ‖(1 : ℂ)‖ + ‖(3 : ℂ) * Complex.I * z‖ :=
       norm_add_le _ _
     _ = 1 + 3 * ‖z‖ := by
-      simp
+      simp only [norm_one, Complex.norm_mul, Complex.norm_ofNat, Complex.norm_I, mul_one]
     _ ≤ 3 * (1 + ‖z‖) ^ 2 := by
       linarith [norm_nonneg z, sq_nonneg ‖z‖]
 
@@ -19322,7 +19423,7 @@ theorem minusSaddleQuadraticCoefficient_norm_le (z : ℂ) :
         ‖(1 : ℂ)‖ + ‖(3 : ℂ) * Complex.I * z‖ :=
       norm_sub_le _ _
     _ = 1 + 3 * ‖z‖ := by
-      simp
+      simp only [norm_one, Complex.norm_mul, Complex.norm_ofNat, Complex.norm_I, mul_one]
     _ ≤ 3 * (1 + ‖z‖) ^ 2 := by
       linarith [norm_nonneg z, sq_nonneg ‖z‖]
 
@@ -19409,15 +19510,15 @@ theorem plusPolynomial_translation_norm_le
   let z : ℂ := Complex.I * (u : ℂ)
   have hz : ‖z‖ = |u| := by
     try dsimp [z]
-    simp [Complex.norm_real, Real.norm_eq_abs]
+    simp only [Complex.norm_mul, Complex.norm_I, Complex.norm_real, Real.norm_eq_abs, one_mul]
   have hA :
       ‖2 * z + Complex.I * (1 + 3 * z ^ 2)‖ ≤
         3 * (1 + |u|) ^ 2 := by
-    simpa [hz] using! plusSaddleLinearCoefficient_norm_le z
+    simpa only [hz] using! plusSaddleLinearCoefficient_norm_le z
   have hB :
       ‖1 + 3 * Complex.I * z‖ ≤
         3 * (1 + |u|) ^ 2 := by
-    simpa [hz] using! plusSaddleQuadraticCoefficient_norm_le z
+    simpa only [hz] using! plusSaddleQuadraticCoefficient_norm_le z
   have hidentity :
       plusPolynomial ε ((T : ℂ) + z) -
           plusPolynomial ε z =
@@ -19433,7 +19534,7 @@ theorem plusPolynomial_translation_norm_le
   exact saddle_cubic_translation_norm_le u T
     (2 * z + Complex.I * (1 + 3 * z ^ 2))
     (1 + 3 * Complex.I * z) Complex.I
-    hA hB (by simp)
+    hA hB (by simp only [Complex.norm_I, Std.le_refl])
 
 theorem minusPolynomial_translation_norm_le
     (ε u T : ℝ) :
@@ -19443,15 +19544,15 @@ theorem minusPolynomial_translation_norm_le
   let z : ℂ := Complex.I * (u : ℂ)
   have hz : ‖z‖ = |u| := by
     try dsimp [z]
-    simp [Complex.norm_real, Real.norm_eq_abs]
+    simp only [Complex.norm_mul, Complex.norm_I, Complex.norm_real, Real.norm_eq_abs, one_mul]
   have hA :
       ‖2 * z - Complex.I * (1 + 3 * z ^ 2)‖ ≤
         3 * (1 + |u|) ^ 2 := by
-    simpa [hz] using! minusSaddleLinearCoefficient_norm_le z
+    simpa only [hz] using! minusSaddleLinearCoefficient_norm_le z
   have hB :
       ‖1 - 3 * Complex.I * z‖ ≤
         3 * (1 + |u|) ^ 2 := by
-    simpa [hz] using! minusSaddleQuadraticCoefficient_norm_le z
+    simpa only [hz] using! minusSaddleQuadraticCoefficient_norm_le z
   have hidentity :
       minusPolynomial ε ((T : ℂ) + z) -
           minusPolynomial ε z =
@@ -19468,7 +19569,7 @@ theorem minusPolynomial_translation_norm_le
   exact saddle_cubic_translation_norm_le u T
     (2 * z - Complex.I * (1 + 3 * z ^ 2))
     (1 - 3 * Complex.I * z) (-Complex.I)
-    hA hB (by simp)
+    hA hB (by simp only [norm_neg, Complex.norm_I, Std.le_refl])
 
 theorem exists_plusPolynomial_uniform_difference_ratio
     {ε : ℝ} (hε : 0 < ε) :
@@ -19574,7 +19675,11 @@ theorem upperNegativeHalfGammaArgument_ne_zero
     upperNegativeHalfGammaArgument N s ≠ 0 := by
   intro hzero
   have hre := congrArg Complex.re hzero
-  simp [upperNegativeHalfGammaArgument] at hre
+  simp only [upperNegativeHalfGammaArgument, one_div, neg_add_rev, Complex.ofReal_div, Complex.ofReal_ofNat,
+    Complex.sub_re, Complex.add_re, Complex.neg_re, Complex.inv_re, Complex.re_ofNat, Complex.normSq_ofNat,
+    div_self_mul_self', Complex.natCast_re, Complex.mul_re, Complex.I_re, Complex.div_ofNat_re, Complex.ofReal_re,
+    zero_mul, Complex.I_im, Complex.div_ofNat_im, Complex.ofReal_im, zero_div, mul_zero, sub_self, sub_zero,
+    Complex.zero_re] at hre
   have hN : 0 ≤ (N : ℝ) := Nat.cast_nonneg N
   linarith
 
@@ -19644,7 +19749,7 @@ theorem eventually_upper_shellLocation_gt_shortEndpoint :
       Tendsto (fun ε : ℝ =>
         ε ^ 2 * (ε * (1 + shortEndpoint ε)))
         (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) := by
-    simpa using! (hid.pow 2).mul
+    simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero] using! (hid.pow 2).mul
       tendsto_upper_one_add_shortEndpoint_scaled
   have hsmall :
       ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
@@ -19685,11 +19790,11 @@ theorem upperShellMarginRatio_inv
         Real.exp (-(x ^ 2) / 8) *
           Real.exp (5 * Real.log x / x) := by
   have hshort : shortEndpoint x⁻¹ = 10 * Real.log x := by
-    simp [shortEndpoint]
+    simp only [shortEndpoint, div_inv_eq_mul, one_mul]
   have hcutoff : (shortCutoff x⁻¹)⁻¹ = x ^ 3 := by
-    simp [shortCutoff]
+    simp only [shortCutoff, inv_pow, inv_inv]
   have hlocation : shellLocation x⁻¹ = x ^ 3 := by
-    simp [shellLocation]
+    simp only [shellLocation, inv_inv]
   have hweight :
       shellWeight x⁻¹ = Real.exp (-(3 : ℝ) * x ^ 2 / 8) := by
     unfold shellWeight
@@ -19734,7 +19839,7 @@ theorem tendsto_upper_log_cubic_gaussian_atTop :
         11 * ((x ^ 3 + 1) *
           Real.exp (-(x ^ 2) / 8)))
         atTop (𝓝 (0 : ℝ)) := by
-    simpa using! tendsto_cubic_gaussian_atTop.const_mul (11 : ℝ)
+    simpa only [mul_zero] using! tendsto_cubic_gaussian_atTop.const_mul (11 : ℝ)
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le'
     (tendsto_const_nhds (x := (0 : ℝ))) hupper ?_ ?_
   · filter_upwards [eventually_ge_atTop (1 : ℝ)] with x hx
@@ -19768,7 +19873,7 @@ theorem tendsto_upper_shell_log_correction_atTop :
       atTop (𝓝 (1 : ℝ)) := by
   have hlog : Tendsto (fun x : ℝ => Real.log x / x)
       atTop (𝓝 (0 : ℝ)) := by
-    simpa using!
+    simpa only [pow_one, one_mul, add_zero] using!
       Real.tendsto_pow_log_div_mul_add_atTop
         1 0 1 (by norm_num : (1 : ℝ) ≠ 0)
   have hscaled : Tendsto (fun x : ℝ =>
@@ -19778,7 +19883,7 @@ theorem tendsto_upper_shell_log_correction_atTop :
     · ext x
       ring
     · norm_num
-  simpa using! hscaled.rexp
+  simpa only [Real.exp_zero] using! hscaled.rexp
 
 theorem tendsto_upperShellMarginRatio :
     Tendsto upperShellMarginRatio
@@ -19790,7 +19895,7 @@ theorem tendsto_upperShellMarginRatio :
           Real.exp (-(x ^ 2) / 8))) *
             Real.exp (5 * Real.log x / x))
         atTop (𝓝 (0 : ℝ)) := by
-    simpa using!
+    simpa only [mul_zero, mul_one] using!
       (tendsto_upper_log_cubic_gaussian_atTop.const_mul
         (5000 : ℝ)).mul
           tendsto_upper_shell_log_correction_atTop
@@ -19957,7 +20062,7 @@ theorem upper_intervalIntegral_one_add_inv_sq
       (hasDerivAt_inv hxpos.ne') using 1; ring
   rw [intervalIntegral.integral_eq_sub_of_hasDerivAt
     (fun x hx => hderiv x
-      (by simpa [Set.uIcc_of_le hab] using! hx))
+      (by simpa only [mem_Icc, Set.uIcc_of_le hab] using! hx))
     (hcont.intervalIntegrable_of_Icc hab)]
   ring
 
@@ -20303,8 +20408,10 @@ theorem upperPositiveShellVariance_bounds
   change lo ≤ upperPositiveShellVariance ε δ ∧
     upperPositiveShellVariance ε δ ≤ hi
   constructor
-  · simpa [upperPositiveShellVariance, B] using! hlower
-  · simpa [upperPositiveShellVariance, B] using! hupper
+  · simpa only [upperPositiveShellVariance, intervalIntegral.integral_const, add_sub_cancel_left, smul_eq_mul,
+      one_mul] using! hlower
+  · simpa only [upperPositiveShellVariance, intervalIntegral.integral_const, add_sub_cancel_left, smul_eq_mul,
+      one_mul] using! hupper
 
 def upperShortShellVariance (ε δ : ℝ) : ℝ :=
   ∫ a in shortCutoff ε..shortEndpoint ε,
@@ -20418,7 +20525,7 @@ theorem upperShortShellVariance_global_bound
       (-shortShellDensity ε a) * a ^ 2 *
         Real.cosh ((1 + δ) * a)) ≤
       (A - a₀) * K := by
-        simpa using! hmono
+        simpa only [neg_mul, intervalIntegral.integral_neg, intervalIntegral.integral_const, smul_eq_mul] using! hmono
     _ ≤ (A + a₀⁻¹) * K := by
       apply mul_le_mul_of_nonneg_right _ hK
       linarith
@@ -20448,7 +20555,7 @@ theorem upperShortShellVariance_nonneg
       mul_nonneg (hmargin a ha) (Real.exp_pos _).le
     have hd : 0 < 2 * a ^ 2 * Real.cosh a := by
       positivity
-    simpa using! div_nonneg hn hd.le
+    simpa only [neg_mul, neg_neg, ge_iff_le] using! div_nonneg hn hd.le
   exact mul_nonneg
     (mul_nonneg hdensity (sq_nonneg a))
     (Real.cosh_pos _).le
@@ -20614,8 +20721,7 @@ theorem upperPositiveShellThirdMoment_le
     (hthird.intervalIntegrable _ _)
     (hright.intervalIntegrable _ _)
     hpoint
-  simpa [upperPositiveShellThirdMoment,
-    upperPositiveShellVariance, B,
+  simpa only [upperPositiveShellThirdMoment, upperPositiveShellVariance, ge_iff_le,
     intervalIntegral.integral_const_mul] using! hmono
 
 def upperShortShellThirdMoment (ε δ : ℝ) : ℝ :=
@@ -20686,7 +20792,7 @@ theorem upperShortShellThirdMoment_le
         mul_nonneg hmargin' (Real.exp_pos _).le
       have hd : 0 < 2 * a ^ 2 * Real.cosh a := by
         positivity
-      simpa using! div_nonneg hn hd.le
+      simpa only [neg_mul, neg_neg, ge_iff_le] using! div_nonneg hn hd.le
     have hbasenonneg :
         0 ≤ (-shortShellDensity ε a) * a ^ 2 *
           Real.cosh ((1 + δ) * a) :=
@@ -20708,9 +20814,8 @@ theorem upperShortShellThirdMoment_le
     (hthird.intervalIntegrable_of_Icc horder)
     (hright.intervalIntegrable_of_Icc horder)
     hpoint
-  simpa [upperShortShellThirdMoment,
-    upperShortShellVariance, a₀, A,
-    intervalIntegral.integral_const_mul] using! hmono
+  simpa only [upperShortShellThirdMoment, neg_mul, intervalIntegral.integral_neg, upperShortShellVariance,
+    mul_neg, neg_le_neg_iff, ge_iff_le, intervalIntegral.integral_const_mul] using! hmono
 
 theorem eventually_upper_shortShellThirdMoment_domination :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
@@ -20799,7 +20904,7 @@ theorem upper_inv_one_sub_exp_neg_bounds
         _ ≤ (1 + x⁻¹) * (1 - Real.exp (-x)) :=
           mul_le_mul_of_nonneg_left
             (sub_le_sub_left hexp 1) hfactor
-    simpa [one_div] using! hgoal
+    simpa only [ge_iff_le, one_div] using! hgoal
 
 def upperGammaMeasureDensity (ℓ η a : ℝ) : ℝ :=
   Real.exp (-η * a) /
@@ -20816,7 +20921,7 @@ theorem upper_laplace_monomial_integrable
     (by norm_num) hη
   apply h.congr_fun _ measurableSet_Ioi
   intro a ha
-  simp [Real.rpow_natCast]
+  simp only [Real.rpow_natCast, Real.rpow_one, neg_mul]
 
 theorem upper_laplace_monomial_integral
     {η : ℝ} (hη : 0 < η) (k : ℕ) :
@@ -20848,7 +20953,7 @@ theorem upper_laplace_monomial_integral
         norm_num, Real.rpow_natCast]
       rw [show ((k + 1 : ℕ) : ℝ) = (k : ℝ) + 1 by
         push_cast; ring, Real.Gamma_nat_eq_factorial]
-      simp [inv_pow, div_eq_mul_inv, mul_comm]
+      simp only [div_eq_mul_inv, mul_comm, mul_one, inv_pow]
 
 theorem upperGammaVarianceDensity_pointwise_bounds
     {ℓ η a : ℝ} (hℓ : 0 < ℓ) (ha : 0 < a) :
@@ -20925,7 +21030,7 @@ theorem upperGammaVarianceDensity_integrable
     change a ^ 1 * Real.exp (-η * a) +
       (ℓ / 2) * (a ^ 0 * Real.exp (-η * a)) =
         (a + ℓ / 2) * Real.exp (-η * a)
-    simp
+    simp only [pow_one, neg_mul, pow_zero, one_mul]
     ring
   have hmeas : Measurable
       (fun a : ℝ => a ^ 2 * upperGammaMeasureDensity ℓ η a) := by
@@ -20960,7 +21065,7 @@ theorem upperGammaThirdMomentDensity_integrable
     change a ^ 2 * Real.exp (-η * a) +
       (ℓ / 2) * (a ^ 1 * Real.exp (-η * a)) =
         (a ^ 2 + (ℓ / 2) * a) * Real.exp (-η * a)
-    simp
+    simp only [neg_mul, pow_one]
     ring
   have hmeas : Measurable
       (fun a : ℝ => a ^ 3 * upperGammaMeasureDensity ℓ η a) := by
@@ -20995,11 +21100,11 @@ theorem upperGammaVariance_bounds
   have hzero : IntegrableOn
       (fun a : ℝ => Real.exp (-η * a))
       (Set.Ioi 0) := by
-    simpa using! upper_laplace_monomial_integrable hη 0
+    simpa only [neg_mul, pow_zero, one_mul] using! upper_laplace_monomial_integrable hη 0
   have hline : IntegrableOn
       (fun a : ℝ => a * Real.exp (-η * a))
       (Set.Ioi 0) := by
-    simpa using! upper_laplace_monomial_integrable hη 1
+    simpa only [neg_mul, pow_one] using! upper_laplace_monomial_integrable hη 1
   have hconst : IntegrableOn
       (fun a : ℝ => (ℓ / 2) * Real.exp (-η * a))
       (Set.Ioi 0) :=
@@ -21041,7 +21146,7 @@ theorem upperGammaVariance_bounds
   have hlinevalue :
       (∫ a : ℝ in Set.Ioi 0,
         a * Real.exp (-η * a)) = 1 / η ^ 2 := by
-    simpa using! upper_laplace_monomial_integral hη 1
+    simpa only [neg_mul, one_div, pow_one, Nat.factorial_one, Nat.cast_one, Nat.reduceAdd] using! upper_laplace_monomial_integral hη 1
   have hconstvalue :
       (∫ a : ℝ in Set.Ioi 0,
         (ℓ / 2) * Real.exp (-η * a)) =
@@ -21104,7 +21209,7 @@ theorem upperGammaThirdMoment_bounds
   have hline : IntegrableOn
       (fun a : ℝ => a * Real.exp (-η * a))
       (Set.Ioi 0) := by
-    simpa using! upper_laplace_monomial_integrable hη 1
+    simpa only [neg_mul, pow_one] using! upper_laplace_monomial_integrable hη 1
   have hquadratic : IntegrableOn
       (fun a : ℝ => a ^ 2 * Real.exp (-η * a))
       (Set.Ioi 0) :=
@@ -21158,11 +21263,11 @@ theorem upperGammaThirdMoment_bounds
   have hlinevalue :
       (∫ a : ℝ in Set.Ioi 0,
         a * Real.exp (-η * a)) = 1 / η ^ 2 := by
-    simpa using! upper_laplace_monomial_integral hη 1
+    simpa only [neg_mul, one_div, pow_one, Nat.factorial_one, Nat.cast_one, Nat.reduceAdd] using! upper_laplace_monomial_integral hη 1
   have hquadraticvalue :
       (∫ a : ℝ in Set.Ioi 0,
         a ^ 2 * Real.exp (-η * a)) = 2 / η ^ 3 := by
-    simpa using! upper_laplace_monomial_integral hη 2
+    simpa only [neg_mul, Nat.factorial_two, Nat.cast_ofNat, Nat.reduceAdd] using! upper_laplace_monomial_integral hη 2
   have hconstvalue :
       (∫ a : ℝ in Set.Ioi 0,
         (ℓ / 2) * a * Real.exp (-η * a)) =
@@ -21459,7 +21564,7 @@ theorem realHyperbolicShellInterval_hasDerivAt
       HasDerivAt (fun z : ℝ => F z x) (F' v x) v := by
     have hlinear : HasDerivAt
         (fun z : ℝ => x * z) x v := by
-      simpa using! (hasDerivAt_id v).const_mul x
+      simpa only [id_eq, mul_one] using! (hasDerivAt_id v).const_mul x
     have hcosh := (Real.hasDerivAt_cosh
       (x * v)).comp v hlinear
     simpa [F, F', mul_assoc, mul_left_comm, mul_comm] using! (hcosh.sub_const (1 : ℝ)).const_mul (w x)
@@ -21590,7 +21695,7 @@ theorem realHyperbolicShellPhase_hasDerivAt_one
     (horder : shortCutoff ε ≤ shortEndpoint ε) :
     HasDerivAt (realHyperbolicShellPhase ε)
       (saddleShellDerivativeOne ε) 1 := by
-  simpa [saddleShellDerivativeOne] using!
+  simpa only [saddleShellDerivativeOne, mul_one] using!
     realHyperbolicShellPhase_hasDerivAt hε horder 1
 
 theorem exists_realHyperbolicShellPhase_quadratic_remainder
@@ -21627,8 +21732,8 @@ theorem exists_realHyperbolicShellPhase_quadratic_remainder
           1 (Set.Icc (1 : ℝ) 2) 1 x =
         realHyperbolicShellPhase ε 1 +
           (x - 1) * saddleShellDerivativeOne ε := by
-    simp [taylorWithinEval_succ, iteratedDerivWithin_one,
-      hwithin, smul_eq_mul]
+    simp only [taylorWithinEval_succ, taylor_within_zero_eval, CharP.cast_eq_zero, zero_add, Nat.factorial_zero,
+      Nat.cast_one, mul_one, inv_one, pow_one, one_mul, iteratedDerivWithin_one, hwithin, smul_eq_mul]
   refine ⟨max C 0, le_max_right _ _, ?_⟩
   intro x hx
   have hxbound := hC x hx
@@ -21669,7 +21774,7 @@ theorem exists_plusSaddleSmallRadiusPhase_error
   have hratio : 0 ≤ 2 * (n : ℝ) / ℓ := by
     positivity
   have hratioupper : 2 * (n : ℝ) / ℓ ≤ 1 :=
-    (div_le_iff₀ hℓ).mpr (by simpa using! hn)
+    (div_le_iff₀ hℓ).mpr (by simpa only [one_mul] using! hn)
   have hx : x ∈ Set.Icc (1 : ℝ) 2 := by
     constructor <;> dsimp [x] <;> linarith
   have hscale : ℓ * (x - 1) = 2 * (n : ℝ) := by
@@ -21718,7 +21823,7 @@ theorem plusSaddleSmallRadiusPolynomial_error
     positivity
   have hsone : s ≤ 1 := by
     try dsimp [s]
-    exact (div_le_iff₀ hℓ).mpr (by simpa using! hn)
+    exact (div_le_iff₀ hℓ).mpr (by simpa only [one_mul] using! hn)
   have hsquare : (2 + s) ^ 2 ≤ 9 := by
     linarith [mul_nonneg
       (show 0 ≤ 3 - (2 + s) by linarith)
@@ -21746,7 +21851,7 @@ theorem abs_exp_sub_one_le_abs_mul_exp_abs (t : ℝ) :
     |Real.exp t - 1| ≤ |t| * Real.exp |t| := by
   rcases le_total 0 t with ht | ht
   · have hexp : 1 ≤ Real.exp t := by
-      simpa using! Real.exp_le_exp.mpr ht
+      simpa only [Real.one_le_exp_iff, Real.exp_zero] using! Real.exp_le_exp.mpr ht
     rw [abs_of_nonneg (sub_nonneg.mpr hexp),
       abs_of_nonneg ht]
     have hsupport := Real.add_one_le_exp (-t)
@@ -21754,14 +21859,14 @@ theorem abs_exp_sub_one_le_abs_mul_exp_abs (t : ℝ) :
       (Real.exp_pos t).le
     have hcancel : Real.exp t * Real.exp (-t) = 1 := by
       rw [← Real.exp_add]
-      simp
+      simp only [add_neg_cancel, Real.exp_zero]
     rw [hcancel] at hmul
     linarith
   · have hexp : Real.exp t ≤ 1 := by
-      simpa using! Real.exp_le_exp.mpr ht
+      simpa only [Real.exp_le_one_iff, Real.exp_zero] using! Real.exp_le_exp.mpr ht
     have hnegt : 0 ≤ -t := neg_nonneg.mpr ht
     have hexpneg : 1 ≤ Real.exp (-t) := by
-      simpa using! Real.exp_le_exp.mpr hnegt
+      simpa only [Real.one_le_exp_iff, Left.nonneg_neg_iff, Real.exp_zero] using! Real.exp_le_exp.mpr hnegt
     rw [abs_of_nonpos (sub_nonpos.mpr hexp),
       abs_of_nonpos ht]
     have hsupport := Real.add_one_le_exp t
@@ -21807,9 +21912,9 @@ theorem plusSaddleSmallRadiusCoefficient_error_of_phase
     try dsimp [k]
     positivity [beta_pos hε]
   have hE : |E| ≤ q := by
-    simpa [E, q] using! hphase
+    simpa only  using! hphase
   have hP : |P - 1| ≤ k := by
-    simpa [P, k] using!
+    simpa only  using!
       plusSaddleSmallRadiusPolynomial_error hε hℓ n hn
   have hexp : Real.exp E ≤ Real.exp q :=
     Real.exp_le_exp.mpr ((le_abs_self E).trans hE)
@@ -21882,7 +21987,7 @@ theorem exists_plusSaddleSmallRadiusCoefficient_error
       (C * (n : ℝ) ^ 2 / ℓ +
         K * ((n : ℝ) / ℓ)) *
           Real.exp (C * (n : ℝ) ^ 2 / ℓ) := by
-            simpa [K] using! hsource
+            simpa only [K] using! hsource
     _ ≤ ((C + K) * ((n : ℝ) + (n : ℝ) ^ 2) / ℓ) *
           Real.exp ((C + K) * (n : ℝ) ^ 2 / ℓ) :=
         mul_le_mul hpoly (Real.exp_le_exp.mpr hq)
@@ -22060,7 +22165,7 @@ theorem saddleExpSeries_tail_term_le_geometric
       (y ^ m / (m.factorial : ℝ)) *
         ((1 / 2 : ℝ) ^ k) := by
   induction k with
-  | zero => simp
+  | zero => simp only [add_zero, one_div, pow_zero, mul_one, Std.le_refl]
   | succ k ih =>
     have hden : 0 < ((m + k + 1 : ℕ) : ℝ) := by
       exact_mod_cast (show 0 < m + k + 1 by omega)
@@ -22133,7 +22238,7 @@ theorem saddleExpSeries_alternating_tail_bound
     have hfact : 0 < ((n + m).factorial : ℝ) := by
       exact_mod_cast Nat.factorial_pos (n + m)
     rw [abs_of_pos hfact]
-    simp [Nat.add_comm]
+    simp only [Nat.add_comm]
   have hterms (n : ℕ) :
       ‖f (n + m)‖ ≤
         (y ^ m / (m.factorial : ℝ)) *
@@ -22349,7 +22454,7 @@ theorem upper_one_sub_cos_quadratic_lower
   rw [hsquare, hfourth] at hquartic
   have hx2 : x ^ 2 ≤ 1 := by
     have h := pow_le_pow_left₀ hnonnegative hx 2
-    simpa [hsquare] using! h
+    simpa only [sq_le_one_iff_abs_le_one, ge_iff_le, hsquare, one_pow] using! h
   have hx4 : x ^ 4 ≤ x ^ 2 := by
     linarith [mul_nonneg (sq_nonneg x)
       (sub_nonneg.mpr hx2)]
@@ -22476,8 +22581,8 @@ theorem upperGammaDamping_lower_bound
       upperGammaDamping ℓ η T := by
   by_cases hT : T = 0
   · subst T
-    simp [upperGammaDamping,
-      upperGammaDampingIntegrand]
+    simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_div, abs_zero, min_self, mul_zero,
+      upperGammaDamping, upperGammaDampingIntegrand, Real.cos_zero, sub_self, zero_mul, integral_zero, Std.le_refl]
   · let q : ℝ := min η⁻¹ |T|⁻¹
     let c : ℝ :=
       (ℓ / (8 * Real.exp 1)) * T ^ 2
@@ -22530,7 +22635,7 @@ theorem upperGammaDamping_lower_bound
         (Ioc (0 : ℝ) q)).toReal = q
       rw [Real.volume_Ioc,
         ENNReal.toReal_ofReal (by linarith)]
-      simp
+      simp only [sub_zero]
     have hconstintegral :
         (∫ a : ℝ in Ioc (0 : ℝ) q, c) = q * c := by
       rw [setIntegral_const, hmeasure]
@@ -22541,7 +22646,7 @@ theorem upperGammaDamping_lower_bound
       rw [min_mul_of_nonneg η⁻¹ |T|⁻¹
         (sq_nonneg T)]
       congr 1
-      · simp [div_eq_mul_inv, mul_comm]
+      · simp only [div_eq_mul_inv, mul_comm]
       · have hTabs : |T| ≠ 0 := abs_ne_zero.mpr hT
         calc
           |T|⁻¹ * T ^ 2 = |T|⁻¹ * |T| ^ 2 := by
@@ -22775,7 +22880,7 @@ theorem eventually_upperSaddleThirdMoment_le_variance
       upperNetShellThirdMoment ε δ ≤
           upperSaddleShellThirdCoefficient ε *
             upperPositiveShellVariance ε δ := by
-        simpa [upperSaddleShellThirdCoefficient] using! hthird δ hδ
+        simpa only [upperSaddleShellThirdCoefficient] using! hthird δ hδ
       _ ≤ upperSaddleShellThirdCoefficient ε *
             ((100 / 99 : ℝ) *
               upperNetShellVariance ε δ) :=
@@ -22808,14 +22913,14 @@ theorem upperShortMargin_mul_exp_antitone
           ((hasDerivAt_const a (10 * ε)).mul
             ((hasDerivAt_const a (1 : ℝ)).add
               (hasDerivAt_id a)))
-      convert! h using 1; simp [Pi.add_apply, id]
+      convert! h using 1; simp only [Pi.add_apply, id, zero_mul, zero_add, mul_one, zero_sub]
     have hexp : HasDerivAt
         (fun x : ℝ => Real.exp (ε * x))
         (Real.exp (ε * a) * ε) a := by
       convert! ((hasDerivAt_id a).const_mul ε).exp
-        using 1; simp [id]
+        using 1; simp only [id, mul_one]
     have h := hmargin.mul hexp
-    convert! h using 1; simp; ring
+    convert! h using 1; simp only [neg_mul]; ring
   apply antitoneOn_of_deriv_nonpos
     (convex_Ici (0 : ℝ))
   · have hc : Continuous f := by
@@ -22843,9 +22948,9 @@ theorem upperShortMargin_mul_exp_le_zero_value
     shortMargin ε a * Real.exp (ε * a) ≤
       1 - 10 * ε := by
   have h := upperShortMargin_mul_exp_antitone hε
-    (show (0 : ℝ) ∈ Ici 0 by simp)
+    (show (0 : ℝ) ∈ Ici 0 by simp only [mem_Ici, Std.le_refl])
     (show a ∈ Ici 0 from ha) ha
-  simpa [shortMargin] using! h
+  simpa only [shortMargin, ge_iff_le, add_zero, mul_one, mul_zero, Real.exp_zero] using! h
 
 theorem upperFirstBranch_shortRatio_le
     {ε u a : ℝ}
@@ -22873,7 +22978,7 @@ theorem upperFirstBranch_shortRatio_le
       apply Real.cosh_le_cosh.mpr
       rw [abs_mul, abs_of_nonneg ha]
       exact (mul_le_mul_of_nonneg_right huabs ha).trans
-        (by simp)
+        (by simp only [one_mul, Std.le_refl])
     have hratio :
         Real.cosh (u * a) / Real.cosh a ≤ 1 := by
       exact (div_le_one (Real.cosh_pos a)).mpr hcosh
@@ -23036,7 +23141,7 @@ theorem upperFirstBranch_shortDamping_le_gamma
     have hneg : IntervalIntegrable
         (fun a : ℝ => -shortShellDensity ε a)
         volume a₀ A := by
-      simpa [a₀, A, Pi.neg_apply] using! hs.neg
+      simpa only  using! hs.neg
     have hconst := hneg.const_mul ℓ
     have hwithCosh :=
       hconst.mul_continuousOn hcosh.continuousOn
@@ -23064,8 +23169,8 @@ theorem upperFirstBranch_shortDamping_le_gamma
       sub_nonneg.mpr (Real.cos_le_one _)
     have hmul :=
       mul_le_mul_of_nonneg_right hcomparison hoscNonneg
-    simpa [upperGammaDampingIntegrand, η, mul_assoc,
-      mul_left_comm, mul_comm] using! hmul
+    simpa only [mul_neg, neg_mul, mul_assoc, mul_comm, mul_left_comm, upperGammaDampingIntegrand,
+      ge_iff_le] using! hmul
   have hmono := setIntegral_mono_on
     hshortOn hscaledOn measurableSet_Ioc hpoint
   have hnonnegative :
@@ -23227,7 +23332,8 @@ theorem saddle_complexShellInterval_re
       try dsimp [F]
       rw [Complex.mul_re, Complex.sub_re,
         saddle_shifted_complexCos_re]
-      simp
+      simp only [Complex.ofReal_re, Complex.one_re, Complex.ofReal_im, Complex.sub_im, Complex.one_im, sub_zero,
+        zero_mul]
 
 theorem shortShellDensity_continuousOn_support
     {ε : ℝ} (hε : 0 < ε) :
@@ -23393,8 +23499,9 @@ theorem radialCriticalLogProfile_eq_reflected_tilt {d : ℕ}
     radialCriticalLogProfile hd f u =
       schwartzExponentialTilt (radialSchwartzProfile hd f)
         ((d : ℝ) / 2) 1 (-u) := by
-  simp [radialCriticalLogProfile, schwartzExponentialTilt,
-    radialSchwartzProfile_apply, mul_neg]
+  simp only [radialCriticalLogProfile, neg_mul, Complex.real_smul, Complex.ofReal_exp, Complex.ofReal_neg,
+    Complex.ofReal_mul, Complex.ofReal_div, Complex.ofReal_natCast, Complex.ofReal_ofNat, schwartzExponentialTilt,
+    mul_neg, one_mul, radialSchwartzProfile_apply]
 
 theorem radialCriticalLogProfile_integrable {d : ℕ}
     (hd : 0 < d) (f : TestFunction d) :
@@ -23438,7 +23545,7 @@ theorem radialCriticalLogProfile_fourier_integrable {d : ℕ}
     funext v
     exact radialCriticalLogProfile_eq_reflected_tilt hd f v
   rw [hprofile]
-  simpa [Function.comp_def, G] using!
+  simpa only [LinearIsometryEquiv.coe_neg, Function.comp_def] using!
     (Real.fourier_comp_linearIsometry
       (LinearIsometryEquiv.neg ℝ) G u).symm
 
@@ -23471,7 +23578,7 @@ theorem plusSaddleFourierData_integrable {ε ℓ : ℝ}
     Integrable (plusSaddleFourierData ε ℓ) := by
   have hnorm : Integrable
       (fun y : ℝ => ‖plusSaddleFourierData ε ℓ y‖) := by
-    simpa using!
+    simpa only [Real.norm_eq_abs, pow_zero, one_mul] using!
       plusSaddleFourierData_norm_moment_integrable hε hℓ horder 0
   exact (integrable_norm_iff
     (plusSaddleFourierData_continuous
@@ -23483,7 +23590,7 @@ theorem minusSaddleFourierData_integrable {ε ℓ : ℝ}
     Integrable (minusSaddleFourierData ε ℓ) := by
   have hnorm : Integrable
       (fun y : ℝ => ‖minusSaddleFourierData ε ℓ y‖) := by
-    simpa using!
+    simpa only [Real.norm_eq_abs, pow_zero, one_mul] using!
       minusSaddleFourierData_norm_moment_integrable hε hℓ horder 0
   exact (integrable_norm_iff
     (minusSaddleFourierData_continuous
@@ -23496,8 +23603,8 @@ theorem radialProfile_eq_plusSaddleProfile_of_source
     radialProfile hd f r = plusSaddleProfile ε ((d : ℝ) / 2) r := by
   unfold radialProfile
   rw [hf]
-  simp [plusSaddleFunction, norm_smul,
-    norm_radialUnitDirection hd, abs_of_nonneg hr]
+  simp only [plusSaddleFunction, norm_smul, Real.norm_eq_abs, abs_of_nonneg hr, norm_radialUnitDirection hd,
+    mul_one]
 
 theorem radialProfile_eq_minusSaddleProfile_of_source
     {ε : ℝ} {d : ℕ} (hd : 0 < d) (f : TestFunction d)
@@ -23506,8 +23613,8 @@ theorem radialProfile_eq_minusSaddleProfile_of_source
     radialProfile hd f r = minusSaddleProfile ε ((d : ℝ) / 2) r := by
   unfold radialProfile
   rw [hf]
-  simp [minusSaddleFunction, norm_smul,
-    norm_radialUnitDirection hd, abs_of_nonneg hr]
+  simp only [minusSaddleFunction, norm_smul, Real.norm_eq_abs, abs_of_nonneg hr, norm_radialUnitDirection hd,
+    mul_one]
 
 theorem exp_neg_rpow_neg_half_dimension {d : ℕ} (u : ℝ) :
     (Real.exp (-u)) ^ (-((d : ℝ) / 2)) =
@@ -23531,7 +23638,7 @@ theorem plusSaddleCriticalLogProfile_eq_fourierInv
     Real.log_exp, Real.fourierInv_eq_fourier_neg]
   simp only [Complex.real_smul]
   rw [← mul_assoc, ← Complex.ofReal_mul, ← Real.exp_add]
-  simp
+  simp only [neg_mul, neg_add_cancel, Real.exp_zero, Complex.ofReal_one, one_mul]
 
 theorem minusSaddleCriticalLogProfile_eq_fourierInv
     {ε : ℝ} {d : ℕ} (hd : 0 < d) (f : TestFunction d)
@@ -23548,7 +23655,7 @@ theorem minusSaddleCriticalLogProfile_eq_fourierInv
     Real.log_exp, Real.fourierInv_eq_fourier_neg]
   simp only [Complex.real_smul]
   rw [← mul_assoc, ← Complex.ofReal_mul, ← Real.exp_add]
-  simp
+  simp only [neg_mul, neg_add_cancel, Real.exp_zero, Complex.ofReal_one, one_mul]
 
 theorem plusSaddleFourierData_fourier_integrable_of_source
     {ε : ℝ} {d : ℕ} (hd : 0 < d) (f : TestFunction d)
@@ -23560,7 +23667,7 @@ theorem plusSaddleFourierData_fourier_integrable_of_source
   filter_upwards [] with u
   have h := congrFun
     (plusSaddleCriticalLogProfile_eq_fourierInv hd f hf) (-u)
-  simpa [Real.fourierInv_eq_fourier_neg] using! h
+  simpa only [Real.fourierInv_eq_fourier_neg, neg_neg] using! h
 
 theorem minusSaddleFourierData_fourier_integrable_of_source
     {ε : ℝ} {d : ℕ} (hd : 0 < d) (f : TestFunction d)
@@ -23572,7 +23679,7 @@ theorem minusSaddleFourierData_fourier_integrable_of_source
   filter_upwards [] with u
   have h := congrFun
     (minusSaddleCriticalLogProfile_eq_fourierInv hd f hf) (-u)
-  simpa [Real.fourierInv_eq_fourier_neg] using! h
+  simpa only [Real.fourierInv_eq_fourier_neg, neg_neg] using! h
 
 theorem plusSaddle_radialMellinFrequency_of_source
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
@@ -23683,7 +23790,7 @@ theorem radialMellinFrequency_injective {d : ℕ}
   intro x
   by_cases hx : x = 0
   · subst x
-    simpa using! hzero
+    simpa only [radialProfile_zero] using! hzero
   · have hr : 0 < ‖x‖ := norm_pos_iff.mpr hx
     calc
       f x = radialProfile hd f ‖x‖ :=
@@ -23814,22 +23921,22 @@ def saddleSourceAdmissible
   · intro ξ
     rw [fourier_dilate_apply, hfourier, Complex.smul_im,
       hrealplus (R⁻¹ • ξ)]
-    simp
+    simp only [smul_eq_mul, mul_zero]
   · intro ξ
     rw [fourier_dilate_apply, hfourier, Complex.smul_re]
-    simpa [smul_eq_mul] using!
+    simpa only [smul_eq_mul] using!
       mul_nonneg
         (inv_nonneg.mpr (pow_nonneg hR.le d))
         (hnonneg (R⁻¹ • ξ))
   · rw [fourier_dilate_zero, hfourier, Complex.smul_re]
-    simpa [smul_eq_mul] using!
+    simpa only [smul_eq_mul] using!
       mul_pos (inv_pos.mpr (pow_pos hR d)) hzero
   · intro x hx
     change (fminus (R • x)).re ≤ 0
     rw [hminus]
     apply hminusoutside
     have hscaled := mul_le_mul_of_nonneg_left hx hR.le
-    simpa [norm_smul, Real.norm_eq_abs, abs_of_pos hR] using! hscaled
+    simpa only [norm_smul, Real.norm_eq_abs, abs_of_pos hR, ge_iff_le, mul_one] using! hscaled
 
 @[simp] theorem saddleSourceAdmissible_function
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
@@ -23968,7 +24075,7 @@ theorem saddleDigamma_bounds {x : ℝ} (hx : 1 < x) :
     rw [slope_def_field] at hconv
     have hden : x - (x - 1) = (1 : ℝ) := by ring
     rw [hden, div_one, hrec] at hconv
-    simpa using! hconv
+    simpa only [ge_iff_le, Function.comp_apply, add_sub_cancel_left] using! hconv
   · have hconv := Real.convexOn_log_Gamma.deriv_le_slope
       (show x ∈ Ioi (0 : ℝ) from hxpositive)
       (show x + 1 ∈ Ioi (0 : ℝ) from hnext)
@@ -23978,7 +24085,7 @@ theorem saddleDigamma_bounds {x : ℝ} (hx : 1 < x) :
     rw [slope_def_field] at hconv
     have hden : (x + 1) - x = (1 : ℝ) := by ring
     rw [hden, div_one, hrec] at hconv
-    simpa using! hconv
+    simpa only [ge_iff_le, Function.comp_apply, add_sub_cancel_left] using! hconv
 
 theorem tendsto_saddleDigamma_sub_log :
     Tendsto (fun x : ℝ => saddleDigamma x - Real.log x)
@@ -23987,13 +24094,13 @@ theorem tendsto_saddleDigamma_sub_log :
       atTop (𝓝 (0 : ℝ)) := tendsto_inv_atTop_zero
   have hargument : Tendsto (fun x : ℝ => 1 - x⁻¹)
       atTop (𝓝 (1 : ℝ)) := by
-    simpa using! (tendsto_const_nhds.sub hinv)
+    simpa only [sub_zero] using! (tendsto_const_nhds.sub hinv)
   have hlog : Tendsto (fun x : ℝ =>
       Real.log (1 - x⁻¹)) atTop (𝓝 (0 : ℝ)) := by
     convert! (Real.continuousAt_log
       (show (1 : ℝ) ≠ 0 by norm_num)).tendsto.comp
         hargument using 1
-    all_goals simp
+    all_goals simp only [Real.log_one]
   have hlower : Tendsto (fun x : ℝ =>
       Real.log (x - 1) - Real.log x)
       atTop (𝓝 (0 : ℝ)) := by
@@ -24128,14 +24235,14 @@ theorem tendsto_saddleSourceRadius_normalized
         (saddleDigamma (saddleCriticalGammaArgument ε d) -
           Real.log (saddleCriticalGammaArgument ε d)) / 2)
       atTop (𝓝 (0 : ℝ)) := by
-    simpa using! hargument.div_const (2 : ℝ)
+    simpa only [Function.comp_apply, zero_div] using! hargument.div_const (2 : ℝ)
   have hcorrection : Tendsto
       (fun d : ℕ =>
         Real.exp
           ((saddleDigamma (saddleCriticalGammaArgument ε d) -
             Real.log (saddleCriticalGammaArgument ε d)) / 2))
       atTop (𝓝 (1 : ℝ)) := by
-    simpa using! hhalf.rexp
+    simpa only [Real.exp_zero] using! hhalf.rexp
   have htarget : Tendsto
       (fun d : ℕ =>
         Real.exp
@@ -24143,7 +24250,7 @@ theorem tendsto_saddleSourceRadius_normalized
             Real.log (saddleCriticalGammaArgument ε d)) / 2) *
           limitingSaddleRadius ε)
       atTop (𝓝 (limitingSaddleRadius ε)) := by
-    simpa using! hcorrection.mul_const (limitingSaddleRadius ε)
+    simpa only [one_mul] using! hcorrection.mul_const (limitingSaddleRadius ε)
   refine htarget.congr' ?_
   filter_upwards [eventually_gt_atTop (0 : ℕ)] with d hd
   exact (saddleSourceRadius_div_sqrt_eq hε hd).symm
@@ -24171,7 +24278,7 @@ theorem saddleSourceMellinContour_shellArgument
   push_cast
   field_simp
   ring_nf
-  simp [Complex.I_sq]
+  simp only [Complex.I_sq, neg_mul, one_mul, sub_neg_eq_add]
 
 theorem saddleSourceMellinContour_gammaArgument
     (ℓ u T : ℝ) :
@@ -24211,7 +24318,7 @@ def saddleSourceShellDerivative (ε u : ℝ) : ℝ :=
 theorem saddleSourceShellDerivative_one (ε : ℝ) :
     saddleSourceShellDerivative ε 1 =
       saddleShellDerivativeOne ε := by
-  simp [saddleSourceShellDerivative, saddleShellDerivativeOne]
+  simp only [saddleSourceShellDerivative, one_mul, saddleShellDerivativeOne]
 
 theorem saddleSourceShellDerivative_neg
     (ε u : ℝ) :
@@ -24297,7 +24404,7 @@ theorem saddleSourceShellDerivative_eq_deriv
     (realHyperbolicShellPhase_hasDerivAt
       hε horder u).deriv
   unfold saddleSourceShellDerivative
-  simpa [mul_comm] using! h.symm
+  simpa only [mul_comm] using! h.symm
 
 theorem saddleSourceShellDerivative_contDiff_one
     {ε : ℝ} (hε : 0 < ε)
@@ -24358,7 +24465,7 @@ theorem saddleSourceShellDerivative_neg_one
     (ε : ℝ) :
     saddleSourceShellDerivative ε (-1) =
       -saddleShellDerivativeOne ε := by
-  simpa [saddleSourceShellDerivative_one] using!
+  simpa only [saddleSourceShellDerivative_one] using!
     saddleSourceShellDerivative_neg ε 1
 
 theorem exists_saddleSourceShellDerivative_endpoint_bound
@@ -24534,7 +24641,7 @@ theorem exists_saddleSmallRadiusStar_coordinate_bound
       abs_exp_sub_one_le_abs_mul_exp_abs z
     rw [abs_of_nonneg
       (sub_nonneg.mpr (by
-        simpa using! Real.exp_le_exp.mpr hznonnegative)),
+        simpa only [Real.one_le_exp_iff, Real.exp_zero] using! Real.exp_le_exp.mpr hznonnegative)),
       abs_of_nonneg hznonnegative] at hsource
     exact hsource
   have hproduct :
@@ -24559,7 +24666,7 @@ theorem exists_saddleSmallRadiusStar_coordinate_bound
           2 * (saddleShellDerivativeOne ε +
             saddleSourceShellDerivative ε
               (saddleSmallRadiusStarOrdinate ε d))) := by
-        simpa [m, ℓ] using!
+        simpa only [m, ℓ] using!
           saddleSmallRadiusVariable_star_eq
             (ε := ε) hd
     _ ≤ Real.exp (Real.log m + z) := by
@@ -24642,13 +24749,13 @@ theorem tendsto_logLinear_div_atTop :
   have hlog : Tendsto
       (fun ℓ : ℝ => Real.log ℓ / ℓ)
       atTop (𝓝 0) := by
-    simpa using!
+    simpa only [pow_one, one_mul, add_zero] using!
       Real.tendsto_pow_log_div_mul_add_atTop
         1 0 1 (by norm_num : (1 : ℝ) ≠ 0)
   have hinv : Tendsto
       (fun ℓ : ℝ => (1 : ℝ) / ℓ)
       atTop (𝓝 0) := by
-    simpa [one_div] using!
+    simpa only [one_div] using!
       (tendsto_inv_atTop_zero :
         Tendsto (fun ℓ : ℝ => ℓ⁻¹)
           atTop (𝓝 0))
@@ -24664,19 +24771,19 @@ theorem tendsto_logLinear_sq_div_atTop :
   have hlog1 : Tendsto
       (fun ℓ : ℝ => Real.log ℓ / ℓ)
       atTop (𝓝 0) := by
-    simpa using!
+    simpa only [pow_one, one_mul, add_zero] using!
       Real.tendsto_pow_log_div_mul_add_atTop
         1 0 1 (by norm_num : (1 : ℝ) ≠ 0)
   have hlog2 : Tendsto
       (fun ℓ : ℝ => Real.log ℓ ^ 2 / ℓ)
       atTop (𝓝 0) := by
-    simpa using!
+    simpa only [one_mul, add_zero] using!
       Real.tendsto_pow_log_div_mul_add_atTop
         1 0 2 (by norm_num : (1 : ℝ) ≠ 0)
   have hinv : Tendsto
       (fun ℓ : ℝ => (1 : ℝ) / ℓ)
       atTop (𝓝 0) := by
-    simpa [one_div] using!
+    simpa only [one_div] using!
       (tendsto_inv_atTop_zero :
         Tendsto (fun ℓ : ℝ => ℓ⁻¹)
           atTop (𝓝 0))
@@ -24766,7 +24873,7 @@ theorem eventually_saddleSmallResidueTruncation_dominates_window
       (eventually_ge_atTop (max C 0))] with ℓ hlog
   intro y hy hyupper
   have hlogC : C ≤ Real.log ℓ := by
-    simpa [max_eq_left hC] using! hlog
+    simpa only [max_eq_left hC] using! hlog
   have hN := saddleSmallResidueTruncation_lower ℓ
   linarith [hlogC]
 
@@ -24777,7 +24884,7 @@ theorem saddleExpSeries_term_le_exp_mul_half_pow
   have hterm :
       (2 * y) ^ m / (m.factorial : ℝ) ≤
         Real.exp (2 * y) := by
-    simpa using!
+    simpa only [Finset.sum_singleton] using!
       (sum_le_hasSum ({m} : Finset ℕ)
         (fun n hn => by positivity)
         (saddleExpSeries_hasSum (2 * y)))
@@ -24890,7 +24997,7 @@ theorem tendsto_saddleSmallResidueTailMajorant
         3 * C + (-(77 / 8 : ℝ)) * Real.log ℓ by ring,
       Real.exp_add]
     rfl
-  · simp
+  · simp only [mul_zero]
 
 def saddleSmallResidueCoefficientMajorant
     (K C ℓ : ℝ) : ℝ :=
@@ -25046,7 +25153,7 @@ theorem tendsto_saddleSmallResidueCoefficientMajorant
           Real.exp
             (K * (saddleSmallResidueTruncation ℓ : ℝ) ^ 2 / ℓ))
         atTop (𝓝 1) := by
-    simpa using! hscaled.rexp
+    simpa only [Real.exp_zero] using! hscaled.rexp
   have hwindow :=
     (tendsto_saddleLogWindowPolynomial_exp_neg C).comp
       Real.tendsto_log_atTop
@@ -25077,7 +25184,7 @@ theorem tendsto_saddleSmallResidueRelativeErrorMajorant
   have h :=
     (tendsto_saddleSmallResidueCoefficientMajorant K C).add
       ((tendsto_saddleSmallResidueTailMajorant C).const_mul 2)
-  simpa [saddleSmallResidueRelativeErrorMajorant] using! h
+  simpa only [mul_zero, add_zero] using! h
 
 theorem eventually_plusSaddleSmallRadius_relativeFiniteResidue_lt_half
     {ε : ℝ}
@@ -25203,7 +25310,7 @@ theorem gamma_half_factorial_lower (N : ℕ) :
     Real.Gamma (3 / 2 : ℝ) * (N.factorial : ℝ) ≤
       Real.Gamma ((N : ℝ) + 3 / 2) := by
   induction N with
-  | zero => simp
+  | zero => simp only [Nat.factorial_zero, Nat.cast_one, mul_one, CharP.cast_eq_zero, zero_add, Std.le_refl]
   | succ N ih =>
     have hq : 0 < (N : ℝ) + 3 / 2 := by positivity
     have hrec :
@@ -25406,7 +25513,7 @@ theorem tendsto_saddleNegativeTruncation_odd_sq_div :
   have hinv : Tendsto
       (fun ℓ : ℝ => (1 : ℝ) / ℓ)
       atTop (𝓝 0) := by
-    simpa [one_div] using!
+    simpa only [one_div] using!
       (tendsto_inv_atTop_zero :
         Tendsto (fun ℓ : ℝ => ℓ⁻¹) atTop (𝓝 0))
   have h :=
@@ -25529,17 +25636,20 @@ theorem upperCosLaplaceKernel_eq_frullani_re
     upperCosLaplaceKernel c T a =
       (complexFrullaniKernel (c : ℂ)
         ((c : ℂ) + Complex.I * (T : ℂ)) a).re := by
-  simp [upperCosLaplaceKernel, complexFrullaniKernel,
-    Complex.exp_re, Real.cos_neg]
+  simp only [upperCosLaplaceKernel, neg_mul, complexFrullaniKernel, neg_add_rev, Complex.div_ofReal_re,
+    Complex.sub_re, Complex.exp_re, Complex.neg_re, Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, mul_zero,
+    sub_zero, Complex.neg_im, Complex.mul_im, zero_mul, add_zero, neg_zero, Real.cos_zero, mul_one, Complex.add_re,
+    Complex.I_re, Complex.I_im, sub_self, zero_add, Complex.add_im, one_mul, Real.cos_neg]
   ring_nf
 
 theorem upperCosLaplaceKernel_integrable
     {c : ℝ} (hc : 0 < c) (T : ℝ) :
     IntegrableOn (upperCosLaplaceKernel c T) (Ioi 0) := by
   have hw : 0 < ((c : ℂ) + Complex.I * (T : ℂ)).re := by
-    simpa using! hc
+    simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, add_zero] using! hc
   have h := complexFrullaniKernel_integrable (z := (c : ℂ))
-    (w := (c : ℂ) + Complex.I * (T : ℂ)) (by simpa using! hc) hw
+    (w := (c : ℂ) + Complex.I * (T : ℂ)) (by simpa only [Complex.ofReal_re] using! hc) hw
   have hr := h.re
   exact hr.congr (Filter.Eventually.of_forall
     (fun a => (upperCosLaplaceKernel_eq_frullani_re c T a).symm))
@@ -25551,7 +25661,7 @@ theorem integral_upperCosLaplaceKernel
         (‖((c : ℂ) + Complex.I * (T : ℂ))‖ / c) := by
   let z : ℂ := (c : ℂ)
   let w : ℂ := (c : ℂ) + Complex.I * (T : ℂ)
-  have hz : 0 < z.re := by simpa [z] using! hc
+  have hz : 0 < z.re := by simpa only [Complex.ofReal_re] using! hc
   have hw : 0 < w.re := by simpa [w] using! hc
   have hi := complexFrullaniKernel_integrable hz hw
   calc
@@ -25567,9 +25677,10 @@ theorem integral_upperCosLaplaceKernel
     _ = Real.log (‖((c : ℂ) + Complex.I * (T : ℂ))‖ / c) := by
       rw [Complex.sub_re, Complex.log_re, Complex.log_re,
         Real.log_div]
-      · simp [z, w, abs_of_pos hc]
+      · simp only [Complex.norm_real, Real.norm_eq_abs, abs_of_pos hc, w, z]
       · exact (norm_pos_iff.mpr (ne_of_apply_ne Complex.re
-          (by simpa [w] using! hc.ne'))).ne'
+          (by simpa only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+                Complex.ofReal_im, mul_zero, sub_self, add_zero, Complex.zero_re, ne_eq] using! hc.ne'))).ne'
       · exact hc.ne'
 
 def upperGammaTruncatedDampingIntegrand
@@ -25613,9 +25724,8 @@ theorem upperGammaGeometricLimit_eq_integrand
     upperCosLaplaceKernel η T a *
         (1 - Real.exp (-(2 * a / ℓ)))⁻¹ =
       upperGammaDampingIntegrand ℓ η T a := by
-  simp [upperCosLaplaceKernel, upperGammaDampingIntegrand,
-    upperGammaMeasureDensity, div_eq_mul_inv,
-    mul_comm, mul_left_comm, mul_assoc]
+  simp only [upperCosLaplaceKernel, mul_comm, mul_neg, div_eq_mul_inv, mul_left_comm, mul_assoc,
+    upperGammaDampingIntegrand, upperGammaMeasureDensity, mul_inv_rev]
 
 theorem tendsto_integral_upperGammaTruncatedDampingIntegrand
     {ℓ η : ℝ} (hℓ : 0 < ℓ) (hη : 0 < η) (T : ℝ) :
@@ -25688,7 +25798,7 @@ theorem tendsto_integral_upperGammaTruncatedDampingIntegrand
       Filter.Tendsto.mul
         (tendsto_const_nhds
           (x := upperCosLaplaceKernel η T a)) hshift
-    simpa [upperGammaTruncatedDampingIntegrand,
+    simpa only [upperGammaTruncatedDampingIntegrand, Function.comp_apply,
       upperGammaGeometricLimit_eq_integrand] using! hlimit
 
 theorem upperGammaLaplaceRate_pos
@@ -25798,7 +25908,8 @@ theorem upperGammaEuler_complex_factor_pos
     0 < ‖(m : ℂ) + Complex.I * (b : ℂ) + (k : ℂ)‖ := by
   apply norm_pos_iff.mpr
   apply ne_of_apply_ne Complex.re
-  simp
+  simp only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+    Complex.ofReal_im, mul_zero, sub_self, add_zero, Complex.natCast_re, Complex.zero_re, ne_eq]
   exact (add_pos_of_pos_of_nonneg hm (Nat.cast_nonneg k)).ne'
 
 theorem upperGammaEuler_log_norm_ratio
@@ -25817,7 +25928,8 @@ theorem upperGammaEuler_log_norm_ratio
   have hpow : ‖(n : ℂ) ^ z‖ = ‖(n : ℂ) ^ (m : ℂ)‖ := by
     rw [Complex.norm_natCast_cpow_of_pos hn,
       Complex.norm_natCast_cpow_of_pos hn]
-    simp [z]
+    simp only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, add_zero, z]
   have hpown : ‖(n : ℂ) ^ (m : ℂ)‖ ≠ 0 :=
     (Complex.norm_natCast_cpow_pos_of_pos hn (m : ℂ)).ne'
   have hfactorial : (n.factorial : ℝ) ≠ 0 := by
@@ -25825,7 +25937,7 @@ theorem upperGammaEuler_log_norm_ratio
   have hreal (k : ℕ) : 0 < m + (k : ℝ) := by
     positivity
   have hcomplex (k : ℕ) : 0 < ‖z + (k : ℂ)‖ := by
-    simpa [z] using! upperGammaEuler_complex_factor_pos hm b k
+    simpa only [norm_pos_iff, ne_eq] using! upperGammaEuler_complex_factor_pos hm b k
   have hprodreal :
       (∏ k ∈ Finset.range (n + 1),
         (m + (k : ℝ))) ≠ 0 := by
@@ -25876,7 +25988,7 @@ theorem tendsto_upperGammaEuler_log_norm_ratio
   have hden : ‖Complex.Gamma (m : ℂ)‖ ≠ 0 :=
     norm_ne_zero_iff.mpr
       (Complex.Gamma_ne_zero_of_re_pos
-        (by simpa using! hm))
+        (by simpa only [Complex.ofReal_re] using! hm))
   have hratio :=
     (Complex.GammaSeq_tendsto_Gamma z).norm.div
       (Complex.GammaSeq_tendsto_Gamma (m : ℂ)).norm
@@ -25926,7 +26038,8 @@ theorem upperGammaPositiveShifted_log_norm_eq_neg_damping
         congr 1
         apply Finset.sum_congr rfl
         intro k hk
-        simpa [m, b] using!
+        simpa only [Complex.ofReal_div, Complex.ofReal_mul, Complex.ofReal_ofNat, Complex.ofReal_add,
+          Complex.ofReal_natCast, m, b] using!
           (upperGammaLaplaceRate_log_ratio hℓ hη T k).symm
       _ = -(∫ a : ℝ in Ioi 0,
           upperGammaTruncatedDampingIntegrand ℓ η T n a) := by
@@ -25970,7 +26083,7 @@ theorem upperGammaShifted_log_norm_eq_neg_damping
         starRingEnd ℂ
           ((m : ℂ) + Complex.I * (b : ℂ)) =
           ((m : ℂ) - Complex.I * (b : ℂ)) := by
-      simp [sub_eq_add_neg]
+      simp only [map_add, Complex.conj_ofReal, map_mul, Complex.conj_I, neg_mul, sub_eq_add_neg]
     rw [← harg (ℓ * η / 2) (ℓ * T / 2),
       Complex.Gamma_conj,
       Complex.norm_conj]
@@ -25996,7 +26109,8 @@ theorem upperGammaShifted_modulus_eq_exp_neg_damping
       Complex.Gamma
           ((m : ℂ) - Complex.I * (b : ℂ)) ≠ 0 := by
     apply Complex.Gamma_ne_zero_of_re_pos
-    simpa using! hm
+    simpa only [Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, sub_zero] using! hm
   have hratio :
       0 < ‖Complex.Gamma
           ((m : ℂ) - Complex.I * (b : ℂ))‖ /
@@ -26077,10 +26191,10 @@ theorem plusSaddleProfile_re_pos_of_relative_residue_bounds
   have hexp : 0 < Real.exp y := Real.exp_pos y
   have hone : Real.exp y * Real.exp (-y) = 1 := by
     rw [← Real.exp_add]
-    simp
+    simp only [add_neg_cancel, Real.exp_zero]
   have hfinite' :
       Real.exp y * |S - Real.exp (-y)| < (1 / 2 : ℝ) := by
-    simpa [S, y] using! hfinite
+    simpa only [one_div] using! hfinite
   have hremainder' :
       Real.exp y * ‖Q‖ < (1 / 2 : ℝ) := by
     simpa [Q, y] using! hremainder
@@ -26141,7 +26255,7 @@ theorem upperPositiveHalfGamma_scaled_sq_le
           Real.Gamma (((n + 1 : ℕ) : ℝ) + 1 / 2) =
             q * Real.Gamma q := by
         convert! Real.Gamma_add_one hq.ne' using 1
-        · simp [q, Nat.cast_add, Nat.cast_one]
+        · simp only [Nat.cast_add, Nat.cast_one, one_div, q]
           ring_nf
       let z : ℂ := (q : ℂ) + Complex.I * (x : ℂ)
       have hz : z ≠ 0 := by
@@ -26155,7 +26269,8 @@ theorem upperPositiveHalfGamma_scaled_sq_le
                 Complex.I * (x : ℂ)) =
             z * Complex.Gamma z := by
         convert! Complex.Gamma_add_one z hz using 1
-        · simp [z, q, Nat.cast_add, Nat.cast_one]
+        · simp only [Nat.cast_add, Nat.cast_one, one_div, Complex.ofReal_add, Complex.ofReal_natCast,
+            Complex.ofReal_one, Complex.ofReal_inv, Complex.ofReal_ofNat, z, q]
           ring_nf
       have hzlower : q ≤ ‖z‖ := by
         have h := Complex.abs_re_le_norm z
@@ -26235,7 +26350,7 @@ theorem upperNegativeContour_shortMeasure_pointwise
           (Real.exp ((η - 2) * a) *
             Real.exp ((κ - 1) * a)) := by ring
       _ ≤ shortMargin ε a := by
-          simpa using! mul_le_mul_of_nonneg_left hexp hmargin
+          simpa only [mul_one] using! mul_le_mul_of_nonneg_left hexp hmargin
       _ ≤ 1 - 10 * ε := hmargintop
       _ ≤ 1 - 4 * ε := by linarith
   have hidentity :
@@ -26319,7 +26434,7 @@ theorem upperNegativeContour_shortDamping_le_gamma
     have hneg : IntervalIntegrable
         (fun a : ℝ => -shortShellDensity ε a)
         volume a₀ A := by
-      simpa [a₀, A, Pi.neg_apply] using! hs.neg
+      simpa only  using! hs.neg
     exact ((hneg.const_mul ℓ).mul_continuousOn
       hcosh.continuousOn).mul_continuousOn
         hosc.continuousOn
@@ -26345,8 +26460,8 @@ theorem upperNegativeContour_shortDamping_le_gamma
       sub_nonneg.mpr (Real.cos_le_one _)
     have hmul :=
       mul_le_mul_of_nonneg_right hcomparison hoscNonneg
-    simpa [upperGammaDampingIntegrand, mul_assoc,
-      mul_left_comm, mul_comm] using! hmul
+    simpa only [mul_neg, neg_mul, mul_assoc, mul_comm, mul_left_comm, upperGammaDampingIntegrand,
+      ge_iff_le] using! hmul
   have hmono := setIntegral_mono_on
     hshortOn hscaledOn measurableSet_Ioc hpoint
   have hnonnegative :
@@ -26442,7 +26557,7 @@ theorem saddleNegativeContourOrdinate_add_rate_le_three
         (2 * (N : ℝ) + 3) / ℓ =
       1 + (4 * (N : ℝ) + 4) / ℓ := by ring
     _ ≤ 1 + 2 := by
-      simpa [add_comm] using! add_le_add_left hratio 1
+      simpa only [add_comm, add_le_add_iff_left] using! add_le_add_left hratio 1
     _ = 3 := by norm_num
 
 theorem upperNegativeContour_reflectedGamma_damping_exp_le_cosh
@@ -26499,7 +26614,7 @@ theorem upperNegativeContour_reflectedGamma_damping_exp_le_cosh
           Real.Gamma q ^ 2 *
             (Real.exp (-D) ^ 2 *
               Real.cosh (Real.pi * (s / 2))) := by
-      simpa [mul_assoc] using! hhalfnormal
+      simpa only [mul_one, mul_assoc] using! hhalfnormal
     exact le_of_mul_le_mul_left hscaled
       (sq_pos_of_pos hΓ)
   have hinverse :
@@ -26537,12 +26652,13 @@ theorem upperNegativeHalfGamma_reflection_norm
         norm_num [z] at h
       have hneg : -z ≠ 0 := neg_ne_zero.mpr hz
       have hargneg : upperNegativeHalfGammaArgument 0 s = -z := by
-        simp [upperNegativeHalfGammaArgument, z]
+        simp only [upperNegativeHalfGammaArgument, CharP.cast_eq_zero, one_div, zero_add, Complex.ofReal_div,
+          Complex.ofReal_ofNat, neg_add_rev, z]
         ring
       have hargpos :
           (((((0 : ℕ) : ℝ) + 3 / 2 : ℝ) : ℂ) +
             Complex.I * (((s / 2 : ℝ) : ℂ))) = z + 1 := by
-        simp [z]
+        simp only [CharP.cast_eq_zero, zero_add, Complex.ofReal_div, Complex.ofReal_ofNat, one_div, z]
         ring
       have hconjarg : -z + 1 = starRingEnd ℂ z := by
         try dsimp [z]
@@ -26556,12 +26672,12 @@ theorem upperNegativeHalfGamma_reflection_norm
           ‖Complex.Gamma z‖ =
             ‖z‖ * ‖Complex.Gamma (-z)‖ := by
         have h := congrArg norm hnegRec
-        simpa [norm_mul] using! h
+        simpa only [RCLike.norm_conj, neg_mul, norm_neg, Complex.norm_mul] using! h
       have hposRec := Complex.Gamma_add_one z hz
       have hposNorm :
           ‖Complex.Gamma (z + 1)‖ =
             ‖z‖ * ‖Complex.Gamma z‖ := by
-        simpa [norm_mul] using! congrArg norm hposRec
+        simpa only [Complex.norm_mul] using! congrArg norm hposRec
       rw [hargneg, hargpos, hposNorm]
       calc
         ‖Complex.Gamma (-z)‖ *
@@ -26582,18 +26698,23 @@ theorem upperNegativeHalfGamma_reflection_norm
       have hz : z ≠ 0 := by
         intro hz0
         have h := congrArg Complex.re hz0
-        simp [z] at h
+        simp only [Complex.ofReal_add, Complex.ofReal_natCast, Complex.ofReal_div, Complex.ofReal_ofNat,
+          Complex.add_re, Complex.natCast_re, Complex.div_ofNat_re, Complex.re_ofNat, Complex.mul_re, Complex.I_re,
+          Complex.ofReal_re, zero_mul, Complex.I_im, Complex.div_ofNat_im, Complex.ofReal_im, zero_div, mul_zero, sub_self,
+          add_zero, Complex.zero_re, z] at h
         have hN : 0 ≤ (N : ℝ) := Nat.cast_nonneg N
         linarith
       have harg :
           upperNegativeHalfGammaArgument (N + 1) s = -z := by
         unfold upperNegativeHalfGammaArgument
-        simp [z, Nat.cast_add, Nat.cast_one]
+        simp only [Nat.cast_add, Nat.cast_one, one_div, neg_add_rev, Complex.ofReal_div, Complex.ofReal_ofNat,
+          Complex.ofReal_add, Complex.ofReal_natCast, z]
         ring
       have hpos :
           (((((N + 1 : ℕ) : ℝ) + 3 / 2 : ℝ) : ℂ) +
             Complex.I * (((s / 2 : ℝ) : ℂ))) = z + 1 := by
-        simp [z, Nat.cast_add, Nat.cast_one]
+        simp only [Nat.cast_add, Nat.cast_one, Complex.ofReal_add, Complex.ofReal_natCast, Complex.ofReal_one,
+          Complex.ofReal_div, Complex.ofReal_ofNat, z]
         ring
       have hnegRec := Complex.Gamma_add_one
         (upperNegativeHalfGammaArgument (N + 1) s)
@@ -26611,7 +26732,7 @@ theorem upperNegativeHalfGamma_reflection_norm
       have hposNorm :
           ‖Complex.Gamma (z + 1)‖ =
             ‖z‖ * ‖Complex.Gamma z‖ := by
-        simpa [norm_mul] using! congrArg norm hposRec
+        simpa only [Complex.norm_mul] using! congrArg norm hposRec
       rw [hpos, hposNorm]
       calc
         ‖Complex.Gamma
@@ -26625,7 +26746,7 @@ theorem upperNegativeHalfGamma_reflection_norm
             (upperNegativeHalfGammaArgument N s)‖ *
               ‖Complex.Gamma z‖ := by rw [← hnegNorm]
         _ = Real.pi / Real.cosh (Real.pi * (s / 2)) := by
-          simpa [z] using! ih
+          simpa only [Complex.ofReal_add, Complex.ofReal_natCast, Complex.ofReal_div, Complex.ofReal_ofNat, z] using! ih
 
 theorem upperNegativeHalfGamma_norm_eq_reflected_damping
     {ℓ : ℝ} (hℓ : 0 < ℓ) (N : ℕ) (s : ℝ) :
@@ -26843,7 +26964,7 @@ theorem saddleTaylorContour_shellArgument
   push_cast
   field_simp [hℓ.ne']
   ring_nf
-  simp [Complex.I_sq]; ring
+  simp only [Complex.I_sq, neg_mul, one_mul]; ring
 
 theorem saddleNegativeContourOrdinate_le_two
     {ℓ : ℝ} (hℓ : 0 < ℓ) (N : ℕ)
@@ -26912,7 +27033,7 @@ theorem upperNegativeContour_gamma_mul_shellExponential_le
           (Real.pi / Real.Gamma ((N : ℝ) + 3 / 2)) *
             Real.exp (2 * ε * Real.log 2) *
               Real.exp (-ε * Real.pi * |s|) := by
-      simpa [κ, δ, abs_neg] using! hgamma
+      simpa only [neg_mul, neg_neg, abs_neg] using! hgamma
     have hfreq : s / ℓ = -T := by
       try dsimp [T]
       ring
@@ -27003,8 +27124,9 @@ theorem norm_plusPolynomial_negativeContour_le
           ‖Complex.I * (((-κ : ℝ) : ℂ))‖ :=
         norm_add_le _ _
       _ = |s| / ℓ + κ := by
-        simp [Complex.norm_real, Real.norm_eq_abs, abs_of_pos hℓ,
-          abs_of_nonneg (show 0 ≤ κ by linarith)]
+        simp only [Complex.ofReal_div, Complex.ofReal_neg, Complex.norm_div, norm_neg, Complex.norm_real,
+          Real.norm_eq_abs, abs_of_pos hℓ, mul_neg, Complex.norm_mul, Complex.norm_I, abs_of_nonneg (show 0 ≤ κ by linarith),
+          one_mul]
   have hbase :
       1 + ‖((-s / ℓ : ℝ) : ℂ) +
         Complex.I * (((-κ : ℝ) : ℂ))‖ ≤
@@ -27037,7 +27159,9 @@ theorem saddleNegativeContour_piExponential_norm
           Real.log Real.pi / 2) := by
   rw [Complex.norm_exp]
   congr 1
-  simp [Complex.mul_re]
+  simp only [Complex.div_ofNat_re, Complex.mul_re, Complex.sub_re, Complex.ofReal_re, Complex.add_re,
+    Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, add_zero, Complex.sub_im,
+    Complex.add_im, Complex.mul_im, zero_add, zero_sub, sub_zero]
 
 def saddleNegativeMellinMajorantCoefficient
     (ε ℓ : ℝ) (N : ℕ) : ℝ :=
@@ -27115,11 +27239,11 @@ theorem plusSaddleMellinData_negativeContour_norm_le
               ((Real.pi / Real.Gamma ((N : ℝ) + 3 / 2)) *
                 Real.exp (2 * ε * Real.log 2) *
                   Real.exp (-ε * Real.pi * |s|)) := by
-        simpa [z, q] using! hfactor
+        simpa only [Complex.norm_mul, neg_mul, z, q] using! hfactor
       have hpoly' :
           ‖plusPolynomial ε q‖ ≤
             27 * (1 + |beta ε|) * (1 + |s|) ^ 3 := by
-        simpa [z, q] using! hpoly
+        simpa only [q, z] using! hpoly
       have hpi' :
           ‖Complex.exp
             (((ℓ : ℂ) - z) *
@@ -27127,7 +27251,7 @@ theorem plusSaddleMellinData_negativeContour_norm_le
             Real.exp
               ((ℓ - saddleTaylorContour N) *
                 Real.log Real.pi / 2) := by
-        simpa [z] using! hpi
+        simpa only [z] using! hpi
       rw [hpi']
       gcongr
     _ = saddleNegativeMellinMajorantCoefficient ε ℓ N *
@@ -27166,7 +27290,7 @@ theorem plusSaddleMellinData_negativeContour_integral_norm_le
         plusSaddleMellinData ε ℓ
           ((saddleTaylorContour N : ℂ) +
             (s : ℂ) * Complex.I)) := by
-    simpa using!
+    simpa only [pow_zero, one_mul] using!
       plusSaddleMellinData_shiftedLine_moment_integrable
         hε hℓ horder
         (fun n : ℕ => saddleTaylorContour_ne_pole N n) 0
@@ -27211,7 +27335,7 @@ theorem plusSaddleTaylorRemainder_negativeContour_bound
   have hdata : Integrable
       (fun t : ℝ => plusSaddleMellinData ε ℓ
         ((a : ℂ) + (t : ℂ) * Complex.I)) := by
-    simpa [a] using!
+    simpa only [pow_zero, one_mul] using!
       plusSaddleMellinData_shiftedLine_moment_integrable
         hε hℓ horder
         (fun n : ℕ => saddleTaylorContour_ne_pole N n) 0
@@ -27699,15 +27823,15 @@ theorem eventually_plusSaddleProfile_re_pos_on_star_fixed
   intro r hr hrstar
   by_cases hzero : r = 0
   · subst r
-    simpa [plusSaddleProfile] using!
+    simpa only [plusSaddleProfile, ↓reduceIte, Complex.ofReal_re] using!
       (saddleOriginValue_pos hε ((d : ℝ) / 2))
   · have hrpos : 0 < r := lt_of_le_of_ne hr (Ne.symm hzero)
     have hℓ : 0 < (d : ℝ) / 2 := by positivity
     exact plusSaddleProfile_re_pos_of_relative_residue_bounds
       hε hℓ horder hrpos
       (saddleSmallResidueTruncation ((d : ℝ) / 2))
-      (by simpa using! hfinite_d r hr hrstar)
-      (by simpa using! hrem_d r hrpos hrstar)
+      (by simpa only [one_div] using! hfinite_d r hr hrstar)
+      (by simpa only [Complex.norm_div, Complex.norm_real, Real.norm_eq_abs, one_div] using! hrem_d r hrpos hrstar)
 
 theorem eventually_plusSaddleProfile_re_pos_on_star :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
@@ -27745,11 +27869,11 @@ theorem saddleRealCpow_hasDerivAt_zero
     subst z
     norm_num at hz
   have hsub : 0 < (z - 1).re := by
-    simpa using! sub_pos.mpr hz
+    simpa only [Complex.sub_re, Complex.one_re, sub_pos] using! sub_pos.mpr hz
   have hsub0 : z - 1 ≠ 0 := by
     intro heq
     have := congrArg Complex.re heq
-    simpa using! (ne_of_gt hsub) this
+    simpa only  using! (ne_of_gt hsub) this
   rw [hasDerivAt_iff_tendsto_slope_zero]
   have htend :
       Tendsto (fun t : ℝ => (t : ℂ) ^ (z - 1))
@@ -27757,16 +27881,16 @@ theorem saddleRealCpow_hasDerivAt_zero
     have hcontinuous :=
       Complex.continuousAt_ofReal_cpow_const
         (0 : ℝ) (z - 1) (Or.inl hsub)
-    simpa [Complex.zero_cpow hsub0] using!
+    simpa only [Complex.ofReal_zero, Complex.zero_cpow hsub0] using!
       hcontinuous.tendsto.mono_left nhdsWithin_le_nhds
   apply htend.congr'
   filter_upwards [self_mem_nhdsWithin] with t ht
   have ht0 : t ≠ 0 := by
-    simpa using! ht
+    simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using! ht
   have htc : (t : ℂ) ≠ 0 :=
     Complex.ofReal_ne_zero.mpr ht0
-  simp [hz0, Complex.real_smul, Complex.cpow_sub z 1 htc,
-    div_eq_mul_inv, mul_comm]
+  simp only [Complex.cpow_sub z 1 htc, Complex.cpow_one, div_eq_mul_inv, zero_add, Complex.ofReal_zero, ne_eq,
+    hz0, not_false_eq_true, Complex.zero_cpow, sub_zero, Complex.real_smul, Complex.ofReal_inv, mul_comm]
 
 theorem saddleRealCpow_hasDerivAt
     {z : ℂ} (hz : 1 < z.re) (x : ℝ) :
@@ -27783,7 +27907,7 @@ theorem saddleRealCpow_hasDerivAt
       have hre := congrArg Complex.re heq
       norm_num at hre
       linarith
-    simpa [Complex.zero_cpow hsub] using!
+    simpa only [Complex.ofReal_zero, Complex.zero_cpow hsub, mul_zero] using!
       saddleRealCpow_hasDerivAt_zero hz
   · exact hasDerivAt_ofReal_cpow_const hx hz0
 
@@ -27820,23 +27944,22 @@ theorem saddlePositiveCpow_hasDerivAt_zero
     have hcontinuous :=
       (saddlePositiveCpow_continuous hsub).continuousAt
         (x := (0 : ℝ))
-    simpa [saddlePositiveCpow,
-      Complex.zero_cpow hsub0] using!
+    simpa only [saddlePositiveCpow, max_self, Complex.ofReal_zero, Complex.zero_cpow hsub0] using!
         hcontinuous.tendsto.mono_left nhdsWithin_le_nhds
   apply htend.congr'
   filter_upwards [self_mem_nhdsWithin] with t ht
   have ht0 : t ≠ 0 := by
-    simpa using! ht
+    simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using! ht
   rcases lt_or_gt_of_ne ht0 with hneg | hpos
   · have hmax : max t 0 = 0 := max_eq_right hneg.le
-    simp [saddlePositiveCpow, hmax,
-      Complex.zero_cpow hz0, Complex.zero_cpow hsub0]
+    simp only [saddlePositiveCpow, hmax, Complex.ofReal_zero, Complex.zero_cpow hsub0, zero_add,
+      Complex.zero_cpow hz0, max_self, sub_self, smul_zero]
   · have hmax : max t 0 = t := max_eq_left hpos.le
     have htc : (t : ℂ) ≠ 0 :=
       Complex.ofReal_ne_zero.mpr ht0
-    simp [saddlePositiveCpow, hmax, hz0,
-      Complex.real_smul, Complex.cpow_sub z 1 htc,
-      div_eq_mul_inv, mul_comm]
+    simp only [saddlePositiveCpow, hmax, Complex.cpow_sub z 1 htc, Complex.cpow_one, div_eq_mul_inv, zero_add,
+      max_self, Complex.ofReal_zero, ne_eq, hz0, not_false_eq_true, Complex.zero_cpow, sub_zero, Complex.real_smul,
+      Complex.ofReal_inv, mul_comm]
 
 theorem saddlePositiveCpow_hasDerivAt
     {z : ℂ} (hz : 1 < z.re) (x : ℝ) :
@@ -27857,27 +27980,25 @@ theorem saddlePositiveCpow_hasDerivAt
           (fun _ : ℝ => (0 : ℂ)) := by
       filter_upwards [Iio_mem_nhds hneg] with y hy
       change y < 0 at hy
-      simp [saddlePositiveCpow, max_eq_right hy.le,
-        Complex.zero_cpow hz0]
+      simp only [saddlePositiveCpow, max_eq_right hy.le, Complex.ofReal_zero, Complex.zero_cpow hz0]
     have hvalue : saddlePositiveCpow (z - 1) x = 0 := by
-      simp [saddlePositiveCpow, max_eq_right hneg.le,
-        Complex.zero_cpow hsub0]
-    simpa [hvalue] using!
+      simp only [saddlePositiveCpow, max_eq_right hneg.le, Complex.ofReal_zero, Complex.zero_cpow hsub0]
+    simpa only [hvalue, mul_zero] using!
       (hasDerivAt_const x (0 : ℂ)).congr_of_eventuallyEq
         hevent
   · subst x
-    simp [saddlePositiveCpow, Complex.zero_cpow hsub0,
+    simp only [saddlePositiveCpow, max_self, Complex.ofReal_zero, Complex.zero_cpow hsub0, mul_zero,
       saddlePositiveCpow_hasDerivAt_zero hz]
   · have hevent :
         saddlePositiveCpow z =ᶠ[𝓝 x]
           (fun y : ℝ => (y : ℂ) ^ z) := by
       filter_upwards [Ioi_mem_nhds hpos] with y hy
       change 0 < y at hy
-      simp [saddlePositiveCpow, max_eq_left hy.le]
+      simp only [saddlePositiveCpow, max_eq_left hy.le]
     have hvalue :
         saddlePositiveCpow (z - 1) x =
           (x : ℂ) ^ (z - 1) := by
-      simp [saddlePositiveCpow, max_eq_left hpos.le]
+      simp only [saddlePositiveCpow, max_eq_left hpos.le]
     rw [hvalue]
     exact (saddleRealCpow_hasDerivAt hz x).congr_of_eventuallyEq
       hevent
@@ -27887,7 +28008,8 @@ def saddleContourExponent (a t : ℝ) : ℂ :=
 
 @[simp] theorem saddleContourExponent_re (a t : ℝ) :
     (saddleContourExponent a t).re = -a / 2 := by
-  simp [saddleContourExponent, Complex.mul_re]
+  simp only [saddleContourExponent, Complex.neg_re, Complex.div_ofNat_re, Complex.add_re, Complex.ofReal_re,
+    Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, add_zero]
   ring
 
 def saddleContourExponentPolynomial (a : ℝ) : Polynomial ℂ :=
@@ -27897,8 +28019,8 @@ def saddleContourExponentPolynomial (a : ℝ) : Polynomial ℂ :=
 theorem saddleContourExponentPolynomial_eval (a t : ℝ) :
     (saddleContourExponentPolynomial a).eval (t : ℂ) =
       saddleContourExponent a t := by
-  simp [saddleContourExponentPolynomial,
-    saddleContourExponent]
+  simp only [saddleContourExponentPolynomial, Polynomial.eval_sub, Polynomial.eval_C, Polynomial.eval_mul,
+    Polynomial.eval_X, saddleContourExponent]
   ring
 
 def saddleContourFallingPolynomial (a : ℝ) (j : ℕ) :
@@ -27914,9 +28036,8 @@ theorem saddleContourFallingPolynomial_eval_succ
       (saddleContourFallingPolynomial a j).eval
           (t : ℂ) *
         (saddleContourExponent a t - (j : ℂ)) := by
-  simp [saddleContourFallingPolynomial,
-    Finset.prod_range_succ,
-    saddleContourExponentPolynomial_eval]
+  simp only [saddleContourFallingPolynomial, map_natCast, Finset.prod_range_succ, Polynomial.eval_mul,
+    Polynomial.eval_sub, saddleContourExponentPolynomial_eval, Polynomial.eval_natCast]
 
 theorem saddlePolynomialWeightedData_integrable
     {D : ℝ → ℂ}
@@ -27956,7 +28077,7 @@ def saddlePositiveContourMoment
     (a t : ℝ) (j : ℕ) :
     (saddleContourExponent a t - (j : ℂ)).re =
       -a / 2 - (j : ℝ) := by
-  simp [saddleContourExponent_re]
+  simp only [Complex.sub_re, saddleContourExponent_re, Complex.natCast_re]
 
 theorem saddlePositiveCpow_norm_le_one
     {z : ℂ} (hz : 0 < z.re)
@@ -27990,7 +28111,7 @@ theorem saddlePositiveContourPower_frequency_continuous
       0 < (saddleContourExponent a t - (j : ℂ)).re := by
     rw [saddleContourExponent_sub_nat_re]
     linarith
-  simpa using! hpositive.ne'
+  simpa only [Complex.sub_re, saddleContourExponent_re, Complex.natCast_re, Complex.zero_re, ne_eq] using! hpositive.ne'
 
 theorem saddlePositiveContourMoment_hasDerivAt
     {D : ℝ → ℂ}
@@ -28142,7 +28263,7 @@ theorem saddlePositiveContourMoment_contDiffOn
       rw [contDiffOn_zero]
       intro u hu
       have hj : (j : ℝ) + 1 < -a / 2 := by
-        simpa using! ha
+        simpa only [CharP.cast_eq_zero, zero_add] using! ha
       exact
         (saddlePositiveContourMoment_hasDerivAt
           hD j hj hu).continuousAt.continuousWithinAt
@@ -28156,14 +28277,14 @@ theorem saddlePositiveContourMoment_contDiffOn
         push_cast at ha ⊢
         linarith
       rw [show (↑(n + 1) : WithTop ℕ∞) =
-          (↑n : WithTop ℕ∞) + 1 by simp,
+          (↑n : WithTop ℕ∞) + 1 by simp only [Nat.cast_add, Nat.cast_one],
         contDiffOn_succ_iff_deriv_of_isOpen isOpen_Ioo]
       refine ⟨?_, ?_, ?_⟩
       · intro u hu
         exact
           (saddlePositiveContourMoment_hasDerivAt
             hD j hj hu).differentiableAt.differentiableWithinAt
-      · simp
+      · simp only [WithTop.natCast_ne_top, IsEmpty.forall_iff]
       · exact (ih (j + 1) hnext).congr
           (fun u hu =>
             (saddlePositiveContourMoment_hasDerivAt
@@ -28183,8 +28304,7 @@ theorem saddleMellinInversePower_eq_squaredPositiveCpow
     _ = (((r ^ (2 : ℝ) : ℝ) : ℂ)) ^ (-z / 2) :=
       Complex.cpow_mul_ofReal_nonneg hr.le 2 (-z / 2)
     _ = saddlePositiveCpow (-z / 2) (r ^ 2) := by
-      simp [saddlePositiveCpow,
-        max_eq_left (sq_nonneg r)]
+      simp only [Real.rpow_ofNat, Complex.ofReal_pow, saddlePositiveCpow, max_eq_left (sq_nonneg r)]
 
 @[simp] theorem saddlePositiveContourMoment_zero
     {a : ℝ} (j : ℕ)
@@ -28206,8 +28326,8 @@ theorem saddleMellinInversePower_eq_squaredPositiveCpow
           0 < (saddleContourExponent a t - (j : ℂ)).re := by
         rw [saddleContourExponent_sub_nat_re]
         linarith
-      simpa using! hpositive.ne'
-    simp [saddlePositiveCpow, Complex.zero_cpow hexp]
+      simpa only [Complex.sub_re, saddleContourExponent_re, Complex.natCast_re, Complex.zero_re, ne_eq] using! hpositive.ne'
+    simp only [saddlePositiveCpow, max_self, Complex.ofReal_zero, Complex.zero_cpow hexp, zero_mul]
   rw [hzero, integral_zero]
 
 def plusSaddleSquaredRemainder
@@ -28249,7 +28369,8 @@ theorem plusSaddleTaylorRemainder_eq_squared
     unfold saddleContourExponent
     ring
   rw [hq]
-  simp [saddleContourFallingPolynomial]
+  simp only [CharP.cast_eq_zero, sub_zero, saddleContourFallingPolynomial, Finset.range_zero, map_natCast,
+    Finset.prod_empty, Polynomial.eval_one, one_mul]
 
 theorem minusSaddleTaylorRemainder_eq_squared
     (ε ℓ : ℝ) (N : ℕ)
@@ -28272,7 +28393,8 @@ theorem minusSaddleTaylorRemainder_eq_squared
     unfold saddleContourExponent
     ring
   rw [hq]
-  simp [saddleContourFallingPolynomial]
+  simp only [CharP.cast_eq_zero, sub_zero, saddleContourFallingPolynomial, Finset.range_zero, map_natCast,
+    Finset.prod_empty, Polynomial.eval_one, one_mul]
 
 theorem plusSaddleSquaredRemainder_contDiffOn
     {ε ℓ : ℝ}
@@ -28297,7 +28419,7 @@ theorem plusSaddleSquaredRemainder_contDiffOn
       (fun j : ℕ => saddleTaylorContour_ne_pole N j) k
   have hsmooth :=
     saddlePositiveContourMoment_contDiffOn hmoment
-      n 0 (by simpa using! hshift)
+      n 0 (by simpa only [CharP.cast_eq_zero, add_zero] using! hshift)
   exact (contDiff_const.contDiffOn.mul hsmooth)
 
 theorem minusSaddleSquaredRemainder_contDiffOn
@@ -28323,7 +28445,7 @@ theorem minusSaddleSquaredRemainder_contDiffOn
       (fun j : ℕ => saddleTaylorContour_ne_pole N j) k
   have hsmooth :=
     saddlePositiveContourMoment_contDiffOn hmoment
-      n 0 (by simpa using! hshift)
+      n 0 (by simpa only [CharP.cast_eq_zero, add_zero] using! hshift)
   exact (contDiff_const.contDiffOn.mul hsmooth)
 
 def saddleSquaredResiduePolynomial
@@ -28342,10 +28464,11 @@ theorem saddleTaylorContour_negativeHalf_pos (N : ℕ) :
   classical
   unfold saddleSquaredResiduePolynomial
   rw [Finset.sum_eq_single 0]
-  · simp
+  · simp only [Complex.ofReal_zero, pow_zero, mul_one]
   · intro j _ hj
-    simp [zero_pow hj]
-  · simp
+    simp only [Complex.ofReal_zero, zero_pow hj, mul_zero]
+  · simp only [Finset.mem_range, lt_add_iff_pos_left, Order.lt_add_one_iff, zero_le, not_true_eq_false,
+      Complex.ofReal_zero, pow_zero, mul_one, IsEmpty.forall_iff]
 
 theorem saddleSquaredResiduePolynomial_contDiff
     (c : ℕ → ℂ) (N n : ℕ) :
@@ -28361,16 +28484,16 @@ theorem saddleSquaredResiduePolynomial_contDiff
     plusSaddleSquaredRemainder ε ℓ N 0 = 0 := by
   unfold plusSaddleSquaredRemainder
   rw [saddlePositiveContourMoment_zero 0
-    (by simpa using! saddleTaylorContour_negativeHalf_pos N)]
-  simp
+    (by simpa only [CharP.cast_eq_zero, Nat.ofNat_pos, div_pos_iff_of_pos_right, Left.neg_pos_iff] using! saddleTaylorContour_negativeHalf_pos N)]
+  simp only [one_div, mul_inv_rev, Complex.ofReal_mul, Complex.ofReal_inv, Complex.ofReal_ofNat, mul_zero]
 
 @[simp] theorem minusSaddleSquaredRemainder_zero
     (ε ℓ : ℝ) (N : ℕ) :
     minusSaddleSquaredRemainder ε ℓ N 0 = 0 := by
   unfold minusSaddleSquaredRemainder
   rw [saddlePositiveContourMoment_zero 0
-    (by simpa using! saddleTaylorContour_negativeHalf_pos N)]
-  simp
+    (by simpa only [CharP.cast_eq_zero, Nat.ofNat_pos, div_pos_iff_of_pos_right, Left.neg_pos_iff] using! saddleTaylorContour_negativeHalf_pos N)]
+  simp only [one_div, mul_inv_rev, Complex.ofReal_mul, Complex.ofReal_inv, Complex.ofReal_ofNat, mul_zero]
 
 theorem plusSaddleProfile_eq_squaredTaylor
     {ε ℓ : ℝ}
@@ -28383,8 +28506,8 @@ theorem plusSaddleProfile_eq_squaredTaylor
       plusSaddleSquaredRemainder ε ℓ N (r ^ 2) := by
   rcases hr.eq_or_lt with hzero | hpositive
   · subst r
-    simp [plusSaddleProfile,
-      plusSaddlePoleResidue_zero hℓ]
+    simp only [plusSaddleProfile, ↓reduceIte, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      saddleSquaredResiduePolynomial_zero, plusSaddlePoleResidue_zero hℓ, plusSaddleSquaredRemainder_zero, add_zero]
   · rw [plusSaddleProfile_eq_residue_sum_add_remainder
       hε hℓ horder hpositive N,
       plusSaddleTaylorRemainder_eq_squared
@@ -28408,8 +28531,8 @@ theorem minusSaddleProfile_eq_squaredTaylor
       minusSaddleSquaredRemainder ε ℓ N (r ^ 2) := by
   rcases hr.eq_or_lt with hzero | hpositive
   · subst r
-    simp [minusSaddleProfile,
-      minusSaddlePoleResidue_zero hℓ]
+    simp only [minusSaddleProfile, ↓reduceIte, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      saddleSquaredResiduePolynomial_zero, minusSaddlePoleResidue_zero hℓ, minusSaddleSquaredRemainder_zero, add_zero]
   · rw [minusSaddleProfile_eq_residue_sum_add_remainder
       hε hℓ horder hpositive N,
       minusSaddleTaylorRemainder_eq_squared
@@ -28451,7 +28574,7 @@ theorem plusSaddleFunction_contDiff_nat
           (plusSaddleSquaredRemainder
             ε ((d : ℝ) / 2) N)
           (‖(0 : Euclidean d)‖ ^ 2) := by
-      simpa using!
+      simpa only [norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow] using!
         (plusSaddleSquaredRemainder_contDiffOn
           hε hdimension horder n N hshift).contDiffAt
             (isOpen_Ioo.mem_nhds
@@ -28488,7 +28611,7 @@ theorem plusSaddleFunction_contDiff_nat
       ((plusSaddleFunction_contDiffOn hε hd horder).contDiffAt
           ((isOpen_compl_singleton
             (x := (0 : Euclidean d))).mem_nhds
-              (by simpa using! hx))).of_le
+              (by simpa only [mem_compl_iff, mem_singleton_iff] using! hx))).of_le
                 (mod_cast le_top)
 
 theorem minusSaddleFunction_contDiff_nat
@@ -28513,7 +28636,7 @@ theorem minusSaddleFunction_contDiff_nat
           (minusSaddleSquaredRemainder
             ε ((d : ℝ) / 2) N)
           (‖(0 : Euclidean d)‖ ^ 2) := by
-      simpa using!
+      simpa only [norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow] using!
         (minusSaddleSquaredRemainder_contDiffOn
           hε hdimension horder n N hshift).contDiffAt
             (isOpen_Ioo.mem_nhds
@@ -28550,7 +28673,7 @@ theorem minusSaddleFunction_contDiff_nat
       ((minusSaddleFunction_contDiffOn hε hd horder).contDiffAt
           ((isOpen_compl_singleton
             (x := (0 : Euclidean d))).mem_nhds
-              (by simpa using! hx))).of_le
+              (by simpa only [mem_compl_iff, mem_singleton_iff] using! hx))).of_le
                 (mod_cast le_top)
 
 theorem plusSaddleFunction_contDiff
@@ -28608,11 +28731,13 @@ theorem saddleRightHalfPlane_boundary_rectangle
       (Complex.mem_reProdIm.mp hu).1
     rcases Set.mem_uIcc.mp hre with hleft | hright
     · have hza : z.re = A := by
-        simp [z, Complex.mul_re]
+        simp only [Complex.ofReal_neg, neg_mul, Complex.add_re, Complex.ofReal_re, Complex.neg_re, Complex.mul_re,
+          Complex.I_re, mul_zero, Complex.ofReal_im, Complex.I_im, mul_one, sub_self, neg_zero, add_zero, z]
       rw [hza] at hleft
       exact hA.trans_le hleft.1
     · have hwb : w.re = B := by
-        simp [w, Complex.mul_re]
+        simp only [Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, Complex.ofReal_im,
+          Complex.I_im, mul_one, sub_self, add_zero, w]
       rw [hwb] at hright
       exact hB.trans_le hright.1
   have h :=
@@ -28664,7 +28789,7 @@ theorem plusSaddleMellinData_positive_vertical_integral_eq
           ∫ a in A..B,
             F ((a : ℂ) + ((-T : ℝ) : ℂ) * Complex.I))
         Filter.atTop (𝓝 0) := by
-    simpa [F] using!
+    simpa only [Complex.ofReal_neg, neg_mul, one_mul] using!
       plusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
         hε hℓ horder hr hAB (-1) (by norm_num)
   have hupper :
@@ -28673,7 +28798,7 @@ theorem plusSaddleMellinData_positive_vertical_integral_eq
           ∫ a in A..B,
             F ((a : ℂ) + (T : ℂ) * Complex.I))
         Filter.atTop (𝓝 0) := by
-    simpa [F] using!
+    simpa only [one_mul] using!
       plusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
         hε hℓ horder hr hAB 1 (by norm_num)
   exact saddleInfiniteRectangle_vertical_integral_eq
@@ -28724,7 +28849,7 @@ theorem minusSaddleMellinData_positive_vertical_integral_eq
           ∫ a in A..B,
             F ((a : ℂ) + ((-T : ℝ) : ℂ) * Complex.I))
         Filter.atTop (𝓝 0) := by
-    simpa [F] using!
+    simpa only [Complex.ofReal_neg, neg_mul, one_mul] using!
       minusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
         hε hℓ horder hr hAB (-1) (by norm_num)
   have hupper :
@@ -28733,7 +28858,7 @@ theorem minusSaddleMellinData_positive_vertical_integral_eq
           ∫ a in A..B,
             F ((a : ℂ) + (T : ℂ) * Complex.I))
         Filter.atTop (𝓝 0) := by
-    simpa [F] using!
+    simpa only [one_mul] using!
       minusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
         hε hℓ horder hr hAB 1 (by norm_num)
   exact saddleInfiniteRectangle_vertical_integral_eq
@@ -28823,7 +28948,8 @@ theorem plusSaddleProfile_eq_positive_squaredContour
     unfold saddleContourExponent
     ring
   rw [hq]
-  simp [saddleContourFallingPolynomial]
+  simp only [CharP.cast_eq_zero, sub_zero, saddleContourFallingPolynomial, Finset.range_zero, map_natCast,
+    Finset.prod_empty, Polynomial.eval_one, one_mul]
 
 theorem minusSaddleProfile_eq_positive_squaredContour
     {ε ℓ r a : ℝ}
@@ -28847,7 +28973,8 @@ theorem minusSaddleProfile_eq_positive_squaredContour
     unfold saddleContourExponent
     ring
   rw [hq]
-  simp [saddleContourFallingPolynomial]
+  simp only [CharP.cast_eq_zero, sub_zero, saddleContourFallingPolynomial, Finset.range_zero, map_natCast,
+    Finset.prod_empty, Polynomial.eval_one, one_mul]
 
 theorem saddlePositiveCpow_hasDerivAt_of_pos
     {z : ℂ} (hz : z ≠ 0)
@@ -28859,11 +28986,11 @@ theorem saddlePositiveCpow_hasDerivAt_of_pos
         (fun v : ℝ => (v : ℂ) ^ z) := by
     filter_upwards [Ioi_mem_nhds hu] with v hv
     change 0 < v at hv
-    simp [saddlePositiveCpow, max_eq_left hv.le]
+    simp only [saddlePositiveCpow, max_eq_left hv.le]
   have hvalue :
       saddlePositiveCpow (z - 1) u =
         (u : ℂ) ^ (z - 1) := by
-    simp [saddlePositiveCpow, max_eq_left hu.le]
+    simp only [saddlePositiveCpow, max_eq_left hu.le]
   rw [hvalue]
   exact
     (hasDerivAt_ofReal_cpow_const hu.ne' hz).congr_of_eventuallyEq
@@ -28962,7 +29089,7 @@ theorem saddlePositiveContourMoment_hasDerivAt_of_positiveContour
       have hk : (0 : ℝ) ≤ j := Nat.cast_nonneg j
       have hneg : -a / 2 - (j : ℝ) < 0 := by
         linarith
-      simpa using! hneg.ne
+      simpa only [Complex.zero_re, ne_eq] using! hneg.ne
     have hderiv :=
       (saddlePositiveCpow_hasDerivAt_of_pos
         hnonzero (lt_trans zero_lt_one hv)).mul_const
@@ -29056,14 +29183,14 @@ theorem saddlePositiveContourMoment_contDiffOn_of_positiveContour
           hD ha j hu).continuousAt.continuousWithinAt
   | succ n ih =>
       rw [show (↑(n + 1) : WithTop ℕ∞) =
-          (↑n : WithTop ℕ∞) + 1 by simp,
+          (↑n : WithTop ℕ∞) + 1 by simp only [Nat.cast_add, Nat.cast_one],
         contDiffOn_succ_iff_deriv_of_isOpen isOpen_Ioi]
       refine ⟨?_, ?_, ?_⟩
       · intro u hu
         exact
           (saddlePositiveContourMoment_hasDerivAt_of_positiveContour
             hD ha j hu).differentiableAt.differentiableWithinAt
-      · simp
+      · simp only [WithTop.natCast_ne_top, IsEmpty.forall_iff]
       · exact (ih (j + 1)).congr
           (fun u hu =>
             (saddlePositiveContourMoment_hasDerivAt_of_positiveContour
@@ -29091,7 +29218,7 @@ theorem saddlePositiveContourMoment_iteratedDeriv_of_positiveContour
     iteratedDeriv n (saddlePositiveContourMoment a j D) u =
       saddlePositiveContourMoment a (j + n) D u := by
   induction n generalizing j u with
-  | zero => simp
+  | zero => simp only [iteratedDeriv_zero, add_zero]
   | succ n ih =>
       rw [iteratedDeriv_succ']
       have hevent :
@@ -29102,7 +29229,7 @@ theorem saddlePositiveContourMoment_iteratedDeriv_of_positiveContour
           (saddlePositiveContourMoment_hasDerivAt_of_positiveContour
             hD ha j hv).deriv
       rw [hevent.iteratedDeriv_eq n]
-      simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using! ih (j + 1) hu
+      simpa only [Nat.add_left_comm, Nat.add_comm] using! ih (j + 1) hu
 
 def saddleContourMomentL1
     (a : ℝ) (j : ℕ) (D : ℝ → ℂ) : ℝ :=
@@ -29271,8 +29398,7 @@ theorem plusSaddleOuterSquaredProfile_contDiff
       have hvzero :
           Real.smoothTransition (v - 2) = 0 :=
         Real.smoothTransition.zero_of_nonpos (by linarith)
-      simp [plusSaddleOuterSquaredProfile,
-        saddleOuterCutoff, hvzero]
+      simp only [plusSaddleOuterSquaredProfile, saddleOuterCutoff, hvzero, Complex.ofReal_zero, zero_mul]
     exact contDiffAt_const.congr_of_eventuallyEq hevent
   · have hone : u ∈ Set.Ioi (1 : ℝ) := by
       change 1 < u
@@ -29301,8 +29427,7 @@ theorem minusSaddleOuterSquaredProfile_contDiff
       have hvzero :
           Real.smoothTransition (v - 2) = 0 :=
         Real.smoothTransition.zero_of_nonpos (by linarith)
-      simp [minusSaddleOuterSquaredProfile,
-        saddleOuterCutoff, hvzero]
+      simp only [minusSaddleOuterSquaredProfile, saddleOuterCutoff, hvzero, Complex.ofReal_zero, zero_mul]
     exact contDiffAt_const.congr_of_eventuallyEq hevent
   · have hone : u ∈ Set.Ioi (1 : ℝ) := by
       change 1 < u
@@ -29320,14 +29445,14 @@ theorem plusSaddleOuterSquaredProfile_eq_zero
     plusSaddleOuterSquaredProfile ε ℓ u = 0 := by
   have hcut : Real.smoothTransition (u - 2) = 0 :=
     Real.smoothTransition.zero_of_nonpos (by linarith)
-  simp [plusSaddleOuterSquaredProfile, saddleOuterCutoff, hcut]
+  simp only [plusSaddleOuterSquaredProfile, saddleOuterCutoff, hcut, Complex.ofReal_zero, zero_mul]
 
 theorem minusSaddleOuterSquaredProfile_eq_zero
     (ε ℓ : ℝ) {u : ℝ} (hu : u < 2) :
     minusSaddleOuterSquaredProfile ε ℓ u = 0 := by
   have hcut : Real.smoothTransition (u - 2) = 0 :=
     Real.smoothTransition.zero_of_nonpos (by linarith)
-  simp [minusSaddleOuterSquaredProfile, saddleOuterCutoff, hcut]
+  simp only [minusSaddleOuterSquaredProfile, saddleOuterCutoff, hcut, Complex.ofReal_zero, zero_mul]
 
 theorem plusSaddleOuterSquaredProfile_eq_positiveContour
     {ε ℓ a u : ℝ}
@@ -29437,7 +29562,7 @@ theorem saddleOuterSquaredProfile_schwartz_decay
           iteratedDeriv_const_mul_field,
           saddlePositiveContourMoment_iteratedDeriv_of_positiveContour
             (hD a ha) ha n 0 huoi]
-        simp
+        simp only [zero_add]
       have hmoment :
           ‖saddlePositiveContourMoment a n (D a) u‖ ≤
             u ^ (-a / 2 - (n : ℝ)) * L := by
@@ -29503,7 +29628,8 @@ theorem plusSaddleOuterSquaredProfile_schwartz_decay
       hε hℓ horder
       (fun m => saddlePositiveContour_ne_pole ha m) j
   · intro a ha u hu
-    simpa [plusSaddlePositiveSquaredContour] using!
+    simpa only [one_div, mul_inv_rev, Complex.ofReal_mul, Complex.ofReal_inv, Complex.ofReal_ofNat,
+      plusSaddlePositiveSquaredContour] using!
       plusSaddleOuterSquaredProfile_eq_positiveContour
         hε hℓ horder ha hu
 
@@ -29529,7 +29655,8 @@ theorem minusSaddleOuterSquaredProfile_schwartz_decay
       hε hℓ horder
       (fun m => saddlePositiveContour_ne_pole ha m) j
   · intro a ha u hu
-    simpa [minusSaddlePositiveSquaredContour] using!
+    simpa only [one_div, mul_inv_rev, Complex.ofReal_mul, Complex.ofReal_inv, Complex.ofReal_ofNat,
+      minusSaddlePositiveSquaredContour] using!
       minusSaddleOuterSquaredProfile_eq_positiveContour
         hε hℓ horder ha hu
 
@@ -29685,7 +29812,7 @@ def plusSaddleSchwartz
     have hcompact :
         HasCompactSupport (fun x : Euclidean d =>
           plusSaddleFunction ε d x - tail x) := by
-      simpa [plusSaddleFunction, ℓ, tail] using!
+      simpa only [plusSaddleFunction, plusSaddleOuterSchwartz_apply] using!
         plusSaddleOuterDifference_hasCompactSupport
           hε hℓ horder d
     have hsmooth :
@@ -29726,7 +29853,7 @@ def minusSaddleSchwartz
     have hcompact :
         HasCompactSupport (fun x : Euclidean d =>
           minusSaddleFunction ε d x - tail x) := by
-      simpa [minusSaddleFunction, ℓ, tail] using!
+      simpa only [minusSaddleFunction, minusSaddleOuterSchwartz_apply] using!
         minusSaddleOuterDifference_hasCompactSupport
           hε hℓ horder d
     have hsmooth :
@@ -29779,7 +29906,11 @@ theorem saddleSourceContour_piExponential_norm
       Real.exp (-(ℓ * u) * Real.log Real.pi / 2) := by
   rw [Complex.norm_exp]
   congr 1
-  simp [saddleSourceMellinContour, Complex.mul_re]
+  simp only [saddleSourceMellinContour, Complex.ofReal_mul, Complex.ofReal_add, Complex.ofReal_one,
+    Complex.div_ofNat_re, Complex.mul_re, Complex.sub_re, Complex.ofReal_re, Complex.add_re, Complex.one_re,
+    Complex.ofReal_im, Complex.add_im, Complex.one_im, add_zero, mul_zero, sub_zero, Complex.I_re, zero_mul,
+    Complex.I_im, Complex.mul_im, sub_self, Complex.sub_im, one_mul, zero_add, zero_sub, sub_neg_eq_add, neg_mul, ne_eq,
+    OfNat.ofNat_ne_zero, not_false_eq_true, div_left_inj']
   ring
 
 theorem saddleSourceContour_gamma_norm
@@ -29929,8 +30060,7 @@ theorem saddleSourceCenteredMinusIntegrand_norm
       upperSaddleDamping ε ℓ δ T := by
   have hη : 1 + (1 + δ) = 2 + δ := by ring
   have hδ : (1 + δ) - 1 = δ := by ring
-  simp [saddleSourceContourDamping, upperSaddleDamping,
-    hη, hδ]
+  simp only [saddleSourceContourDamping, hη, hδ, upperSaddleDamping]
 
 theorem saddleSourceMellinContour_integral_change
     {ℓ : ℝ} (hℓ : 0 < ℓ)
@@ -29973,7 +30103,7 @@ theorem saddleSourceMellinContour_integral_change
           (∫ t : ℝ,
             F ((a : ℂ) + (t : ℂ) * Complex.I)) := by
           rw [habs]
-          simp [G, Complex.real_smul]
+          simp only [Complex.real_smul, Complex.ofReal_inv, G]
   change
     (∫ t : ℝ,
       F ((a : ℂ) + (t : ℂ) * Complex.I)) =
@@ -30288,7 +30418,7 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_pos :
     with ε hpositive
   intro ℓ hℓ δ hδ
   convert! hpositive ℓ hℓ δ hδ using 1
-  all_goals simp [saddleSourceGaussianVariance]
+  all_goals simp only [saddleSourceGaussianVariance, add_sub_cancel_left]
 
 theorem plusSaddleProfile_exp_re_pos_of_gaussian_error
     {ε ℓ u v : ℝ}
@@ -30431,7 +30561,7 @@ theorem upperFirstBranch_shortVariance_le_gamma
     have hneg : IntervalIntegrable
         (fun a : ℝ => -shortShellDensity ε a)
         volume a₀ A := by
-      simpa [a₀, A, Pi.neg_apply] using! hs.neg
+      simpa only  using! hs.neg
     exact ((hneg.const_mul ℓ).mul_continuousOn
       hcosh.continuousOn).mul_continuousOn
         hsquare.continuousOn
@@ -30734,21 +30864,21 @@ theorem upperImaginaryExp_hasDerivAt (x : ℝ) :
       (Complex.I * upperImaginaryExp x) x := by
   have hreal :
       HasDerivAt (fun t : ℝ => (t : ℂ)) (1 : ℂ) x := by
-    simpa using! Complex.ofRealCLM.hasDerivAt
+    simpa only [Complex.ofRealCLM_apply, Complex.ofReal_one] using! Complex.ofRealCLM.hasDerivAt
   have hlinear :
       HasDerivAt (fun t : ℝ => Complex.I * (t : ℂ))
         Complex.I x := by
     convert! hreal.const_mul Complex.I using 1
-    all_goals simp
+    all_goals simp only [mul_one]
   convert! hlinear.cexp using 1
-  all_goals simp [upperImaginaryExp, mul_comm]
+  all_goals simp only [upperImaginaryExp, mul_comm]
 
 theorem upperImaginaryExp_iteratedDeriv
     (n : ℕ) (x : ℝ) :
     iteratedDeriv n upperImaginaryExp x =
       Complex.I ^ n * upperImaginaryExp x := by
   induction n generalizing x with
-  | zero => simp
+  | zero => simp only [iteratedDeriv_zero, pow_zero, one_mul]
   | succ n ih =>
       rw [iteratedDeriv_succ]
       have heq :
@@ -30782,7 +30912,7 @@ theorem upperImaginaryExp_iteratedDeriv_norm
     ‖iteratedDeriv n upperImaginaryExp x‖ = 1 := by
   rw [upperImaginaryExp_iteratedDeriv,
     norm_mul, norm_pow, upperImaginaryExp_norm]
-  simp
+  simp only [Complex.norm_I, one_pow, mul_one]
 
 theorem upperImaginaryExp_iteratedDerivWithin_Icc
     {a b x : ℝ} (hab : a < b) (hx : x ∈ Icc a b)
@@ -30811,7 +30941,10 @@ theorem upperImaginaryExp_taylorWithinEval_two
     taylor_within_zero_eval,
     upperImaginaryExp_iteratedDerivWithin_Icc hx hzero 1,
     upperImaginaryExp_iteratedDerivWithin_Icc hx hzero 2]
-  simp [upperImaginaryExp, Complex.real_smul]
+  simp only [upperImaginaryExp, Complex.ofReal_zero, mul_zero, Complex.exp_zero, CharP.cast_eq_zero, zero_add,
+    Nat.factorial_zero, Nat.cast_one, mul_one, inv_one, sub_zero, pow_one, one_mul, Complex.real_smul,
+    Nat.factorial_one, Nat.reduceAdd, Complex.I_sq, smul_neg, Complex.ofReal_mul, Complex.ofReal_inv,
+    Complex.ofReal_add, Complex.ofReal_one, Complex.ofReal_pow, Complex.ofReal_div, Complex.ofReal_ofNat]
   ring
 
 theorem upperImaginaryExp_cubicIntegral_norm_le
@@ -30844,7 +30977,7 @@ theorem upperImaginaryExp_cubicIntegral_norm_le
     convert! (((hasDerivAt_const t x).sub
       (hasDerivAt_id t)).pow 3).neg.div_const 6 using 1
     all_goals
-      simp [Pi.sub_apply, id]
+      simp only [Nat.cast_ofNat, Pi.sub_apply, id, Nat.add_one_sub_one, zero_sub, mul_neg, mul_one, neg_neg]
       ring
   calc
     ‖∫ t in (0 : ℝ)..x,
@@ -30870,12 +31003,13 @@ theorem upperImaginaryExp_quadratic_remainder_norm_le_of_nonneg
           ((x ^ 2 / 2 : ℝ) : ℂ)‖ ≤
       x ^ 3 / 6 := by
   rcases hx.eq_or_lt with rfl | hxpos
-  · simp [upperImaginaryExp]
+  · simp only [upperImaginaryExp, Complex.ofReal_zero, mul_zero, Complex.exp_zero, sub_self, ne_eq,
+      OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_div, add_zero, norm_zero, Std.le_refl]
   have hcont :
       ContDiffOn ℝ (3 : ℕ)
         upperImaginaryExp (Set.uIcc 0 x) :=
     (upperImaginaryExp_contDiff.of_le
-      (by simp : (3 : WithTop ℕ∞) ≤ ⊤)).contDiffOn
+      (by simp only [le_top] : (3 : WithTop ℕ∞) ≤ ⊤)).contDiffOn
   have htaylor :=
     taylor_integral_remainder
       (f := upperImaginaryExp) (x := x)
@@ -30927,13 +31061,13 @@ theorem upperImaginaryExp_quadratic_remainder_norm_le
           ((x ^ 2 / 2 : ℝ) : ℂ)‖ ≤
       |x| ^ 3 / 6 := by
   by_cases hx : 0 ≤ x
-  · simpa [abs_of_nonneg hx] using!
+  · simpa only [Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_ofNat, abs_of_nonneg hx] using!
       upperImaginaryExp_quadratic_remainder_norm_le_of_nonneg hx
   · have hxnegative : x < 0 := lt_of_not_ge hx
     have hf :
         upperImaginaryExp x =
           starRingEnd ℂ (upperImaginaryExp (-x)) := by
-      simpa using! upperImaginaryExp_neg (-x)
+      simpa only [neg_neg] using! upperImaginaryExp_neg (-x)
     have hconj :
         upperImaginaryExp x - 1 -
             Complex.I * (x : ℂ) +
@@ -30943,9 +31077,11 @@ theorem upperImaginaryExp_quadratic_remainder_norm_le
               Complex.I * ((-x : ℝ) : ℂ) +
                 (((-x) ^ 2 / 2 : ℝ) : ℂ)) := by
       have htwo : starRingEnd ℂ (2 : ℂ) = 2 := by
-        simpa using! Complex.conj_ofReal (2 : ℝ)
+        simpa only [Complex.ofReal_ofNat] using! Complex.conj_ofReal (2 : ℝ)
       rw [hf]
-      simp [htwo]
+      simp only [Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_ofNat, Complex.ofReal_neg, mul_neg,
+        sub_neg_eq_add, even_two, Even.neg_pow, map_add, map_sub, map_one, map_mul, Complex.conj_I, Complex.conj_ofReal,
+        neg_mul, map_div₀, map_pow, htwo, add_left_inj]
       ring
     calc
       ‖upperImaginaryExp x - 1 -
@@ -30997,7 +31133,7 @@ theorem saddleSourceShiftedCosine_eq_imaginaryExponentials
     congr 1
     push_cast
     ring_nf
-    simp [Complex.I_sq]
+    simp only [Complex.I_sq, mul_neg, mul_one, neg_mul]
     ring
   have hsecond :
       Complex.exp
@@ -31010,7 +31146,7 @@ theorem saddleSourceShiftedCosine_eq_imaginaryExponentials
     congr 1
     push_cast
     ring_nf
-    simp [Complex.I_sq]
+    simp only [Complex.I_sq, mul_neg, mul_one, neg_mul, sub_neg_eq_add]
   unfold Complex.cos
   rw [hfirst, hsecond]
   push_cast
@@ -31091,7 +31227,8 @@ theorem saddleSourceCosineQuadraticRemainder_norm_le
               Complex.I * ((-(a * T) : ℝ) : ℂ) +
                 (((-(a * T)) ^ 2 / 2 : ℝ) : ℂ)‖ ≤
               |a * T| ^ 3 / 6 := by
-          simpa [abs_neg] using! hsecond
+          simpa only [Complex.ofReal_neg, Complex.ofReal_mul, mul_neg, sub_neg_eq_add, even_two, Even.neg_pow,
+            Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_ofNat, abs_mul, abs_neg] using! hsecond
         gcongr
     _ = Real.cosh (u * a) * |a * T| ^ 3 / 6 := by
       rw [Real.cosh_eq]
@@ -31216,7 +31353,7 @@ theorem saddleSourceShortShellQuadraticRemainder_norm_le
     have hm : 0 ≤ shortMargin ε a := hmargin a ha
     have hd : 0 < 2 * a ^ 2 * Real.cosh a := by
       positivity
-    simpa using!
+    simpa only [neg_mul, neg_neg, ge_iff_le] using!
       div_nonneg
         (mul_nonneg hm (Real.exp_pos _).le)
         hd.le
@@ -31888,7 +32025,7 @@ theorem saddleDigamma_add_nat
         ∑ k ∈ Finset.range n,
           (m + (k : ℝ))⁻¹ := by
   induction n with
-  | zero => simp
+  | zero => simp only [CharP.cast_eq_zero, add_zero, Finset.range_zero, Finset.sum_empty]
   | succ n ih =>
     rw [Nat.cast_succ, ← add_assoc,
       saddleDigamma_add_one (by positivity),
@@ -31932,7 +32069,7 @@ theorem tendsto_saddleEulerHarmonicCorrection
           (fun n : ℕ =>
             1 + (m + 1) * (n : ℝ)⁻¹)
           atTop (𝓝 (1 : ℝ)) := by
-      simpa using! h
+      simpa only [mul_zero, add_zero] using! h
     apply h'.congr'
     filter_upwards [eventually_gt_atTop (0 : ℕ)]
       with n hn
@@ -31954,7 +32091,7 @@ theorem tendsto_saddleEulerHarmonicCorrection
             Real.log
               ((m + (n : ℝ) + 1) / (n : ℝ)))
           atTop (𝓝 0) := by
-      simpa using! hlogratio
+      simpa only [Real.log_one] using! hlogratio
     apply h.congr'
     filter_upwards [eventually_gt_atTop (0 : ℕ)]
       with n hn
@@ -31975,7 +32112,7 @@ theorem tendsto_saddleEulerHarmonicCorrection
               Real.log (n : ℝ))) +
             saddleDigamma m)
         atTop (𝓝 (saddleDigamma m)) := by
-    simpa [Function.comp_apply] using! hlimit
+    simpa only [sub_add_sub_cancel, neg_sub, Function.comp_apply, add_zero, neg_zero, zero_add] using! hlimit
   apply hlimit'.congr'
   filter_upwards [] with n
   have hrec := saddleDigamma_add_nat hm (n + 1)
@@ -32040,7 +32177,7 @@ theorem upperCenteredLaplaceKernel_integrable
   let z : ℂ := (c : ℂ) - Complex.I * (T : ℂ)
   let w : ℂ := (c : ℂ)
   have hz : 0 < z.re := by simpa [z] using! hc
-  have hw : 0 < w.re := by simpa [w] using! hc
+  have hw : 0 < w.re := by simpa only [Complex.ofReal_re] using! hc
   have hfrullani := complexFrullaniKernel_integrable hz hw
   have hlaplace :=
     (complexLaplaceKernel_integrable hw).const_mul
@@ -32061,7 +32198,7 @@ theorem integral_upperCenteredLaplaceKernel
   let z : ℂ := (c : ℂ) - Complex.I * (T : ℂ)
   let w : ℂ := (c : ℂ)
   have hz : 0 < z.re := by simpa [z] using! hc
-  have hw : 0 < w.re := by simpa [w] using! hc
+  have hw : 0 < w.re := by simpa only [Complex.ofReal_re] using! hc
   have hfrullani := complexFrullaniKernel_integrable hz hw
   have hlaplace := complexLaplaceKernel_integrable hw
   calc
@@ -32126,9 +32263,9 @@ theorem upperGammaCenteredGeometricLimit_eq_kernel
     upperCenteredLaplaceKernel η T a *
         (((1 - Real.exp (-(2 * a / ℓ)))⁻¹ : ℝ) : ℂ) =
       upperGammaCenteredKernel ℓ η T a := by
-  simp [upperCenteredLaplaceKernel, upperGammaCenteredKernel,
-    upperGammaMeasureDensity, div_eq_mul_inv,
-    mul_comm, mul_left_comm, mul_assoc]
+  simp only [upperCenteredLaplaceKernel, mul_comm, Complex.ofReal_mul, mul_neg, div_eq_mul_inv,
+    Complex.ofReal_inv, Complex.ofReal_exp, Complex.ofReal_neg, mul_assoc, mul_left_comm, Complex.ofReal_sub,
+    Complex.ofReal_one, Complex.ofReal_ofNat, upperGammaCenteredKernel, upperGammaMeasureDensity, mul_inv_rev]
 
 theorem tendsto_integral_upperGammaCenteredTruncatedKernel
     {ℓ η : ℝ} (hℓ : 0 < ℓ) (hη : 0 < η) (T : ℝ) :
@@ -32213,7 +32350,8 @@ theorem exp_integral_upperCenteredLaplaceKernel
     exact_mod_cast hc.ne'
   have hzn : (c : ℂ) - Complex.I * (T : ℂ) ≠ 0 := by
     apply ne_of_apply_ne Complex.re
-    simpa using! hc.ne'
+    simpa only [Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, sub_zero, Complex.zero_re, ne_eq] using! hc.ne'
   have hphase :
       -(Complex.I * (T : ℂ) * (c : ℂ)⁻¹) =
         -Complex.I * ((T / c : ℝ) : ℂ) := by
@@ -32273,7 +32411,8 @@ theorem exp_integral_upperCenteredLaplaceKernel_scale
     exact_mod_cast hs.ne'
   have hzn : (c : ℂ) - Complex.I * (T : ℂ) ≠ 0 := by
     apply ne_of_apply_ne Complex.re
-    simpa using! hc.ne'
+    simpa only [Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul, Complex.I_im,
+      Complex.ofReal_im, mul_zero, sub_self, sub_zero, Complex.zero_re, ne_eq] using! hc.ne'
   have hratio :
       (c : ℂ) / ((c : ℂ) - Complex.I * (T : ℂ)) =
         (((s * c : ℝ) : ℂ) /
@@ -32347,13 +32486,14 @@ theorem upperGammaEuler_centered_ratio
   have hreal (k : ℕ) :
       (m : ℂ) + (k : ℂ) ≠ 0 := by
     apply ne_of_apply_ne Complex.re
-    simp
+    simp only [Complex.add_re, Complex.ofReal_re, Complex.natCast_re, Complex.zero_re, ne_eq]
     exact (add_pos_of_pos_of_nonneg hm
       (Nat.cast_nonneg k)).ne'
   have hcomplex (k : ℕ) :
       z + (k : ℂ) ≠ 0 := by
     apply ne_of_apply_ne Complex.re
-    simp [z]
+    simp only [Complex.add_re, Complex.sub_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, zero_mul,
+      Complex.I_im, Complex.ofReal_im, mul_zero, sub_self, sub_zero, Complex.natCast_re, Complex.zero_re, ne_eq, z]
     exact (add_pos_of_pos_of_nonneg hm
       (Nat.cast_nonneg k)).ne'
   have hprodreal :
@@ -32573,7 +32713,7 @@ theorem exp_upperGammaCenteredPhase
     positivity
   have hden : Complex.Gamma (m : ℂ) ≠ 0 :=
     Complex.Gamma_ne_zero_of_re_pos
-      (by simpa using! hm)
+      (by simpa only [Complex.ofReal_re] using! hm)
   have hgamma :
       Tendsto
         (fun n : ℕ =>
@@ -33200,7 +33340,7 @@ theorem saddle_abs_le_exp_sq (T : ℝ) :
   have hlinear : |T| ≤ 1 + T ^ 2 := by
     linarith [abs_nonneg T, sq_nonneg T]
   exact hlinear.trans (by
-    simpa [add_comm] using! Real.add_one_le_exp (T ^ 2))
+    simpa only [add_comm] using! Real.add_one_le_exp (T ^ 2))
 
 theorem saddleGaussianTailWeight_le_two_exp_three_sq (T : ℝ) :
     saddleGaussianTailWeight T ≤
@@ -33225,7 +33365,7 @@ theorem saddleGaussianTailWeight_le_two_exp_three_abs (T : ℝ) :
     calc
       |T| ≤ 1 + |T| := by linarith
       _ ≤ Real.exp |T| := by
-        simpa [add_comm] using! Real.add_one_le_exp |T|
+        simpa only [add_comm] using! Real.add_one_le_exp |T|
   have hcube : |T| ^ 3 ≤ (Real.exp |T|) ^ 3 :=
     pow_le_pow_left₀ (abs_nonneg T) hlinear 3
   have hexpcube : (Real.exp |T|) ^ 3 =
@@ -33251,7 +33391,7 @@ theorem saddle_integral_exp_neg_mul_abs
         (f := fun T : ℝ => Real.exp (-a * T)))
     _ = 2 / a := by
       rw [hhalf]
-      simp [div_eq_mul_inv]
+      simp only [mul_zero, Real.exp_zero, div_eq_mul_inv, inv_neg, mul_neg, neg_mul, one_mul, neg_neg]
 
 theorem saddleGaussianTailWeight_mul_gaussian_integrable
     {k : ℝ} (hk : 0 < k) :
@@ -33264,12 +33404,12 @@ theorem saddleGaussianTailWeight_mul_gaussian_integrable
     hk (s := (3 : ℝ)) (by norm_num)
   have hpolynomial : Integrable
       (fun T : ℝ => T ^ 3 * Real.exp (-k * T ^ 2)) := by
-    simpa [Real.rpow_natCast] using! hthree
+    simpa only [neg_mul, Real.rpow_ofNat] using! hthree
   have hsum := hzero.add hpolynomial.norm
   apply hsum.congr
   filter_upwards [] with T
-  simp [saddleGaussianTailWeight, Real.norm_eq_abs,
-    abs_of_pos (Real.exp_pos _), add_mul]
+  simp only [neg_mul, norm_mul, norm_pow, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _), Pi.add_apply,
+    saddleGaussianTailWeight, add_mul, one_mul]
 
 theorem saddleGaussianTailWeight_mul_exp_abs_integrable
     {k : ℝ} (hk : 0 < k) :
@@ -33282,7 +33422,7 @@ theorem saddleGaussianTailWeight_mul_exp_abs_integrable
   have hsum := hzero.add hthree
   apply hsum.congr
   filter_upwards [] with T
-  simp [saddleGaussianTailWeight, add_mul]
+  simp only [neg_mul, Pi.add_apply, saddleGaussianTailWeight, add_mul, one_mul]
 
 def saddleGaussianTailSet (R : ℝ) : Set ℝ :=
   {T : ℝ | R ≤ |T|}
@@ -33318,7 +33458,7 @@ theorem saddleGaussian_cubic_tail_integral_le
     change R ≤ |T| at hT
     have hsq : R ^ 2 ≤ T ^ 2 := by
       have h := pow_le_pow_left₀ hR hT 2
-      simpa [sq_abs] using! h
+      simpa only [ge_iff_le, sq_abs] using! h
     have hexponent :
         3 * T ^ 2 + (-k * T ^ 2) ≤
           (-(k / 4) * R ^ 2) +
@@ -33467,7 +33607,7 @@ theorem saddleGaussianOuterPhi_le_endpointBarrier
         Real.exp (B * δ₀) *
           Real.exp (B * (δ - δ₀)) := by
             gcongr
-            simpa [add_comm] using!
+            simpa only [add_comm] using!
               Real.add_one_le_exp (B * (δ - δ₀))
       _ = Real.exp (B * δ) := by
         rw [← Real.exp_add]
@@ -33517,7 +33657,7 @@ theorem eventually_saddleGaussianOuterPhi_uniform
         atTop (𝓝 (0 : ℝ)) := by
       convert!
         (tendsto_const_nhds
-          (x := Real.exp (A * δ₀ + 4))).mul hbase using 1; simp
+          (x := Real.exp (A * δ₀ + 4))).mul hbase using 1; simp only [mul_zero]
     apply hscaled.congr'
     filter_upwards [] with ℓ
     symm
@@ -33605,7 +33745,7 @@ theorem upperPositiveShellVariance_firstBranch_le
     ((hcont u).intervalIntegrable _ _)
     ((hcont (1 + ε / 2)).intervalIntegrable _ _)
     hpoint
-  simpa [upperPositiveShellVariance, B] using! hmono
+  simpa only [upperPositiveShellVariance, add_sub_cancel, ge_iff_le] using! hmono
 
 theorem upperFirstBranch_saddleSourceGaussianVariance_upper_bound
     {ε ℓ u : ℝ}
@@ -33711,7 +33851,9 @@ theorem saddleSourceNormalizedEnvelope_continuous
     have hre :
         0 < (saddleSourceMellinContour ℓ u T).re := by
       unfold saddleSourceMellinContour
-      simp
+      simp only [Complex.ofReal_mul, Complex.ofReal_add, Complex.ofReal_one, Complex.sub_re, Complex.mul_re,
+        Complex.ofReal_re, Complex.add_re, Complex.one_re, Complex.ofReal_im, Complex.add_im, Complex.one_im, add_zero,
+        mul_zero, sub_zero, Complex.I_re, zero_mul, Complex.I_im, Complex.mul_im, sub_self]
       linarith [mul_pos hℓ (show 0 < 1 + u by linarith)]
     exact (saddleMellinGamma_differentiableAt_of_re_pos
       hre).continuousAt.comp_of_eq harg.continuousAt (by rfl)
@@ -33845,7 +33987,7 @@ theorem saddleSource_firstBranch_weighted_integrable
       Real.exp (-saddleSourceContourDamping ε ℓ u T) ≤
           Real.exp (-a * min (T ^ 2 / η) |T|) := by
             apply Real.exp_le_exp.mpr
-            simpa [a, η] using! neg_le_neg hcoercive
+            simpa only [saddleSourceContourDamping_eq_firstBranch, neg_mul, neg_le_neg_iff, a, η] using! neg_le_neg hcoercive
       _ ≤ _ := hmin
   change
     saddleGaussianTailWeight T *
@@ -33924,7 +34066,7 @@ theorem saddleSource_firstBranch_weighted_tail_le
         Real.exp (-saddleSourceContourDamping ε ℓ u T) ≤
             Real.exp (-a * min (T ^ 2 / η) |T|) := by
               apply Real.exp_le_exp.mpr
-              simpa [a, η] using! neg_le_neg hcoercive
+              simpa only [saddleSourceContourDamping_eq_firstBranch, neg_mul, neg_le_neg_iff, a, η] using! neg_le_neg hcoercive
         _ ≤ Real.exp (-a * (T ^ 2 / η)) +
             Real.exp (-a * |T|) := hmin
         _ = Real.exp (-(a / η) * T ^ 2) +
@@ -34268,7 +34410,7 @@ theorem tendsto_saddleFirstBranchTailLogMajorant
       (fun ℓ : ℝ =>
         Real.sqrt (C / (Real.log ℓ / 4)))
       atTop (𝓝 (0 : ℝ)) := by
-    convert! hratio.sqrt using 1; simp
+    convert! hratio.sqrt using 1; simp only [Real.sqrt_zero]
   have hfirst := hexp.const_mul
     (4 * Real.sqrt (Real.pi * C / c))
   have hsecond := hsqrt.const_mul (16 / c)
@@ -34281,7 +34423,7 @@ theorem tendsto_saddleFirstBranchTailLogMajorant
         (16 / c) *
           Real.sqrt (C / (Real.log ℓ / 4)))
     atTop (𝓝 (0 : ℝ))
-  simpa using! hfirst.add hsecond
+  simpa only [one_div, neg_mul, mul_zero, add_zero] using! hfirst.add hsecond
 
 theorem eventually_saddleSource_firstBranch_uniform_tail :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
@@ -34370,8 +34512,7 @@ theorem eventually_saddleSource_firstBranch_uniform_tail :
       hε hℓ hulower huupper horder hmargin' hscale
   have hupper : η * V ≤ C := by
     have hbound : V ≤ C / η := by
-      simpa [V, η, C,
-        saddleSourceFirstBranchVarianceCoefficient] using! hvariance
+      simpa only [saddleSourceFirstBranchVarianceCoefficient] using! hvariance
     calc
       η * V ≤ η * (C / η) :=
         mul_le_mul_of_nonneg_left hbound hη.le
@@ -34441,7 +34582,7 @@ theorem eventually_saddleSource_firstBranch_uniform_tail :
       4 * Real.sqrt (Real.pi * C / c) *
         Real.exp (-(c / (4 * C)) * z ^ 2) +
           (16 / c) * Real.sqrt (C / (ℓ * η)) := by
-        simpa [c, η, V] using! hsource
+        simpa only [saddleSourceContourDamping_eq_firstBranch, neg_mul, V, c, η] using! hsource
     _ ≤ saddleFirstBranchTailLogMajorant c C ℓ := by
       unfold saddleFirstBranchTailLogMajorant
       gcongr
@@ -34464,7 +34605,7 @@ theorem eventually_saddleGaussianOuterPhi_uniform_polynomial
   · subst K
     filter_upwards [] with ℓ
     intro δ hδ
-    simpa using! hκ
+    simpa only [zero_mul, neg_mul] using! hκ
   · have hlimit :=
       eventually_saddleGaussianOuterPhi_uniform
         hB hQ hc hδ₀ (κ / K)
@@ -34597,7 +34738,7 @@ theorem upperPositiveShellThirdMoment_firstBranch_le
     ((hcont u).intervalIntegrable _ _)
     ((hcont (1 + ε / 2)).intervalIntegrable _ _)
     hpoint
-  simpa [upperPositiveShellThirdMoment, B] using! hmono
+  simpa only [upperPositiveShellThirdMoment, add_sub_cancel, ge_iff_le] using! hmono
 
 theorem upperGammaVariance_firstBranch_scaled_le
     {ℓ η : ℝ} (hℓ : 0 < ℓ) (hη : 0 < η)
@@ -34605,7 +34746,7 @@ theorem upperGammaVariance_firstBranch_scaled_le
     η * upperGammaVariance ℓ η ≤ (3 / 2 : ℝ) := by
   have hone : 1 / (ℓ * η) ≤ (1 : ℝ) := by
     apply (div_le_iff₀ (mul_pos hℓ hη)).2
-    simpa using! hscale
+    simpa only [one_mul] using! hscale
   calc
     η * upperGammaVariance ℓ η ≤
         η * (1 / (2 * η) + 1 / (ℓ * η ^ 2)) :=
@@ -34621,7 +34762,7 @@ theorem upperGammaThirdMoment_firstBranch_scaled_le
     η ^ 2 * upperGammaThirdMoment ℓ η ≤ (5 / 2 : ℝ) := by
   have hone : 1 / (ℓ * η) ≤ (1 : ℝ) := by
     apply (div_le_iff₀ (mul_pos hℓ hη)).2
-    simpa using! hscale
+    simpa only [one_mul] using! hscale
   have htwo : 2 / (ℓ * η) ≤ (2 : ℝ) := by
     calc
       2 / (ℓ * η) = 2 * (1 / (ℓ * η)) := by ring
@@ -34674,9 +34815,9 @@ theorem upperFirstBranch_saddleSourceThirdMoment_scaled_le
       positivity
     exact (hcut.trans_le horder).le
   have hgamma := upperGammaVariance_firstBranch_scaled_le
-    hℓ hη (by simpa [η] using! hscale)
+    hℓ hη (by simpa only [η] using! hscale)
   have hthirdgamma := upperGammaThirdMoment_firstBranch_scaled_le
-    hℓ hη (by simpa [η] using! hscale)
+    hℓ hη (by simpa only [η] using! hscale)
   have hgammanonneg : 0 ≤ upperGammaVariance ℓ η :=
     (show 0 ≤ 1 / (2 * η) by positivity).trans
       (upperGammaVariance_bounds hℓ hη).1
@@ -35243,7 +35384,7 @@ theorem saddleSourceFirstBranch_cubic_central_window_le
     (T := T) hℓ hη (by positivity) hK.le
     (Real.rpow_nonneg hx.le _)
     hmoment hvariance (by
-      simpa [saddleSourceFirstBranchCentralRadius] using! hT)
+      simpa only [one_div, saddleSourceFirstBranchCentralRadius] using! hT)
   calc
     (ℓ * upperSaddleThirdMoment ε ℓ (u - 1) / 6) *
         |T| ^ 3 ≤
@@ -35302,7 +35443,7 @@ theorem eventually_saddleSourceSecondBranch_cubic_central_window_le :
         (2 + (100 / 99 : ℝ) *
           upperSaddleShellThirdCoefficient ε) *
           saddleSourceGaussianVariance ε ℓ (1 + δ) := by
-    simpa [saddleSourceGaussianVariance, hargument] using! hthird
+    simpa only [saddleSourceGaussianVariance, hargument] using! hthird
   have hbase := saddleSource_cubic_window_le_of_variance_floor
     (ℓ := ℓ)
     (V := saddleSourceGaussianVariance ε ℓ (1 + δ))
@@ -35315,7 +35456,7 @@ theorem eventually_saddleSourceSecondBranch_cubic_central_window_le :
     hℓpositive hfloorpositive hvariance hC
     (Real.rpow_nonneg hℓpositive.le _)
     hthird' (by
-      simpa [saddleSourceSecondBranchCentralRadius] using! hT)
+      simpa only [one_div, saddleSourceSecondBranchCentralRadius] using! hT)
   calc
     (ℓ * upperSaddleThirdMoment ε ℓ δ / 6) *
         |T| ^ 3 ≤
@@ -35421,7 +35562,7 @@ theorem saddleSourceFirstBranch_central_radius_le
       ((2 + ε / 2) / Real.sqrt (2 * ε)) *
         ((ℓ * (1 + u)) ^ (1 / 12 : ℝ) /
           Real.sqrt (ℓ * (1 + u))) := by
-      simpa [saddleSourceFirstBranchCentralRadius] using! hbase
+      simpa only [saddleSourceFirstBranchCentralRadius, one_div, Nat.ofNat_nonneg, Real.sqrt_mul] using! hbase
     _ = ((2 + ε / 2) / Real.sqrt (2 * ε)) *
         (ℓ * (1 + u)) ^ (-(5 / 12 : ℝ)) := by
       rw [saddleSource_central_rpow_div_sqrt hx]
@@ -35496,7 +35637,7 @@ theorem eventually_saddleSourceFirstBranch_cubic_window :
     convert! tendsto_const_nhds.mul
       (tendsto_rpow_neg_atTop
         (by norm_num : (0 : ℝ) < 1 / 4)) using 1
-    all_goals simp
+    all_goals simp only [mul_zero]
   obtain ⟨N, hN⟩ := Filter.eventually_atTop.1
     (htendsto.eventually (Iio_mem_nhds hκ))
   filter_upwards [eventually_gt_atTop (0 : ℝ),
@@ -35538,7 +35679,7 @@ theorem eventually_saddleSourceSecondBranch_cubic_window :
     convert! tendsto_const_nhds.mul
       (tendsto_rpow_neg_atTop
         (by norm_num : (0 : ℝ) < 1 / 4)) using 1
-    all_goals simp
+    all_goals simp only [mul_zero]
   filter_upwards [eventually_ge_atTop (1 : ℝ),
     htendsto.eventually (Iio_mem_nhds hκ)]
     with ℓ hℓ hsmall
@@ -35578,7 +35719,7 @@ theorem eventually_saddleSourceFirstBranch_central_radius_lt :
     convert! tendsto_const_nhds.mul
       (tendsto_rpow_neg_atTop
         (by norm_num : (0 : ℝ) < 5 / 12)) using 1
-    all_goals simp
+    all_goals simp only [mul_zero]
   obtain ⟨N, hN⟩ := Filter.eventually_atTop.1
     (htendsto.eventually (Iio_mem_nhds hκ))
   filter_upwards [eventually_gt_atTop (0 : ℝ),
@@ -35612,7 +35753,7 @@ theorem eventually_saddleSourceSecondBranch_central_radius_lt :
     convert! tendsto_const_nhds.mul
       (tendsto_rpow_neg_atTop
         (by norm_num : (0 : ℝ) < 5 / 12)) using 1
-    all_goals simp
+    all_goals simp only [mul_zero]
   filter_upwards [eventually_gt_atTop (0 : ℝ),
     htendsto.eventually (Iio_mem_nhds hκ)]
     with ℓ hℓ hsmall
@@ -35916,7 +36057,7 @@ theorem upperPositiveShellDamping_local_variance_lower
       (B + 1) * |T| ≤
           (B + 1) * (1 / (2 * (B + 1))) := by
             apply mul_le_mul_of_nonneg_left _ (by linarith)
-            simpa [B] using! hT
+            simpa only [one_div, mul_inv_rev, B] using! hT
       _ = 1 / 2 := by
         field_simp [hB1.ne']
   have hdensity : Continuous (positiveShellDensity ε) :=
@@ -36019,7 +36160,7 @@ theorem upperGammaVarianceDensity_laplace_linear_lower
   have hinv : 1 ≤ (1 - Real.exp (-x))⁻¹ := by
     rw [inv_eq_one_div]
     apply (le_div_iff₀ hden).2
-    simpa using! hdenone
+    simpa only [one_mul, tsub_le_iff_right, le_add_iff_nonneg_right] using! hdenone
   have hfactor : 0 ≤ a * Real.exp (-η * a) := by
     positivity
   calc
@@ -36313,7 +36454,7 @@ theorem eventually_saddleSourceContourDamping_secondBranch_local_coercivity :
           T ^ 2 =
       (ℓ / (100 * Real.exp 1)) *
         upperSaddleVariance ε ℓ δ * T ^ 2 := by
-          simp [saddleSourceGaussianVariance]
+          simp only [saddleSourceGaussianVariance, add_sub_cancel_left]
     _ ≤ (ℓ / (100 * Real.exp 1)) *
           upperGammaVariance ℓ (2 + δ) * T ^ 2 +
         (ℓ / (100 * Real.exp 1)) *
@@ -36408,7 +36549,7 @@ theorem eventually_saddleSource_secondBranch_weighted_integrable :
           (-saddleSourceContourDamping ε ℓ (1 + δ) T) ≤
         Real.exp (-a * min (T ^ 2 / η) |T|) := by
           apply Real.exp_le_exp.mpr
-          simpa [a, η] using! neg_le_neg hsource
+          simpa only [saddleSourceContourDamping_eq_firstBranch, neg_mul, neg_le_neg_iff, a, η] using! neg_le_neg hsource
       _ ≤ Real.exp (-a * (T ^ 2 / η)) +
           Real.exp (-a * |T|) := hmin
       _ = Real.exp (-(a / η) * T ^ 2) +
@@ -36675,8 +36816,7 @@ theorem eventually_saddleSource_secondBranch_pointwise_gaussian_plus_outer :
     saddleGaussianTailWeight_nonneg T
   by_cases hinside : |T| ≤ t₀
   · have hquadratic := hlocal ℓ hℓ δ hδ T
-      (by simpa [t₀,
-        saddleSourceSecondBranchLocalFrequency] using! hinside)
+      (by simpa only [one_div, mul_inv_rev, saddleSourceSecondBranchLocalFrequency, t₀] using! hinside)
     have hlocalexp :
         Real.exp
             (-saddleSourceContourDamping
@@ -36705,7 +36845,7 @@ theorem eventually_saddleSource_secondBranch_pointwise_gaussian_plus_outer :
       le_of_not_ge hinside
     have hsquare : t₀ ^ 2 ≤ T ^ 2 := by
       have h := pow_le_pow_left₀ ht₀.le houtside 2
-      simpa [sq_abs] using! h
+      simpa only [ge_iff_le, sq_abs] using! h
     have hone : t₀ ^ 2 ≤ (1 : ℝ) := by
       nlinarith [sq_nonneg (1 - t₀)]
     have hminimum : t₀ ^ 2 ≤ min (T ^ 2) 1 :=
@@ -36891,10 +37031,10 @@ theorem eventually_saddleSource_secondBranch_weighted_tail_explicit :
     hactual.integrableOn hmajor.integrableOn
     (saddleGaussianTailSet_measurable R)
     (fun T _ => by
-      simpa [k, q, a, b] using!
+      simpa only [saddleSourceContourDamping_eq_firstBranch, neg_mul, k, b, q, a] using!
         hpoint ℓ hℓ δ hδ T)
   have hgaussianTail := saddleGaussian_cubic_tail_integral_le
-    (k := k) (R := R) (by simpa [k] using! hk) hR
+    (k := k) (R := R) (by simpa only [k] using! hk) hR
   have hgammanonnegative :
       0 ≤ᶠ[ae (volume : Measure ℝ)]
         (fun T : ℝ =>
@@ -37121,7 +37261,7 @@ theorem eventually_saddleSource_secondBranch_normalized_tail_bound :
             ε ℓ δ / 4) *
             (z / Real.sqrt (ℓ * V)) ^ 2 =
               z ^ 2 / (400 * Real.exp 1) := by
-        simpa [V] using! hexponent
+        simpa only [V] using! hexponent
       have hnegative :
           -(saddleSourceSecondBranchGaussianRate
             ε ℓ δ / 4) *
@@ -37135,7 +37275,7 @@ theorem eventually_saddleSource_secondBranch_normalized_tail_bound :
                 (saddleSourceSecondBranchGaussianRate
                   ε ℓ δ / 4)) =
             Real.sqrt (400 * Real.exp 1 * Real.pi) := by
-        simpa [V] using! hpref
+        simpa only [V] using! hpref
       try dsimp [R]
       rw [hnegative]
       have hscaled := congrArg
@@ -37189,7 +37329,7 @@ theorem saddleSecondBranch_gammaWeightedCoefficient_le
           (1 + 2 * Real.pi * C)) * η ^ 4 := by
   have hη0 : 0 ≤ η := by linarith
   have hηthree : 1 ≤ η ^ 3 := by
-    simpa using!
+    simpa only [one_pow] using!
       (pow_le_pow_left₀
         (show (0 : ℝ) ≤ 1 by norm_num) hη 3)
   have hinverse := saddle_inverse_sqrt_cube_le hq
@@ -37259,7 +37399,7 @@ theorem saddleSecondBranch_linearWeightedCoefficient_le
         (2 / (a / 2)) ≤
       (8 * C * (1 + (6 * C) ^ 3)) * η ^ 4 := by
   have hηfour : 1 ≤ η ^ 4 := by
-    simpa using!
+    simpa only [one_pow] using!
       (pow_le_pow_left₀
         (show (0 : ℝ) ≤ 1 by norm_num) hη 4)
   have hidentity :
@@ -37442,7 +37582,7 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_upper :
       saddleSourceGaussianVariance ε ℓ (1 + δ) ≤
         1 / (2 * η) + 1 / (ℓ * η ^ 2) +
           upperPositiveShellVariance ε δ := by
-    simpa [saddleSourceGaussianVariance, η] using! hfull
+    simpa only [saddleSourceGaussianVariance, add_sub_cancel_left, one_div, mul_inv_rev] using! hfull
   have hshell' :
       upperPositiveShellVariance ε δ ≤
         (shellLocation ε + 1) ^ 2 *
@@ -37482,7 +37622,7 @@ theorem eventually_saddleSource_secondBranch_sqrtVariance_le :
         (ℓ * (C * Real.exp
           ((shellLocation ε + 1) * δ))) := by
         apply Real.sqrt_le_sqrt
-        simpa [C] using! hscaled
+        simpa only [C] using! hscaled
     _ = Real.sqrt C * Real.sqrt ℓ *
         Real.exp
           (((shellLocation ε + 1) / 2) * δ) := by
@@ -37522,7 +37662,7 @@ theorem tendsto_saddleSourceSecondBranchLocalTailMajorant :
   · funext ℓ
     congr 2
     ring
-  · simp
+  · simp only [mul_zero]
 
 theorem eventually_saddleSource_secondBranch_uniform_tail :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
@@ -37644,7 +37784,7 @@ theorem eventually_saddleSource_secondBranch_uniform_tail :
       Real.sqrt (ℓ * V) ≤
         Real.sqrt C * Real.sqrt ℓ *
           Real.exp (((B + 1) / 2) * δ) := by
-    simpa [V, C, B] using! hsqrt ℓ hℓ δ hδ
+    simpa only  using! hsqrt ℓ hℓ δ hδ
   have hmoment :=
     saddleSourceSecondBranch_outerMoment_le hℓ hδ0
   have hmoment' :
@@ -37663,7 +37803,7 @@ theorem eventually_saddleSource_secondBranch_uniform_tail :
               (saddleSourceSecondBranchGammaLinearRate
                 ℓ / 2)) ≤
           saddleSourceSecondBranchMomentCoefficient * η ^ 4 := by
-    simpa [η] using! hmoment
+    simpa only [Nat.ofNat_nonneg, Real.sqrt_div'] using! hmoment
   have hqpositive :
       0 < saddleSourceSecondBranchGammaGaussianRate ℓ δ := by
     unfold saddleSourceSecondBranchGammaGaussianRate
@@ -38100,14 +38240,14 @@ theorem saddleGaussian_fullLine_error_lt_of_central_and_normalized_tails
       (κ := κsource * A)
       (X := ∫ T : ℝ in saddleGaussianTailSet R, ‖F T‖)
       (W := ∫ T : ℝ in saddleGaussianTailSet R, ‖F T‖)
-      hℓ hV hone hone (by simp) hsource
+      hℓ hV hone hone (by simp only [mul_one, one_mul, Std.le_refl]) hsource
   have hgaussian' :=
     saddleSource_scaled_tail_lt_relative_gaussian
       (ε := ε) (u := u) (C := (1 : ℝ)) (A := (1 : ℝ))
       (κ := κgaussian * A)
       (X := ∫ T : ℝ in saddleGaussianTailSet R, ‖G T‖)
       (W := ∫ T : ℝ in saddleGaussianTailSet R, ‖G T‖)
-      hℓ hV hone hone (by simp) hgaussian
+      hℓ hV hone hone (by simp only [mul_one, one_mul, Std.le_refl]) hgaussian
   calc
     ‖(∫ T : ℝ, F T) - (∫ T : ℝ, G T)‖ ≤
         ‖∫ T : ℝ in Icc (-R) R, (F T - G T)‖ +
@@ -38121,7 +38261,7 @@ theorem saddleGaussian_fullLine_error_lt_of_central_and_normalized_tails
         ((κgaussian * A /
             Real.sqrt (2 * Real.pi)) *
           (∫ T : ℝ, saddleSourceGaussianKernel ε ℓ u T)) := by
-      simpa using! add_lt_add (add_lt_add hcentral hsource') hgaussian'
+      simpa only [Nat.ofNat_nonneg, Real.sqrt_mul, one_mul, mul_one] using! add_lt_add (add_lt_add hcentral hsource') hgaussian'
     _ = (κcentral + (κsource + κgaussian) /
         Real.sqrt (2 * Real.pi)) * A *
           (∫ T : ℝ, saddleSourceGaussianKernel ε ℓ u T) := by
@@ -38368,8 +38508,7 @@ theorem eventually_saddleSource_firstBranch_uniform_gaussian_tail :
         saddleSourceGaussianKernel ε ℓ u T) ≤
       4 * Real.sqrt (2 * Real.pi) *
         Real.exp (-(z ^ 2) / 8) := by
-      simpa [saddleSourceFirstBranchCentralRadius,
-        V, η, z] using! hgaussian
+      simpa only [saddleSourceFirstBranchCentralRadius, one_div, Nat.ofNat_nonneg, Real.sqrt_mul, z, η] using! hgaussian
     _ ≤ saddleSourceGaussianNormalizedTailMajorant
       (Real.log ℓ / 4) := by
       unfold saddleSourceGaussianNormalizedTailMajorant
@@ -38433,8 +38572,7 @@ theorem eventually_saddleSource_secondBranch_uniform_gaussian_tail :
         saddleSourceGaussianKernel ε ℓ (1 + δ) T) ≤
       4 * Real.sqrt (2 * Real.pi) *
         Real.exp (-(z ^ 2) / 8) := by
-      simpa [saddleSourceSecondBranchCentralRadius,
-        V, z] using! hgaussian
+      simpa only [saddleSourceSecondBranchCentralRadius, one_div, Nat.ofNat_nonneg, Real.sqrt_mul, z] using! hgaussian
     _ = saddleSourceGaussianNormalizedTailMajorant ℓ := by
       unfold saddleSourceGaussianNormalizedTailMajorant
       rw [hsquare]
@@ -38870,14 +39008,14 @@ theorem eventually_saddleSourceSecondBranch_sourceL1Tails_of_uniform_tail
           saddleGaussianTailWeight T *
             Real.exp (-saddleSourceContourDamping ε ℓ u T)) <
           κ / Cp := by
-    simpa [R, V, u] using! hp δ hδ
+    simpa only [saddleSourceContourDamping_eq_firstBranch] using! hp δ hδ
   have hmnormal :
       Real.sqrt (ℓ * V) *
         (∫ T : ℝ in saddleGaussianTailSet R,
           saddleGaussianTailWeight T *
             Real.exp (-saddleSourceContourDamping ε ℓ u T)) <
           κ / Cm := by
-    simpa [R, V, u] using! hm δ hδ
+    simpa only [saddleSourceContourDamping_eq_firstBranch] using! hm δ hδ
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
@@ -39224,7 +39362,8 @@ theorem eventually_saddleSourceSecondBranch_sourceL1Tails :
                 (Complex.I * ((1 + δ : ℝ) : ℂ))‖) := by
   apply eventually_saddleSourceSecondBranch_sourceL1Tails_of_uniform_tail
     eventually_saddleSource_secondBranch_weighted_integrable
-  simpa [saddleSourceSecondBranchCentralRadius] using!
+  simpa only [saddleSourceSecondBranchCentralRadius, one_div, saddleSourceContourDamping_eq_firstBranch,
+    eventually_atTop] using!
     eventually_saddleSource_secondBranch_uniform_tail
 
 theorem eventually_saddleSourceSecondBranch_fullGaussianErrors :
@@ -39271,7 +39410,7 @@ theorem saddleDigamma_eq_complexDigamma_re
     intro n h
     have hre := congrArg Complex.re h
     have hn : 0 ≤ (n : ℝ) := Nat.cast_nonneg n
-    simp at hre
+    simp only [Complex.ofReal_re, Complex.neg_re, Complex.natCast_re] at hre
     linarith
   have hreal :
       HasDerivAt Real.Gamma
@@ -39294,7 +39433,7 @@ theorem complexGamma_differentiableOn_positiveHalfPlane :
   intro n hn
   have hre := congrArg Complex.re hn
   have hnreal : 0 ≤ (n : ℝ) := Nat.cast_nonneg n
-  simp at hre
+  simp only [Complex.neg_re, Complex.natCast_re] at hre
   change 0 < z.re at hz
   linarith
 
@@ -39317,7 +39456,7 @@ theorem complexDigamma_continuousOn_positiveHalfPlane :
     hderiv.div hcont
       (fun z hz =>
         Complex.Gamma_ne_zero_of_re_pos hz)
-  simpa [s, Complex.digamma_def, logDeriv_apply] using! hratio
+  simpa only [Complex.digamma_def] using! hratio
 
 theorem saddleDigamma_continuousOn_Ioi :
     ContinuousOn saddleDigamma (Ioi (0 : ℝ)) := by
@@ -39326,7 +39465,7 @@ theorem saddleDigamma_continuousOn_Ioi :
         (Ioi (0 : ℝ))
         {z : ℂ | 0 < z.re} := by
     intro x hx
-    simpa using! hx
+    simpa only [mem_setOf_eq, Complex.ofReal_re, mem_Ioi] using! hx
   have hcomplex :=
     complexDigamma_continuousOn_positiveHalfPlane.comp
       Complex.continuous_ofReal.continuousOn hmap
@@ -39380,7 +39519,7 @@ theorem saddleSinhShellInterval_hasDerivAt
       HasDerivAt (fun z : ℝ => F z x) (F' v x) v := by
     have hlinear : HasDerivAt
         (fun z : ℝ => x * z) x v := by
-      simpa using! (hasDerivAt_id v).const_mul x
+      simpa only [id_eq, mul_one] using! (hasDerivAt_id v).const_mul x
     have hsinh := (Real.hasDerivAt_sinh
       (x * v)).comp v hlinear
     simpa [F, F', pow_two, mul_assoc, mul_left_comm, mul_comm] using! hsinh.const_mul (w x * x)
@@ -39620,7 +39759,7 @@ theorem saddleLogRadius_continuousOn_Ici
       (hdigamma.div_const 2)).add hshell
   apply hsum.congr
   intro u hu
-  simpa [g] using!
+  simpa only  using!
     saddleLogRadius_eq_digamma_add_shellDerivative
       ε d u
 
@@ -39673,7 +39812,7 @@ theorem tendsto_saddleLogRadius_atTop_of_shell_monotone
       · change 1 + ε / 2 ≤ U
         try dsimp [U]
         exact le_rfl
-      · simpa [U] using! hu
+      · simpa only [mem_Ici] using! hu
       · exact hu
     rw [saddleLogRadius_eq_digamma_add_shellDerivative]
     try dsimp [C]
@@ -40050,7 +40189,8 @@ theorem lowerGammaBoundaryLog_pole_decomposition
         ‖s‖ * ‖Complex.Gamma s‖ := by
     rw [Complex.Gamma_add_one s hs, norm_mul]
   have hs_norm : ‖s‖ = |y| / 2 := by
-    simp [s, Complex.norm_real, Real.norm_eq_abs]
+    simp only [neg_mul, Complex.norm_div, norm_neg, Complex.norm_mul, Complex.norm_I, Complex.norm_real,
+      Real.norm_eq_abs, one_mul, Complex.norm_ofNat, s]
   have hlog :
       Real.log ‖Complex.Gamma s‖ =
         Real.log ‖Complex.Gamma (s + 1)‖ -
@@ -40084,7 +40224,7 @@ theorem lowerGammaBoundaryLog_tendsto_atTop_zero
     apply hshift.congr'
     filter_upwards [self_mem_nhdsWithin] with y hy
     have hyzero : y ≠ 0 := by
-      simpa using! hy
+      simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using! hy
     rw [Real.log_div
       (abs_ne_zero.mpr hyzero) (by norm_num), Real.log_abs]
     ring
@@ -40122,13 +40262,14 @@ theorem lowerGammaBoundaryLog_tendsto_atTop_zero
         Real.log ‖Complex.Gamma
           (1 - Complex.I * (y : ℂ) / 2)‖) 0 := by
     apply hnumGamma.norm.log
-    simp
+    simp only [Complex.ofReal_zero, mul_zero, zero_div, sub_zero, Complex.Gamma_one, norm_one, ne_eq, one_ne_zero,
+      not_false_eq_true]
   have hdenLog :
       ContinuousAt (fun y : ℝ =>
         Real.log ‖Complex.Gamma
           ((ℓ : ℂ) + Complex.I * (y : ℂ) / 2)‖) 0 := by
     apply hdenGamma.norm.log
-    simpa using! norm_ne_zero_iff.mpr
+    simpa only [Complex.ofReal_zero, mul_zero, zero_div, add_zero, ne_eq, norm_eq_zero] using! norm_ne_zero_iff.mpr
       (Complex.Gamma_ne_zero hdenPole)
   have hregular :
       ContinuousAt (fun y : ℝ =>
@@ -40160,7 +40301,7 @@ theorem lowerGammaBoundaryLog_tendsto_atTop_zero
   apply hsum.congr'
   filter_upwards [self_mem_nhdsWithin] with y hy
   have hyzero : y ≠ 0 := by
-    simpa using! hy
+    simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using! hy
   rw [lowerGammaBoundaryLog_pole_decomposition ℓ R hyzero]
   ring
 
@@ -40183,7 +40324,7 @@ theorem lowerGammaBoundaryCapped_continuous
       filter_upwards [h] with x hx
       intro hxzero
       apply hx
-      simpa using! hxzero
+      simpa only [mem_compl_iff, mem_singleton_iff, ne_eq] using! hxzero
     have hconstant :
         ContinuousAt (fun _ : ℝ => D) (0 : ℝ) :=
       continuousAt_const
@@ -40196,14 +40337,14 @@ theorem lowerGammaBoundaryCapped_continuous
   · have hopen : IsOpen ({(0 : ℝ)}ᶜ) :=
       isClosed_singleton.isOpen_compl
     have hmem : y ∈ ({(0 : ℝ)}ᶜ : Set ℝ) := by
-      simpa using! hy
+      simpa only [mem_compl_iff, mem_singleton_iff] using! hy
     have hregular :
         ContinuousAt (lowerGammaBoundaryLog ℓ R) y := by
       apply (lowerGammaBoundaryLog_continuousOn hℓ R
         (S := {(0 : ℝ)}ᶜ)
         (by
           intro x hx
-          simpa using! hx)).continuousAt
+          simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using! hx)).continuousAt
       exact hopen.mem_nhds hmem
     have hmin :
         ContinuousAt (fun x : ℝ =>
@@ -40211,7 +40352,7 @@ theorem lowerGammaBoundaryCapped_continuous
       hregular.min continuousAt_const
     apply hmin.congr_of_eventuallyEq
     filter_upwards [eventually_ne_nhds hy] with x hx
-    simp [lowerGammaBoundaryCapped, hx]
+    simp only [lowerGammaBoundaryCapped, hx, ↓reduceIte]
 
 theorem lowerGammaBoundaryCapped_exp_integrable_of_exp_integrable
     {ℓ a : ℝ} (hℓ : 0 < ℓ) (ha : 0 < a)
@@ -40225,8 +40366,7 @@ theorem lowerGammaBoundaryCapped_exp_integrable_of_exp_integrable
       (fun y : ℝ =>
         Real.exp ((-a) * |y|) *
           |lowerGammaBoundaryLog ℓ R y|) := by
-    simpa [Real.norm_eq_abs, abs_mul,
-      abs_of_pos (Real.exp_pos _)] using! hgamma.norm
+    simpa only [neg_mul, norm_mul, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)] using! hgamma.norm
   have hbase := strip_exp_abs_integrable ha
   have hmajor : Integrable (fun y : ℝ =>
       Real.exp ((-a) * |y|) *
@@ -40300,8 +40440,7 @@ theorem stripRegularizedOuter_integrable_of_exp_integrable
       Integrable
         (fun y : ℝ =>
           Real.exp ((-a) * |y|) * |b y|) := by
-    simpa [Real.norm_eq_abs, abs_mul,
-      abs_of_pos (Real.exp_pos _)] using! hboundary.norm
+    simpa only [neg_mul, norm_mul, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)] using! hboundary.norm
   have hposfactor (y : ℝ) :
       Real.exp (Real.pi * (z.re - y) / (2 * ℓ)) / D =
         Cpos * Real.exp ((-a) * y) := by
@@ -40335,7 +40474,7 @@ theorem stripRegularizedOuter_integrable_of_exp_integrable
       ContinuousOn
         (fun y : ℝ => (b y : ℂ))
         (Ioi (0 : ℝ)) := by
-    simpa [Function.comp_def] using!
+    simpa only [comp_def] using!
       Complex.continuous_ofReal.comp_continuousOn hboundaryRight
   have hcontinuousRight :
       ContinuousOn
@@ -40394,7 +40533,7 @@ theorem stripRegularizedOuter_integrable_of_exp_integrable
       ContinuousOn
         (fun y : ℝ => (b y : ℂ))
         (Iio (0 : ℝ)) := by
-    simpa [Function.comp_def] using!
+    simpa only [comp_def] using!
       Complex.continuous_ofReal.comp_continuousOn hboundaryLeft
   have hcontinuousLeft :
       ContinuousOn
@@ -40445,7 +40584,7 @@ theorem stripRegularizedOuter_integrable_of_exp_integrable
           (Real.exp ((-a) * |y|) *
             |b y|) := by
         rw [abs_of_neg (mem_Iio.mp hy), hnegfactor]
-        simp [mul_neg, neg_mul]
+        simp only [mul_neg, neg_mul, neg_neg]
         ring
   rw [← integrableOn_univ, ← @Iio_union_Ici _ _ (0 : ℝ),
     integrableOn_union, integrableOn_Ici_iff_integrableOn_Ioi]
@@ -40479,8 +40618,7 @@ theorem stripRegularizedOuter_differentiableAt_of_exp_integrable
         (fun y : ℝ =>
           Real.exp (-(Real.pi / (2 * ℓ)) * |y|) *
             |b y|) := by
-    simpa [Real.norm_eq_abs, abs_mul,
-      abs_of_pos (Real.exp_pos _)] using! hboundary.norm
+    simpa only [neg_mul, norm_mul, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)] using! hboundary.norm
   have hboundintegrable :
       Integrable
         (fun y : ℝ =>
@@ -40721,7 +40859,7 @@ theorem stripPoissonKernel_tendsto_zero_bottom_of_ne
         (continuousAt_const.sub
           (Real.continuous_cos.comp hangle).continuousAt)) hden)
   convert! hcontinuous.tendsto using 1
-  all_goals simp [stripPoissonKernel, stripAngle]
+  all_goals simp only [stripPoissonKernel, stripAngle, add_neg_cancel, mul_zero, zero_div, Real.sin_zero, Real.cos_zero]
 
 theorem stripPoissonKernel_le_center_of_lower_of_abs_ge
     {σ δ T : ℝ}
@@ -40752,14 +40890,14 @@ theorem stripPoissonKernel_le_center_of_lower_of_abs_ge
     gcongr
   have hratio : 1 ≤ A / C := by
     apply (le_div_iff₀ hCpos).2
-    simpa using! hCA
+    simpa only [one_mul] using! hCA
   have hangle := stripAngle_mem_Ioo hbelow
     (show σ < 1 by linarith)
   have hcoslt : Real.cos (stripAngle σ) < 1 := by
     have h := Real.cos_lt_cos_of_nonneg_of_le_pi
       (x := 0) (y := stripAngle σ)
       (by norm_num) hangle.2.le hangle.1
-    simpa using! h
+    simpa only [gt_iff_lt, Real.cos_zero] using! h
   have hsin : 0 < Real.sin (stripAngle σ) :=
     Real.sin_pos_of_pos_of_lt_pi hangle.1 hangle.2
   have hden : 0 < A - Real.cos (stripAngle σ) := by
@@ -40812,7 +40950,7 @@ theorem stripPoissonKernel_le_center_of_lower
     have h := Real.cos_lt_cos_of_nonneg_of_le_pi
       (x := 0) (y := stripAngle σ)
       (by norm_num) hangle.2.le hangle.1
-    simpa using! h
+    simpa only [gt_iff_lt, Real.cos_zero] using! h
   have hc : 0 < c := by
     try dsimp [c]
     linarith
@@ -40837,7 +40975,8 @@ theorem stripPoissonKernel_le_center_of_lower
           stripPoissonKernel 0 T := by
       have hcenter : stripPoissonKernel 0 T =
           1 / (4 * A) := by
-        simp [stripPoissonKernel, stripAngle, A]
+        simp only [stripPoissonKernel, stripAngle, add_zero, mul_one, Real.sin_pi_div_two, Real.cos_pi_div_two,
+          sub_zero, one_div, mul_inv_rev, A]
       rw [hcenter]
       change 1 / (4 * (c * A)) =
         (1 / c) * (1 / (4 * A))
@@ -40857,7 +40996,7 @@ theorem stripPoissonKernel_lower_product_integrable
     have h := Real.cos_lt_cos_of_nonneg_of_le_pi
       (x := 0) (y := stripAngle σ)
       (by norm_num) hangle.2.le hangle.1
-    simpa using! h
+    simpa only [gt_iff_lt, Real.cos_zero] using! h
   have hC : 0 < C := by
     try dsimp [C]
     exact one_div_pos.mpr (by linarith)
@@ -40990,7 +41129,7 @@ theorem norm_extension_le_of_frontier
           calc
             N x = ‖f x‖ := hinterior x hx
             _ = ‖f w‖ := by
-              simpa [Function.comp_def, Function.const] using!
+              simpa only [comp_apply, const] using!
                 hconstant hx
             _ = N w := (hinterior w hWinterior).symm
         have hclosedconstant :=
@@ -41004,14 +41143,14 @@ theorem norm_extension_le_of_frontier
         calc
           N w = N t := by
             symm
-            simpa [Function.const] using!
+            simpa only [const] using!
               hclosedconstant htclosure
           _ ≤ C := hfrontier t ht
       · exact hfrontier w hWfrontier
     exact le_trans (hwmax hz) hwbound
   · have hempty : U = ∅ :=
       Set.not_nonempty_iff_eq_empty.mp hnonempty
-    simp [hempty] at hz
+    simp only [hempty, finite_empty, Finite.isClosed, IsClosed.closure_eq, mem_empty_iff_false] at hz
 
 theorem horizontalStrip_norm_extension_majorization
     {a b C : ℝ} (hab : a < b) (hC : 0 < C)
@@ -41079,7 +41218,7 @@ theorem horizontalStrip_norm_extension_majorization
       ((Complex.continuous_ofReal.mul
         continuous_const).cexp.smul
           continuous_const).norm.tendsto'
-    simp
+    simp only [Pi.mul_apply, Pi.smul_apply', ofReal_zero, zero_mul, exp_zero, smul_eq_mul, one_mul]
   filter_upwards [self_mem_nhdsWithin]
     with ε hε
   change ε < 0 at hε
@@ -41197,7 +41336,7 @@ theorem horizontalStrip_norm_extension_majorization
         ({w : ℂ | m - r < w.im} ∩
           {w : ℂ | w.im < m + r}) := by
       ext w
-      simp [U, Complex.mem_reProdIm]
+      simp only [mem_reProdIm, mem_Ioo, mem_inter_iff, mem_setOf_eq, U]
     rw [hset]
     exact
       ((convex_halfSpace_re_gt (-R)).inter
@@ -41269,7 +41408,7 @@ theorem horizontalStrip_norm_extension_majorization
       have himinterior := him'.resolve_left him
       try dsimp [Next]
       rw [hinterior w himinterior]
-      simpa [smul_eq_mul, norm_mul] using!
+      simpa only [ge_iff_le, smul_eq_mul, Complex.norm_mul] using!
         hR w
           ((abs_eq hRpos.le).mpr hvert.1.symm)
           himinterior
@@ -41356,7 +41495,7 @@ theorem harmonic_integerGammaBoundary_abs_le_linear
         exact harmonic_abs_log_sqrtFactor_le_linear
           (Nat.cast_nonneg j) hx
       _ = S + (k : ℝ) * x := by
-        simp [S, Finset.sum_add_distrib]
+        simp only [Finset.sum_add_distrib, Finset.sum_const, Finset.card_range, nsmul_eq_mul, S]
   rw [lowerGammaBoundaryLog_integer k R hxzero]
   have habs := abs_sub
     ((k : ℝ) * Real.log (Real.pi * R ^ 2))
@@ -41422,7 +41561,7 @@ theorem harmonic_halfIntegerGammaBoundary_abs_le_linear
         apply harmonic_abs_log_sqrtFactor_le_linear
           (by positivity) hx
       _ = S + (k : ℝ) * x := by
-        simp [S, Finset.sum_add_distrib]
+        simp only [one_div, Finset.sum_add_distrib, Finset.sum_const, Finset.card_range, nsmul_eq_mul, S]
   have hcorr :=
     harmonic_abs_log_coth_div_le_linear hx
   have hcorrhalf :
@@ -41434,7 +41573,7 @@ theorem harmonic_halfIntegerGammaBoundary_abs_le_linear
           (Real.pi * x + Q + x) := by
     rw [abs_mul, abs_of_nonneg (by norm_num)]
     exact mul_le_mul_of_nonneg_left
-      (by simpa [Q] using! hcorr)
+      (by simpa only [Q] using! hcorr)
       (by norm_num)
   rw [lowerGammaBoundaryLog_halfInteger
     k R hxpos.ne']
@@ -41976,17 +42115,19 @@ theorem lowerStripCappedGammaOuter_abs_re_le_linear
   have hσbelow : -1 < σ := by
     try dsimp [σ]
     apply (lt_div_iff₀ hℓ).2
-    simpa using! hzbelow
+    simpa only [neg_mul, one_mul] using! hzbelow
   have hσabove : σ < 1 := by
     try dsimp [σ]
     apply (div_lt_iff₀ hℓ).2
-    simpa using! hzabove
+    simpa only [one_mul] using! hzabove
   have hzrep :
       (z.re : ℂ) +
         Complex.I * ((σ * ℓ : ℝ) : ℂ) = z := by
     apply Complex.ext
-    · simp
-    · simp [σ, hℓ.ne']
+    · simp only [ofReal_mul, add_re, ofReal_re, mul_re, I_re, ofReal_im, mul_zero, sub_zero, zero_mul, I_im, mul_im,
+        add_zero, sub_self]
+    · simp only [isUnit_iff_ne_zero, ne_eq, hℓ.ne', not_false_eq_true, IsUnit.div_mul_cancel, add_im, ofReal_im,
+        mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add, σ]
   have hreal := lowerStripCappedGammaOuter_re_dimension
     hd hσbelow hσabove z.re (R := R) (D := D)
   rw [hzrep] at hreal
@@ -42072,7 +42213,7 @@ theorem antiFourierWitness_cappedWeightedMellinStrip_growth
           apply mul_le_mul_of_nonneg_left
             (show 1 + c * |z.re| ≤
               Real.exp (c * |z.re|) by
-              simpa [add_comm] using!
+              simpa only [add_comm] using!
                 Real.add_one_le_exp (c * |z.re|))
             (by positivity)
     try dsimp [B]
@@ -42118,7 +42259,8 @@ theorem harmonic_bottom_normalized_height_tendsto
     fun_prop
   convert! hcontinuous.continuousAt.tendsto.mono_left
     nhdsWithin_le_nhds using 1;
-      simp [hℓ.ne']
+      simp only [sub_im, ofReal_im, mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add, zero_sub, ne_eq,
+        hℓ.ne', not_false_eq_true, neg_div_self]
 
 theorem harmonic_bottom_real_tendsto
     {ℓ : ℝ} (s : ℝ) :
@@ -42128,7 +42270,7 @@ theorem harmonic_bottom_real_tendsto
       (𝓝 s) := by
   convert! Complex.continuous_re.continuousAt.tendsto.mono_left
     nhdsWithin_le_nhds using 1;
-      simp
+      simp only [sub_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, sub_zero]
 
 theorem harmonic_bottom_far_joint_tendsto_zero
     {ℓ : ℝ} (hℓ : 0 < ℓ)
@@ -42181,7 +42323,7 @@ theorem harmonic_bottom_far_joint_tendsto_zero
       with z hz
     have hzbelow : -ℓ < z.im := hz.1
     apply (lt_div_iff₀ hℓ).2
-    simpa using! hzbelow
+    simpa only [neg_mul, one_mul] using! hzbelow
   have hupper :
       ∀ᶠ z : ℂ in 𝓝[U] z₀,
         z.im / ℓ ≤ 0 := by
@@ -42198,7 +42340,7 @@ theorem harmonic_bottom_far_joint_tendsto_zero
     filter_upwards [hball]
       with z hz
     have hsmall : |z.re - s| < 1 := by
-      simpa [Metric.mem_ball, Real.dist_eq] using! hz
+      simpa only [Real.dist_eq] using! hz
     have htriangle := abs_add_le
       (z.re - s) s
     have heq : z.re - s + s = z.re := by ring
@@ -42336,9 +42478,9 @@ theorem harmonic_bottom_far_joint_tendsto_zero
             (𝓝 (b (s - ℓ * T))) := by
         convert! hcont.continuousAt.tendsto.mono_left
           nhdsWithin_le_nhds using 1;
-            simp [z₀]
-      simpa using! hkernel.mul hdatum
-    · simpa [Set.indicator_of_notMem hT] using!
+            simp only [sub_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, sub_zero, z₀]
+      simpa only [comp_apply, zero_mul] using! hkernel.mul hdatum
+    · simpa only [Set.indicator_of_notMem hT] using!
         (tendsto_const_nhds :
           Tendsto (fun _ : ℂ => (0 : ℝ))
             (𝓝[U] z₀) (𝓝 (0 : ℝ)))
@@ -42352,7 +42494,7 @@ theorem harmonic_bottom_far_joint_tendsto_zero
             (A * ℓ) *
               (stripPoissonKernel 0 T * |T|)))
       hmeas hdom hmajor hpoint
-  simpa [U, z₀, S, integral_indicator hS] using! hDCT
+  simpa only [integral_indicator hS, integral_zero] using! hDCT
 
 theorem harmonic_bottom_joint_tendsto_zero_of_zero
     {ℓ : ℝ} (hℓ : 0 < ℓ)
@@ -42401,14 +42543,14 @@ theorem harmonic_bottom_joint_tendsto_zero_of_zero
       (Metric.tendsto_nhds.mp hfar)
         (ε / 2) hhalf
     filter_upwards [hmetric] with z hz
-    simpa [U, z₀, S, dist_zero_right] using! hz
+    simpa only [Real.norm_eq_abs, dist_zero_right] using! hz
   have hlower :
       ∀ᶠ z : ℂ in 𝓝[U] z₀,
         -1 < z.im / ℓ := by
     filter_upwards [self_mem_nhdsWithin]
       with z hz
     apply (lt_div_iff₀ hℓ).2
-    simpa using! hz.1
+    simpa only [neg_mul, one_mul] using! hz.1
   have hσ := harmonic_bottom_normalized_height_tendsto
     hℓ s
   have hupper :
@@ -42427,7 +42569,7 @@ theorem harmonic_bottom_joint_tendsto_zero_of_zero
       (Metric.ball_mem_nhds s (half_pos hη))
     filter_upwards [hball]
       with z hz
-    simpa [Metric.mem_ball, Real.dist_eq] using! hz
+    simpa only [Real.dist_eq] using! hz
   filter_upwards [hlower, hupper,
     hfarevent, hrealclose]
     with z hzbelow hzupper hzfar hzreal
@@ -42502,7 +42644,7 @@ theorem harmonic_bottom_joint_tendsto_zero_of_zero
         have hbsmall := hcontrol hbdist
         have hbabs :
             |b (z.re - ℓ * T)| < ε / 2 := by
-          simpa [Real.dist_eq, hszero] using! hbsmall
+          simpa only [hszero, dist_zero_right, Real.norm_eq_abs] using! hbsmall
         have hkpos := stripPoissonKernel_pos
           hzbelow hzabove T
         rw [norm_mul, Real.norm_eq_abs,
@@ -42608,7 +42750,7 @@ theorem lowerGammaBoundaryCapped_bottom_poisson_joint_tendsto
     ring
   have hzero := harmonic_bottom_joint_tendsto_zero_of_zero
     hℓ hb₀ hA₀ hbound₀ hcentral₀ s
-      (show b₀ s = 0 by simp [b₀])
+      (show b₀ s = 0 by simp only [sub_self, b₀])
   have hσ := harmonic_bottom_normalized_height_tendsto
     hℓ s
   have hmasscontinuous : Continuous stripBottomMass := by
@@ -42640,7 +42782,7 @@ theorem lowerGammaBoundaryCapped_bottom_poisson_joint_tendsto
       with z hz hzupper
     have hzlower : -1 < z.im / ℓ := by
       apply (lt_div_iff₀ hℓ).2
-      simpa using! hz.1
+      simpa only [neg_mul, one_mul] using! hz.1
     have hzabove : z.im / ℓ < 1 := by linarith
     have hg₀ : Continuous
         (fun T : ℝ => b₀ (z.re - ℓ * T)) := by
@@ -42702,7 +42844,8 @@ theorem stripPoissonKernel_tendsto_zero_top
     unfold stripAngle
     fun_prop
   have h := (hnum.div hdencont hden).tendsto
-  simpa [stripPoissonKernel, hangle, Real.sin_pi] using! h
+  simpa only [stripPoissonKernel, Pi.div_apply, hangle, Real.sin_pi, Real.cos_pi, sub_neg_eq_add,
+    zero_div] using! h
 
 theorem harmonic_top_normalized_height_tendsto
     {ℓ : ℝ} (hℓ : 0 < ℓ) (s : ℝ) :
@@ -42716,7 +42859,8 @@ theorem harmonic_top_normalized_height_tendsto
     fun_prop
   convert! hcontinuous.continuousAt.tendsto.mono_left
     nhdsWithin_le_nhds using 1;
-      simp [hℓ.ne']
+      simp only [add_im, ofReal_im, mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add, ne_eq, hℓ.ne',
+        not_false_eq_true, div_self]
 
 theorem harmonic_upper_joint_tendsto_zero
     {ℓ : ℝ} (hℓ : 0 < ℓ)
@@ -42744,7 +42888,7 @@ theorem harmonic_upper_joint_tendsto_zero
       (𝓝[U] z₀) (𝓝 s) := by
     convert! Complex.continuous_re.continuousAt.tendsto.mono_left
       nhdsWithin_le_nhds using 1;
-      simp [z₀]
+      simp only [add_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, add_zero, z₀]
   have hnonneg : ∀ᶠ z : ℂ in 𝓝[U] z₀,
       0 ≤ z.im / ℓ := by
     have h := hσ.eventually
@@ -42755,7 +42899,7 @@ theorem harmonic_upper_joint_tendsto_zero
     filter_upwards [self_mem_nhdsWithin]
       with z hz
     apply (div_lt_iff₀ hℓ).2
-    simpa using! hz.2
+    simpa only [one_mul] using! hz.2
   have hrealbound : ∀ᶠ z : ℂ in 𝓝[U] z₀,
       |z.re| ≤ |s| + 1 := by
     have hball := hreal.eventually
@@ -42763,7 +42907,7 @@ theorem harmonic_upper_joint_tendsto_zero
         (by norm_num : (0 : ℝ) < 1))
     filter_upwards [hball] with z hz
     have hsmall : |z.re - s| < 1 := by
-      simpa [Metric.mem_ball, Real.dist_eq] using! hz
+      simpa only [Real.dist_eq] using! hz
     have htri := abs_add_le (z.re - s) s
     have heq : z.re - s + s = z.re := by ring
     rw [heq] at htri
@@ -42855,8 +42999,8 @@ theorem harmonic_upper_joint_tendsto_zero
         (𝓝[U] z₀) (𝓝 (b (s - ℓ * T))) := by
       convert! hcont.continuousAt.tendsto.mono_left
         nhdsWithin_le_nhds using 1;
-          simp [z₀]
-    simpa using! hk.mul hdatum
+          simp only [add_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, add_zero, z₀]
+    simpa only [comp_apply, zero_mul] using! hk.mul hdatum
   have h :=
     MeasureTheory.tendsto_integral_filter_of_dominated_convergence
       (f := fun _ : ℝ => (0 : ℝ))
@@ -42866,7 +43010,7 @@ theorem harmonic_upper_joint_tendsto_zero
           (A * ℓ) *
             (stripPoissonExponentialMajorant T * |T|))
       hmeas hdom hmajor hpoint
-  simpa [U, z₀] using! h
+  simpa only [integral_zero] using! h
 
 theorem exists_antiFourierWitness_eventually_capped_bottom_majorant
     {d : ℕ} (hd : 0 < d) {R : ℝ} (hR : 0 < R)
@@ -42891,8 +43035,10 @@ theorem exists_antiFourierWitness_eventually_capped_bottom_majorant
         ((y : ℂ) -
           Complex.I * (((d : ℝ) / 2 : ℝ) : ℂ))‖ ≤ C := by
     apply hglobal
-    · simp
-    · simp
+    · simp only [ofReal_div, ofReal_natCast, ofReal_ofNat, sub_im, ofReal_im, mul_im, I_re, div_ofNat_im,
+        natCast_im, zero_div, mul_zero, I_im, div_ofNat_re, natCast_re, one_mul, zero_add, zero_sub, Std.le_refl]
+    · simp only [ofReal_div, ofReal_natCast, ofReal_ofNat, sub_im, ofReal_im, mul_im, I_re, div_ofNat_im,
+        natCast_im, zero_div, mul_zero, I_im, div_ofNat_re, natCast_re, one_mul, zero_add, zero_sub, neg_le_self_iff]
       have hdim : 0 ≤ (d : ℝ) := Nat.cast_nonneg d
       linarith
   have hcapped :
@@ -42910,7 +43056,8 @@ theorem exists_antiFourierWitness_eventually_capped_bottom_majorant
       _ ≤ Real.exp D := Real.exp_le_exp.mpr hD
   by_cases hy : y = 0
   · subst y
-    simpa [lowerGammaBoundaryCapped] using! hcapped
+    simpa only [ofReal_zero, ofReal_div, ofReal_natCast, ofReal_ofNat, zero_sub, lowerGammaBoundaryCapped,
+      ↓reduceIte, ge_iff_le] using! hcapped
   · unfold lowerGammaBoundaryCapped
     rw [if_neg hy]
     by_cases hmin :
@@ -42953,16 +43100,18 @@ theorem lowerStripCappedGammaOuter_bottom_re_joint_tendsto
       with z hz
     have hbelow : -1 < z.im / ℓ := by
       apply (lt_div_iff₀ hℓ).2
-      simpa using! hz.1
+      simpa only [neg_mul, one_mul] using! hz.1
     have habove : z.im / ℓ < 1 := by
       apply (div_lt_iff₀ hℓ).2
-      simpa using! hz.2
+      simpa only [one_mul] using! hz.2
     have hrepr :
         (z.re : ℂ) + Complex.I *
           (((z.im / ℓ * ℓ : ℝ) : ℂ)) = z := by
       apply Complex.ext
-      · simp
-      · simp [hℓ.ne']
+      · simp only [ofReal_mul, ofReal_div, add_re, ofReal_re, mul_re, I_re, div_ofReal_re, div_ofReal_im, ofReal_im,
+          zero_div, mul_zero, sub_zero, zero_mul, I_im, mul_im, add_zero, sub_self]
+      · simp only [isUnit_iff_ne_zero, ne_eq, hℓ.ne', not_false_eq_true, IsUnit.div_mul_cancel, add_im, ofReal_im,
+          mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add]
     rw [← hrepr]
     simpa [ℓ, hℓ.ne'] using!
       (lowerStripCappedGammaOuter_re_dimension
@@ -43003,16 +43152,18 @@ theorem lowerStripCappedGammaOuter_top_re_joint_tendsto
       with z hz
     have hbelow : -1 < z.im / ℓ := by
       apply (lt_div_iff₀ hℓ).2
-      simpa using! hz.1
+      simpa only [neg_mul, one_mul] using! hz.1
     have habove : z.im / ℓ < 1 := by
       apply (div_lt_iff₀ hℓ).2
-      simpa using! hz.2
+      simpa only [one_mul] using! hz.2
     have hrepr :
         (z.re : ℂ) + Complex.I *
           (((z.im / ℓ * ℓ : ℝ) : ℂ)) = z := by
       apply Complex.ext
-      · simp
-      · simp [hℓ.ne']
+      · simp only [ofReal_mul, ofReal_div, add_re, ofReal_re, mul_re, I_re, div_ofReal_re, div_ofReal_im, ofReal_im,
+          zero_div, mul_zero, sub_zero, zero_mul, I_im, mul_im, add_zero, sub_self]
+      · simp only [isUnit_iff_ne_zero, ne_eq, hℓ.ne', not_false_eq_true, IsUnit.div_mul_cancel, add_im, ofReal_im,
+          mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add]
     rw [← hrepr]
     simpa [ℓ, hℓ.ne'] using!
       (lowerStripCappedGammaOuter_re_dimension
@@ -43087,39 +43238,37 @@ theorem horizontalStripRealTraceExtension_continuousOn
     intro z hz
     have hza : z.im ≠ a := ne_of_gt hz.1
     have hzb : z.im ≠ b := ne_of_lt hz.2
-    simp [E, horizontalStripRealTraceExtension,
-      hza, hzb]
+    simp only [horizontalStripRealTraceExtension, hza, ↓reduceIte, hzb, E]
   intro z hz
   have hU : ContinuousWithinAt E O z := by
     by_cases hza : z.im = a
     · have hrepr :
           (z.re : ℂ) + Complex.I * (a : ℂ) = z := by
         apply Complex.ext
-        · simp
-        · simpa using! hza.symm
+        · simp only [add_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, add_zero]
+        · simpa only [add_im, ofReal_im, mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add] using! hza.symm
       have htrace := hbottomtrace z.re
       rw [hrepr] at htrace
       have hevent : E =ᶠ[𝓝[O] z] H :=
         mem_of_superset self_mem_nhdsWithin hinterior
       change Tendsto E (𝓝[O] z) (𝓝 (E z))
       have hvalue : E z = bottom z.re := by
-        simp [E, horizontalStripRealTraceExtension, hza]
+        simp only [horizontalStripRealTraceExtension, hza, ↓reduceIte, E]
       rw [hvalue]
       exact htrace.congr' hevent.symm
     · by_cases hzb : z.im = b
       · have hrepr :
             (z.re : ℂ) + Complex.I * (b : ℂ) = z := by
           apply Complex.ext
-          · simp
-          · simpa using! hzb.symm
+          · simp only [add_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, add_zero]
+          · simpa only [add_im, ofReal_im, mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add] using! hzb.symm
         have htrace := htoptrace z.re
         rw [hrepr] at htrace
         have hevent : E =ᶠ[𝓝[O] z] H :=
           mem_of_superset self_mem_nhdsWithin hinterior
         change Tendsto E (𝓝[O] z) (𝓝 (E z))
         have hvalue : E z = top z.re := by
-          simp [E, horizontalStripRealTraceExtension,
-            hzb, (ne_of_gt hab : b ≠ a)]
+          simp only [horizontalStripRealTraceExtension, hzb, (ne_of_gt hab : b ≠ a), ↓reduceIte, E]
         rw [hvalue]
         exact htrace.congr' hevent.symm
       · have hzO : z ∈ O := by
@@ -43136,8 +43285,8 @@ theorem horizontalStripRealTraceExtension_continuousOn
       apply hc.continuousAt.continuousWithinAt.congr
       · intro w hw
         have hwa : w.im = a := hw
-        simp [E, horizontalStripRealTraceExtension, hwa]
-      · simp [E, horizontalStripRealTraceExtension, hreal]
+        simp only [horizontalStripRealTraceExtension, hwa, ↓reduceIte, E]
+      · simp only [horizontalStripRealTraceExtension, hreal, ↓reduceIte, E]
     · apply continuousWithinAt_of_notMem_closure
       rw [hclosedL.closure_eq]
       exact hza
@@ -43153,13 +43302,11 @@ theorem horizontalStripRealTraceExtension_continuousOn
         have hwa : w.im ≠ a := by
           rw [hwb]
           exact ne_of_gt hab
-        simp [E, horizontalStripRealTraceExtension,
-          hwb, (ne_of_gt hab : b ≠ a)]
+        simp only [horizontalStripRealTraceExtension, hwb, (ne_of_gt hab : b ≠ a), ↓reduceIte, E]
       · have hza : z.im ≠ a := by
           rw [hreal]
           exact ne_of_gt hab
-        simp [E, horizontalStripRealTraceExtension,
-          hreal, (ne_of_gt hab : b ≠ a)]
+        simp only [horizontalStripRealTraceExtension, hreal, (ne_of_gt hab : b ≠ a), ↓reduceIte, E]
     · apply continuousWithinAt_of_notMem_closure
       rw [hclosedT.closure_eq]
       exact hzb
@@ -43192,11 +43339,11 @@ theorem lowerStripCappedGammaHarmonic_continuousOn
   · exact lowerGammaBoundaryCapped_continuous hℓ R D
   · fun_prop
   · intro s
-    simpa [sub_eq_add_neg] using!
+    simpa only [ofReal_neg, ofReal_div, ofReal_natCast, ofReal_ofNat, mul_neg, sub_eq_add_neg] using!
       lowerStripCappedGammaOuter_bottom_re_joint_tendsto
         hd R D s
   · intro s
-    simpa using!
+    simpa only [ofReal_div, ofReal_natCast, ofReal_ofNat] using!
       lowerStripCappedGammaOuter_top_re_joint_tendsto
         hd R D s
 
@@ -43281,8 +43428,8 @@ theorem antiFourierWitness_capped_poisson_majorization_of_real_extension
     have hrepr :
         (z.re : ℂ) - Complex.I * (ℓ : ℂ) = z := by
       apply Complex.ext
-      · simp
-      · simp [hz]
+      · simp only [sub_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, sub_zero]
+      · simp only [sub_im, ofReal_im, mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add, zero_sub, hz]
     have hzbound : ‖Z z‖ ≤
         Real.exp (lowerGammaBoundaryCapped ℓ R D z.re) := by
       rw [← hrepr]
@@ -43302,22 +43449,22 @@ theorem antiFourierWitness_capped_poisson_majorization_of_real_extension
             (Real.exp_pos _).le
       _ = 1 := by
         rw [← Real.exp_add]
-        simp
+        simp only [neg_add_cancel, Real.exp_zero]
   have htop : ∀ z : ℂ,
       z.im = ℓ → N z ≤ (1 : ℝ) := by
     intro z hz
     have hrepr :
         (z.re : ℂ) + Complex.I * (ℓ : ℂ) = z := by
       apply Complex.ext
-      · simp
-      · simp [hz]
+      · simp only [add_re, ofReal_re, mul_re, I_re, zero_mul, I_im, ofReal_im, mul_zero, sub_self, add_zero]
+      · simp only [add_im, ofReal_im, mul_im, I_re, mul_zero, I_im, ofReal_re, one_mul, zero_add, hz]
     have hzbound : ‖Z z‖ ≤ (1 : ℝ) := by
       rw [← hrepr]
       exact antiFourierWitness_normalizedMellinStrip_top_norm_le_one
         hd w z.re
     try dsimp [N]
     rw [hEtop z hz]
-    simpa using! hzbound
+    simpa only [neg_zero, Real.exp_zero, one_mul, ge_iff_le] using! hzbound
   let z : ℂ := (s : ℂ) +
     Complex.I * (((σ * ℓ : ℝ) : ℂ))
   have hzbelow : -ℓ ≤ z.im := by
@@ -43358,7 +43505,7 @@ theorem antiFourierWitness_capped_poisson_majorization_of_real_extension
     calc
       E z = (lowerStripCappedGammaOuter ℓ R D z).re := hreal
       _ = _ := by
-        simpa [z, ℓ] using! hpoisson
+        simpa only [ofReal_mul, ofReal_div, ofReal_natCast, ofReal_ofNat, ℓ, z] using! hpoisson
   have hweighted :
       Real.exp (-(E z)) * ‖Z z‖ ≤ (1 : ℝ) := hmax
   have hscale :=
@@ -43367,8 +43514,8 @@ theorem antiFourierWitness_capped_poisson_majorization_of_real_extension
   have hfinal : ‖Z z‖ ≤ Real.exp (E z) := by
     convert! hscale using 1
     · rw [← mul_assoc, ← Real.exp_add]
-      simp
-    · simp
+      simp only [add_neg_cancel, Real.exp_zero, one_mul]
+    · simp only [mul_one]
   rw [hEz] at hfinal
   simpa [z, Z, ℓ] using! hfinal
 
@@ -43401,18 +43548,15 @@ theorem exists_antiFourierWitness_capped_poisson_majorization
       ne_of_gt hz.1
     have hzb : z.im ≠ (d : ℝ) / 2 :=
       ne_of_lt hz.2
-    simp [lowerStripCappedGammaHarmonic,
-      horizontalStripRealTraceExtension, hza, hzb]
+    simp only [lowerStripCappedGammaHarmonic, horizontalStripRealTraceExtension, hza, ↓reduceIte, hzb]
   · intro z hz
-    simp [lowerStripCappedGammaHarmonic,
-      horizontalStripRealTraceExtension, hz]
+    simp only [lowerStripCappedGammaHarmonic, horizontalStripRealTraceExtension, hz, ↓reduceIte]
   · intro z hz
     have hℓ : 0 < (d : ℝ) / 2 :=
       half_pos (Nat.cast_pos.mpr hd)
     have hne : (d : ℝ) / 2 ≠ -((d : ℝ) / 2) := by
       linarith
-    simp [lowerStripCappedGammaHarmonic,
-      horizontalStripRealTraceExtension, hz, hne]
+    simp only [lowerStripCappedGammaHarmonic, horizontalStripRealTraceExtension, hz, hne, ↓reduceIte]
   · exact hbottom D hD
   · exact hbelow
   · exact habove
@@ -43450,7 +43594,7 @@ theorem stripPoissonKernel_shifted_centered_interval_max
           stripPoissonKernel σ x := by
     apply setIntegral_congr_fun measurableSet_Icc
     intro x hx
-    simpa using! stripPoissonKernel_neg σ x
+    simpa only [zero_sub] using! stripPoissonKernel_neg σ x
   rw [hleft, hright]
   exact stripPoissonKernel_centered_interval_max
     hbelow habove hr s
@@ -43575,7 +43719,7 @@ theorem stripPoissonKernel_weighted_product_integrable
         hbelow habove (s - x))]
     exact mul_le_mul_of_nonneg_right
       (stripPoissonKernel_antitone_abs hbelow habove
-        (x := 0) (y := s - x) (by simp))
+        (x := 0) (y := s - x) (by simp only [abs_zero, abs_nonneg]))
       (norm_nonneg _)
 
 theorem stripPoissonWeightedMeasure_integrable
@@ -43601,9 +43745,7 @@ theorem stripPoissonWeightedMeasure_integrable
       hbelow habove hf s
   convert! hproduct using 1
   ext x
-  simp [NNReal.smul_def,
-    Real.coe_toNNReal _
-      (stripPoissonKernel_pos hbelow habove (s - x)).le,
+  simp only [NNReal.smul_def, Real.coe_toNNReal _ (stripPoissonKernel_pos hbelow habove (s - x)).le,
     smul_eq_mul]
 
 theorem stripPoissonWeightedMeasure_integral
@@ -43670,9 +43812,8 @@ theorem lowerGammaBoundaryCapped_dimension_neg
     lowerGammaBoundaryCapped ((d : ℝ) / 2) R D (-y) =
       lowerGammaBoundaryCapped ((d : ℝ) / 2) R D y := by
   by_cases hy : y = 0
-  · simp [lowerGammaBoundaryCapped, hy]
-  · simp [lowerGammaBoundaryCapped, hy,
-      lowerGammaBoundaryLog_dimension_neg R hy]
+  · simp only [lowerGammaBoundaryCapped, hy, neg_zero, ↓reduceIte]
+  · simp only [lowerGammaBoundaryCapped, neg_eq_zero, hy, ↓reduceIte, lowerGammaBoundaryLog_dimension_neg R hy]
 
 theorem lowerGammaBoundaryCapped_dimension_antitoneOn
     {d : ℕ} (R D : ℝ) :
@@ -43757,7 +43898,7 @@ theorem lowerGammaBoundaryLog_dimension_scaled_le_neg_of_large
         linarith
       _ = (Real.exp (3 : ℝ))⁻¹ := Real.exp_neg 3
       _ ≤ (1 / 4 : ℝ) := by
-        simpa [one_div] using!
+        simpa only [one_div] using!
           (one_div_le_one_div_of_le
             (by norm_num : (0 : ℝ) < 4) hexpthree)
   have hcoth := lowerCoth_log_le_four_exp_neg_two harg
@@ -44026,7 +44167,7 @@ theorem lowerGammaScaledCappedClipped_eq_lowerClip_add
     (lowerGammaBoundaryCapped ((d : ℝ) / 2)
       (c * Real.sqrt d) D (((d : ℝ) / 2) * Y))
     (-n) n
-  simpa using! h
+  simpa only [neg_add_cancel] using! h
 
 theorem lowerGammaScaledCappedLowerClip_poisson_integrable
     {d : ℕ} (hd : 0 < d) {c D n σ : ℝ}
@@ -44331,7 +44472,7 @@ theorem lowerRiemannLog_zero (T : ℝ) :
     rw [show T ^ 2 / 4 = (T / 2) ^ 2 by ring,
       Real.sqrt_sq_eq_abs, abs_div]
     norm_num
-  simp [hsqrt]
+  simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_add, hsqrt]
 
 theorem lowerRiemannLog_scaled_factor
     {ℓ T : ℝ} (hℓ : 0 < ℓ) (j : ℝ) :
@@ -44375,7 +44516,7 @@ theorem lowerGammaBoundaryLog_integer_scaled
   have hsum :
       (∑ _j ∈ Finset.range k, Real.log (k : ℝ)) =
         (k : ℝ) * Real.log (k : ℝ) := by
-    simp
+    simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
   rw [hsum]
   rw [Real.log_div
     (show Real.pi * R ^ 2 ≠ 0 by positivity) hkreal.ne']
@@ -44421,7 +44562,7 @@ theorem lowerGammaBoundaryLog_halfInteger_scaled
   have hsum :
       (∑ _j ∈ Finset.range k, Real.log ℓ) =
         (k : ℝ) * Real.log ℓ := by
-    simp
+    simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
   rw [hsum]
   have habs : |ℓ * T| = ℓ * |T| := by
     rw [abs_mul, abs_of_pos hℓ]
@@ -44719,7 +44860,7 @@ theorem stripPoissonExponentialMajorant_abs_moment_integrable :
   have hscaled := hmoment.const_mul (Real.pi / 2)
   convert! hscaled using 1
   ext T
-  simp [stripPoissonExponentialMajorant]
+  simp only [stripPoissonExponentialMajorant, neg_mul, pow_one]
   ring
 
 theorem stripPoissonKernel_abs_moment_integrable
@@ -44774,7 +44915,8 @@ theorem stripPoissonKernel_mul_lowerRiemannLog_zero_integrable
   have hidentity :
       lowerGammaBoundaryLog 1 1 T =
         Real.log Real.pi - lowerRiemannLog T 0 := by
-    simpa using!
+    simpa only [Nat.cast_one, one_mul, one_pow, mul_one, div_one, Finset.range_one, Finset.sum_singleton,
+      CharP.cast_eq_zero] using!
       (lowerGammaBoundaryLog_integer_scaled
         (k := 1) (by norm_num) (R := (1 : ℝ))
         (by norm_num) hT)
@@ -44819,7 +44961,7 @@ theorem lowerRiemannLog_one_continuous :
     fun_prop
   have h := hsqrt.log
     (fun T => (Real.sqrt_pos.mpr (hrad T)).ne')
-  simpa [lowerRiemannLog] using! h
+  simpa only [lowerRiemannLog, one_pow] using! h
 
 theorem stripPoissonKernel_mul_abs_lowerRiemannLog_one_integrable
     {σ : ℝ} (hzero : 0 ≤ σ) (habove : σ < 1) :
@@ -45139,7 +45281,7 @@ theorem lowerCoth_log_half_le_of_one_le_abs
         linarith
       _ = (Real.exp (3 : ℝ))⁻¹ := Real.exp_neg 3
       _ ≤ (1 / 4 : ℝ) := by
-        simpa [one_div] using!
+        simpa only [one_div] using!
           (one_div_le_one_div_of_le
             (by norm_num : (0 : ℝ) < 4) hexpthree)
   have hcoth := lowerCoth_log_le_four_exp_neg_two harg
@@ -45260,7 +45402,7 @@ theorem lowerGammaScaledPositivePart_poisson_exponential_tail
       apply integral_mono_ae hweighted hmajor
       filter_upwards [] with Y
       by_cases hzero : lowerGammaScaledPositivePart d c Y = 0
-      · simp [hzero]
+      · simp only [hzero, mul_zero, Std.le_refl]
       · have hY := hsupport hzero
         have hdist : S - C ≤ |S - Y| := by
           rw [abs_of_nonneg (by linarith [hY.2] : 0 ≤ S - Y)]
@@ -45361,9 +45503,9 @@ theorem lowerStripPoissonMajorant_core_tail_split
     convert! hbase using 1
     ext T
     by_cases hT : T ∈ Icc (-1 : ℝ) 1
-    · simp [hT]
+    · simp only [hT, indicator_of_mem]
       ring
-    · simp [hT]
+    · simp only [hT, not_false_eq_true, indicator_of_notMem, mul_zero]
   have hnear : ∀ T ∈ Icc (-1 : ℝ) 1, b (S - T) ≤ L := by
     intro T hT
     have hdiff : 0 < S - T := by linarith [hT.2]
@@ -45422,9 +45564,9 @@ theorem lowerStripPoissonMajorant_core_tail_split
           apply integral_congr_ae
           filter_upwards [] with T
           by_cases hT : T ∈ Icc (-1 : ℝ) 1
-          · simp [hT]
+          · simp only [hT, indicator_of_mem]
             ring
-          · simp [hT]
+          · simp only [hT, not_false_eq_true, indicator_of_notMem, mul_zero]
       _ = ∫ T in Icc (-1 : ℝ) 1,
         L * stripPoissonKernel σ T := by
         rw [integral_indicator measurableSet_Icc]
@@ -45603,7 +45745,7 @@ theorem exists_lowerStripPoissonMajorant_positive_logarithmic_tail
         _ = β * Real.exp (a * C) *
               Real.exp (-(S * a)) := by
               ring
-    · simp
+    · simp only [mul_zero]
   have hsmall : ∀ᶠ S : ℝ in atTop,
       β * Real.exp (-a * (S - C)) < m / 4 :=
     hdecay.eventually
@@ -45710,7 +45852,7 @@ theorem exists_lowerStripPoissonMajorant_logarithmic_tail
   · have hnegative : S < 0 := lt_of_not_ge hnonneg
     have habs : |S| = -S := abs_of_neg hnegative
     have hdpos : 0 < d := lt_of_lt_of_le (by norm_num) hd
-    have hnegS : B ≤ -S := by simpa [habs] using! hS
+    have hnegS : B ≤ -S := by simpa only [habs] using! hS
     have htailneg := htail d hd (-S) hnegS
     have harg :
         ((d : ℝ) / 2) * S =
@@ -45744,7 +45886,7 @@ theorem inverseQuadraticAbs_integrable :
   ext S
   rw [Real.norm_eq_abs,
     Real.rpow_neg (by positivity)]
-  simp [one_div]
+  simp only [one_div, Real.rpow_ofNat]
 
 theorem exists_lowerStripPoissonMajorant_integrable_majorant
     {c : ℝ} (hc : 0 < c) (hsharp : c < Real.pi⁻¹) :
@@ -45803,7 +45945,7 @@ theorem exists_lowerStripPoissonMajorant_integrable_majorant
     have hAS : A ≤ |S| := le_trans hTA hfar
     have habspos : 0 < |S| := lt_of_lt_of_le hA hAS
     have hratio : (1 : ℝ) ≤ |S| / A :=
-      (le_div_iff₀ hA).2 (by simpa using! hAS)
+      (le_div_iff₀ hA).2 (by simpa only [one_mul] using! hAS)
     have hlog : 0 ≤ Real.log (|S| / A) :=
       Real.log_nonneg hratio
     have hκscale : 4 ≤ κ * ((d : ℝ) / 2) := by
@@ -46094,7 +46236,7 @@ theorem uniformAntiFourierSignRadius_of_poisson_majorization
     UniformAntiFourierSignRadius := by
   intro c hc hcritical
   have hsharp : c < Real.pi⁻¹ := by
-    simpa [criticalRadius] using! hcritical
+    simpa only [criticalRadius] using! hcritical
   obtain ⟨σ, γ, C, hσpos, hσone, hγ, hC, hmajor⟩ :=
     exists_lowerStripPoissonMajorant_integrable_majorant hc hsharp
   let J : ℝ := lowerInverseQuadraticMass
@@ -46131,7 +46273,7 @@ theorem uniformAntiFourierSignRadius_of_poisson_majorization
     · ext d
       congr 1
       ring_nf
-    · simp
+    · simp only [mul_zero]
   have hsmall : ∀ᶠ d : ℕ in atTop,
       K * Real.exp (-γ * ((d : ℝ) / 2)) < (1 / 2 : ℝ) :=
     hlimit.eventually
@@ -46433,7 +46575,7 @@ theorem tendsto_log_factorialStirlingSequence :
 theorem tendsto_log_nat_div_nat :
     Tendsto (fun k : ℕ => Real.log (k : ℝ) / (k : ℝ))
       atTop (nhds 0) := by
-  simpa using!
+  simpa only [pow_one, one_mul, add_zero] using!
     (Real.tendsto_pow_log_div_mul_add_atTop 1 0 1
       (by norm_num : (1 : ℝ) ≠ 0)).comp
         (tendsto_natCast_atTop_atTop (R := ℝ))
@@ -46444,7 +46586,7 @@ theorem tendsto_log_factorialStirlingSequence_div_nat :
       atTop (nhds 0) := by
   convert! tendsto_log_factorialStirlingSequence.mul
     (tendsto_inv_atTop_nhds_zero_nat (𝕜 := ℝ)) using 1;
-    simp
+    simp only [mul_zero]
 
 theorem tendsto_log_two_mul_nat_div_nat :
     Tendsto (fun k : ℕ =>
@@ -46459,7 +46601,7 @@ theorem tendsto_log_two_mul_nat_div_nat :
           Real.log (2 : ℝ) / (k : ℝ) +
             Real.log (k : ℝ) / (k : ℝ))
         atTop (nhds 0) := by
-    simpa using! hsum
+    simpa only [add_zero] using! hsum
   refine hsum'.congr' ?_
   filter_upwards [eventually_gt_atTop (0 : ℕ)] with k hk
   rw [← add_div, Real.log_mul (by norm_num : (2 : ℝ) ≠ 0)
@@ -46637,7 +46779,7 @@ theorem tendsto_log_oddFactorial_div_oddDimension_sub_log :
             (2 * (k : ℝ) + 1) -
           Real.log (2 * (k : ℝ) + 1))
       atTop (nhds (-1)) := by
-  simpa [Function.comp_def, Nat.cast_add, Nat.cast_mul] using!
+  simpa only [Function.comp_def, Nat.cast_add, Nat.cast_mul, Nat.cast_ofNat, Nat.cast_one] using!
     tendsto_log_factorial_div_nat_sub_log_nat.comp
       tendsto_oddDimension_atTop
 
@@ -46815,7 +46957,7 @@ theorem radialFlatBumpReal_nonneg (d : ℕ) (x : Euclidean d) :
 theorem radialFlatBumpReal_zero_pos (d : ℕ) :
     0 < radialFlatBumpReal d (0 : Euclidean d) := by
   unfold radialFlatBumpReal
-  simpa using! expNegInvGlue.pos_of_pos (by norm_num : (0 : ℝ) < 1)
+  simpa only [norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero, sub_zero] using! expNegInvGlue.pos_of_pos (by norm_num : (0 : ℝ) < 1)
 
 theorem support_radialFlatBumpReal (d : ℕ) :
     Function.support (radialFlatBumpReal d) =
@@ -46838,7 +46980,7 @@ theorem support_radialFlatBumpFun (d : ℕ) :
       Metric.ball (0 : Euclidean d) (1 / 2 : ℝ) := by
   rw [← support_radialFlatBumpReal d]
   ext x
-  simp [radialFlatBumpFun]
+  simp only [mem_support, radialFlatBumpFun, ne_eq, Complex.ofReal_eq_zero]
 
 theorem radialFlatBumpFun_contDiff (d : ℕ) :
     ContDiff ℝ ∞ (radialFlatBumpFun d) := by
@@ -46866,11 +47008,11 @@ def radialFlatBump (d : ℕ) : TestFunction d :=
 
 theorem radialFlatBump_real (d : ℕ) : IsRealValued (radialFlatBump d) := by
   intro x
-  simp
+  simp only [radialFlatBump_apply, Complex.ofReal_im]
 
 theorem radialFlatBump_radial (d : ℕ) : IsRadial (radialFlatBump d) := by
   intro x y hxy
-  simp [radialFlatBumpReal, hxy]
+  simp only [radialFlatBump_apply, radialFlatBumpReal, hxy]
 
 theorem integral_radialFlatBumpReal_pos (d : ℕ) :
     0 < ∫ x : Euclidean d, radialFlatBumpReal d x := by
@@ -46881,7 +47023,7 @@ theorem integral_radialFlatBumpReal_pos (d : ℕ) :
   · have hcomplex :
         Integrable (radialFlatBump d : Euclidean d → ℂ) :=
       (radialFlatBump d).integrable
-    simpa using! hcomplex.re
+    simpa only [radialFlatBump_apply, RCLike.re_to_complex, Complex.ofReal_re] using! hcomplex.re
   · exact radialFlatBumpReal_nonneg d
   · exact (radialFlatBumpReal_zero_pos d).ne'
 
@@ -46915,7 +47057,8 @@ theorem fourier_conj_apply_of_real {d : ℕ} (f : TestFunction d)
   have hreal : starRingEnd ℂ (f x) = f x :=
     Complex.conj_eq_iff_im.mpr (hf x)
   have htwo : starRingEnd ℂ (2 : ℂ) = 2 := Complex.conj_ofNat 2
-  simp [smul_eq_mul, map_mul, ← Complex.exp_conj, hreal, htwo]
+  simp only [neg_mul, Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, smul_eq_mul, map_mul,
+    ← Complex.exp_conj, map_neg, htwo, Complex.conj_ofReal, Complex.conj_I, mul_neg, neg_neg, hreal, inner_neg_right]
 
 theorem IsRealValued.fourier_of_radial {d : ℕ} {f : TestFunction d}
     (hf : IsRealValued f) (hrad : IsRadial f) :
@@ -46923,7 +47066,7 @@ theorem IsRealValued.fourier_of_radial {d : ℕ} {f : TestFunction d}
   intro ξ
   apply Complex.conj_eq_iff_im.mp
   rw [fourier_conj_apply_of_real f hf]
-  exact hrad.fourier (-ξ) ξ (by simp)
+  exact hrad.fourier (-ξ) ξ (by simp only [norm_neg])
 
 def radialAutocorrelation (d : ℕ) : TestFunction d :=
   SchwartzMap.convolution (ContinuousLinearMap.mul ℂ ℂ)
@@ -46934,7 +47077,7 @@ theorem fourier_radialAutocorrelation_apply (d : ℕ) (ξ : Euclidean d) :
       ((𝓕 (radialFlatBump d) : TestFunction d) ξ) ^ 2 := by
   unfold radialAutocorrelation
   rw [SchwartzMap.fourier_convolution]
-  simp [pow_two]
+  simp only [SchwartzMap.pairing_apply_apply, ContinuousLinearMap.mul_apply', pow_two]
 
 theorem fourier_radialFlatBump_real (d : ℕ) :
     IsRealValued (𝓕 (radialFlatBump d) : TestFunction d) :=
@@ -46944,7 +47087,7 @@ theorem fourier_radialAutocorrelation_real (d : ℕ) :
     IsRealValued (𝓕 (radialAutocorrelation d) : TestFunction d) := by
   intro ξ
   rw [fourier_radialAutocorrelation_apply]
-  simp [pow_two, Complex.mul_im, fourier_radialFlatBump_real d ξ]
+  simp only [pow_two, Complex.mul_im, fourier_radialFlatBump_real d ξ, mul_zero, zero_mul, add_zero]
 
 theorem fourier_radialAutocorrelation_nonneg (d : ℕ) (ξ : Euclidean d) :
     0 ≤ ((𝓕 (radialAutocorrelation d) : TestFunction d) ξ).re := by
@@ -46958,7 +47101,8 @@ theorem fourier_radialFlatBump_zero (d : ℕ) :
       (↑(∫ x : Euclidean d, radialFlatBumpReal d x) : ℂ) := by
   change (𝓕 (radialFlatBump d : Euclidean d → ℂ)) 0 = _
   rw [Real.fourier_eq']
-  simpa [radialFlatBump_apply] using!
+  simpa only [neg_mul, inner_zero_right, mul_zero, Complex.ofReal_zero, zero_mul, Complex.exp_zero,
+    radialFlatBump_apply, smul_eq_mul, one_mul, Complex.coe_algebraMap] using!
     (integral_ofReal (𝕜 := ℂ)
       (f := radialFlatBumpReal d)
       (μ := (volume : Measure (Euclidean d))))
@@ -46968,7 +47112,8 @@ theorem fourier_radialAutocorrelation_zero_pos (d : ℕ) :
       (0 : Euclidean d)).re := by
   rw [fourier_radialAutocorrelation_apply,
     fourier_radialFlatBump_zero]
-  simpa [pow_two, Complex.mul_re] using!
+  simpa only [pow_two, Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero, mul_self_pos,
+    ne_eq] using!
     mul_pos (integral_radialFlatBumpReal_pos d)
       (integral_radialFlatBumpReal_pos d)
 
@@ -47014,7 +47159,7 @@ theorem radialAutocorrelation_outside_eq_zero (d : ℕ)
       (radialAutocorrelation d : Euclidean d → ℂ) := hne
   have hball := support_radialAutocorrelation_subset d hsupport
   have hnorm : ‖x‖ < (1 : ℝ) := by
-    simpa [Metric.mem_ball, dist_zero_right] using! hball
+    simpa only [Metric.mem_ball, dist_zero_right] using! hball
   linarith
 
 theorem radialAutocorrelation_real (d : ℕ) :
@@ -47035,7 +47180,7 @@ theorem radialAutocorrelation_real (d : ℕ) :
           radialFlatBumpReal d t * radialFlatBumpReal d (x - t)) : ℂ) :=
     integral_ofReal (𝕜 := ℂ)
   rw [hreal]
-  simp
+  simp only [Complex.ofReal_im]
 
 theorem fourier_radialAutocorrelation_radial (d : ℕ) :
     IsRadial (𝓕 (radialAutocorrelation d) : TestFunction d) := by
@@ -47048,8 +47193,8 @@ theorem radialAutocorrelation_radial (d : ℕ) :
     IsRadial (radialAutocorrelation d) := by
   intro x y hxy
   have h := (fourier_radialAutocorrelation_radial d).fourier
-    (-x) (-y) (by simpa using! hxy)
-  simpa [fourier_sq_apply] using! h
+    (-x) (-y) (by simpa only [norm_neg] using! hxy)
+  simpa only [fourier_sq_apply, neg_neg] using! h
 
 def autocorrelationAdmissible (d : ℕ) : Admissible d where
   function := radialAutocorrelation d
@@ -47061,7 +47206,7 @@ def autocorrelationAdmissible (d : ℕ) : Admissible d where
   outside_nonpos := by
     intro x hx
     rw [radialAutocorrelation_outside_eq_zero d x hx]
-    simp
+    simp only [Complex.zero_re, Std.le_refl]
 
 theorem admissible_nonempty (d : ℕ) : Nonempty (Admissible d) :=
   ⟨autocorrelationAdmissible d⟩
@@ -47096,7 +47241,7 @@ theorem criticalPackingBase_lt_one : criticalPackingBase < 1 := by
     apply (div_lt_one (by positivity)).2
     linarith [Real.exp_one_lt_three, Real.pi_gt_three]
   exact (Real.sqrt_lt' (by norm_num : (0 : ℝ) < 1)).2
-    (by simpa using! hratio)
+    (by simpa only [one_pow] using! hratio)
 
 theorem criticalBinaryExponent_pos : 0 < criticalBinaryExponent := by
   have hlog : Real.logb 2 criticalPackingBase < 0 := by
@@ -47198,7 +47343,8 @@ theorem eventually_linearProgram_pos_of_sharpQuotient
       hzero] at hpositive
     have hdreal : (d : ℝ) ≠ 0 := by
       exact_mod_cast (Nat.ne_of_gt hd)
-    simp [quotientRootMap, hdreal] at hpositive
+    simp only [quotientRootMap, ne_eq, inv_eq_zero, hdreal, not_false_eq_true, Real.zero_rpow, zero_div,
+      lt_self_iff_false] at hpositive
   unfold linearProgram
   exact mul_pos (geometricFactor_pos d) hinf
 
@@ -47447,7 +47593,7 @@ theorem eventually_plusSaddleProfile_re_pos_at_firstBranchSaddles :
             ε ((d : ℝ) / 2) u T).re := by
     rw [saddleSourceGaussianPlusIntegrand_integral_re_eq_norm
       hε hulower]
-    simpa [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
+    simpa only [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
   exact plusSaddleProfile_re_pos_at_sourceSaddle_of_gaussian_error
     hε hd hulower horder hV herror
 
@@ -47487,7 +47633,7 @@ theorem eventually_minusSaddleProfile_re_neg_at_firstBranchSaddles :
             ε ((d : ℝ) / 2) u T).re := by
     rw [saddleSourceGaussianMinusIntegrand_neg_integral_re_eq_norm
       hε hulower]
-    simpa [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
+    simpa only [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
   exact minusSaddleProfile_re_neg_at_sourceSaddle_of_gaussian_error
     hε hd hu horder hV herror
 
@@ -47534,7 +47680,7 @@ theorem eventually_plusSaddleProfile_re_pos_at_secondBranchSaddles :
             ε ((d : ℝ) / 2) u T).re := by
     rw [saddleSourceGaussianPlusIntegrand_integral_re_eq_norm
       hε hulower]
-    simpa [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
+    simpa only [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
   exact plusSaddleProfile_re_pos_at_sourceSaddle_of_gaussian_error
     hε hd hulower horder hV herror
 
@@ -47582,7 +47728,7 @@ theorem eventually_minusSaddleProfile_re_neg_at_secondBranchSaddles :
             ε ((d : ℝ) / 2) u T).re := by
     rw [saddleSourceGaussianMinusIntegrand_neg_integral_re_eq_norm
       hε huminus]
-    simpa [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
+    simpa only [saddleSourceStationaryLogRadius_eq_saddleLogRadius] using! herr
   exact minusSaddleProfile_re_neg_at_sourceSaddle_of_gaussian_error
     hε hd hulower horder hV herror
 
@@ -47773,10 +47919,10 @@ theorem tendsto_manuscriptPackingDeficit
         (fun d : ℕ =>
           criticalPackingBase - (linearProgram d) ^ ((d : ℝ)⁻¹))
         atTop (nhds (0 : ℝ)) := by
-    simpa using! hconstant.sub hpacking
+    simpa only [sub_self] using! hconstant.sub hpacking
   have hmax :=
     (tendsto_const_nhds (f := atTop) (x := (0 : ℝ))).max hsub
-  simpa [manuscriptPackingDeficit] using! hmax
+  simpa only [max_self] using! hmax
 
 theorem manuscriptPackingRoot_sub_deficit_le (d : ℕ) :
     criticalPackingBase - manuscriptPackingDeficit d ≤
@@ -47838,7 +47984,7 @@ theorem tendsto_manuscriptPackingRootError
   have hconstant :
       Tendsto (fun _ : ℕ => criticalPackingBase) atTop
         (nhds criticalPackingBase) := tendsto_const_nhds
-  simpa [manuscriptPackingRootError] using! hpacking.sub hconstant
+  simpa only [sub_self] using! hpacking.sub hconstant
 
 theorem manuscriptLinearProgram_eq_packing_error_pow
     {d : ℕ} (hd : 0 < d) :
@@ -47864,7 +48010,7 @@ theorem tendsto_manuscriptBinaryExponentError
   have hconstant :
       Tendsto (fun _ : ℕ => criticalBinaryExponent) atTop
         (nhds criticalBinaryExponent) := tendsto_const_nhds
-  simpa [manuscriptBinaryExponentError] using! hbinary.neg.sub hconstant
+  simpa only [neg_neg, sub_self] using! hbinary.neg.sub hconstant
 
 theorem manuscriptLinearProgram_eq_binary_error_rpow
     {d : ℕ} (hd : 0 < d) (hpositive : 0 < linearProgram d) :
@@ -47894,7 +48040,7 @@ theorem tendsto_manuscriptQuotientRootError :
   have hconstant :
       Tendsto (fun _ : ℕ => criticalRadius) atTop
         (nhds criticalRadius) := tendsto_const_nhds
-  simpa [manuscriptQuotientRootError] using!
+  simpa only [sub_self] using!
     hquotient.sub hconstant
 
 theorem manuscriptQuotientRootError_isLittleO :
@@ -48038,7 +48184,7 @@ variable {r : ℝ} {ι : Type*} [Fintype ι]
 
 theorem EuclideanSpace.euclidean_ball_volume_positive [Nonempty ι] (x : EuclideanSpace ℝ ι) (hr : 0 < r) :
     0 < volume (ball x r) := by
-  simpa using! measure_ball_pos (μ := volume) x hr
+  simpa only  using! measure_ball_pos (μ := volume) x hr
 
 open Classical in
 
@@ -48046,7 +48192,7 @@ theorem EuclideanSpace.euclidean_ball_volume_finite
     [NullSingletonClass (volume : Measure (EuclideanSpace ℝ ι))]
     (x : EuclideanSpace ℝ ι) :
     volume (ball x r) < ⊤ := by
-  simpa using! measure_ball_lt_top (μ := volume) (x := x) (r := r)
+  simpa only  using! measure_ball_lt_top (μ := volume) (x := x) (r := r)
 
 end
 
@@ -48089,8 +48235,8 @@ attribute [instance] PeriodicSpherePacking.lattice_isZLattice
 theorem SpherePacking.distinct_centers_separation_bound (S : SpherePacking d) (x y : EuclideanSpace ℝ (Fin d))
     (hx : x ∈ S.centers) (hy : y ∈ S.centers) (hxy : x ≠ y) :
     S.separation ≤ dist x y := by
-  simpa using!
-    S.centers_dist (Subtype.coe_ne_coe.mp (by simpa using! hxy) : (⟨x, hx⟩ : S.centers) ≠ ⟨y, hy⟩)
+  simpa only  using!
+    S.centers_dist (Subtype.coe_ne_coe.mp (by simpa only [ne_eq] using! hxy) : (⟨x, hx⟩ : S.centers) ≠ ⟨y, hy⟩)
 
 instance PeriodicSpherePacking.instDiscretePackingLattice (S : PeriodicSpherePacking d) :
     DiscreteTopology S.lattice :=
@@ -48160,7 +48306,7 @@ def SpherePacking.rescaleConfiguration (S : SpherePacking d) {c : ℝ} (hc : 0 <
     rfl
   have hdist := S.distinct_centers_separation_bound x y hx hy hne
   change c * S.separation ≤ dist (c • x) (c • y)
-  simpa [dist_smul₀, abs_of_pos hc] using
+  simpa only [dist_smul₀, norm_eq_abs, abs_of_pos hc] using
     mul_le_mul_of_nonneg_left hdist hc.le
 
 noncomputable def PeriodicSpherePacking.rescaleConfiguration (S : PeriodicSpherePacking d) {c : ℝ}
@@ -48177,15 +48323,15 @@ noncomputable def PeriodicSpherePacking.rescaleConfiguration (S : PeriodicSphere
         obtain ⟨x, hx, hxy⟩ := y.property
         change c • x = (y : EuclideanSpace ℝ (Fin d)) at hxy
         rw [← hxy]
-        simpa [smul_smul, hc.ne'] using hx⟩
+        simpa only [smul_smul, ne_eq, hc.ne', not_false_eq_true, inv_mul_cancel₀, one_smul, SetLike.mem_coe] using hx⟩
       left_inv := by
         intro x
         apply Subtype.ext
-        simp [smul_smul, hc.ne']
+        simp only [smul_smul, ne_eq, hc.ne', not_false_eq_true, inv_mul_cancel₀, one_smul]
       right_inv := by
         intro y
         apply Subtype.ext
-        simp [smul_smul, hc.ne'] }
+        simp only [smul_smul, ne_eq, hc.ne', not_false_eq_true, mul_inv_cancel₀, one_smul] }
   let latticeHomeomorph : S.lattice ≃ₜ scaledLattice :=
     { latticeEquiv with
       continuous_toFun := by
@@ -48212,9 +48358,9 @@ noncomputable def PeriodicSpherePacking.rescaleConfiguration (S : PeriodicSphere
           apply Submodule.subset_span
           exact ⟨x, hx, rfl⟩
       | zero =>
-          simp
+          simp only [smul_zero, zero_mem]
       | add x y hx hy ihx ihy =>
-          simpa [smul_add] using
+          simpa only [smul_add] using
             (Submodule.add_mem (Submodule.span ℝ
               (scaledLattice : Set (EuclideanSpace ℝ (Fin d)))) ihx ihy)
       | smul a x hx ih =>
@@ -48223,7 +48369,7 @@ noncomputable def PeriodicSpherePacking.rescaleConfiguration (S : PeriodicSphere
             (scaledLattice : Set (EuclideanSpace ℝ (Fin d)))) a ih
     apply top_unique
     intro x _
-    simpa [smul_smul, hc.ne'] using all_scaled_mem (c⁻¹ • x)
+    simpa only [smul_smul, ne_eq, hc.ne', not_false_eq_true, mul_inv_cancel₀, one_smul] using all_scaled_mem (c⁻¹ • x)
   letI : IsZLattice ℝ scaledLattice := ⟨scaled_span_top⟩
   refine
     { toSpherePacking := S.toSpherePacking.rescaleConfiguration hc
@@ -48240,8 +48386,9 @@ lemma SpherePacking.rescale_occupied_region {S : SpherePacking d} {c : ℝ} (hc 
     (S.rescaleConfiguration hc).occupiedBallRegion = c • S.occupiedBallRegion := by
   have hc0 : (c : ℝ) ≠ 0 := hc.ne'
   ext x
-  simp [SpherePacking.occupiedBallRegion, SpherePacking.rescaleConfiguration, Set.smul_set_iUnion, Set.mem_smul_set,
-    _root_.smul_ball hc0, Real.norm_eq_abs, abs_of_pos hc, mul_div_assoc]
+  simp only [occupiedBallRegion, rescaleConfiguration, Set.image_smul, mul_div_assoc, Set.iUnion_coe_set,
+    Set.mem_smul_set, Set.iUnion_exists, Set.biUnion_and', Set.iUnion_iUnion_eq_right, Set.mem_iUnion, mem_ball,
+    exists_prop, Set.smul_set_iUnion, _root_.smul_ball hc0, norm_eq_abs, abs_of_pos hc]
 
 end Scaling
 
@@ -48262,8 +48409,8 @@ namespace SpherePacking
 
 lemma local_density_le_one {d : ℕ} (S : SpherePacking d) (R : ℝ) :
     S.densityInsideRadius R ≤ 1 := by
-  simpa [densityInsideRadius] using!
-    (ENNReal.div_le_of_le_mul (by simpa [one_mul] using! volume.mono Set.inter_subset_right))
+  simpa only [densityInsideRadius, Set.iUnion_coe_set] using!
+    (ENNReal.div_le_of_le_mul (by simpa only [one_mul, OuterMeasure.measureOf_eq_coe, Measure.coe_toOuterMeasure] using! volume.mono Set.inter_subset_right))
 
 lemma upper_packing_density_le_one {d : ℕ} (S : SpherePacking d) : S.upperPackingDensity ≤ 1 := by
   rw [upperPackingDensity]
@@ -48288,11 +48435,11 @@ lemma rescale_local_packing_density {d : ℕ} (S : SpherePacking d) {c : ℝ} (h
 lemma rescale_local_packing_density_radius {d : ℕ} (S : SpherePacking d) {c : ℝ} (hc : 0 < c)
     (R : ℝ) :
     (S.rescaleConfiguration hc).densityInsideRadius R = S.densityInsideRadius (R / c) := by
-  simpa [mul_div_assoc', hc.ne.symm] using! (rescale_local_packing_density (S := S) hc (R := R / c))
+  simpa only [mul_div_assoc', ne_eq, hc.ne.symm, not_false_eq_true, mul_div_cancel_left₀] using! (rescale_local_packing_density (S := S) hc (R := R / c))
 
 lemma rescale_upper_packing_density {d : ℕ} (S : SpherePacking d) {c : ℝ} (hc : 0 < c) :
     (S.rescaleConfiguration hc).upperPackingDensity = S.upperPackingDensity := by
-  simpa [upperPackingDensity, Function.comp, map_div_atTop_eq c hc] using!
+  simpa only [upperPackingDensity, map_div_atTop_eq c hc] using!
     (limsup_congr (Eventually.of_forall fun R => rescale_local_packing_density_radius (S := S) hc R)).trans
       (Filter.limsup_comp (u := S.densityInsideRadius) (v := fun R => R / c) (f := atTop))
 
@@ -48301,7 +48448,7 @@ theorem packing_supremum_eq_unit_separation {d : ℕ} :
   rw [iSup_subtype', SpherePackingConstant]
   refine le_antisymm (iSup_le ?_) (iSup_le ?_)
   · intro S
-    simpa [rescale_upper_packing_density] using!
+    simpa only [rescale_upper_packing_density] using!
       (le_iSup (fun S : { S : SpherePacking d // S.separation = 1 } ↦ S.val.upperPackingDensity)
         ⟨S.rescaleConfiguration (inv_pos.mpr S.separation_pos), inv_mul_cancel₀ S.separation_pos.ne.symm⟩)
   · rintro ⟨S, -⟩
@@ -48332,7 +48479,7 @@ lemma clipped_ball_union_subset_nearby_union
   use y, ⟨hy₁, ?_⟩, hy₂
   refine lt_of_le_of_lt (norm_le_norm_add_norm_sub x y) ?_
   rw [← sub_add_cancel R r]
-  exact add_lt_add hx (by simpa [dist_eq_norm, norm_sub_rev] using! hy₂)
+  exact add_lt_add hx (by simpa only [dist_eq_norm] using! hy₂)
 
 theorem SpherePacking.volume_center_ball_union_eq_tsum
     (R : ℝ) {r' : ℝ} (hr' : r' ≤ S.separation / 2) :
@@ -48396,7 +48543,7 @@ theorem SpherePacking.local_density_lower_bound (hd : 0 < d) (R : ℝ) :
   exact (ENNReal.le_div_iff_mul_le
     (Or.inl (euclidean_ball_volume_positive _ (by linarith [S.separation_pos])).ne.symm)
     (Or.inl (euclidean_ball_volume_finite _).ne)).1 <|
-      (by simpa [sub_add_cancel] using! (S.center_count_in_ball_upper_bound hd (R - S.separation / 2)))
+      (by simpa only [Set.iUnion_coe_set, sub_add_cancel] using! (S.center_count_in_ball_upper_bound hd (R - S.separation / 2)))
 
 theorem SpherePacking.local_density_upper_bound (hd : 0 < d) (R : ℝ) :
     S.densityInsideRadius R
@@ -48409,7 +48556,7 @@ theorem SpherePacking.local_density_upper_bound (hd : 0 < d) (R : ℝ) :
   exact (ENNReal.div_le_iff_le_mul
     (Or.inl (euclidean_ball_volume_positive _ (by linarith [S.separation_pos])).ne.symm)
     (Or.inl (euclidean_ball_volume_finite _).ne)).1 <|
-      (by simpa [add_sub_cancel_right] using! (S.center_count_in_ball_lower_bound (R + S.separation / 2)))
+      (by simpa only [Set.iUnion_coe_set, add_sub_cancel_right, ge_iff_le] using! (S.center_count_in_ball_lower_bound (R + S.separation / 2)))
 
 end BasicResults
 
@@ -48431,10 +48578,10 @@ theorem ENat.tsum_constant_eq_card_mul {α : Type*} (c : ENat) :
   classical
   by_cases hα : Finite α
   · letI := Fintype.ofFinite α
-    simp [tsum_fintype, ENat.card_eq_coe_fintype_card, nsmul_eq_mul]
+    simp only [tsum_fintype, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, card_eq_coe_fintype_card]
   · letI := not_finite_iff_infinite.mp hα
     by_cases hc : c = 0
-    · simp [hc]
+    · simp only [hc, tsum_zero, card_eq_top_of_infinite, mul_zero]
     · rw [ENat.card_eq_top_of_infinite, ENat.top_mul hc]
       apply HasSum.tsum_eq
       change Filter.Tendsto (fun s : Finset α => ∑ i ∈ s, c)
@@ -48456,9 +48603,9 @@ theorem ENat.tsum_constant_eq_card_mul {α : Type*} (c : ENat) :
           b < (s.card : ENat) := hbc
           _ ≤ (t.card : ENat) := by exact_mod_cast hcard
           _ ≤ (t.card : ENat) * c := by
-            simpa using (mul_le_mul_right hc_one (t.card : ENat))
+            simpa only [mul_one] using (mul_le_mul_right hc_one (t.card : ENat))
           _ = ∑ i ∈ t, c := by
-            simp [nsmul_eq_mul]
+            simp only [Finset.sum_const, nsmul_eq_mul]
       · intro b hb
         exact (not_lt_of_ge le_top hb).elim
 
@@ -48467,7 +48614,7 @@ theorem ENat.tsum_subtype_constant_eq_encard_mul {α : Type*} (s : Set α) (c : 
   rw [ENat.tsum_constant_eq_card_mul, Set.encard]
 
 theorem ENat.tsum_unit_eq_cardinality {α : Type*} : ∑' (_ : α), 1 = ENat.card α := by
-  simp [ENat.tsum_constant_eq_card_mul]
+  simp only [tsum_constant_eq_card_mul, mul_one]
 
 theorem ENat.tsum_subtype_unit_eq_encard {α : Type*} (s : Set α) : ∑' (_ : s), 1 = s.encard := by
   rw [ENat.tsum_unit_eq_cardinality, Set.encard]
@@ -48497,7 +48644,7 @@ protected theorem tsum_reindex_injective_le {φ : α → β} (hφ : Injective φ
 
 protected theorem tsum_le_reindex_surjection {φ : α → β} (hφ : Surjective φ) (g : β → ℕ∞) :
     ∑' y, g y ≤ ∑' x, g (φ x) :=
-  calc ∑' y, g y = ∑' y, g (φ (surjInv hφ y)) := by simp [surjInv_eq hφ]
+  calc ∑' y, g y = ∑' y, g (φ (surjInv hφ y)) := by simp only [surjInv_eq hφ]
     _ ≤ ∑' x, g (φ x) :=
       ENat.tsum_reindex_injective_le (injective_surjInv hφ) _
 
@@ -48524,9 +48671,9 @@ open Function
 
 theorem Set.encard_disjoint_union_eq_tsum {ι α : Type*} {s : ι → Set α}
     (hs : Set.PairwiseDisjoint Set.univ s) : (⋃ i, s i).encard = ∑' i, (s i).encard := by
-  simpa [ENat.tsum_subtype_unit_eq_encard] using!
+  simpa only [ENat.tsum_subtype_unit_eq_encard] using!
     (ENat.tsum_disjoint_subtype_union (f := fun _ : α => (1 : ℕ∞)) (t := s) (by
-      simpa [Set.PairwiseDisjoint, Set.pairwise_univ] using! hs))
+      simpa only [PairwiseDisjoint, pairwise_univ] using! hs))
 
 end
 
@@ -48540,9 +48687,10 @@ variable {E ι K : Type*} [NormedField K] [LinearOrder K] [IsStrictOrderedRing K
 theorem ZSpan.fundamental_region_iff_coordinate_floor_zero (v : E) : v ∈ fundamentalDomain b ↔ floor b v = 0 := by
   simp_rw [mem_fundamentalDomain, ← Int.floor_eq_zero_iff]
   constructor <;> intro h
-  · simp [floor, h]
+  · simp only [floor, h, zero_smul, Finset.sum_const_zero]
   · intro i
-    exact_mod_cast (by simpa [h] using! (repr_floor_apply b v i).symm)
+    exact_mod_cast (by simpa only [Int.floor_eq_zero_iff, Set.mem_Ico, h, ZeroMemClass.coe_zero, map_zero, Finsupp.coe_zero,
+                         Pi.zero_apply, Int.cast_eq_zero] using! (repr_floor_apply b v i).symm)
 
 section BasisIndexEquiv
 
@@ -48562,14 +48710,15 @@ noncomputable def coordinateIndexEquiv (Λ : Submodule ℤ (EuclideanSpace ℝ (
       exact ⟨x, hx, rfl⟩
     · rintro ⟨y, hy, he⟩
       exact e.injective he ▸ hy
-  let h : Λ ≃ₜ L := c.toHomeomorph.subtype (by simpa [e] using hmem)
+  let h : Λ ≃ₜ L := c.toHomeomorph.subtype (by simpa only [ContinuousLinearEquiv.coe_toHomeomorph, LinearEquiv.restrictScalars_apply,
+                                                 ContinuousLinearEquiv.coe_toLinearEquiv, e] using hmem)
   letI : DiscreteTopology L := h.discreteTopology
   have hset : (L : Set (Fin d → ℝ)) =
       c.toLinearEquiv.toLinearMap '' (Λ : Set (EuclideanSpace ℝ (Fin d))) := by
     ext x
     change (∃ y, y ∈ Λ ∧ e y = x) ↔
       ∃ y, y ∈ Λ ∧ c.toLinearEquiv.toLinearMap y = x
-    simp [e]
+    simp only [LinearEquiv.restrictScalars_apply, ContinuousLinearEquiv.coe_toLinearEquiv, LinearEquiv.coe_coe, e]
   letI : IsZLattice ℝ L := ⟨by
     calc
       Submodule.span ℝ (L : Set (Fin d → ℝ)) =
@@ -48605,12 +48754,12 @@ private lemma bounded_union_of_center_balls (hD_isBounded : IsBounded D) :
   intro x hx
   rcases Set.mem_iUnion₂.1 hx with ⟨y, hy, hx⟩
   exact (norm_le_norm_add_norm_sub' x y).trans <|
-    add_le_add (hL y hy.2) (le_of_lt (by simpa [mem_ball, dist_eq_norm] using! hx))
+    add_le_add (hL y hy.2) (le_of_lt (by simpa only [mem_ball, dist_eq_norm] using! hx))
 
 private lemma pairwise_disjoint_center_balls (D : Set (EuclideanSpace ℝ (Fin d))) :
     Set.PairwiseDisjoint (S.centers ∩ D) (fun x ↦ ball x (S.separation / 2)) := by
   intro x hx y hy hxy
-  exact ball_disjoint_ball (by simpa [add_halves] using! S.distinct_centers_separation_bound _ _ hx.left hy.left hxy)
+  exact ball_disjoint_ball (by simpa only [add_halves] using! S.distinct_centers_separation_bound _ _ hx.left hy.left hxy)
 
 private theorem finite_of_bounded_union_with_uniform_volume
     {ι τ : Type*} {s : Set ι} {f : ι → Set (EuclideanSpace ℝ τ)} {c : ℝ≥0∞} (hc : 0 < c)
@@ -48640,7 +48789,8 @@ private theorem finite_of_bounded_union_with_uniform_volume
     apply top_unique
     calc
       (⊤ : ENNReal) = ∑' _ : ℕ, c := by
-        simp [hc.ne']
+        simp only [ENNReal.tsum_const, ENat.card_eq_top_of_infinite, ENat.toENNReal_top, ne_eq, hc.ne',
+          not_false_eq_true, ENNReal.top_mul]
       _ ≤ ∑' n : ℕ, volume (f (e n : ι)) :=
         ENNReal.tsum_le_tsum fun n => h_volume (e n) (e n).property
   have h_subset :
@@ -48659,12 +48809,12 @@ lemma finite_centers_in_bounded_region (hD_isBounded : IsBounded D) (hd : 0 < d)
   refine (Set.finite_coe_iff).2 <| finite_of_bounded_union_with_uniform_volume
       (c := volume (ball (0 : EuclideanSpace ℝ (Fin d)) (S.separation / 2)))
       (hc := by
-        simpa using!
+        simpa only  using!
           euclidean_ball_volume_positive (0 : EuclideanSpace ℝ (Fin d)) (by linarith [S.separation_pos]))
       (h_measurable := fun _ _ => measurableSet_ball)
       (h_bounded := bounded_union_of_center_balls S D hD_isBounded)
-      (h_volume := fun _ _ => by simp [Measure.addHaar_ball_center])
-      (h_disjoint := by simpa using! pairwise_disjoint_center_balls S D)
+      (h_volume := fun _ _ => by simp only [Measure.addHaar_ball_center, Std.le_refl])
+      (h_disjoint := by simpa only  using! pairwise_disjoint_center_balls S D)
 
 lemma finite_centers_in_fundamental_region {ι : Type*} [Finite ι] (b : Basis ι ℤ S.lattice)
     (hd : 0 < d) :
@@ -48692,8 +48842,8 @@ lemma translates_disjoint_of_unique_cover {Λ : Submodule ℤ (EuclideanSpace �
   refine Set.disjoint_left.2 (by
     intro x hxg hxh
     exact hgh <| neg_injective <| (hD_unique_covers x).unique
-      (by simpa [Set.mem_vadd_set_iff_neg_vadd_mem] using! hxg)
-      (by simpa [Set.mem_vadd_set_iff_neg_vadd_mem] using! hxh))
+      (by simpa only [Set.mem_vadd_set_iff_neg_vadd_mem] using! hxg)
+      (by simpa only [Set.mem_vadd_set_iff_neg_vadd_mem] using! hxh))
 
 end Pointwise
 
@@ -48719,9 +48869,9 @@ noncomputable def PeriodicSpherePacking.centerOrbitEquivFundamentalRegion
     have hgD : (g : EuclideanSpace ℝ (Fin d)) + y.1 ∈ D :=
       hco.symm ▸ x.2.2
     have hgzero : g = 0 :=
-      (hD_unique_covers y.1).unique hgD (by simpa using y.2.2)
+      (hD_unique_covers y.1).unique hgD (by simpa only [zero_vadd] using y.2.2)
     apply Subtype.ext
-    simpa [hgzero] using hco.symm
+    simpa only [hgzero, ZeroMemClass.coe_zero, zero_add] using hco.symm
   · intro q
     refine Quotient.inductionOn q ?_
     intro x
@@ -48735,7 +48885,7 @@ noncomputable def PeriodicSpherePacking.centerOrbitEquivFundamentalRegion
     apply Quotient.sound
     refine ⟨g, ?_⟩
     apply Subtype.ext
-    simp [y]
+    simp only [y]
 
 noncomputable def PeriodicSpherePacking.centerOrbitEquivBasisRegion
     {ι : Type*} [Finite ι] (b : Basis ι ℤ S.lattice) :
@@ -48825,7 +48975,7 @@ theorem PeriodicSpherePacking.card_centers_in_fundamental_region
     (S.centers ∩ D).toFinset.card = S.centerOrbitCardinality := by
   rw [centerOrbitCardinality]
   convert! Finset.card_eq_of_equiv_fintype ?_
-  simpa [Set.mem_toFinset] using! (S.centerOrbitEquivFundamentalRegion D hD_unique_covers).symm
+  simpa only [mem_toFinset, mem_inter_iff] using! (S.centerOrbitEquivFundamentalRegion D hD_unique_covers).symm
 
 theorem PeriodicSpherePacking.encard_centers_in_fundamental_region
     (hD_isBounded : IsBounded D)
@@ -48840,7 +48990,7 @@ theorem PeriodicSpherePacking.card_centers_in_translated_region (hd : 0 < d)
     haveI := @Fintype.ofFinite _ <| finite_centers_in_translated_fundamental_region S b hd v
     (S.centers ∩ (v +ᵥ fundamentalDomain (b.ofZLatticeBasis ℝ _))).toFinset.card = S.centerOrbitCardinality := by
   rw [centerOrbitCardinality]
-  exact card_eq_of_equiv_fintype (by simpa using! (S.centerOrbitEquivTranslatedBasisRegion b v).symm)
+  exact card_eq_of_equiv_fintype (by simpa only [mem_toFinset, mem_inter_iff] using! (S.centerOrbitEquivTranslatedBasisRegion b v).symm)
 
 theorem PeriodicSpherePacking.encard_centers_in_translated_region (hd : 0 < d)
     {ι : Type*} [Finite ι] (b : Basis ι ℤ S.lattice) (v : EuclideanSpace ℝ (Fin d)) :
@@ -48870,7 +49020,7 @@ theorem PeriodicSpherePacking.orbit_cardinality_eq_bounded_representatives (S : 
   {D : Set (EuclideanSpace ℝ (Fin d))} (hD_isBounded : IsBounded D)
   (hD_unique_covers : ∀ x, ∃! g : S.lattice, g +ᵥ x ∈ D) :
   S.centerOrbitCardinality = S.boundedCenterRepresentativeCount hd hD_isBounded := by
-  simpa [PeriodicSpherePacking.boundedCenterRepresentativeCount, Set.toFinset_card] using!
+  simpa only [boundedCenterRepresentativeCount, Set.fintypeCard_eq_ncard, Set.toFinset_card] using!
     (S.card_centers_in_fundamental_region (D := D) hD_isBounded hD_unique_covers hd).symm
 
 end numReps_aux
@@ -48893,11 +49043,11 @@ private theorem iUnion_lattice_inter_ball_sub_vadd_fundamentalDomain_subset_ball
   rw [Set.mem_vadd_set] at hz
   rcases hz with ⟨y, hy, rfl⟩
   have hxnorm : ‖x‖ < R - L := by
-    simpa [mem_ball, dist_zero_right] using hx.2
+    simpa only [mem_ball, dist_zero_right] using hx.2
   have hynorm : ‖y‖ ≤ L := hL y hy
   have hsum : ‖x + y‖ < R :=
     lt_of_le_of_lt (norm_add_le x y) (by linarith)
-  simpa [mem_ball, dist_zero_right, vadd_eq_add] using hsum
+  simpa only [vadd_eq_add, mem_ball, dist_zero_right, gt_iff_lt] using hsum
 
 private theorem fundamental_region_translates_disjoint
     {ι : Type*} [Finite ι] (b : Basis ι ℤ S.lattice)
@@ -48908,11 +49058,11 @@ private theorem fundamental_region_translates_disjoint
     Submodule.span ℤ (Set.range (b.ofZLatticeBasis ℝ _))
   have hx' : x ∈ Λ := by simpa [Λ, S.integral_basis_spans_packing_lattice] using! hx
   have hy' : y ∈ Λ := by simpa [Λ, S.integral_basis_spans_packing_lattice] using! hy
-  have hxy' : (⟨x, hx'⟩ : Λ) ≠ ⟨y, hy'⟩ := fun h => hxy (by simpa using! congrArg Subtype.val h)
-  simpa [Λ] using!
+  have hxy' : (⟨x, hx'⟩ : Λ) ≠ ⟨y, hy'⟩ := fun h => hxy (by simpa only  using! congrArg Subtype.val h)
+  simpa only  using!
     (translates_disjoint_of_unique_cover (d := d) (Λ := Λ)
       (D := fundamentalDomain (b.ofZLatticeBasis ℝ _))
-      (by intro u; simpa using!
+      (by intro u; simpa only [mem_fundamentalDomain, Set.mem_Ico] using!
         exist_unique_vadd_mem_fundamentalDomain (b.ofZLatticeBasis ℝ _) u) hxy')
 
 theorem PeriodicSpherePacking.encard_centers_inter_ball_ge_numReps_nsmul_encard_lattice_inter_ball
@@ -48949,7 +49099,7 @@ private theorem ball_subset_iUnion_lattice_inter_ball_add_vadd_fundamentalDomain
       exact Submodule.coe_mem _
     · rw [mem_ball_zero_iff] at hx ⊢
       have hfloor : ‖floor (b.ofZLatticeBasis ℝ _) x‖ = ‖x - fract (b.ofZLatticeBasis ℝ _) x‖ := by
-        simp [fract]
+        simp only [AddSubgroupClass.coe_norm, fract, sub_sub_cancel]
       refine lt_of_le_of_lt (hfloor.le.trans (norm_sub_le _ _)) ?_
       exact add_lt_add_of_lt_of_le hx (hL _ (fract_mem_fundamentalDomain _ _))
   · rw [Set.mem_vadd_set_iff_neg_vadd_mem, vadd_eq_add, neg_add_eq_sub]
@@ -48993,19 +49143,19 @@ private theorem ball_covered_by_nearby_lattice_translates
     (hD_unique_covers : ∀ x, ∃! g : S.lattice, g +ᵥ x ∈ D) (hL : ∀ x ∈ D, ‖x‖ ≤ L) :
     ball 0 (R - L) ⊆ ⋃ x ∈ ↑S.lattice ∩ ball (0 : EuclideanSpace ℝ (Fin d)) R, (x +ᵥ D) := by
   intro x hx
-  have hx' : ‖x‖ < R - L := by simpa [mem_ball_zero_iff] using! hx
+  have hx' : ‖x‖ < R - L := by simpa only [mem_ball, dist_zero_right] using! hx
   rcases hD_unique_covers x with ⟨g, hg, -⟩
   simp_rw [Set.mem_iUnion, exists_prop, Set.mem_inter_iff]
-  refine ⟨-g.val, ⟨⟨by simp, ?_⟩, ?_⟩⟩
+  refine ⟨-g.val, ⟨⟨by simp only [SetLike.mem_coe, neg_mem_iff, SetLike.coe_mem], ?_⟩, ?_⟩⟩
   · have : ‖g.val‖ < R := by
       have htri : ‖g.val‖ ≤ ‖g.val + x‖ + ‖x‖ := by
-        simpa [sub_eq_add_neg, add_assoc] using! (norm_sub_le (a := g.val + x) (b := x))
+        simpa only [sub_eq_add_neg, add_assoc, add_neg_cancel, add_zero] using! (norm_sub_le (a := g.val + x) (b := x))
       refine lt_of_le_of_lt htri ?_
       calc
-        ‖g.val + x‖ + ‖x‖ < L + (R - L) := add_lt_add_of_le_of_lt (hL _ (by simpa using! hg)) hx'
+        ‖g.val + x‖ + ‖x‖ < L + (R - L) := add_lt_add_of_le_of_lt (hL _ (by simpa only  using! hg)) hx'
         _ = R := by abel
-    simpa [mem_ball_zero_iff, norm_neg] using! this
-  · exact (Set.mem_vadd_set_iff_neg_vadd_mem).2 (by simpa using! hg)
+    simpa only [mem_ball, dist_zero_right, norm_neg, gt_iff_lt] using! this
+  · exact (Set.mem_vadd_set_iff_neg_vadd_mem).2 (by simpa only [neg_neg, vadd_eq_add] using! hg)
 
 instance (E : Type*) [AddCommGroup E] [MeasurableSpace E] [MeasurableAdd E] [Module ℤ E]
     [Module ℝ E] (μ : Measure E) [μ.IsAddLeftInvariant] [IsScalarTower ℤ ℝ E] (s : Submodule ℤ E) :
@@ -49043,9 +49193,9 @@ private theorem nearby_lattice_translates_subset_expanded_ball (hL : ∀ x ∈ D
     ⋃ x ∈ ↑S.lattice ∩ ball (0 : EuclideanSpace ℝ (Fin d)) R, (x +ᵥ D) ⊆ ball 0 (R + L) := by
   intro x hx
   rw [mem_ball_zero_iff]
-  rcases (by simpa [Set.mem_iUnion, exists_prop, Set.mem_inter_iff] using! hx) with
+  rcases (by simpa only [Set.mem_inter_iff, SetLike.mem_coe, mem_ball, dist_zero_right, Set.mem_iUnion, exists_prop] using! hx) with
     ⟨i, ⟨-, hi_ball⟩, hi_mem⟩
-  have hi_ball' : ‖i‖ < R := by simpa [mem_ball_zero_iff] using! hi_ball
+  have hi_ball' : ‖i‖ < R := by simpa only  using! hi_ball
   have hi_mem' : ‖-i + x‖ ≤ L := hL _ (Set.mem_vadd_set_iff_neg_vadd_mem.mp hi_mem)
   calc
     _ = ‖i + (-i + x)‖ := by congr; abel
@@ -49065,13 +49215,13 @@ theorem PeriodicSpherePacking.encard_lattice_inter_ball_le_volume_ball_add_div_v
   have hfinite : volume D ≠ ⊤ := ne_of_lt <|
     ((Metric.isBounded_closedBall : Bornology.IsBounded
         (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) L)).subset
-      (fun x hx => by simpa [Metric.mem_closedBall, dist_zero_right] using hL x hx)).measure_lt_top
+      (fun x hx => by simpa only [mem_closedBall, dist_zero_right] using hL x hx)).measure_lt_top
   letI : Nonempty (Fin d) := Fin.pos_iff_nonempty.mp hd
   have hnonzero : volume D ≠ 0 :=
     (lattice_region_is_additive_fundamental_domain S D hD_unique_covers hD_measurable).measure_ne_zero
       (fun hv => by
         have hp := euclidean_ball_volume_positive (0 : EuclideanSpace ℝ (Fin d)) (by norm_num : (0 : ℝ) < 1)
-        simp [hv] at hp)
+        simp only [hv, Measure.coe_zero, Pi.zero_apply, lt_self_iff_false] at hp)
   apply (ENNReal.le_div_iff_mul_le (Or.inl hnonzero) (Or.inl hfinite)).2
   calc
     (T.encard : ℝ≥0∞) * volume D =
@@ -49097,7 +49247,8 @@ theorem PeriodicSpherePacking.encard_lattice_inter_ball_le_volume_ball_add_div_v
             Measurable (fun z : EuclideanSpace ℝ (Fin d) => -(x : EuclideanSpace ℝ (Fin d)) + z))
     _ ≤ volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + L)) := by
       apply volume.mono
-      simpa [T, Set.biUnion_eq_iUnion] using
+      simpa only [Set.iUnion_coe_set, Set.mem_inter_iff, SetLike.mem_coe, mem_ball, dist_zero_right,
+        Set.iUnion_subset_iff, and_imp, T] using
         (nearby_lattice_translates_subset_expanded_ball (S := S) (D := D) (R := R) hL)
 
 open ZSpan
@@ -49115,10 +49266,10 @@ theorem
   intro x
   rcases exist_unique_vadd_mem_fundamentalDomain (b.ofZLatticeBasis ℝ _) x with
     ⟨⟨v, hv⟩, hvD, hvuniq⟩
-  refine ⟨⟨v, by simpa [S.integral_basis_spans_packing_lattice] using! hv⟩, hvD, ?_⟩
+  refine ⟨⟨v, by simpa only [S.integral_basis_spans_packing_lattice] using! hv⟩, hvD, ?_⟩
   rintro ⟨y, hy⟩ hyD
-  have := hvuniq ⟨y, by simpa [S.integral_basis_spans_packing_lattice] using! hy⟩ hyD
-  exact Subtype.ext (by simpa using! congrArg Subtype.val this)
+  have := hvuniq ⟨y, by simpa only [S.integral_basis_spans_packing_lattice] using! hy⟩ hyD
+  exact Subtype.ext (by simpa only  using! congrArg Subtype.val this)
 
 theorem
     PeriodicSpherePacking.encard_lattice_inter_ball_le_volume_ball_add_div_volume_fundamentalDomain
@@ -49131,10 +49282,10 @@ theorem
   intro x
   rcases exist_unique_vadd_mem_fundamentalDomain (b.ofZLatticeBasis ℝ _) x with
     ⟨⟨v, hv⟩, hvD, hvuniq⟩
-  refine ⟨⟨v, by simpa [S.integral_basis_spans_packing_lattice] using! hv⟩, hvD, ?_⟩
+  refine ⟨⟨v, by simpa only [S.integral_basis_spans_packing_lattice] using! hv⟩, hvD, ?_⟩
   rintro ⟨y, hy⟩ hyD
-  have := hvuniq ⟨y, by simpa [S.integral_basis_spans_packing_lattice] using! hy⟩ hyD
-  exact Subtype.ext (by simpa using! congrArg Subtype.val this)
+  have := hvuniq ⟨y, by simpa only [S.integral_basis_spans_packing_lattice] using! hy⟩ hyD
+  exact Subtype.ext (by simpa only  using! congrArg Subtype.val this)
 
 section finiteDensity_limit
 
@@ -49161,7 +49312,7 @@ theorem finiteDensity_le_numReps_mul_volume_ball_ratio
           * volume (ball (0 : EuclideanSpace ℝ (Fin d)) (S.separation / 2))
             / volume (ball (0 : EuclideanSpace ℝ (Fin d)) R) := by
     gcongr
-    simpa using! ENat.toENNReal_le.mpr
+    simpa only [nsmul_eq_mul, ENat.toENNReal_mul, ENat.toENNReal_coe] using! ENat.toENNReal_le.mpr
       (S.encard_centers_inter_ball_le_numReps_nsmul_encard_lattice_inter_ball hd b hL _)
   _ ≤ S.centerOrbitCardinality
         * (volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + S.separation / 2 + L + L))
@@ -49200,7 +49351,7 @@ theorem finiteDensity_ge_numReps_mul_volume_ball_ratio
             * volume (ball (0 : EuclideanSpace ℝ (Fin d)) (S.separation / 2))
               / volume (ball (0 : EuclideanSpace ℝ (Fin d)) R) := by
       gcongr
-      simpa using ENat.toENNReal_le.mpr
+      simpa only [nsmul_eq_mul, ENat.toENNReal_mul, ENat.toENNReal_coe] using ENat.toENNReal_le.mpr
         (S.encard_centers_inter_ball_ge_numReps_nsmul_encard_lattice_inter_ball
           hd b hL (R - S.separation / 2))
     _ ≥ S.centerOrbitCardinality
@@ -49229,7 +49380,7 @@ open Asymptotics Filter ENNReal EuclideanSpace
 lemma eventually_ofReal_div_add_one_rpow_mem_Icc {d : ℝ} {ε : ℝ≥0∞} (hd : 0 ≤ d) (hε : 0 < ε) :
     ∃ k : ℝ, k ≥ 0 ∧ ∀ k' ≥ k, ENNReal.ofReal ((k' / (k' + 1)) ^ d) ∈ Set.Icc (1 - ε) (1 + ε) := by
   have hshift : Tendsto (fun k : ℝ => k + 1) atTop atTop := by
-    simpa using (tendsto_atTop_add_const_right atTop (1 : ℝ) tendsto_id)
+    simpa only [id_eq] using (tendsto_atTop_add_const_right atTop (1 : ℝ) tendsto_id)
   have hzero : Tendsto (fun k : ℝ => 1 / (k + 1)) atTop (𝓝 0) :=
     tendsto_const_nhds.div_atTop hshift
   have hratio : Tendsto (fun k : ℝ => k / (k + 1)) atTop (𝓝 1) := by
@@ -49250,9 +49401,9 @@ lemma eventually_ofReal_div_add_one_rpow_mem_Icc {d : ℝ} {ε : ℝ≥0∞} (hd
     simpa only [Function.comp_def, ENNReal.ofReal_one] using
       ENNReal.continuous_ofReal.continuousAt.tendsto.comp hrpow
   have hlower : 1 - ε < (1 : ℝ≥0∞) :=
-    ENNReal.sub_lt_self (by simp) (by simp) (ne_of_gt hε)
+    ENNReal.sub_lt_self (by simp only [ne_eq, one_ne_top, not_false_eq_true]) (by simp only [ne_eq, one_ne_zero, not_false_eq_true]) (ne_of_gt hε)
   have hupper : (1 : ℝ≥0∞) < 1 + ε := by
-    exact ENNReal.lt_add_right (by simp) (ne_of_gt hε)
+    exact ENNReal.lt_add_right (by simp only [ne_eq, one_ne_top, not_false_eq_true]) (ne_of_gt hε)
   obtain ⟨k, hk⟩ := eventually_atTop.1 (hlimit.eventually (Ioo_mem_nhds hlower hupper))
   refine ⟨max k 0, le_max_right _ _, ?_⟩
   intro k' hk'
@@ -49261,7 +49412,7 @@ lemma eventually_ofReal_div_add_one_rpow_mem_Icc {d : ℝ} {ε : ℝ≥0∞} (hd
 
 lemma eventually_ofReal_div_add_one_pow_mem_Icc {ε : ℝ≥0∞} (hε : 0 < ε) :
     ∃ k : ℝ, k ≥ 0 ∧ ∀ k' ≥ k, ENNReal.ofReal ((k' / (k' + 1)) ^ d) ∈ Set.Icc (1 - ε) (1 + ε) := by
-  simpa using! eventually_ofReal_div_add_one_rpow_mem_Icc (d := d) (Nat.cast_nonneg _) hε
+  simpa only [ge_iff_le, Set.mem_Icc, tsub_le_iff_right, Real.rpow_natCast] using! eventually_ofReal_div_add_one_rpow_mem_Icc (d := d) (Nat.cast_nonneg _) hε
 
 theorem volume_ball_div_volume_ball_add_tendsto_one {C : ℝ} (hd : 0 < d) (hC : 0 ≤ C) :
     Tendsto (fun R ↦ volume (ball (0 : EuclideanSpace ℝ (Fin d)) R)
@@ -49277,7 +49428,7 @@ theorem volume_ball_div_volume_ball_add_tendsto_one {C : ℝ} (hd : 0 < d) (hC :
   have hctop : c ≠ ⊤ := by
     exact ENNReal.ofReal_ne_top
   have hshift : Tendsto (fun R : ℝ => R + C) atTop atTop := by
-    simpa using (tendsto_atTop_add_const_right atTop C tendsto_id)
+    simpa only [id_eq] using (tendsto_atTop_add_const_right atTop C tendsto_id)
   have hzero : Tendsto (fun R : ℝ => C / (R + C)) atTop (𝓝 0) :=
     tendsto_const_nhds.div_atTop hshift
   have hratio : Tendsto (fun R : ℝ => R / (R + C)) atTop (𝓝 1) := by
@@ -49291,7 +49442,7 @@ theorem volume_ball_div_volume_ball_add_tendsto_one {C : ℝ} (hd : 0 < d) (hC :
     field_simp
     ring
   have hpow : Tendsto (fun R : ℝ => (R / (R + C)) ^ d) atTop (𝓝 1) := by
-    simpa using hratio.pow d
+    simpa only [one_pow] using hratio.pow d
   have hlimit : Tendsto (fun R : ℝ => ENNReal.ofReal ((R / (R + C)) ^ d))
       atTop (𝓝 (1 : ℝ≥0∞)) := by
     simpa only [Function.comp_def, ENNReal.ofReal_one] using
@@ -49315,20 +49466,20 @@ theorem volume_ball_add_div_volume_ball_add_tendsto_one_of_nonneg
   have hshift : Tendsto (fun R : ℝ => R + C') atTop atTop :=
     tendsto_atTop_add_const_right _ C' tendsto_id
   have herror : Tendsto (fun R : ℝ => (C - C') / (R + C')) atTop (𝓝 0) := by
-    simpa [div_eq_mul_inv] using
+    simpa only [div_eq_mul_inv, Function.comp_apply, mul_zero] using
       (tendsto_inv_atTop_zero.comp hshift).const_mul (C - C')
   have hratio : Tendsto (fun R : ℝ => (R + C) / (R + C')) atTop (𝓝 1) := by
     have hsum : Tendsto (fun R : ℝ => 1 + (C - C') / (R + C')) atTop (𝓝 1) := by
-      simpa using tendsto_const_nhds.add herror
+      simpa only [add_zero] using tendsto_const_nhds.add herror
     apply Tendsto.congr' (f₁ := fun R : ℝ => 1 + (C - C') / (R + C')) ?_ hsum
     filter_upwards [eventually_ge_atTop (1 : ℝ)] with R hR
     have hden : R + C' ≠ 0 := ne_of_gt (by linarith)
     field_simp; ring
   have hpow : Tendsto (fun R : ℝ => ((R + C) / (R + C')) ^ d) atTop (𝓝 1) := by
-    simpa using hratio.pow d
+    simpa only [one_pow] using hratio.pow d
   have henn : Tendsto
       (fun R : ℝ => ENNReal.ofReal (((R + C) / (R + C')) ^ d)) atTop (𝓝 1) := by
-    simpa using tendsto_ofReal hpow
+    simpa only [ofReal_one] using tendsto_ofReal hpow
   apply Tendsto.congr'
     (f₁ := fun R : ℝ => ENNReal.ofReal (((R + C) / (R + C')) ^ d)) ?_ henn
   filter_upwards [eventually_ge_atTop (1 : ℝ)] with R hR
@@ -49341,11 +49492,11 @@ theorem volume_ball_add_div_volume_ball_add_tendsto_one_of_nonneg
 theorem Filter.atTop_invariant_under_translation {β : Type*} {f : ℝ → β} (C : ℝ) (α : Filter β) :
     Tendsto f atTop α ↔ Tendsto (fun x ↦ f (x + C)) atTop α := by
   have hmap : Filter.map (fun x : ℝ => x + C) atTop = atTop := by
-    simpa using! (Filter.map_add_atTop_eq (α := ℝ) (k := C))
+    simpa only  using! (Filter.map_add_atTop_eq (α := ℝ) (k := C))
   constructor <;> intro hf
-  · exact tendsto_map'_iff.mp (by simpa [hmap] using! hf)
+  · exact tendsto_map'_iff.mp (by simpa only [hmap] using! hf)
   · have : Tendsto f (Filter.map (fun x : ℝ => x + C) atTop) α := tendsto_map'_iff.mpr hf
-    simpa [hmap] using! this
+    simpa only [hmap] using! this
 
 theorem volume_ball_add_div_volume_ball_add_tendsto_one {d : ℕ} {C C' : ℝ} (hd : 0 < d) :
     Tendsto (fun R ↦ volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + C))
@@ -49355,7 +49506,7 @@ theorem volume_ball_add_div_volume_ball_add_tendsto_one {d : ℕ} {C C' : ℝ} (
   refine (Filter.atTop_invariant_under_translation (f := fun R ↦
       volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + C)) /
         volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + C'))) (max (-C) (-C')) _).mpr ?_
-  simpa [add_assoc] using!
+  simpa only [add_assoc] using!
     volume_ball_add_div_volume_ball_add_tendsto_one_of_nonneg (d := d) (C := max (-C) (-C') + C)
       (C' := max (-C) (-C') + C') hd hC₀ hC'₀
 
@@ -49539,7 +49690,7 @@ theorem PeriodicSpherePacking.packing_density_zero_of_empty_centers (S : Periodi
   left
   letI := @Fintype.ofFinite _ <| finite_centers_in_bounded_region S D hD_isBounded hd
   haveI : IsEmpty (↥(S.centers ∩ D)) := ⟨fun x => instEmpty.false ⟨x.1, x.2.1⟩⟩
-  simp
+  simp only [Fintype.card_eq_zero]
 
 end Empty_Centers
 
@@ -49558,13 +49709,13 @@ open scoped Pointwise
 variable {d : ℕ}
 
 lemma coordinate_abs_bounded_by_norm (x : EuclideanSpace ℝ (Fin d)) (i : Fin d) : |x i| ≤ ‖x‖ := by
-  simpa [EuclideanSpace.inner_single_left, PiLp.norm_single] using!
+  simpa only [inner_single_left, Real.ringHom_apply, one_mul, PiLp.norm_single, norm_one] using!
     abs_real_inner_le_norm (EuclideanSpace.single i (1 : ℝ)) x
 
 lemma coordinate_difference_small_inside_ball {x y : EuclideanSpace ℝ (Fin d)} {r : ℝ} (hy : y ∈ ball x r)
     (i : Fin d) : |y i - x i| < r := by
-  have hnorm : ‖y - x‖ < r := by simpa [Metric.mem_ball, dist_eq_norm, dist_comm] using! hy
-  exact lt_of_le_of_lt (by simpa using! coordinate_abs_bounded_by_norm (d := d) (y - x) i) hnorm
+  have hnorm : ‖y - x‖ < r := by simpa only [mem_ball, dist_eq_norm] using! hy
+  exact lt_of_le_of_lt (by simpa only [PiLp.sub_apply] using! coordinate_abs_bounded_by_norm (d := d) (y - x) i) hnorm
 
 lemma metric_ball_subset_axis_cell {x : EuclideanSpace ℝ (Fin d)} {r L : ℝ}
     (hx : ∀ i : Fin d, x i ∈ Set.Icc r (L - r)) :
@@ -49590,9 +49741,9 @@ lemma center_distance_bound_of_disjoint_regions {x y : EuclideanSpace ℝ (Fin d
   let m : EuclideanSpace ℝ (Fin d) := midpoint ℝ x y
   have hhalf : (1 / 2 : ℝ) * dist x y < r := by linarith
   have hmx : m ∈ ball x r := by
-    simpa [Metric.mem_ball, dist_comm, m] using! (by simpa [m] using! hhalf : dist m x < r)
+    simpa only [mem_ball, dist_comm, dist_left_midpoint, Real.norm_ofNat] using! (by simpa only [dist_midpoint_left, Real.norm_ofNat, one_div, m] using! hhalf : dist m x < r)
   have hmy : m ∈ ball y r := by
-    simpa [Metric.mem_ball, dist_comm, m] using! (by simpa [m, dist_comm] using! hhalf : dist m y < r)
+    simpa only [mem_ball, dist_comm, dist_right_midpoint, Real.norm_ofNat] using! (by simpa only [dist_comm, dist_right_midpoint, Real.norm_ofNat, one_div, m] using! hhalf : dist m y < r)
   exact Set.disjoint_left.1 hAB (hx hmx) (hy hmy)
 
 open scoped Pointwise in
@@ -49604,7 +49755,7 @@ noncomputable def latticeReplicatedCenters (Λ : Submodule ℤ (EuclideanSpace �
 lemma mem_replicated_centers_iff {Λ : Submodule ℤ (EuclideanSpace ℝ (Fin d))}
     {F : Set (EuclideanSpace ℝ (Fin d))} {x : EuclideanSpace ℝ (Fin d)} :
     x ∈ latticeReplicatedCenters (d := d) Λ F ↔ ∃ g : Λ, ∃ f ∈ F, x = g +ᵥ f := by
-  simp [latticeReplicatedCenters, Set.mem_iUnion, Set.mem_vadd_set, eq_comm]
+  simp only [latticeReplicatedCenters, Set.mem_iUnion, Set.mem_vadd_set, eq_comm, Subtype.exists]
 
 lemma replicated_centers_translation_closed {Λ : Submodule ℤ (EuclideanSpace ℝ (Fin d))}
     {F : Set (EuclideanSpace ℝ (Fin d))} {x y : EuclideanSpace ℝ (Fin d)}
@@ -49612,20 +49763,21 @@ lemma replicated_centers_translation_closed {Λ : Submodule ℤ (EuclideanSpace 
     x + y ∈ latticeReplicatedCenters (d := d) Λ F := by
   rcases (mem_replicated_centers_iff (d := d) (Λ := Λ) (F := F) (x := y)).1 hy with ⟨g, f, hf, rfl⟩
   refine (mem_replicated_centers_iff (d := d) (Λ := Λ) (F := F)).2 ⟨(⟨x, hx⟩ : Λ) + g, f, hf, ?_⟩
-  simp [Submodule.vadd_def, vadd_eq_add, add_assoc]
+  simp only [Submodule.vadd_def, vadd_eq_add, Submodule.coe_add, add_assoc]
 
 lemma translated_ball_subset_translated_region {Λ : Submodule ℤ (EuclideanSpace ℝ (Fin d))}
     {D : Set (EuclideanSpace ℝ (Fin d))} {r : ℝ} {g : Λ} {x : EuclideanSpace ℝ (Fin d)}
     (hx : ball x r ⊆ D) :
     ball (g +ᵥ x) r ⊆ g +ᵥ D := by
   intro y hy
-  refine Set.mem_vadd_set.2 ⟨(-g : Λ) +ᵥ y, ?_, by simp [Submodule.vadd_def, vadd_eq_add]⟩
+  refine Set.mem_vadd_set.2 ⟨(-g : Λ) +ᵥ y, ?_, by simp only [Submodule.vadd_def, NegMemClass.coe_neg, vadd_eq_add, add_neg_cancel_left]⟩
   apply hx
   have :
       (- (g : EuclideanSpace ℝ (Fin d))) +ᵥ y ∈
         (- (g : EuclideanSpace ℝ (Fin d))) +ᵥ ball (g +ᵥ x) r :=
-    Set.mem_vadd_set.2 ⟨y, by simpa [Submodule.vadd_def, vadd_eq_add] using! hy, rfl⟩
-  simpa [Metric.vadd_ball, add_vadd, Submodule.vadd_def, vadd_eq_add] using! this
+    Set.mem_vadd_set.2 ⟨y, by simpa only [Submodule.vadd_def, vadd_eq_add, mem_ball] using! hy, rfl⟩
+  simpa only [Submodule.vadd_def, NegMemClass.coe_neg, vadd_eq_add, mem_ball, gt_iff_lt, vadd_ball,
+    neg_add_cancel_left] using! this
 
 noncomputable def replicate_to_periodic_packing
     (S : SpherePacking d)
@@ -49659,13 +49811,13 @@ noncomputable def replicate_to_periodic_packing
         intro h
         apply hab
         apply Subtype.ext
-        simp [ha, hb, h]
+        simp only [ha, h, hb]
       have hdist := S.distinct_centers_separation_bound fa fb (hF_centers hfa) (hF_centers hfb) hne
       have : S.separation ≤ dist (ga +ᵥ fa) (ga +ᵥ fb) := by
         have htrans : dist (ga +ᵥ fa) (ga +ᵥ fb) = dist fa fb :=
           dist_vadd_cancel_left (ga : EuclideanSpace ℝ (Fin d)) fa fb
-        simpa [htrans] using! hdist
-      simpa [ha, hb] using! this
+        simpa only [htrans, ge_iff_le] using! hdist
+      simpa only [ha, hb, ge_iff_le] using! this
     ·
       have hballa : ball (ga +ᵥ fa) (S.separation / 2) ⊆ ga +ᵥ D :=
         translated_ball_subset_translated_region (d := d) (Λ := Λ) (D := D) (g := ga) (x := fa) (r := S.separation / 2)
@@ -49678,8 +49830,8 @@ noncomputable def replicate_to_periodic_packing
       have : 2 * (S.separation / 2) ≤ dist (ga +ᵥ fa) (gb +ᵥ fb) :=
         center_distance_bound_of_disjoint_regions (d := d) hballa hballb hdisj
       have : S.separation ≤ dist (ga +ᵥ fa) (gb +ᵥ fb) := by
-        simpa [two_mul, add_halves] using! this
-      simpa [ha, hb] using! this
+        simpa only [two_mul, add_halves] using! this
+      simpa only [ha, hb, ge_iff_le] using! this
   ·
     intro x y hx hy
     exact replicated_centers_translation_closed (d := d) (Λ := Λ) (F := F) hx hy
@@ -49718,22 +49870,23 @@ lemma axis_cell_basis_fundamental_region (L : ℝ) (hL : 0 < L) :
     specialize hx i
     refine ⟨?_, ?_⟩
     · have : 0 ≤ (L : ℝ) * (L⁻¹ * x.ofLp i) := mul_nonneg (le_of_lt hL) hx.1
-      have : 0 ≤ (L * L⁻¹) * x.ofLp i := by simpa [mul_assoc] using! this
-      simpa [mul_inv_cancel₀ (ne_of_gt hL)] using! this
+      have : 0 ≤ (L * L⁻¹) * x.ofLp i := by simpa only [mul_assoc] using! this
+      simpa only [ge_iff_le, mul_inv_cancel₀ (ne_of_gt hL), one_mul] using! this
     · have : (L : ℝ) * (L⁻¹ * x.ofLp i) < (L : ℝ) * 1 := mul_lt_mul_of_pos_left hx.2 hL
-      have : (L * L⁻¹) * x.ofLp i < (L : ℝ) * 1 := by simpa [mul_assoc] using! this
-      simpa [mul_inv_cancel₀ (ne_of_gt hL)] using! this
+      have : (L * L⁻¹) * x.ofLp i < (L : ℝ) * 1 := by simpa only [mul_assoc, mul_one] using! this
+      simpa only [gt_iff_lt, mul_inv_cancel₀ (ne_of_gt hL), one_mul, mul_one] using! this
   · intro hx i
     specialize hx i
     have hLinv : 0 < (L⁻¹ : ℝ) := inv_pos.mpr hL
     refine ⟨mul_nonneg (le_of_lt hLinv) hx.1, ?_⟩
     have : (L⁻¹ : ℝ) * x.ofLp i < (L⁻¹ : ℝ) * L := mul_lt_mul_of_pos_left hx.2 hLinv
-    simpa [mul_assoc, inv_mul_cancel₀ (ne_of_gt hL), one_mul] using! this
+    simpa only [IsUnit.unit_spec, OrthonormalBasis.coe_toBasis_repr_apply, basisFun_repr, smul_eq_mul, gt_iff_lt,
+      inv_mul_cancel₀ (ne_of_gt hL)] using! this
 
 lemma metric_ball_subset_inset_axis_cell {L r : ℝ} {x : EuclideanSpace ℝ (Fin d)}
     (hx : x ∈ insetAxisAlignedCell (d := d) L r) :
     ball x r ⊆ axisAlignedCell (d := d) L := by
-  simpa [axisAlignedCell, insetAxisAlignedCell] using!
+  simpa only [axisAlignedCell, Set.mem_Ico] using!
     metric_ball_subset_axis_cell (d := d) (x := x) (r := r) (L := L) hx
 
 lemma replicated_centers_intersection_of_subset {Λ : Submodule ℤ (EuclideanSpace ℝ (Fin d))}
@@ -49747,13 +49900,13 @@ lemma replicated_centers_intersection_of_subset {Λ : Submodule ℤ (EuclideanSp
       ⟨g, f, hf, hxf⟩
     obtain ⟨g₀, hg₀, hunique⟩ := hD_unique_covers f
     have hg : g = g₀ := hunique g (show g +ᵥ f ∈ D from hxf ▸ hxD)
-    have hzero : (0 : Λ) = g₀ := hunique 0 (by simpa using hF_sub hf)
+    have hzero : (0 : Λ) = g₀ := hunique 0 (by simpa only [zero_vadd] using hF_sub hf)
     have : g = 0 := hg.trans hzero.symm
-    simpa [hxf, this] using hf
+    simpa only [hxf, this, zero_vadd] using hf
   · intro hx
     refine ⟨?_, hF_sub hx⟩
     exact (mem_replicated_centers_iff (d := d) (Λ := Λ) (F := F)).2
-      ⟨0, x, hx, by simp⟩
+      ⟨0, x, hx, by simp only [zero_vadd]⟩
 
 end PeriodicConstantCube
 
@@ -49767,20 +49920,20 @@ variable {d : ℕ}
 
 private lemma coordinate_preimage_volume (s : Set (Fin d → ℝ)) (hs : MeasurableSet s) :
     volume ((fun x : EuclideanSpace ℝ (Fin d) ↦ x.ofLp) ⁻¹' s) = volume s := by
-  simpa using! (PiLp.volume_preserving_ofLp (ι := Fin d)).measure_preimage hs.nullMeasurableSet
+  simpa only  using! (PiLp.volume_preserving_ofLp (ι := Fin d)).measure_preimage hs.nullMeasurableSet
 
 lemma axis_cell_translates_cover_uniquely (L : ℝ) (hL : 0 < L) :
     ∀ x, ∃! g : axisCellLattice (d := d) L hL, g +ᵥ x ∈ axisAlignedCell (d := d) L := fun x => by
-    simpa [axisCellLattice, axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
+    simpa only [axisCellLattice, axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
       exist_unique_vadd_mem_fundamentalDomain (axisCellBasis (d := d) L hL) x
 
 lemma axis_cell_is_bounded (L : ℝ) (hL : 0 < L) : IsBounded (axisAlignedCell (d := d) L) := by
-  simpa [axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
+  simpa only [axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
     fundamentalDomain_isBounded (axisCellBasis (d := d) L hL)
 
 lemma axis_cell_is_measurable (L : ℝ) (hL : 0 < L) :
     MeasurableSet (axisAlignedCell (d := d) L) := by
-  simpa [axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
+  simpa only [axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
     fundamentalDomain_measurableSet (axisCellBasis (d := d) L hL)
 
 lemma axis_cell_eq_coordinate_preimage (L : ℝ) :
@@ -49788,26 +49941,28 @@ lemma axis_cell_eq_coordinate_preimage (L : ℝ) :
       (fun x : EuclideanSpace ℝ (Fin d) ↦ x.ofLp) ⁻¹'
         (Set.pi Set.univ fun _ : Fin d ↦ Set.Ico (0 : ℝ) L) := by
   ext x
-  simp [axisAlignedCell, Set.mem_pi]
+  simp only [axisAlignedCell, Set.mem_Ico, Set.mem_setOf_eq, Set.mem_preimage, Set.mem_pi, Set.mem_univ,
+    forall_const]
 
 lemma axis_cell_volume_formula (L : ℝ) :
     volume (axisAlignedCell (d := d) L) = (ENNReal.ofReal L) ^ d := by
   have hmeas : MeasurableSet (Set.pi Set.univ fun _ : Fin d ↦ Set.Ico (0 : ℝ) L) := by
-    simpa using! (MeasurableSet.pi Set.countable_univ fun _ _ ↦ measurableSet_Ico)
+    simpa only  using! (MeasurableSet.pi Set.countable_univ fun _ _ ↦ measurableSet_Ico)
   have hpre :
       volume (axisAlignedCell (d := d) L) =
         volume (Set.pi Set.univ fun _ : Fin d ↦ Set.Ico (0 : ℝ) L) := by
-    simpa [axis_cell_eq_coordinate_preimage (d := d) (L := L)] using!
+    simpa only [axis_cell_eq_coordinate_preimage (d := d) (L := L)] using!
       (coordinate_preimage_volume (d := d) (s := Set.pi Set.univ fun _ : Fin d ↦ Set.Ico (0 : ℝ) L) hmeas)
   rw [hpre, volume_pi, Measure.pi_pi]
-  simp [Real.volume_Ico, sub_zero]
+  simp only [Real.volume_Ico, sub_zero, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
 
 lemma inset_cell_eq_coordinate_preimage (L r : ℝ) :
     insetAxisAlignedCell (d := d) L r =
       (fun x : EuclideanSpace ℝ (Fin d) ↦ x.ofLp) ⁻¹'
         (Set.pi Set.univ fun _ : Fin d ↦ Set.Icc r (L - r)) := by
   ext x
-  simp [insetAxisAlignedCell, Pi.le_def, forall_and]
+  simp only [insetAxisAlignedCell, Set.mem_Icc, forall_and, Set.mem_setOf_eq, Set.pi_univ_Icc, Set.mem_preimage,
+    Pi.le_def]
 
 lemma inset_axis_cell_volume_formula (L r : ℝ) :
     volume (insetAxisAlignedCell (d := d) L r) = (ENNReal.ofReal (L - 2 * r)) ^ d := by
@@ -49816,11 +49971,12 @@ lemma inset_axis_cell_volume_formula (L r : ℝ) :
   have hpre :
       volume (insetAxisAlignedCell (d := d) L r) =
         volume (Set.pi Set.univ fun _ : Fin d ↦ Set.Icc r (L - r)) := by
-    simpa [inset_cell_eq_coordinate_preimage (d := d) (L := L) (r := r)] using!
+    simpa only [inset_cell_eq_coordinate_preimage (d := d) (L := L) (r := r), Set.pi_univ_Icc] using!
       (coordinate_preimage_volume (d := d) (s := Set.pi Set.univ fun _ : Fin d ↦ Set.Icc r (L - r))
         hmeas)
   rw [hpre, volume_pi, Measure.pi_pi]
-  simp [Real.volume_Icc, sub_eq_add_neg, add_left_comm, add_comm, two_mul]
+  simp only [sub_eq_add_neg, Real.volume_Icc, add_comm, add_left_comm, Finset.prod_const, Finset.card_univ,
+    Fintype.card_fin, two_mul, neg_add_rev]
 
 lemma inset_cell_subset_axis_cell {L r : ℝ} (hr : 0 < r) :
     insetAxisAlignedCell (d := d) L r ⊆ axisAlignedCell (d := d) L := by
@@ -49845,10 +50001,10 @@ lemma translated_axis_cells_cover_uniquely (L : ℝ) (hL : 0 < L)
   intro x
   have hvadd (a : axisCellLattice (d := d) L hL) :
       a +ᵥ x ∈ v +ᵥ axisAlignedCell (d := d) L ↔ (a - v) +ᵥ x ∈ axisAlignedCell (d := d) L := by
-    simp [Set.mem_vadd_set_iff_neg_vadd_mem, Submodule.vadd_def, vadd_eq_add, sub_eq_add_neg,
-      add_assoc, add_comm]
+    simp only [Submodule.vadd_def, vadd_eq_add, add_comm, Set.mem_vadd_set_iff_neg_vadd_mem, add_assoc,
+      sub_eq_add_neg, Submodule.coe_add, NegMemClass.coe_neg]
   obtain ⟨g, hg, hguniq⟩ := PeriodicConstant.axis_cell_translates_cover_uniquely (d := d) L hL x
-  refine ⟨g + v, (hvadd (a := g + v)).2 (by simpa using! hg), ?_⟩
+  refine ⟨g + v, (hvadd (a := g + v)).2 (by simpa only [add_sub_cancel_right] using! hg), ?_⟩
   intro a ha
   have ha' : (a - v) +ᵥ x ∈ axisAlignedCell (d := d) L := (hvadd a).1 ha
   have : a - v = g := hguniq _ ha'
@@ -49859,17 +50015,17 @@ lemma ball_subset_translated_cell_of_interior {L r : ℝ} (hL : 0 < L)
     (hx : x ∈ v +ᵥ insetAxisAlignedCell (d := d) L r) :
     ball x r ⊆ v +ᵥ axisAlignedCell (d := d) L := by
   have hx' : (- (v : EuclideanSpace ℝ (Fin d))) +ᵥ x ∈ insetAxisAlignedCell (d := d) L r := by
-    simpa [Set.mem_vadd_set_iff_neg_vadd_mem] using! hx
+    simpa only [vadd_eq_add, Set.mem_vadd_set_iff_neg_vadd_mem] using! hx
   have hball : ball ((- (v : EuclideanSpace ℝ (Fin d))) +ᵥ x) r ⊆ axisAlignedCell (d := d) L :=
     metric_ball_subset_inset_axis_cell (d := d) (L := L) (r := r) hx'
   have h :=
     translated_ball_subset_translated_region (d := d) (Λ := axisCellLattice (d := d) L hL) (D := axisAlignedCell (d := d) L)
       (g := v) (x := (- (v : EuclideanSpace ℝ (Fin d))) +ᵥ x) (r := r) hball
-  simpa [add_vadd, Submodule.vadd_def, vadd_eq_add, add_assoc, add_comm] using! h
+  simpa only [Submodule.vadd_def, ge_iff_le, vadd_eq_add, add_comm, add_neg_cancel_comm_assoc] using! h
 
 lemma axis_cell_subset_enclosing_ball (L : ℝ) (hL : 0 < L) :
     ∃ C : ℝ, axisAlignedCell (d := d) L ⊆ ball (0 : EuclideanSpace ℝ (Fin d)) C := by
-  simpa using! (PeriodicConstant.axis_cell_is_bounded (d := d) L hL).subset_ball 0
+  simpa only  using! (PeriodicConstant.axis_cell_is_bounded (d := d) L hL).subset_ball 0
 
 lemma lattice_points_in_ball_finite (L : ℝ) (hL : 0 < L) (R : ℝ) :
     Set.Finite {g : axisCellLattice (d := d) L hL | (g : EuclideanSpace ℝ (Fin d)) ∈ ball 0 R} := by
@@ -49882,7 +50038,7 @@ lemma lattice_points_in_ball_finite (L : ℝ) (hL : 0 < L) (R : ℝ) :
   have hzero : ∀ g : axisCellLattice (d := d) L hL, ‖g‖ < ε → g = 0 := by
     intro g hg
     apply hεzero g
-    simpa [dist_zero_right] using hg
+    simpa only [dist_zero_right, AddSubgroupClass.coe_norm] using hg
   let P : SpherePacking d :=
     { centers := (axisCellLattice (d := d) L hL : Set (EuclideanSpace ℝ (Fin d)))
       separation := ε
@@ -49896,7 +50052,7 @@ lemma lattice_points_in_ball_finite (L : ℝ) (hL : 0 < L) (R : ℝ) :
         let g : axisCellLattice (d := d) L hL :=
           ⟨(x : EuclideanSpace ℝ (Fin d)) - y, sub_mem x.property y.property⟩
         have hg : ‖g‖ < ε := by
-          simpa [g, dist_eq_norm] using hdist'
+          simpa only [AddSubgroupClass.coe_norm, dist_eq_norm] using hdist'
         have hgeq : g = 0 := hzero g hg
         apply hxy
         apply Subtype.ext
@@ -49947,31 +50103,31 @@ lemma axis_cell_cover_index_unique (x : EuclideanSpace ℝ (Fin d)) (g : axisCel
 
 lemma mem_negated_cover_index_cell (x : EuclideanSpace ℝ (Fin d)) :
     x ∈ (-axisCellCoverIndex (d := d) L hL x) +ᵥ axisAlignedCell (d := d) L := by
-  simpa [Set.mem_vadd_set_iff_neg_vadd_mem] using! axis_cell_cover_index_mem (d := d) L hL x
+  simpa only [Set.mem_vadd_set_iff_neg_vadd_mem, neg_neg] using! axis_cell_cover_index_mem (d := d) L hL x
 
 lemma negated_cover_index_mem_enlarged_ball {C R : ℝ}
     (hC : axisAlignedCell (d := d) L ⊆ ball (0 : EuclideanSpace ℝ (Fin d)) C)
     {x : EuclideanSpace ℝ (Fin d)} (hx : x ∈ ball 0 R) :
     ((-axisCellCoverIndex (d := d) L hL x : axisCellLattice (d := d) L hL) :
         EuclideanSpace ℝ (Fin d)) ∈ ball 0 (R + C) := by
-  have hx0 : ‖x‖ < R := by simpa [mem_ball_zero_iff] using! hx
+  have hx0 : ‖x‖ < R := by simpa only [mem_ball, dist_zero_right] using! hx
   have hxgC : ‖(axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d)) + x‖ < C := by
     have hmem :
         (axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d)) + x ∈ axisAlignedCell (d := d) L := by
-      simpa [Submodule.vadd_def, vadd_eq_add] using! axis_cell_cover_index_mem (d := d) L hL x
-    simpa [mem_ball_zero_iff] using! (hC hmem)
+      simpa only [Submodule.vadd_def, vadd_eq_add] using! axis_cell_cover_index_mem (d := d) L hL x
+    simpa only [gt_iff_lt, mem_ball, dist_zero_right] using! (hC hmem)
   have htri :
       ‖(axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d))‖ ≤
         ‖(axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d)) + x‖ + ‖x‖ := by
-    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using!
+    simpa only [add_comm, sub_eq_add_neg, add_assoc, add_neg_cancel_comm_assoc] using!
       (norm_sub_le (a := (axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d)) + x) (b := x))
   have :
       ‖(- (axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d)))‖ < R + C := by
     have : ‖(axisCellCoverIndex (d := d) L hL x : EuclideanSpace ℝ (Fin d))‖ < C + R := by
       refine lt_of_le_of_lt htri ?_
-      simpa [add_comm, add_left_comm, add_assoc] using! add_lt_add hxgC hx0
-    simpa [norm_neg, add_comm, add_left_comm, add_assoc] using! this
-  simpa [mem_ball_zero_iff] using! this
+      simpa only [add_comm] using! add_lt_add hxgC hx0
+    simpa only [norm_neg, add_comm, gt_iff_lt] using! this
+  simpa only [NegMemClass.coe_neg, mem_ball, dist_zero_right, norm_neg, gt_iff_lt] using! this
 
 lemma mem_translated_cell_iff_cover_index (g : axisCellLattice (d := d) L hL)
     (x : EuclideanSpace ℝ (Fin d)) :
@@ -49980,8 +50136,8 @@ lemma mem_translated_cell_iff_cover_index (g : axisCellLattice (d := d) L hL)
   · intro hx
     have : (-g : axisCellLattice (d := d) L hL) = axisCellCoverIndex (d := d) L hL x :=
       axis_cell_cover_index_unique (d := d) L hL x (-g)
-        (by simpa [Set.mem_vadd_set_iff_neg_vadd_mem] using! hx)
-    simpa using! congrArg (fun t : axisCellLattice (d := d) L hL => -t) this
+        (by simpa only [Set.mem_vadd_set_iff_neg_vadd_mem] using! hx)
+    simpa only [neg_neg] using! congrArg (fun t : axisCellLattice (d := d) L hL => -t) this
   · rintro rfl; exact mem_negated_cover_index_cell (d := d) L hL x
 
 end CoordCubeCover
@@ -49998,13 +50154,13 @@ lemma translated_axis_cell_subset_ball {L : ℝ} (hL : 0 < L) {R C : ℝ}
   intro y hy
   rcases hy with ⟨x, hx, rfl⟩
   have hx' : ‖x‖ < C := by
-    simpa [mem_ball_zero_iff] using! hC hx
+    simpa only [mem_ball, dist_zero_right] using! hC hx
   have hg' : ‖(g : EuclideanSpace ℝ (Fin d))‖ < R + C := by
-    simpa [mem_ball_zero_iff] using! hg
+    simpa only [mem_ball, dist_zero_right] using! hg
   have : ‖(g : EuclideanSpace ℝ (Fin d)) + x‖ < R + (2 * C) := by
     refine (lt_of_le_of_lt (norm_add_le _ _) ?_)
-    simpa [two_mul, add_assoc, add_left_comm, add_comm] using! add_lt_add hg' hx'
-  simpa [Submodule.vadd_def, vadd_eq_add, mem_ball_zero_iff] using! this
+    simpa only [add_comm, two_mul, add_left_comm] using! add_lt_add hg' hx'
+  simpa only [vadd_eq_add, mem_ball, dist_zero_right, gt_iff_lt] using! this
 
 lemma finite_cell_union_subset_enclosing_ball {L : ℝ} (hL : 0 < L) {R C : ℝ}
     (hC : axisAlignedCell (d := d) L ⊆ ball (0 : EuclideanSpace ℝ (Fin d)) C) :
@@ -50017,7 +50173,7 @@ lemma finite_cell_union_subset_enclosing_ball {L : ℝ} (hL : 0 < L) {R C : ℝ}
   rcases Set.mem_iUnion₂.1 hy with ⟨g, hgT, hy'⟩
   have hgBall :
       (g : EuclideanSpace ℝ (Fin d)) ∈ ball (0 : EuclideanSpace ℝ (Fin d)) (R + C) :=
-    htSet.mem_toFinset.1 (by simpa [t] using! hgT)
+    htSet.mem_toFinset.1 (by simpa only [mem_ball, dist_zero_right, Set.Finite.mem_toFinset, Set.mem_setOf_eq, t] using! hgT)
   exact (translated_axis_cell_subset_ball (d := d) (hL := hL) (R := R) (C := C) hC hgBall) hy'
 
 lemma lattice_count_mul_cell_volume_le_ball_volume {L : ℝ} (hL : 0 < L)
@@ -50037,7 +50193,7 @@ lemma lattice_count_mul_cell_volume_le_ball_volume {L : ℝ} (hL : 0 < L)
       (PeriodicConstant.axis_cell_translates_cover_uniquely (d := d) L hL) hgh
   have hmeas :
       ∀ g ∈ t, MeasurableSet (g +ᵥ axisAlignedCell (d := d) L) := by
-    intro g _; simpa using!
+    intro g _; simpa only  using!
       (MeasurableSet.const_vadd (PeriodicConstant.axis_cell_is_measurable (d := d) L hL) g)
   have hvol_union :
       volume (⋃ g ∈ t, g +ᵥ axisAlignedCell (d := d) L) =
@@ -50071,7 +50227,7 @@ lemma boundary_half_ball_subset_outer_annulus (L : ℝ) :
   intro x hx
   rcases hx with ⟨a, ⟨ha, ha_boundary⟩, b, hb, rfl⟩
   have hb_norm : ‖b‖ < (1 / 2 : ℝ) := by
-    simpa [mem_ball_zero_iff] using hb
+    simpa only [one_div, mem_ball, dist_zero_right] using hb
   constructor
   · refine Set.mem_vadd_set.2
       ⟨a + b - constantCoordinateVector (d := d) (-(1 / 2 : ℝ)), ?_, ?_⟩
@@ -50083,7 +50239,7 @@ lemma boundary_half_ball_subset_outer_annulus (L : ℝ) :
         (a + b - constantCoordinateVector (d := d) (-(1 / 2 : ℝ))) i ≤ L + 1 - 0
       simp only [PiLp.sub_apply, PiLp.add_apply, constantCoordinateVector]
       constructor <;> linarith
-    · simp [vadd_eq_add]
+    · simp only [one_div, vadd_eq_add, add_sub_cancel]
   · intro h_inset
     apply ha_boundary
     intro i
@@ -50138,19 +50294,19 @@ lemma boundary_count_mul_ball_volume_le_annulus {L : ℝ} (hL : 0 < L)
     · have hboundary := hs_boundary x hx
       constructor
       · have hcell := hboundary.1
-        simpa [v, Set.mem_vadd_set_iff_neg_vadd_mem, Submodule.vadd_def,
-          vadd_eq_add, sub_eq_add_neg, add_comm] using hcell
+        simpa only [sub_eq_add_neg, Submodule.vadd_def, Set.mem_vadd_set_iff_neg_vadd_mem, vadd_eq_add,
+          add_comm] using hcell
       · intro hinset
         apply hboundary.2
-        simpa [v, Set.mem_vadd_set_iff_neg_vadd_mem, Submodule.vadd_def,
-          vadd_eq_add, sub_eq_add_neg, add_comm] using hinset
-    · simpa [mem_ball, dist_eq_norm] using hy
+        simpa only [one_div, Submodule.vadd_def, Set.mem_vadd_set_iff_neg_vadd_mem, vadd_eq_add, add_comm,
+          sub_eq_add_neg] using hinset
+    · simpa only [one_div, mem_ball, dist_eq_norm, sub_zero] using hy
     · abel
   calc
     (s.card : ℝ≥0∞) * volume (ball (0 : EuclideanSpace ℝ (Fin d)) (2⁻¹ : ℝ)) =
         volume (⋃ x ∈ s, ball (x - v) (1 / 2 : ℝ)) := by
       rw [hvol_union]
-      simp [Measure.addHaar_ball_center]
+      simp only [Measure.addHaar_ball_center, one_div, Finset.sum_const, nsmul_eq_mul]
     _ ≤ volume (((constantCoordinateVector (d := d) (-(1 / 2 : ℝ))) +ᵥ
           insetAxisAlignedCell (d := d) (L + 1) 0) \
           insetAxisAlignedCell (d := d) L 1) :=
@@ -50169,11 +50325,11 @@ variable {d : ℕ}
 lemma frequently_local_density_exceeds_threshold (S : SpherePacking d) {b : ℝ≥0∞}
     (hb : b < S.upperPackingDensity) : ∃ᶠ R in (atTop : Filter ℝ), b < S.densityInsideRadius R := by
   exact frequently_lt_of_lt_limsup (u := S.densityInsideRadius) (b := b)
-    (h := by simpa [SpherePacking.upperPackingDensity] using! hb)
+    (h := by simpa only [upperPackingDensity] using! hb)
 
 lemma finite_center_ball_intersection_set (S : SpherePacking d) (R : ℝ) :
     (S.centers ∩ ball (0 : EuclideanSpace ℝ (Fin d)) R).Finite := by
-  simpa [Set.finite_coe_iff] using! (SpherePacking.finite_centers_inside_ball (S := S) (R := R))
+  simpa only [Set.finite_coe_iff] using! (SpherePacking.finite_centers_inside_ball (S := S) (R := R))
 
 end SpherePacking
 
@@ -50192,7 +50348,7 @@ lemma unit_inset_cell_subset_shifted_shell (L : ℝ) :
   intro x hx
   refine (Set.mem_vadd_set_iff_neg_vadd_mem).2 ?_
   have hx' : ∀ i : Fin d, x.ofLp i ∈ Set.Icc (1 : ℝ) (L - 1) := by
-    simpa [insetAxisAlignedCell, Set.mem_setOf_eq] using! hx
+    simpa only [Set.mem_Icc, insetAxisAlignedCell, Set.mem_setOf_eq] using! hx
   simp only [insetAxisAlignedCell, Set.mem_setOf_eq, uniformShellShift, vadd_eq_add, one_div, WithLp.ofLp_add,
     WithLp.ofLp_neg, Pi.add_apply, Pi.neg_apply, neg_neg]
   exact fun i => by
@@ -50214,12 +50370,14 @@ lemma axis_shell_volume_difference (L : ℝ) :
       intro _ _
       exact measurableSet_Icc
     have hmp : MeasurePreserving (fun x : EuclideanSpace ℝ (Fin d) ↦ x.ofLp) := by
-      simpa using! (PiLp.volume_preserving_ofLp (ι := Fin d))
-    simpa [PeriodicConstant.inset_cell_eq_coordinate_preimage (d := d) (L := L) (r := (1 : ℝ))] using!
+      simpa only  using! (PiLp.volume_preserving_ofLp (ι := Fin d))
+    simpa only [PeriodicConstant.inset_cell_eq_coordinate_preimage (d := d) (L := L) (r := (1 : ℝ)),
+      Set.pi_univ_Icc] using!
       hmeasPi.preimage hmp.measurable
   have hfin : volume (insetAxisAlignedCell (d := d) L 1) ≠ ∞ := by
-    simp [PeriodicConstant.inset_axis_cell_volume_formula]
-  simpa [measure_vadd, uniformShellShift] using!
+    simp only [PeriodicConstant.inset_axis_cell_volume_formula, mul_one, ne_eq, ENNReal.pow_eq_top_iff,
+      ENNReal.ofReal_ne_top, false_and, not_false_eq_true]
+  simpa only [uniformShellShift, one_div, measure_vadd] using!
     (measure_sdiff (μ := volume) hsub hmeas_inner.nullMeasurableSet hfin)
 
 lemma axis_shell_volume_power_formula (L : ℝ) :
@@ -50227,7 +50385,7 @@ lemma axis_shell_volume_power_formula (L : ℝ) :
         insetAxisAlignedCell (d := d) L 1) =
       (ENNReal.ofReal (L + 1)) ^ d - (ENNReal.ofReal (L - 2)) ^ d := by
   rw [axis_shell_volume_difference (d := d) (L := L)]
-  simp [PeriodicConstant.inset_axis_cell_volume_formula]
+  simp only [PeriodicConstant.inset_axis_cell_volume_formula, mul_zero, sub_zero, mul_one]
 
 section BoundaryControlShellVec
 
@@ -50245,7 +50403,7 @@ lemma boundary_count_mul_ball_volume_le_shell {L : ℝ} (hL : 0 < L)
       x ∈ (g +ᵥ axisAlignedCell (d := d) L) \ (g +ᵥ insetAxisAlignedCell (d := d) L (1 / 2))) :
     (s.card : ℝ≥0∞) * volume (ball (0 : EuclideanSpace ℝ (Fin d)) (2⁻¹ : ℝ)) ≤
       volume (((uniformShellShift d (- (1 / 2 : ℝ))) +ᵥ insetAxisAlignedCell (d := d) (L + 1) 0) \
-          insetAxisAlignedCell (d := d) L 1) := by simpa [uniformShellShift, constantCoordinateVector] using!
+          insetAxisAlignedCell (d := d) L 1) := by simpa only [uniformShellShift, one_div, constantCoordinateVector] using!
     (boundary_count_mul_ball_volume_le_annulus (S := S) hL hSsep hs_centers hs_boundary)
 
 end BoundaryControlShellVec
@@ -50266,15 +50424,15 @@ lemma axis_lattice_covolume_eq_cell_volume (L : ℝ) (hL : 0 < L) :
   have hfund :
       IsAddFundamentalDomain (axisCellLattice (d := d) L hL)
         (fundamentalDomain (axisCellBasis (d := d) L hL)) volume := by
-    simpa [axisCellLattice] using! (ZSpan.isAddFundamentalDomain (axisCellBasis (d := d) L hL) volume)
-  simpa [Measure.real, axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
+    simpa only [axisCellLattice] using! (ZSpan.isAddFundamentalDomain (axisCellBasis (d := d) L hL) volume)
+  simpa only [Measure.real, axis_cell_basis_fundamental_region (d := d) (L := L) (hL := hL)] using!
     (ZLattice.covolume_eq_measure_fundamentalDomain (L := axisCellLattice (d := d) L hL)
       (μ := volume) hfund)
 
 lemma axis_lattice_covolume_toNNReal (L : ℝ) (hL : 0 < L) :
     Real.toNNReal (ZLattice.covolume (axisCellLattice (d := d) L hL) volume) =
       (volume (axisAlignedCell (d := d) L)).toNNReal := by
-  simp [axis_lattice_covolume_eq_cell_volume (d := d) (L := L) hL]
+  simp only [axis_lattice_covolume_eq_cell_volume (d := d) (L := L) hL, ENNReal.toNNReal_toReal_eq]
 
 end CubeLatticeCovolume
 
@@ -50311,20 +50469,20 @@ lemma replicated_cell_packing_density_formula (hd : 0 < d) (S : SpherePacking d)
         assumption)
       (hF_ball := by
         intro x hx
-        have hx' : x ∈ F := by simpa [Fset] using! hx
+        have hx' : x ∈ F := by simpa only [SetLike.mem_coe, Fset] using! hx
         have hxInner : x ∈ g +ᵥ insetAxisAlignedCell (d := d) L (S.separation / 2) := by
-          simpa [hSsep] using! (hF_inner x hx')
+          simpa only [hSsep, one_div] using! (hF_inner x hx')
         exact ball_subset_translated_cell_of_interior hL hxInner)
-  have hPsep : P.separation = 1 := by simpa [P, hSsep]
+  have hPsep : P.separation = 1 := by simpa only
   refine ⟨P, hPsep, ?_⟩
   have hD_bounded : IsBounded D := by
-    simpa [D, Submodule.vadd_def, vadd_eq_add] using!
+    simpa only [Submodule.vadd_def] using!
       (PeriodicConstant.axis_cell_is_bounded (d := d) L hL).vadd (g : EuclideanSpace ℝ (Fin d))
   have hD_unique : ∀ x, ∃! g0 : (axisCellLattice (d := d) L hL), g0 +ᵥ x ∈ D :=
     PeriodicConstantApprox.translated_axis_cells_cover_uniquely (d := d) L hL g
   have hF_sub : Fset ⊆ D := by
     intro x hx
-    have hx' : x ∈ F := by simpa [Fset] using! hx
+    have hx' : x ∈ F := by simpa only [SetLike.mem_coe] using! hx
     rcases (hF_inner x hx') with ⟨a, ha, rfl⟩
     have ha' : a ∈ axisAlignedCell (d := d) L :=
       PeriodicConstant.inset_cell_subset_axis_cell (d := d) (L := L) (r := (2⁻¹ : ℝ))
@@ -50332,7 +50490,7 @@ lemma replicated_cell_packing_density_formula (hd : 0 < d) (S : SpherePacking d)
     exact ⟨a, ha', rfl⟩
   have hcenters_inter :
       P.centers ∩ D = Fset := by
-    simpa [P, replicate_to_periodic_packing, Fset] using!
+    simpa only [replicate_to_periodic_packing] using!
       (replicated_centers_intersection_of_subset (d := d) (Λ := axisCellLattice (d := d) L hL) (D := D)
         (F := Fset) hF_sub hD_unique)
   have hnumReps : P.centerOrbitCardinality = F.card := by
@@ -50340,7 +50498,7 @@ lemma replicated_cell_packing_density_formula (hd : 0 < d) (S : SpherePacking d)
       simpa [hcenters_inter, Fset, Set.encard_coe_eq_coe_finsetCard] using!
         (P.encard_centers_in_fundamental_region (d := d) (D := D) hD_bounded hD_unique hd).symm
     exact_mod_cast h'
-  simpa [hnumReps, hPsep] using! P.density_eq_numReps_mul_volume_ball_div_covolume (d := d) hd
+  simpa only [hnumReps, ENat.toENNReal_coe, hPsep, one_div] using! P.density_eq_numReps_mul_volume_ball_div_covolume (d := d) hd
 
 end PeriodizeCubeDensity
 
@@ -50349,12 +50507,12 @@ lemma axis_shell_volume_ratio_tends_zero :
   have hinv : Tendsto (fun L : ℝ => L⁻¹) atTop (𝓝 0) :=
     tendsto_inv_atTop_zero
   have hplus : Tendsto (fun L : ℝ => 1 + L⁻¹) atTop (𝓝 (1 : ℝ)) := by
-    simpa using (tendsto_const_nhds.add hinv)
+    simpa only [add_zero] using (tendsto_const_nhds.add hinv)
   have hminus : Tendsto (fun L : ℝ => 1 - 2 * L⁻¹) atTop (𝓝 (1 : ℝ)) := by
-    simpa using (tendsto_const_nhds.sub (tendsto_const_nhds.mul hinv))
+    simpa only [mul_zero, sub_zero] using (tendsto_const_nhds.sub (tendsto_const_nhds.mul hinv))
   have hlimit : Tendsto (fun L : ℝ => (1 + L⁻¹) ^ d - (1 - 2 * L⁻¹) ^ d)
       atTop (𝓝 (0 : ℝ)) := by
-    simpa using (hplus.pow d).sub (hminus.pow d)
+    simpa only [one_pow, sub_self] using (hplus.pow d).sub (hminus.pow d)
   apply hlimit.congr'
   filter_upwards [eventually_gt_atTop (0 : ℝ)] with L hL
   have hplus_eq : 1 + L⁻¹ = (L + 1) / L := by
@@ -50401,11 +50559,11 @@ lemma cancel_common_denominator_in_product_ratio {a b c : ℝ≥0∞} (hb0 : b �
     ((a * b) / c) / b = a / c := by
   calc
     ((a * b) / c) / b = (a * b) * c⁻¹ * b⁻¹ := by
-      simp [div_eq_mul_inv, mul_assoc]
+      simp only [div_eq_mul_inv, mul_assoc]
     _ = a * c⁻¹ * (b * b⁻¹) := by
       ac_rfl
     _ = a / c := by
-      simp [div_eq_mul_inv, ENNReal.mul_inv_cancel hb0 hb]
+      simp only [ENNReal.mul_inv_cancel hb0 hb, mul_one, div_eq_mul_inv]
 
 theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
     (S : SpherePacking d) (hSsep : S.separation = 1) {b : ℝ≥0∞} (hb : b < S.upperPackingDensity) :
@@ -50425,14 +50583,16 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
       (PeriodicConstantApprox.axis_shell_relative_cell_volume_tends_zero (d := d))
   have hsmall : ∀ᶠ L : ℝ in atTop, b + shell L / cell L < c := by
     have hlim : Tendsto (fun L : ℝ => b + shell L / cell L) atTop (𝓝 b) := by
-      simpa using tendsto_const_nhds.add hshell
+      simpa only [add_zero] using tendsto_const_nhds.add hshell
     exact hlim.eventually (Iio_mem_nhds hbc)
   obtain ⟨L, hL, hsmallL⟩ :=
     ((eventually_gt_atTop (0 : ℝ)).and hsmall).exists
   have hcell_top : cell L ≠ ∞ := by
-    simp [cell, PeriodicConstant.axis_cell_volume_formula]
+    simp only [PeriodicConstant.axis_cell_volume_formula, ne_eq, ENNReal.pow_eq_top_iff, ENNReal.ofReal_ne_top,
+      false_and, not_false_eq_true, cell]
   have hcell_zero : cell L ≠ 0 := by
-    simp [cell, PeriodicConstant.axis_cell_volume_formula, hL]
+    simp only [PeriodicConstant.axis_cell_volume_formula, ne_eq, pow_eq_zero_iff', ENNReal.ofReal_eq_zero,
+      not_and, Decidable.not_not, isEmpty_Prop, not_le, hL, IsEmpty.forall_iff, cell]
   have hden :
       (↑(Real.toNNReal (ZLattice.covolume (axisCellLattice (d := d) L hL) volume)) : ℝ≥0∞) =
         cell L := by
@@ -50445,7 +50605,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
       Tendsto (fun R : ℝ => A *
         (volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + (1 / 2 + 2 * C))) /
           volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + 0)))) atTop (𝓝 A) := by
-    simpa using
+    simpa only [one_div, add_zero, mul_one] using
       (ENNReal.Tendsto.const_mul
         (volume_ball_add_div_volume_ball_add_tendsto_one
           (d := d) (C := 1 / 2 + 2 * C) (C' := 0) hd)
@@ -50466,7 +50626,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
   have hindex : ∀ x ∈ u, index x ∈ t := by
     intro x hx
     have hxball : x ∈ ball (0 : EuclideanSpace ℝ (Fin d)) (R + (1 / 2 : ℝ)) :=
-      (huSet.mem_toFinset.mp (by simpa [u] using hx)).2
+      (huSet.mem_toFinset.mp (by simpa only [one_div, Set.Finite.mem_toFinset, Set.mem_inter_iff, mem_ball, dist_zero_right, u] using hx)).2
     apply htSet.mem_toFinset.mpr
     simpa [index, t] using
       (PeriodicConstantApprox.negated_cover_index_mem_enlarged_ball
@@ -50485,7 +50645,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
     have hx' : x ∈ u.filter (fun y => index y = g) := by
       simpa only [piece] using hx
     have hxu : x ∈ u := (Finset.mem_filter.mp hx').1
-    exact (huSet.mem_toFinset.mp (by simpa [u] using hxu)).1
+    exact (huSet.mem_toFinset.mp (by simpa only [one_div, Set.Finite.mem_toFinset, Set.mem_inter_iff, mem_ball, dist_zero_right, u] using hxu)).1
   have hpiece_cell {g : axisCellLattice (d := d) L hL}
       {x : EuclideanSpace ℝ (Fin d)} (hx : x ∈ piece g) :
       x ∈ g +ᵥ axisAlignedCell (d := d) L := by
@@ -50494,7 +50654,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
     have hidx : index x = g := (Finset.mem_filter.mp hx').2
     apply (PeriodicConstantApprox.mem_translated_cell_iff_cover_index
       (d := d) L hL g x).2
-    simpa [index] using hidx.symm
+    simpa only  using hidx.symm
   have hinner_bound (g : axisCellLattice (d := d) L hL) :
       ((inner g).card : ℝ≥0∞) * V ≤ b * cell L := by
     obtain ⟨P, hPsep, hPdensity⟩ :=
@@ -50502,13 +50662,13 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
         (d := d) hd S hSsep hL (inner g)
         (by
           intro x hx
-          exact hpiece_center (Finset.mem_filter.mp (by simpa [inner] using hx)).1)
+          exact hpiece_center (Finset.mem_filter.mp (by simpa only [Finset.mem_filter, inner] using hx)).1)
         (by
           intro x hx
-          exact (Finset.mem_filter.mp (by simpa [inner] using hx)).2)
+          exact (Finset.mem_filter.mp (by simpa only [Finset.mem_filter, inner] using hx)).2)
     have hPbound : P.upperPackingDensity ≤ b := hnone P hPsep
     rw [hPdensity, hden] at hPbound
-    exact (ENNReal.div_le_iff hcell_zero hcell_top).mp (by simpa [V] using hPbound)
+    exact (ENNReal.div_le_iff hcell_zero hcell_top).mp (by simpa only [V] using hPbound)
   have hboundary_bound (g : axisCellLattice (d := d) L hL) :
       ((boundary g).card : ℝ≥0∞) * V ≤ shell L := by
     apply PeriodicConstantApprox.boundary_count_mul_ball_volume_le_shell
@@ -50523,11 +50683,11 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
           y ∉ g +ᵥ insetAxisAlignedCell (d := d) L (2⁻¹ : ℝ)) := by
         simpa only [boundary] using hx
       have hx' := Finset.mem_filter.mp hx'
-      exact ⟨hpiece_cell hx'.1, by simpa [one_div] using hx'.2⟩
+      exact ⟨hpiece_cell hx'.1, by simpa only [one_div] using hx'.2⟩
   have hpiece_bound (g : axisCellLattice (d := d) L hL) :
       ((piece g).card : ℝ≥0∞) * V ≤ A * cell L := by
     have hcard : (inner g).card + (boundary g).card = (piece g).card := by
-      simpa [inner, boundary] using
+      simpa only  using
         (Finset.card_filter_add_card_filter_not
           (s := piece g)
           (fun x : EuclideanSpace ℝ (Fin d) =>
@@ -50543,9 +50703,9 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
       _ ≤ b * cell L + shell L :=
         add_le_add (hinner_bound g) (hboundary_bound g)
       _ = A * cell L := by
-        simp [A, add_mul, ENNReal.div_mul_cancel hcell_zero hcell_top]
+        simp only [add_mul, ENNReal.div_mul_cancel hcell_zero hcell_top, A]
   have hpartition : ∑ g ∈ t, (piece g).card = u.card := by
-    simpa [piece, Finset.filter_eq_self.mpr hindex] using
+    simpa only [Finset.filter_eq_self.mpr hindex] using
       (Finset.sum_card_fiberwise_eq_card_filter u t index)
   have hsum_bound :
       (u.card : ℝ≥0∞) * V ≤ (t.card : ℝ≥0∞) * (A * cell L) := by
@@ -50560,7 +50720,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
       _ ≤ ∑ _g ∈ t, A * cell L :=
         Finset.sum_le_sum fun g _ => hpiece_bound g
       _ = (t.card : ℝ≥0∞) * (A * cell L) := by
-        simp [nsmul_eq_mul]
+        simp only [Finset.sum_const, nsmul_eq_mul]
   have ht_volume : (t.card : ℝ≥0∞) * cell L ≤
       volume (ball (0 : EuclideanSpace ℝ (Fin d))
         ((R + (1 / 2 : ℝ)) + 2 * C)) := by
@@ -50576,7 +50736,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
       _ ≤ A * volume (ball (0 : EuclideanSpace ℝ (Fin d))
             (R + (1 / 2 + 2 * C))) := by
           gcongr
-          simpa [add_assoc] using ht_volume
+          simpa only [one_div, add_assoc] using ht_volume
   have hlocal_bound : S.densityInsideRadius R ≤
       (u.card : ℝ≥0∞) * V /
         volume (ball (0 : EuclideanSpace ℝ (Fin d)) R) := by
@@ -50587,7 +50747,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
           (R + (2⁻¹ : ℝ))).encard = (u.card : ENat) := by
       simpa [u, huSet, one_div] using huSet.encard_eq_coe_toFinset_card
     rw [henc] at h
-    simpa [V] using h
+    simpa only [ge_iff_le, ENat.toENNReal_coe] using h
   have hfinal : S.densityInsideRadius R ≤ A *
       (volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + (1 / 2 + 2 * C))) /
         volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + 0))) := by
@@ -50602,7 +50762,7 @@ theorem exists_periodic_unit_packing_above_density_threshold (hd : 0 < d)
       _ = A *
           (volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + (1 / 2 + 2 * C))) /
             volume (ball (0 : EuclideanSpace ℝ (Fin d)) (R + 0))) := by
-          simp [div_eq_mul_inv, mul_assoc]
+          simp only [div_eq_mul_inv, one_mul, mul_assoc, add_zero]
   exact (not_lt_of_ge (le_of_lt (lt_of_le_of_lt hfinal hR_ratio))) hR_density
 
 end SpherePacking
@@ -50647,14 +50807,14 @@ def coordinateTorusProjection (n : ℕ) : (Fin n → ℝ) → UnitAddTorus (Fin 
 
 @[continuity]
 theorem continuous_coordinate_torus_projection {n : ℕ} : Continuous (coordinateTorusProjection n) := by
-  simpa [coordinateTorusProjection, UnitAddCircle] using!
+  simpa only [QuotientAddGroup.coe_mk', Function.comp_apply] using!
     (continuous_pi fun i => (AddCircle.continuous_mk' (p := (1 : ℝ))).comp (continuous_apply i))
 
 def successorCoordinateHomeomorphism (α : Type*) [TopologicalSpace α] (n : ℕ) :
     (α × (Fin n → α)) ≃ₜ (Fin n.succ → α) where
   toEquiv := Fin.consEquiv (fun _ ↦ α)
   continuous_toFun := by
-    simpa [Fin.consEquiv] using! Continuous.finCons (by fun_prop) (by fun_prop)
+    simpa only [Nat.succ_eq_add_one, Fin.consEquiv, Equiv.toFun_as_coe, Equiv.coe_fn_mk] using! Continuous.finCons (by fun_prop) (by fun_prop)
   continuous_invFun := by fun_prop
 
 theorem coordinate_torus_projection_is_open_quotient (n : ℕ) : IsOpenQuotientMap (coordinateTorusProjection n) := by
@@ -50663,11 +50823,11 @@ theorem coordinate_torus_projection_is_open_quotient (n : ℕ) : IsOpenQuotientM
       have h : coordinateTorusProjection 0 =
           (Homeomorph.homeomorphOfUnique (Fin 0 → ℝ) (UnitAddTorus (Fin 0)) : _ → _) := by
         funext x; exact Subsingleton.elim _ _
-      simpa [h] using!
+      simpa only [h] using!
         (Homeomorph.homeomorphOfUnique (Fin 0 → ℝ) (UnitAddTorus (Fin 0))).isOpenQuotientMap
   | succ n ih =>
       have h₁ : IsOpenQuotientMap (fun x : ℝ => (x : UnitAddCircle)) := by
-        simpa using!
+        simpa only  using!
           (QuotientAddGroup.isOpenQuotientMap_mk (G := ℝ) (N := AddSubgroup.zmultiples (1 : ℝ)))
       let eX := (successorCoordinateHomeomorphism (α := ℝ) n).symm
       let eY := successorCoordinateHomeomorphism (α := UnitAddCircle) n
@@ -50684,8 +50844,12 @@ theorem coordinate_torus_projection_is_open_quotient (n : ℕ) : IsOpenQuotientM
         funext x
         ext i
         cases i using Fin.cases with
-        | zero => simp [coordinateTorusProjection, eY, successorCoordinateHomeomorphism, eX, Prod.map]
-        | succ i => simp [coordinateTorusProjection, eY, successorCoordinateHomeomorphism, eX, Prod.map, Fin.tail]
+        | zero => simp only [coordinateTorusProjection, Nat.succ_eq_add_one, successorCoordinateHomeomorphism, Prod.map,
+                    Homeomorph.homeomorph_mk_coe_symm, Fin.consEquiv_symm_apply, Homeomorph.homeomorph_mk_coe, Fin.consEquiv_apply,
+                    Fin.cons_zero, eY, eX]
+        | succ i => simp only [coordinateTorusProjection, Nat.succ_eq_add_one, successorCoordinateHomeomorphism, Prod.map,
+                      Homeomorph.homeomorph_mk_coe_symm, Fin.consEquiv_symm_apply, Homeomorph.homeomorph_mk_coe, Fin.consEquiv_apply,
+                      Fin.cons_succ, Fin.tail, eY, eX]
       have hhomeoY : IsOpenQuotientMap eY := eY.isOpenQuotientMap
       rw [hconj]
       exact IsOpenQuotientMap.comp hhomeoY
@@ -50695,7 +50859,7 @@ theorem coordinate_torus_projection_measure_preserving (n : ℕ) (t : ℝ) :
     MeasurePreserving (coordinateTorusProjection n)
       (Measure.pi fun _ : Fin n => (volume : Measure ℝ).restrict (Set.Ioc t (t + 1)))
       (volume : Measure (UnitAddTorus (Fin n))) := by
-  simpa [coordinateTorusProjection] using!
+  simpa only  using!
     (MeasureTheory.measurePreserving_pi
       (μ := fun _ : Fin n => (volume : Measure ℝ).restrict (Set.Ioc t (t + 1)))
       (ν := fun _ : Fin n => (volume : Measure UnitAddCircle))
@@ -50704,7 +50868,7 @@ theorem coordinate_torus_projection_measure_preserving (n : ℕ) (t : ℝ) :
 theorem restricted_product_volume_eq_product_restriction (n : ℕ) (t : ℝ) :
     (volume : Measure (Fin n → ℝ)).restrict (Set.univ.pi fun _ : Fin n => Set.Ioc t (t + 1)) =
       Measure.pi fun _ : Fin n => (volume : Measure ℝ).restrict (Set.Ioc t (t + 1)) := by
-  simpa using! (Measure.restrict_pi_pi
+  simpa only  using! (Measure.restrict_pi_pi
     (μ := fun _ : Fin n => (volume : Measure ℝ)) (s := fun _ : Fin n => Set.Ioc t (t + 1)))
 
 theorem fourier_character_coordinate_projection (n : ℕ) (k : Fin n → ℤ) (x : Fin n → ℝ) :
@@ -50712,8 +50876,9 @@ theorem fourier_character_coordinate_projection (n : ℕ) (k : Fin n → ℤ) (x
       Complex.exp
         (2 * π * Complex.I *
           (∑ i : Fin n, (k i : ℝ) * x i)) := by
-  simpa [UnitAddTorus.mFourier, ContinuousMap.coe_mk, coordinateTorusProjection, fourier_coe_apply, Finset.mul_sum,
-    mul_assoc, mul_left_comm, mul_comm] using!
+  simpa only [UnitAddTorus.mFourier, fourier_apply, ContinuousMap.coe_mk, coordinateTorusProjection,
+    fourier_coe_apply', mul_comm, mul_left_comm, Complex.ofReal_one, div_one, Complex.ofReal_sum, Complex.ofReal_mul,
+    Complex.ofReal_intCast, Finset.mul_sum, mul_assoc] using!
     (Complex.exp_sum (s := (Finset.univ : Finset (Fin n)))
         (f := fun i : Fin n => 2 * π * Complex.I * ((k i : ℝ) * x i))).symm
 
@@ -50722,7 +50887,7 @@ theorem fourier_character_coordinate_projection_ofLp (n : ℕ) (k : Fin n → �
       Complex.exp
         (2 * π * Complex.I *
           (∑ i : Fin n, (k i : ℝ) * x i)) := by
-  simpa using! (fourier_character_coordinate_projection (n := n) (k := k) (x := WithLp.ofLp x))
+  simpa only [Complex.ofReal_sum, Complex.ofReal_mul, Complex.ofReal_intCast] using! (fourier_character_coordinate_projection (n := n) (k := k) (x := WithLp.ofLp x))
 
 theorem torus_integral_eq_coordinate_cell_integral (n : ℕ) (t : ℝ) (g : UnitAddTorus (Fin n) → ℂ)
     (hg : AEStronglyMeasurable g (volume : Measure (UnitAddTorus (Fin n)))) :
@@ -50735,9 +50900,9 @@ theorem torus_integral_eq_coordinate_cell_integral (n : ℕ) (t : ℝ) (g : Unit
         ∫ x, g (coordinateTorusProjection n x) ∂(Measure.pi fun _ : Fin n =>
           (volume : Measure ℝ).restrict (Set.Ioc t (t + 1))) := by
     rw [← hmp.map_eq]
-    simpa using! (MeasureTheory.integral_map (hφ := hmp.aemeasurable) (f := g)
-      (hfm := by simpa [hmp.map_eq] using! hg))
-  simpa [(restricted_product_volume_eq_product_restriction n t).symm] using! h1
+    simpa only  using! (MeasureTheory.integral_map (hφ := hmp.aemeasurable) (f := g)
+      (hfm := by simpa only [hmp.map_eq] using! hg))
+  simpa only [(restricted_product_volume_eq_product_restriction n t).symm] using! h1
 
 end SchwartzMap.UnitAddTorus
 
@@ -50768,7 +50933,7 @@ theorem fourier_precompose_linear_equivalence (A : V ≃ₗ[ℝ] V) (f : V → �
         (((A.symm : V ≃ₗ[ℝ] V).toLinearMap).adjoint w) =
           @inner ℝ V _ x w := by
     rw [LinearMap.adjoint_inner_right]
-    simp
+    simp only [LinearEquiv.coe_coe, LinearEquiv.symm_apply_apply]
   have hchange :
       (∫ x : V, g x) =
         |LinearMap.det (A : V →ₗ[ℝ] V)| • ∫ x : V, g (A x) := by
@@ -50782,14 +50947,15 @@ theorem fourier_precompose_linear_equivalence (A : V ≃ₗ[ℝ] V) (f : V → �
     calc
       (∫ x : V, g x) =
           ∫ x : V, |LinearMap.det (A : V →ₗ[ℝ] V)| • g (A x) := by
-        simpa [Set.image_univ, A.surjective.range_eq, hdetB] using h
+        simpa only [Complex.real_smul, Set.image_univ, A.surjective.range_eq, Measure.restrict_univ, hdetB] using h
       _ = |LinearMap.det (A : V →ₗ[ℝ] V)| • ∫ x : V, g (A x) :=
         integral_smul _ _
   have hdet : LinearMap.det (A : V →ₗ[ℝ] V) ≠ 0 := by
     intro hzero
     have hcomp := LinearMap.det_comp
       ((A.symm : V ≃ₗ[ℝ] V).toLinearMap) (A : V →ₗ[ℝ] V)
-    simp [hzero] at hcomp
+    simp only [LinearEquiv.comp_coe, LinearEquiv.self_trans_symm, LinearEquiv.refl_toLinearMap, LinearMap.det_id,
+      hzero, mul_zero, one_ne_zero] at hcomp
   change (∫ x : V,
     Complex.exp ((↑(-2 * Real.pi * @inner ℝ V _ x w) : ℂ) * Complex.I) •
       f (A x)) = |LinearMap.det (A : V →ₗ[ℝ] V)|⁻¹ • ∫ x : V, g x
@@ -50799,7 +50965,7 @@ theorem fourier_precompose_linear_equivalence (A : V ≃ₗ[ℝ] V) (f : V → �
           f (A x)) = ∫ x : V, g (A x) := by
     congr 1
     funext x
-    simp [g, hinner]
+    simp only [neg_mul, Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, smul_eq_mul, hinner, g]
   rw [hleft]
   calc
     (∫ x : V, g (A x)) =
@@ -50832,13 +50998,13 @@ noncomputable def referenceIntegerLattice (d : ℕ) :
 namespace referenceIntegerLattice
 
 instance instDiscreteReferenceIntegerLattice : DiscreteTopology (referenceIntegerLattice d) := by
-  simpa [referenceIntegerLattice] using!
+  simpa only [referenceIntegerLattice, OrthonormalBasis.coe_toBasis] using!
     (inferInstance :
       DiscreteTopology
         (Submodule.span ℤ (Set.range ((EuclideanSpace.basisFun (Fin d) ℝ).toBasis))))
 
 instance instFullRankPackingLattice : IsZLattice ℝ (referenceIntegerLattice d) := by
-  simpa [referenceIntegerLattice] using!
+  simpa only [referenceIntegerLattice, OrthonormalBasis.coe_toBasis] using!
     (inferInstance :
       IsZLattice ℝ
         (Submodule.span ℤ (Set.range ((EuclideanSpace.basisFun (Fin d) ℝ).toBasis))))
@@ -50857,7 +51023,7 @@ noncomputable def embeddedIntegerVector (k : Fin d → ℤ) : (EuclideanSpace �
 @[simp]
 lemma embedded_integer_vector_coordinate (k : Fin d → ℤ) (i : Fin d) :
     embeddedIntegerVector (d := d) k i = (k i : ℝ) := by
-  simp [embeddedIntegerVector]
+  simp only [embeddedIntegerVector]
 
 lemma embedded_integer_vector_mem_reference_lattice (k : Fin d → ℤ) :
     embeddedIntegerVector (d := d) k ∈ SchwartzMap.referenceIntegerLattice d := by
@@ -50865,7 +51031,9 @@ lemma embedded_integer_vector_mem_reference_lattice (k : Fin d → ℤ) :
       embeddedIntegerVector (d := d) k =
         ∑ i : Fin d, (k i) • ((EuclideanSpace.basisFun (Fin d) ℝ).toBasis i) := by
     ext j
-    simp [embeddedIntegerVector, OrthonormalBasis.coe_toBasis, EuclideanSpace.basisFun_apply, Pi.single_apply]
+    simp only [embeddedIntegerVector, OrthonormalBasis.coe_toBasis, EuclideanSpace.basisFun_apply,
+      WithLp.ofLp_sum, WithLp.ofLp_smul, PiLp.ofLp_single, zsmul_eq_mul, Finset.sum_apply, Pi.mul_apply, Pi.intCast_apply,
+      Pi.single_apply, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
   rw [hsum]
   refine (SchwartzMap.referenceIntegerLattice d).sum_mem ?_
   intro i hi
@@ -50889,15 +51057,15 @@ lemma half_open_unit_cell_measurable : MeasurableSet (halfOpenUnitCell (d := d))
   have hset :
       halfOpenUnitCell (d := d) = ⋂ i : Fin d, {x : (EuclideanSpace ℝ (Fin d)) | x i ∈ Set.Ioc (0 : ℝ) 1} := by
     ext x
-    simp [halfOpenUnitCell]
+    simp only [halfOpenUnitCell, Set.mem_Ioc, Set.mem_setOf_eq, Set.mem_iInter]
   have hcoord :
       ∀ i : Fin d, MeasurableSet {x : (EuclideanSpace ℝ (Fin d)) | x i ∈ Set.Ioc (0 : ℝ) 1} := by
     intro i
     have hproj : Measurable fun x : (EuclideanSpace ℝ (Fin d)) => x i := by
-      simpa using!
+      simpa only  using!
         (PiLp.continuous_apply (p := (2 : ENNReal)) (β := fun _ : Fin d => ℝ) i).measurable
     exact hproj measurableSet_Ioc
-  simpa [hset] using! MeasurableSet.iInter (ι := Fin d) hcoord
+  simpa only [hset, Set.mem_Ioc] using! MeasurableSet.iInter (ι := Fin d) hcoord
 
 lemma half_open_unit_cell_null_measurable : NullMeasurableSet (halfOpenUnitCell (d := d)) :=
   (half_open_unit_cell_measurable (d := d)).nullMeasurableSet
@@ -50908,22 +51076,23 @@ lemma unique_integer_shift_into_half_open_cell (x : (EuclideanSpace ℝ (Fin d))
   have hxcoord :
       ∀ i : Fin d, ∃! m : ℤ, (x i : ℝ) + m • (1 : ℝ) ∈ Set.Ioc (0 : ℝ) 1 := by
     intro i
-    simpa [one_smul, add_assoc] using!
+    simpa only [zsmul_eq_mul, mul_one, Set.mem_Ioc, zero_add] using!
       (existsUnique_add_zsmul_mem_Ioc (G := ℝ) (ha := zero_lt_one) (b := (x i : ℝ))
         (c := (0 : ℝ)))
   choose n hn hn_unique using hxcoord
   refine ⟨n, ?_, ?_⟩
   ·
     intro i
-    simpa [SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_coordinate, halfOpenUnitCell, zsmul_one] using! hn i
+    simpa only [PiLp.add_apply, embedded_integer_vector_coordinate, Set.mem_Ioc, zsmul_eq_mul, mul_one] using! hn i
   ·
     intro n' hn'
     funext i
     have hcoords : ∀ i : Fin d,
         (x + SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n') i ∈ Set.Ioc (0 : ℝ) 1 := by
-      simpa [halfOpenUnitCell] using! hn'
+      simpa only [PiLp.add_apply, embedded_integer_vector_coordinate, Set.mem_Ioc, halfOpenUnitCell,
+        Set.mem_setOf_eq] using! hn'
     exact hn_unique i (n' i) (by
-      simpa [SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_coordinate, zsmul_one] using! hcoords i)
+      simpa only [zsmul_eq_mul, mul_one, Set.mem_Ioc, PiLp.add_apply, embedded_integer_vector_coordinate] using! hcoords i)
 
 lemma reference_lattice_element_eq_integer_vector (x : (EuclideanSpace ℝ (Fin d)))
     (hx : x ∈ SchwartzMap.referenceIntegerLattice d) :
@@ -50931,16 +51100,17 @@ lemma reference_lattice_element_eq_integer_vector (x : (EuclideanSpace ℝ (Fin 
   let b : OrthonormalBasis (Fin d) ℝ (EuclideanSpace ℝ (Fin d)) := EuclideanSpace.basisFun (Fin d) ℝ
   have hx_span :
       x ∈ Submodule.span ℤ (Set.range fun j : Fin d => (b.toBasis j : (EuclideanSpace ℝ (Fin d)))) := by
-    simpa [SchwartzMap.referenceIntegerLattice, referenceIntegerLattice] using! hx
+    simpa only [OrthonormalBasis.coe_toBasis, referenceIntegerLattice] using! hx
   have hx_repr :=
     (Module.Basis.mem_span_iff_repr_mem (R := ℤ) (b := b.toBasis) x).1 hx_span
   choose n hn using hx_repr
   have hn' : ∀ i : Fin d, (n i : ℝ) = x i := by
     intro i
-    simpa [b] using! hn i
+    simpa only [algebraMap_int_eq, eq_intCast, OrthonormalBasis.coe_toBasis_repr_apply,
+      EuclideanSpace.basisFun_repr] using! hn i
   refine ⟨n, ?_⟩
   ext i
-  simp [SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_coordinate, hn' i]
+  simp only [embedded_integer_vector_coordinate, hn' i]
 
 lemma reference_lattice_dual_self :
     LinearMap.BilinForm.dualSubmodule (B := (innerₗ (EuclideanSpace ℝ (Fin d)) : LinearMap.BilinForm ℝ (EuclideanSpace ℝ (Fin d))))
@@ -50953,22 +51123,23 @@ lemma reference_lattice_dual_self :
       intro i
       have hinner :
           inner ℝ x (EuclideanSpace.basisFun (Fin d) ℝ i) ∈ (1 : Submodule ℤ ℝ) := by
-        simpa [innerₗ_apply_apply] using!
-          hx _ (Submodule.subset_span ⟨i, by simp⟩)
+        simpa only [EuclideanSpace.basisFun_apply, Submodule.mem_one, algebraMap_int_eq, eq_intCast,
+          innerₗ_apply_apply] using!
+          hx _ (Submodule.subset_span ⟨i, by simp only [OrthonormalBasis.coe_toBasis, EuclideanSpace.basisFun_apply]⟩)
       rcases Submodule.mem_one.mp hinner with ⟨n, hn⟩
-      exact ⟨n, by simpa [-EuclideanSpace.basisFun_apply] using! hn⟩
+      exact ⟨n, by simpa only [algebraMap_int_eq, eq_intCast, EuclideanSpace.inner_basisFun_real] using! hn⟩
     choose n hn using hxcoord
     have hx' : x = SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n := by
       ext i
-      simp [SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_coordinate, hn i]
-    simpa [hx'] using!
+      simp only [embedded_integer_vector_coordinate, hn i]
+    simpa only [hx'] using!
       SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_mem_reference_lattice (d := d) n
   · intro hx y hy
     rcases reference_lattice_element_eq_integer_vector (d := d) x hx with ⟨n, rfl⟩
     rcases reference_lattice_element_eq_integer_vector (d := d) y hy with ⟨m, rfl⟩
     refine Submodule.mem_one.mpr ⟨∑ i : Fin d, n i * m i, ?_⟩
-    simp [innerₗ_apply_apply, SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector,
-      PiLp.inner_apply, map_sum, Int.cast_mul, mul_comm]
+    simp only [algebraMap_int_eq, map_sum, eq_intCast, Int.cast_mul, embeddedIntegerVector, innerₗ_apply_apply,
+      PiLp.inner_apply, RCLike.inner_apply, map_intCast, mul_comm]
 
 end SchwartzMap.PoissonSummation.Standard
 namespace SchwartzMap
@@ -50983,7 +51154,7 @@ def euclideanTorusProjection : (EuclideanSpace ℝ (Fin d)) → UnitAddTorus (Fi
 
 @[continuity]
 theorem continuous_euclidean_torus_projection : Continuous (euclideanTorusProjection (d := d)) := by
-  simpa [euclideanTorusProjection] using! (UnitAddTorus.continuous_coordinate_torus_projection (n := d)).comp
+  simpa only  using! (UnitAddTorus.continuous_coordinate_torus_projection (n := d)).comp
     (PiLp.continuous_ofLp (p := (2 : ENNReal)) (β := fun _ : Fin d => ℝ))
 
 theorem euclidean_torus_projection_is_open_quotient : IsOpenQuotientMap (euclideanTorusProjection (d := d)) := by
@@ -50996,7 +51167,8 @@ theorem torus_projection_add_integer_vector (x : (EuclideanSpace ℝ (Fin d))) (
     euclideanTorusProjection (d := d) (x + SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n) =
       euclideanTorusProjection (d := d) x := by
   ext i
-  simp [euclideanTorusProjection, UnitAddTorus.coordinateTorusProjection]
+  simp only [euclideanTorusProjection, coordinateTorusProjection, PiLp.add_apply,
+    embedded_integer_vector_coordinate, AddSubgroup.intCast_mem_zmultiples_one, QuotientAddGroup.mk_add_of_mem]
 
 theorem equal_torus_projections_differ_by_integer_vector {x y : (EuclideanSpace ℝ (Fin d))}
     (h : euclideanTorusProjection (d := d) x = euclideanTorusProjection (d := d) y) :
@@ -51004,14 +51176,15 @@ theorem equal_torus_projections_differ_by_integer_vector {x y : (EuclideanSpace 
   have hcoord : ∀ i : Fin d, ∃ n : ℤ, (n : ℝ) = (x i - y i : ℝ) := by
     intro i
     have hsub : ((x i - y i : ℝ) : AddCircle (1 : ℝ)) = 0 := by
-      simpa [UnitAddCircle, AddCircle.coe_sub, euclideanTorusProjection, UnitAddTorus.coordinateTorusProjection] using!
+      simpa only [QuotientAddGroup.mk_sub, UnitAddCircle, euclideanTorusProjection,
+        coordinateTorusProjection] using!
         sub_eq_zero.2 (congrArg (fun t => t i) h)
     rcases (AddCircle.coe_eq_zero_iff (p := (1 : ℝ)) (x := (x i - y i : ℝ))).1 hsub with ⟨n, hn⟩
-    exact ⟨n, by simpa using! hn⟩
+    exact ⟨n, by simpa only [zsmul_eq_mul, mul_one] using! hn⟩
   choose n hn using hcoord
   refine ⟨n, ?_⟩
   ext i
-  simp [SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector, hn i]
+  simp only [PiLp.sub_apply, embeddedIntegerVector, hn i]
 
 theorem half_open_cell_is_fundamental_region :
     MeasureTheory.IsAddFundamentalDomain (SchwartzMap.referenceIntegerLattice d)
@@ -51025,7 +51198,7 @@ theorem half_open_cell_is_fundamental_region :
     ⟨(⟨SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n,
         SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_mem_reference_lattice (d := d) n⟩), ?_, ?_⟩
   ·
-    simpa [Submodule.vadd_def, vadd_eq_add, add_comm, add_left_comm, add_assoc] using! hn
+    simpa only [Submodule.vadd_def, vadd_eq_add, add_comm] using! hn
   ·
     intro ℓ hℓ
     rcases
@@ -51033,9 +51206,9 @@ theorem half_open_cell_is_fundamental_region :
           (ℓ : (EuclideanSpace ℝ (Fin d))) ℓ.property with
       ⟨n', hn'⟩
     have : n' = n := hn_unique n' (by
-      simpa [Submodule.vadd_def, vadd_eq_add, add_comm, add_left_comm, add_assoc, hn'] using! hℓ)
+      simpa only [Submodule.vadd_def, hn', vadd_eq_add, add_comm] using! hℓ)
     apply Subtype.ext
-    simp [hn', this]
+    simp only [hn', this]
 
 theorem torus_integral_eq_euclidean_cell_integral (g : UnitAddTorus (Fin d) → ℂ)
     (hg : AEStronglyMeasurable g (volume : Measure (UnitAddTorus (Fin d)))) :
@@ -51046,16 +51219,17 @@ theorem torus_integral_eq_euclidean_cell_integral (g : UnitAddTorus (Fin d) → 
       (∫ y : UnitAddTorus (Fin d), g y) =
         ∫ x, g (UnitAddTorus.coordinateTorusProjection d x) ∂(volume : Measure (Fin d → ℝ)).restrict
           (Set.univ.pi fun _ : Fin d => Set.Ioc (0 : ℝ) (0 + 1)) := by
-    simpa using!
+    simpa only [zero_add] using!
       (UnitAddTorus.torus_integral_eq_coordinate_cell_integral (n := d) (t := (0 : ℝ)) g hg)
   let f : (Fin d → ℝ) ≃ᵐ (EuclideanSpace ℝ (Fin d)) := MeasurableEquiv.toLp 2 (Fin d → ℝ)
   have hmp : MeasurePreserving (⇑f) (volume : Measure (Fin d → ℝ)) (volume : Measure (EuclideanSpace ℝ (Fin d))) := by
-    simpa [f, MeasurableEquiv.coe_toLp] using! (PiLp.volume_preserving_toLp (ι := Fin d))
+    simpa only [MeasurableEquiv.coe_toLp] using! (PiLp.volume_preserving_toLp (ι := Fin d))
   have hpre :
       f ⁻¹' (SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell (d := d)) =
         Set.univ.pi fun _ : Fin d => Set.Ioc (0 : ℝ) (0 + 1) := by
     ext x
-    simp [f, SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell, MeasurableEquiv.coe_toLp]
+    simp only [MeasurableEquiv.coe_toLp, halfOpenUnitCell, Set.mem_Ioc, Set.preimage_setOf_eq, Set.mem_setOf_eq,
+      zero_add, Set.mem_pi, Set.mem_univ, forall_const, f]
   have hmpR :
       MeasurePreserving (⇑f)
         ((volume : Measure (Fin d → ℝ)).restrict
@@ -51069,7 +51243,7 @@ theorem torus_integral_eq_euclidean_cell_integral (g : UnitAddTorus (Fin d) → 
           (Set.univ.pi fun _ : Fin d => Set.Ioc (0 : ℝ) (0 + 1))) =
         ∫ y, g (euclideanTorusProjection (d := d) y) ∂(volume : Measure (EuclideanSpace ℝ (Fin d))).restrict
           (SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell (d := d)) := by
-    simpa [hpre, euclideanTorusProjection, f] using!
+    simpa only [zero_add, euclideanTorusProjection, hpre, MeasurableEquiv.toLp_apply] using!
       (MeasurePreserving.integral_comp' hmpR
         (g := fun y : (EuclideanSpace ℝ (Fin d)) => g (UnitAddTorus.coordinateTorusProjection d (WithLp.ofLp y))))
   exact h1.trans h2
@@ -51100,10 +51274,10 @@ noncomputable def integerVectorLatticeEquiv : (Fin d → ℤ) ≃ (SchwartzMap.r
     have hab' :
         SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) a =
           SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) b := by
-      simpa using! congrArg Subtype.val hab
+      simpa only  using! congrArg Subtype.val hab
     funext i
     have := congrArg (fun x : (EuclideanSpace ℝ (Fin d)) => x i) hab'
-    simpa [SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_coordinate] using! this
+    simpa only [embedded_integer_vector_coordinate, Int.cast_inj] using! this
   · intro ℓ
     rcases
         SchwartzMap.PoissonSummation.Standard.reference_lattice_element_eq_integer_vector (d := d)
@@ -51111,7 +51285,7 @@ noncomputable def integerVectorLatticeEquiv : (Fin d → ℤ) ≃ (SchwartzMap.r
       ⟨n, hn⟩
     refine ⟨n, ?_⟩
     apply Subtype.ext
-    simpa using! hn.symm
+    simpa only  using! hn.symm
 
 variable (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
 
@@ -51119,15 +51293,15 @@ instance instMeasurableReferenceLatticeTranslation :
     MeasurableVAdd (SchwartzMap.referenceIntegerLattice d) (EuclideanSpace ℝ (Fin d)) := by
   refine { measurable_const_vadd := ?_, measurable_vadd_const := ?_ }
   · intro c
-    simpa [Submodule.vadd_def, vadd_eq_add] using! (continuous_const.add continuous_id).measurable
+    simpa only [Submodule.vadd_def, vadd_eq_add] using! (continuous_const.add continuous_id).measurable
   · intro x
-    simpa [Submodule.vadd_def, vadd_eq_add] using!
+    simpa only [Submodule.vadd_def, vadd_eq_add] using!
       (continuous_subtype_val.add continuous_const).measurable
 
 instance instReferenceLatticeTranslationInvariantVolume :
     MeasureTheory.VAddInvariantMeasure (SchwartzMap.referenceIntegerLattice d) (EuclideanSpace ℝ (Fin d)) (volume : Measure (EuclideanSpace ℝ (Fin d))) where
   measure_preimage_vadd c s hs := by
-    simp [Submodule.vadd_def, vadd_eq_add, MeasureTheory.measure_preimage_add]
+    simp only [Submodule.vadd_def, vadd_eq_add, measure_preimage_add]
 
 noncomputable def latticeTranslatedMap (ℓ : (SchwartzMap.referenceIntegerLattice d)) : C((EuclideanSpace ℝ (Fin d)), ℂ) :=
   (⟨(fun x => f x), f.continuous⟩ : C((EuclideanSpace ℝ (Fin d)), ℂ)).comp (ContinuousMap.addRight (ℓ : (EuclideanSpace ℝ (Fin d))))
@@ -51140,20 +51314,22 @@ lemma finite_reference_lattice_points_of_norm_bound (r : ℝ) :
       Metric.isBounded_closedBall AddSubgroup.isClosed_of_discrete
   let e : (SchwartzMap.referenceIntegerLattice d) ↪ (EuclideanSpace ℝ (Fin d)) := ⟨fun ℓ => (ℓ : (EuclideanSpace ℝ (Fin d))), Subtype.coe_injective⟩
   have hfin_pre : (e ⁻¹' (Metric.closedBall (0 : (EuclideanSpace ℝ (Fin d))) r ∩ ((SchwartzMap.referenceIntegerLattice d) : Set (EuclideanSpace ℝ (Fin d))))).Finite := by
-    simpa using! Set.Finite.preimage_embedding e (by
-      simpa [Submodule.coe_toAddSubgroup] using! hfinE)
+    simpa only [Set.preimage_inter] using! Set.Finite.preimage_embedding e (by
+      simpa only [AddSubgroup.coe_set_mk, Submodule.coe_toAddSubmonoid] using! hfinE)
   have :
       (e ⁻¹' (Metric.closedBall (0 : (EuclideanSpace ℝ (Fin d))) r ∩ ((SchwartzMap.referenceIntegerLattice d) : Set (EuclideanSpace ℝ (Fin d))))) = {ℓ : (SchwartzMap.referenceIntegerLattice d) | ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ ≤ r} := by
     ext ℓ
-    simp [e, Metric.mem_closedBall, dist_eq_norm, sub_eq_add_neg, add_zero]
-  simpa [this] using! hfin_pre
+    simp only [Function.Embedding.coeFn_mk, Set.preimage_inter, Set.mem_inter_iff, Set.mem_preimage,
+      Metric.mem_closedBall, dist_eq_norm, sub_eq_add_neg, neg_zero, add_zero, Subtype.coe_prop, and_true,
+      Set.mem_setOf_eq, e]
+  simpa only [this] using! hfin_pre
 
 lemma summable_restricted_lattice_translate_norms (K : TopologicalSpace.Compacts (EuclideanSpace ℝ (Fin d))) :
     Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) => ‖(latticeTranslatedMap (d := d) f ℓ).restrict K‖) := by
   let k : ℕ := Module.finrank ℤ (SchwartzMap.referenceIntegerLattice d) + 1
   obtain ⟨C, hCpos, hC⟩ := f.decay k 0
   have hC' : ∀ x : (EuclideanSpace ℝ (Fin d)), ‖x‖ ^ k * ‖f x‖ ≤ C := by
-    simpa [norm_iteratedFDeriv_zero] using! hC
+    simpa only [norm_iteratedFDeriv_zero] using! hC
   obtain ⟨r, hrK⟩ := K.isCompact.isBounded.subset_closedBall (0 : (EuclideanSpace ℝ (Fin d)))
   let r0 : ℝ := max r 0
   have hrK0 : (K : Set (EuclideanSpace ℝ (Fin d))) ⊆ Metric.closedBall (0 : (EuclideanSpace ℝ (Fin d))) r0 := by
@@ -51169,23 +51345,23 @@ lemma summable_restricted_lattice_translate_norms (K : TopologicalSpace.Compacts
       ∀ᶠ ℓ : (SchwartzMap.referenceIntegerLattice d) in Filter.cofinite,
         ‖(latticeTranslatedMap (d := d) f ℓ).restrict K‖ ≤ (C * (2 ^ k : ℝ)) * (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k) := by
     filter_upwards [hfin.eventually_cofinite_notMem] with ℓ hℓ
-    have hRlt : R < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_of_not_ge (by simpa using! hℓ)
+    have hRlt : R < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_of_not_ge (by simpa only [not_le] using! hℓ)
     have hnorm_lt : 2 * r0 < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_of_le_of_lt (le_max_left _ _) hRlt
     have hnorm_pos : 0 < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_trans (by positivity) hRlt
     refine (ContinuousMap.norm_le _ (by positivity)).2 ?_
     rintro ⟨x, hxK⟩
     have hxball : (x : (EuclideanSpace ℝ (Fin d))) ∈ Metric.closedBall (0 : (EuclideanSpace ℝ (Fin d))) r0 := hrK0 hxK
     have hxnorm : ‖(x : (EuclideanSpace ℝ (Fin d)))‖ ≤ r0 := by
-      simpa [Metric.mem_closedBall, dist_eq_norm, sub_eq_add_neg, add_zero] using! hxball
+      simpa only [Metric.mem_closedBall, dist_eq_norm, sub_eq_add_neg, neg_zero, add_zero] using! hxball
     have hnorm_ge : (1 / 2 : ℝ) * ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ ≤ ‖(x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by
       have hsub : ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ - ‖(x : (EuclideanSpace ℝ (Fin d)))‖ ≤ ‖(ℓ : (EuclideanSpace ℝ (Fin d))) + x‖ := by
-        simpa [add_comm, add_left_comm, add_assoc] using! (norm_sub_norm_le (ℓ : (EuclideanSpace ℝ (Fin d))) (-x))
+        simpa only [add_comm, tsub_le_iff_right, norm_neg, sub_neg_eq_add] using! (norm_sub_norm_le (ℓ : (EuclideanSpace ℝ (Fin d))) (-x))
       have hxlt : ‖(x : (EuclideanSpace ℝ (Fin d)))‖ < (1 / 2 : ℝ) * ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := by
         grind
       have : (1 / 2 : ℝ) * ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ ≤ ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ - ‖(x : (EuclideanSpace ℝ (Fin d)))‖ := by
         linarith [le_of_lt hxlt]
       have : (1 / 2 : ℝ) * ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ ≤ ‖(ℓ : (EuclideanSpace ℝ (Fin d))) + x‖ := le_trans this hsub
-      simpa [add_comm, add_left_comm, add_assoc] using! this
+      simpa only [one_div, ge_iff_le, add_comm] using! this
     have hnorm_xℓ_pos : 0 < ‖(x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ :=
       (by positivity : 0 < (1 / 2 : ℝ) * ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖).trans_le hnorm_ge
     have hpow_pos : 0 < ‖(x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ ^ k := pow_pos hnorm_xℓ_pos _
@@ -51200,22 +51376,22 @@ lemma summable_restricted_lattice_translate_norms (K : TopologicalSpace.Compacts
           exact pow_pos (mul_pos (by positivity) hnorm_pos) _
         have :
             (‖(x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ ^ k)⁻¹ ≤ (((1 / 2 : ℝ) * ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖) ^ k)⁻¹ := by
-          simpa [one_div] using! (one_div_le_one_div_of_le hapos hpow_ge)
-        simpa [mul_assoc, mul_comm, inv_pow, mul_inv_rev, mul_pow] using! this
+          simpa only [one_div] using! (one_div_le_one_div_of_le hapos hpow_ge)
+        simpa only [inv_pow, ge_iff_le, one_div, mul_pow, mul_inv_rev, inv_inv, mul_comm] using! this
       have := mul_le_mul_of_nonneg_left hinv (le_of_lt hCpos)
-      simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using! this
+      simpa only [div_eq_mul_inv, inv_pow, mul_assoc, ge_iff_le] using! this
     have : ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ ≤ (C * (2 ^ k : ℝ)) * (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k) :=
       le_trans hdiv hpow_le
-    simpa [latticeTranslatedMap, ContinuousMap.restrict_apply, ContinuousMap.comp_apply] using! this
+    simpa only [SetLike.coe_sort_coe, latticeTranslatedMap, inv_pow, ge_iff_le] using! this
   have hsum_pow : Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) => (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k : ℝ)) := by
-    simpa [k] using!
+    simpa only [inv_pow, AddSubgroupClass.coe_norm] using!
       (ZLattice.summable_norm_pow_inv (L := (SchwartzMap.referenceIntegerLattice d)) (n := k) (Nat.lt_succ_self _))
   have hsum_bd :
       Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) => (C * (2 ^ k : ℝ)) * (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k)) :=
     hsum_pow.mul_left (C * (2 ^ k : ℝ))
   refine Summable.of_norm_bounded_eventually hsum_bd ?_
   filter_upwards [h_event] with ℓ hℓ
-  simpa [Real.norm_of_nonneg (by positivity)] using! hℓ
+  simpa only [SetLike.coe_sort_coe, norm_norm, inv_pow] using! hℓ
 
 noncomputable def latticePeriodizedMap : C((EuclideanSpace ℝ (Fin d)), ℂ) :=
   ∑' ℓ : (SchwartzMap.referenceIntegerLattice d), latticeTranslatedMap (d := d) f ℓ
@@ -51224,11 +51400,11 @@ lemma lattice_periodized_map_apply (x : (EuclideanSpace ℝ (Fin d))) :
     latticePeriodizedMap (d := d) f x = ∑' ℓ : (SchwartzMap.referenceIntegerLattice d), f (x + (ℓ : (EuclideanSpace ℝ (Fin d)))) := by
   have hsum := ContinuousMap.summable_of_locally_summable_norm
     (summable_restricted_lattice_translate_norms (d := d) f)
-  simpa [latticePeriodizedMap, translate_apply] using! (ContinuousMap.tsum_apply hsum x).symm
+  simpa only [latticePeriodizedMap] using! (ContinuousMap.tsum_apply hsum x).symm
 
 @[simp] lemma lattice_periodization_translation_invariant (x : (EuclideanSpace ℝ (Fin d))) (ℓ₀ : (SchwartzMap.referenceIntegerLattice d)) :
     latticePeriodizedMap (d := d) f (x + ℓ₀) = latticePeriodizedMap (d := d) f x := by
-  simpa [lattice_periodized_map_apply (d := d) f, add_assoc] using!
+  simpa only [lattice_periodized_map_apply (d := d) f, add_assoc, Equiv.coe_addLeft, Submodule.coe_add] using!
     (Equiv.addLeft ℓ₀).tsum_eq fun ℓ => f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))
 
 noncomputable def euclideanTorusProjectionContinuous : C((EuclideanSpace ℝ (Fin d)), UnitAddTorus (Fin d)) :=
@@ -51237,16 +51413,16 @@ noncomputable def euclideanTorusProjectionContinuous : C((EuclideanSpace ℝ (Fi
 
 lemma continuous_torus_projection_is_quotient : Topology.IsQuotientMap (euclideanTorusProjectionContinuous (d := d)) := by
   let h := PoissonSummation.Standard.euclidean_torus_projection_is_open_quotient (d := d)
-  simpa [euclideanTorusProjectionContinuous] using! h.isQuotientMap
+  simpa only [euclideanTorusProjectionContinuous, ContinuousMap.coe_mk] using! h.isQuotientMap
 
 lemma lattice_periodization_factors_through_torus :
     Function.FactorsThrough (latticePeriodizedMap (d := d) f) (euclideanTorusProjectionContinuous (d := d)) := by
   intro x y hxy
   rcases PoissonSummation.Standard.equal_torus_projections_differ_by_integer_vector (d := d) (x := x) (y := y)
-      (by simpa [euclideanTorusProjectionContinuous] using! hxy) with ⟨n, hn⟩
+      (by simpa only [euclideanTorusProjectionContinuous, ContinuousMap.coe_mk] using! hxy) with ⟨n, hn⟩
   have hx : x = y + SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n := by
-    simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using! congrArg (fun t => t + y) hn
-  simpa [hx] using!
+    simpa only [sub_eq_add_neg, add_comm, add_left_comm, add_neg_cancel, add_zero] using! congrArg (fun t => t + y) hn
+  simpa only [hx] using!
     (lattice_periodization_translation_invariant (d := d) (f := f) y
       ⟨SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n,
         SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_mem_reference_lattice (d := d) n⟩)
@@ -51261,26 +51437,27 @@ lemma torus_descended_periodization_comp_projection (x : (EuclideanSpace ℝ (Fi
     torusDescendedPeriodization (d := d) f (PoissonSummation.Standard.euclideanTorusProjection (d := d) x) =
       latticePeriodizedMap (d := d) f x := by
   have hcomp : (torusDescendedPeriodization (d := d) f).comp (euclideanTorusProjectionContinuous (d := d)) = latticePeriodizedMap (d := d) f := by
-    simp [torusDescendedPeriodization]
-  simpa [euclideanTorusProjectionContinuous] using! congrArg (fun g : C((EuclideanSpace ℝ (Fin d)), ℂ) => g x) hcomp
+    simp only [torusDescendedPeriodization, Topology.IsQuotientMap.lift_comp]
+  simpa only [euclideanTorusProjectionContinuous, ContinuousMap.comp_apply, ContinuousMap.coe_mk] using! congrArg (fun g : C((EuclideanSpace ℝ (Fin d)), ℂ) => g x) hcomp
 
 lemma negative_fourier_character_projection (n : Fin d → ℤ) (x : (EuclideanSpace ℝ (Fin d))) :
     UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x) =
       (𝐞 (-(inner ℝ x (SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n))) : ℂ) := by
-  simp [PoissonSummation.Standard.euclideanTorusProjection, UnitAddTorus.fourier_character_coordinate_projection_ofLp,
-    Real.fourierChar_apply, SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector, PiLp.inner_apply,
-    Finset.sum_neg_distrib, mul_assoc, mul_comm]
+  simp only [euclideanTorusProjection, fourier_character_coordinate_projection_ofLp, mul_comm, Pi.neg_apply,
+    Int.cast_neg, neg_mul, Finset.sum_neg_distrib, Complex.ofReal_neg, Complex.ofReal_sum, Complex.ofReal_mul,
+    Complex.ofReal_intCast, mul_neg, mul_assoc, embeddedIntegerVector, PiLp.inner_apply, RCLike.inner_apply,
+    Real.ringHom_apply, Real.fourierChar_apply, Complex.ofReal_ofNat]
 
 @[simp] lemma embedded_integer_vector_neg (n : Fin d → ℤ) :
     SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) (-n) =
       -SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n := by
   ext i
-  simp [SchwartzMap.PoissonSummation.Standard.embedded_integer_vector_coordinate]
+  simp only [embedded_integer_vector_coordinate, Pi.neg_apply, Int.cast_neg, PiLp.neg_apply]
 
 lemma fourier_character_euclidean_projection (n : Fin d → ℤ) (x : (EuclideanSpace ℝ (Fin d))) :
     UnitAddTorus.mFourier n (PoissonSummation.Standard.euclideanTorusProjection (d := d) x) =
       (𝐞 (inner ℝ x (SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n)) : ℂ) := by
-  simpa [embedded_integer_vector_neg (d := d) (n := n), inner_neg_right, neg_neg] using!
+  simpa only [neg_neg, embedded_integer_vector_neg (d := d) (n := n), inner_neg_right] using!
     (negative_fourier_character_projection (d := d) (n := -n) (x := x))
 
 lemma fourier_character_projection_exponential (n : Fin d → ℤ) (x : (EuclideanSpace ℝ (Fin d))) :
@@ -51293,7 +51470,8 @@ lemma fourier_character_projection_exponential (n : Fin d → ℤ) (x : (Euclide
         RCLike.wInner (𝕜 := ℝ) 1 x.ofLp
           (SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n).ofLp :=
     RCLike.inner_eq_wInner_one x (embeddedIntegerVector n)
-  simpa [Real.fourierChar_apply, mul_assoc, mul_comm, hinner] using!
+  simpa only [mul_comm, mul_assoc, hinner, Real.fourierChar_apply, Complex.ofReal_mul,
+    Complex.ofReal_ofNat] using!
     (fourier_character_euclidean_projection (d := d) (n := n) (x := x))
 
 lemma negative_character_invariant_under_lattice_shift (n : Fin d → ℤ)
@@ -51303,7 +51481,7 @@ lemma negative_character_invariant_under_lattice_shift (n : Fin d → ℤ)
   rcases
       PoissonSummation.Standard.reference_lattice_element_eq_integer_vector (d := d) (x := (ℓ : (EuclideanSpace ℝ (Fin d))))
         ℓ.property with ⟨m, hm⟩
-  simp [hm]
+  simp only [hm, torus_projection_add_integer_vector]
 
 lemma half_open_unit_cell_subset_closed_ball :
     SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell (d := d) ⊆
@@ -51315,14 +51493,15 @@ lemma half_open_unit_cell_subset_closed_ball :
       have hi : x i ∈ Set.Ioc (0 : ℝ) 1 := hx i
       have hxle : ‖x i‖ ≤ (1 : ℝ) := by
         have hxnonneg : 0 ≤ x i := le_of_lt hi.1
-        simpa [Real.norm_eq_abs, abs_of_nonneg hxnonneg] using! hi.2
-      simpa [pow_two] using! mul_le_mul hxle hxle (norm_nonneg _) (by positivity)
-    simpa using! (Finset.sum_le_sum fun i _ => hterm i).trans_eq (by simp)
-  simpa [Metric.mem_closedBall, dist_eq_norm, EuclideanSpace.norm_eq] using! (Real.sqrt_le_sqrt hsum)
+        simpa only [Real.norm_eq_abs, abs_of_nonneg hxnonneg, ge_iff_le] using! hi.2
+      simpa only [Real.norm_eq_abs, pow_two, abs_mul_abs_self, ge_iff_le, mul_one] using! mul_le_mul hxle hxle (norm_nonneg _) (by positivity)
+    simpa only [Real.norm_eq_abs, sq_abs, ge_iff_le] using! (Finset.sum_le_sum fun i _ => hterm i).trans_eq (by simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_one])
+  simpa only [Metric.mem_closedBall, dist_eq_norm, sub_zero, EuclideanSpace.norm_eq, Real.norm_eq_abs, sq_abs,
+    Nat.cast_nonneg, Real.sqrt_le_sqrt_iff, ge_iff_le] using! (Real.sqrt_le_sqrt hsum)
 
 lemma half_open_unit_cell_volume_finite :
     (volume : Measure (EuclideanSpace ℝ (Fin d))) (SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell (d := d)) < ⊤ := by
-  simpa using! ((Metric.isBounded_closedBall (x := (0 : (EuclideanSpace ℝ (Fin d)))) (r := Real.sqrt d)).subset
+  simpa only  using! ((Metric.isBounded_closedBall (x := (0 : (EuclideanSpace ℝ (Fin d)))) (r := Real.sqrt d)).subset
     (half_open_unit_cell_subset_closed_ball (d := d))).measure_lt_top
 
 lemma fourier_character_translate_integrable_on_cell (n : Fin d → ℤ)
@@ -51344,20 +51523,20 @@ lemma fourier_character_translate_integrable_on_cell (n : Fin d → ℤ)
     have hxK : x ∈ (K : Set (EuclideanSpace ℝ (Fin d))) := hK hx
     have hmFourier :
         ‖UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x)‖ ≤ 1 := by
-      simpa [UnitAddTorus.mFourier_norm (d := Fin d) (n := -n)] using!
+      simpa only [UnitAddTorus.mFourier_norm (d := Fin d) (n := -n)] using!
         (ContinuousMap.norm_coe_le_norm (UnitAddTorus.mFourier (-n))
           (PoissonSummation.Standard.euclideanTorusProjection (d := d) x))
     have hsup :
         ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ ≤ ‖(latticeTranslatedMap (d := d) f ℓ).restrict K‖ := by
-      simpa [translate_apply, ContinuousMap.restrict_apply] using!
+      simpa only [SetLike.coe_sort_coe] using!
         (ContinuousMap.norm_coe_le_norm ((latticeTranslatedMap (d := d) f ℓ).restrict K) ⟨x, hxK⟩)
     calc
       ‖UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x) *
             f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖
           = ‖UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x)‖ *
-              ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp
+              ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp only [Complex.norm_mul]
       _ ≤ 1 * ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by gcongr
-      _ = ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp
+      _ = ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp only [one_mul]
       _ ≤ ‖(latticeTranslatedMap (d := d) f ℓ).restrict K‖ := hsup
   refine Measure.integrableOn_of_bounded (μ := (volume : Measure (EuclideanSpace ℝ (Fin d))))
       (s := SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell (d := d))
@@ -51394,20 +51573,20 @@ lemma fourier_weighted_translate_norm_bound (n : Fin d → ℤ) (ℓ : (Schwartz
   have hxK : x ∈ (ball (d := d) : Set (EuclideanSpace ℝ (Fin d))) := (half_open_unit_cell_subset_closed_ball (d := d)) hx
   have hmFourier :
       ‖UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x)‖ ≤ 1 := by
-    simpa [UnitAddTorus.mFourier_norm (d := Fin d) (n := -n)] using!
+    simpa only [UnitAddTorus.mFourier_norm (d := Fin d) (n := -n)] using!
       (ContinuousMap.norm_coe_le_norm (UnitAddTorus.mFourier (-n))
         (PoissonSummation.Standard.euclideanTorusProjection (d := d) x))
   have hsup :
       ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ ≤ ‖(latticeTranslatedMap (d := d) f ℓ).restrict (ball (d := d))‖ := by
-    simpa [translate_apply, ContinuousMap.restrict_apply] using!
+    simpa only [SetLike.coe_sort_coe] using!
       (ContinuousMap.norm_coe_le_norm ((latticeTranslatedMap (d := d) f ℓ).restrict (ball (d := d))) ⟨x, hxK⟩)
   calc
     ‖UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x) *
           f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖
         = ‖UnitAddTorus.mFourier (-n) (PoissonSummation.Standard.euclideanTorusProjection (d := d) x)‖ *
-            ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp
+            ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp only [Complex.norm_mul]
     _ ≤ 1 * ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by gcongr
-    _ = ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp
+    _ = ‖f (x + (ℓ : (EuclideanSpace ℝ (Fin d))))‖ := by simp only [one_mul]
     _ ≤ ‖(latticeTranslatedMap (d := d) f ℓ).restrict (ball (d := d))‖ := hsup
 
 lemma summable_cell_integrals_of_weighted_translates (n : Fin d → ℤ) :
@@ -51420,11 +51599,11 @@ lemma summable_cell_integrals_of_weighted_translates (n : Fin d → ℤ) :
   let μ : Measure (EuclideanSpace ℝ (Fin d)) := (volume : Measure (EuclideanSpace ℝ (Fin d))).restrict s
   haveI : IsFiniteMeasure μ := by
     refine ⟨?_⟩
-    simpa [μ, s] using! (half_open_unit_cell_volume_finite (d := d))
+    simpa only [MeasurableSet.univ, Measure.restrict_apply, Set.univ_inter, μ, s] using! (half_open_unit_cell_volume_finite (d := d))
   have hsum_norm :
       Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) =>
         μ.real Set.univ * ‖(latticeTranslatedMap (d := d) f ℓ).restrict (ball (d := d))‖) := by
-    simpa [mul_assoc, mul_comm, mul_left_comm] using!
+    simpa only [SetLike.coe_sort_coe, mul_comm] using!
       (summable_restricted_lattice_translate_norms (d := d) f (ball (d := d))).mul_left (μ.real Set.univ)
   refine Summable.of_nonneg_of_le (fun _ => by positivity) (fun ℓ => ?_) hsum_norm
   have hle_ae :
@@ -51451,8 +51630,10 @@ lemma summable_cell_integrals_of_weighted_translates (n : Fin d → ℤ) :
           ∫ x, ‖(latticeTranslatedMap (d := d) f ℓ).restrict (ball (d := d))‖ ∂μ :=
       integral_mono_of_nonneg hnonneg
         (integrable_const ‖(latticeTranslatedMap (d := d) f ℓ).restrict (ball (d := d))‖) hle_ae
-    simpa [MeasureTheory.integral_const (μ := μ), smul_eq_mul, mul_comm] using! hle
-  simpa [μ, s, mul_comm, mul_left_comm, mul_assoc] using! hle'
+    simpa only [Complex.norm_mul, SetLike.coe_sort_coe, mul_comm, ge_iff_le,
+      MeasureTheory.integral_const (μ := μ), smul_eq_mul] using! hle
+  simpa only [Complex.norm_mul, MeasurableSet.univ, measureReal_restrict_apply, Set.univ_inter,
+    SetLike.coe_sort_coe, mul_comm, ge_iff_le] using! hle'
 
 lemma fourier_coefficient_torus_periodization (n : Fin d → ℤ) :
     UnitAddTorus.mFourierCoeff (torusDescendedPeriodization (d := d) f) n =
@@ -51465,7 +51646,7 @@ lemma fourier_coefficient_torus_periodization (n : Fin d → ℤ) :
     (UnitAddTorus.mFourier (-n)).continuous.comp
       (PoissonSummation.Standard.continuous_euclidean_torus_projection (d := d))
   have hχ_norm (x : EuclideanSpace ℝ (Fin d)) : ‖χ x‖ ≤ 1 := by
-    simpa [χ, UnitAddTorus.mFourier_norm (d := Fin d) (n := -n)] using!
+    simpa only [UnitAddTorus.mFourier_norm (d := Fin d) (n := -n)] using!
       (ContinuousMap.norm_coe_le_norm (UnitAddTorus.mFourier (-n))
         (PoissonSummation.Standard.euclideanTorusProjection (d := d) x))
   have hG_int : Integrable G (volume : Measure (EuclideanSpace ℝ (Fin d))) := by
@@ -51498,12 +51679,12 @@ lemma fourier_coefficient_torus_periodization (n : Fin d → ℤ) :
           t = (fun x : EuclideanSpace ℝ (Fin d) =>
             -(ℓ : EuclideanSpace ℝ (Fin d)) + x) ⁻¹' s := by
         ext x
-        simp [t]
+        simp only [Set.image_add_left, Set.mem_preimage, t]
       rw [hpre]
       exact (continuous_const.add continuous_id).measurable hs
     have hmem (x : EuclideanSpace ℝ (Fin d)) :
         ((ℓ : EuclideanSpace ℝ (Fin d)) + x ∈ t) ↔ x ∈ s := by
-      simp [t]
+      simp only [Set.image_add_left, Set.mem_preimage, neg_add_cancel_left, t]
     calc
       (∫ x in t, G x) = ∫ x, t.indicator G x :=
         (integral_indicator hls).symm
@@ -51515,13 +51696,13 @@ lemma fourier_coefficient_torus_periodization (n : Fin d → ℤ) :
         apply integral_congr_ae
         filter_upwards [] with x
         by_cases hx : x ∈ s
-        · simp [hx, (hmem x).2 hx]
-        · simp [hx, mt (hmem x).1 hx]
+        · simp only [(hmem x).2 hx, Set.indicator_of_mem, hx]
+        · simp only [mt (hmem x).1 hx, not_false_eq_true, Set.indicator_of_notMem, hx]
       _ = ∫ x in s, G ((ℓ : EuclideanSpace ℝ (Fin d)) + x) := integral_indicator hs
       _ = ∫ x in s, χ x * f (x + (ℓ : EuclideanSpace ℝ (Fin d))) := by
         apply integral_congr_ae
         filter_upwards [] with x
-        simp [G, add_comm, hχ_shift]
+        simp only [add_comm, hχ_shift, G]
   have hglobal :
       (∫ x : EuclideanSpace ℝ (Fin d), G x) =
         ∑' ℓ : SchwartzMap.referenceIntegerLattice d,
@@ -51545,9 +51726,9 @@ lemma fourier_coefficient_torus_periodization (n : Fin d → ℤ) :
           {x : Fin d → ℝ | ∀ i, x i ∈ Set.Ioc (0 : ℝ) (0 + 1)} =
             Set.univ.pi (fun _ : Fin d => Set.Ioc (0 : ℝ) (0 + 1)) := by
         ext x
-        simp
+        simp only [zero_add, Set.mem_Ioc, Set.mem_setOf_eq, Set.mem_pi, Set.mem_univ, forall_const]
       rw [hset]
-      simpa [UnitAddTorus.coordinateTorusProjection, smul_eq_mul] using!
+      simpa only [zero_add, smul_eq_mul] using!
         (UnitAddTorus.torus_integral_eq_coordinate_cell_integral (n := d) (t := 0)
           (fun y : UnitAddTorus (Fin d) =>
             UnitAddTorus.mFourier (-n) y * torusDescendedPeriodization (d := d) f y)
@@ -51562,7 +51743,7 @@ lemma fourier_coefficient_torus_periodization (n : Fin d → ℤ) :
           (torusDescendedPeriodization (d := d) f).continuous).aestronglyMeasurable)]
       apply integral_congr_ae
       filter_upwards [] with x
-      simp [χ, torus_descended_periodization_comp_projection]
+      simp only [torus_descended_periodization_comp_projection, χ]
     _ = ∫ x in SchwartzMap.PoissonSummation.Standard.halfOpenUnitCell (d := d),
           ∑' ℓ : SchwartzMap.referenceIntegerLattice d,
             χ x * f (x + (ℓ : EuclideanSpace ℝ (Fin d))) := by
@@ -51597,14 +51778,14 @@ lemma summable_fourier_coefficients_torus_periodization :
     have hk : Module.finrank ℤ (SchwartzMap.referenceIntegerLattice d) < k := by
       have hrank : Module.finrank ℤ (SchwartzMap.referenceIntegerLattice d) = d := by
         have h := (ZLattice.rank (K := ℝ) (L := (SchwartzMap.referenceIntegerLattice d)))
-        simpa using! (h.trans (by simp))
-      simp [hrank, k]
+        simpa only  using! (h.trans (by simp only [finrank_euclideanSpace, Fintype.card_fin]))
+      simp only [hrank, lt_add_iff_pos_right, Order.lt_one_iff, k]
     obtain ⟨C, hCpos, hC⟩ := (FourierTransform.fourierCLE ℂ (SchwartzMap (EuclideanSpace ℝ (Fin d)) ℂ) f).decay k 0
     have hC' : ∀ x : (EuclideanSpace ℝ (Fin d)), ‖x‖ ^ k * ‖𝓕 (fun y : (EuclideanSpace ℝ (Fin d)) => f y) x‖ ≤ C := by
-      simpa [FourierTransform.fourierCLE_apply, fourier_coe, norm_iteratedFDeriv_zero] using! hC
+      simpa only [FourierTransform.fourierCLE_apply, fourier_coe, norm_iteratedFDeriv_zero] using! hC
     have hsum_pow :
         Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) => (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k : ℝ)) := by
-      simpa [k] using! (ZLattice.summable_norm_pow_inv (L := (SchwartzMap.referenceIntegerLattice d)) (n := k) hk)
+      simpa only [inv_pow, AddSubgroupClass.coe_norm] using! (ZLattice.summable_norm_pow_inv (L := (SchwartzMap.referenceIntegerLattice d)) (n := k) hk)
     have hsum_bd : Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) => (C : ℝ) * (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k)) :=
       hsum_pow.mul_left C
     have hsum_lattice : Summable (fun ℓ : (SchwartzMap.referenceIntegerLattice d) => ‖𝓕 (fun y : (EuclideanSpace ℝ (Fin d)) => f y) (ℓ : (EuclideanSpace ℝ (Fin d)))‖) := by
@@ -51612,7 +51793,7 @@ lemma summable_fourier_coefficients_torus_periodization :
         finite_reference_lattice_points_of_norm_bound (d := d) 1
       refine Summable.of_norm_bounded_eventually hsum_bd ?_
       filter_upwards [hfin.compl_mem_cofinite] with ℓ hℓ
-      have hnorm_gt : (1 : ℝ) < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_of_not_ge (by simpa using! hℓ)
+      have hnorm_gt : (1 : ℝ) < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_of_not_ge (by simpa only [not_le, Set.mem_compl_iff, Set.mem_setOf_eq] using! hℓ)
       have hnorm_pos : 0 < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ := lt_trans (by positivity) hnorm_gt
       have hpow_pos : 0 < ‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖ ^ k := pow_pos hnorm_pos _
       have hmain := hC' (ℓ : (EuclideanSpace ℝ (Fin d)))
@@ -51620,14 +51801,14 @@ lemma summable_fourier_coefficients_torus_periodization :
         (le_div_iff₀' hpow_pos).2 hmain
       have hdiv :
           ‖𝓕 (fun y : (EuclideanSpace ℝ (Fin d)) => f y) (ℓ : (EuclideanSpace ℝ (Fin d)))‖ ≤ (C : ℝ) * (‖(ℓ : (EuclideanSpace ℝ (Fin d)))‖⁻¹ ^ k) := by
-        simpa [div_eq_mul_inv, inv_pow, one_div] using! this
-      simpa [Real.norm_of_nonneg (norm_nonneg _)] using! hdiv
+        simpa only [inv_pow, div_eq_mul_inv] using! this
+      simpa only [norm_norm, inv_pow, ge_iff_le] using! hdiv
     let e := (PoissonSummation.Standard.integerVectorLatticeEquiv (d := d))
     have : Summable (fun n : Fin d → ℤ => ‖𝓕 (fun y : (EuclideanSpace ℝ (Fin d)) => f y) ((e n : (SchwartzMap.referenceIntegerLattice d)) : (EuclideanSpace ℝ (Fin d)))‖) := by
-      simpa using! (Summable.comp_injective hsum_lattice e.injective)
-    simpa [PoissonSummation.Standard.integerVectorLatticeEquiv] using! this
+      simpa only  using! (Summable.comp_injective hsum_lattice e.injective)
+    simpa only  using! this
   refine (Summable.of_norm ?_)
-  simpa [fourier_coefficient_torus_periodization (d := d) (f := f)] using! hsum_norm
+  simpa only [fourier_coefficient_torus_periodization (d := d) (f := f)] using! hsum_norm
 
 theorem reference_lattice_poisson_formula (v : (EuclideanSpace ℝ (Fin d))) :
     (∑' ℓ : (SchwartzMap.referenceIntegerLattice d), f (v + (ℓ : (EuclideanSpace ℝ (Fin d))))) =
@@ -51636,9 +51817,9 @@ theorem reference_lattice_poisson_formula (v : (EuclideanSpace ℝ (Fin d))) :
           Complex.exp
             (2 * Real.pi * Complex.I *
               ⟪v, SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n⟫_[ℝ]) := by
-  simpa [torus_descended_periodization_comp_projection (d := d) (f := f) v, lattice_periodized_map_apply (d := d) (f := f), smul_eq_mul,
-    fourier_coefficient_torus_periodization (d := d) (f := f), fourier_character_projection_exponential (d := d), mul_assoc,
-    mul_left_comm, mul_comm] using!
+  simpa only [mul_comm, mul_assoc, torus_descended_periodization_comp_projection (d := d) (f := f) v,
+    lattice_periodized_map_apply (d := d) (f := f), fourier_coefficient_torus_periodization (d := d) (f := f),
+    fourier_character_projection_exponential (d := d), smul_eq_mul] using!
     (UnitAddTorus.hasSum_mFourier_series_apply_of_summable
         (f := torusDescendedPeriodization (d := d) f)
         (summable_fourier_coefficients_torus_periodization (d := d) (f := f))
@@ -51668,11 +51849,11 @@ noncomputable def integralLatticeCoordinateBasis (L : Submodule ℤ (EuclideanSp
   let b₀ := Module.Free.chooseBasis ℤ L
   have hfinrank : Module.finrank ℤ L = d := by
     have hE : Module.finrank ℝ (EuclideanSpace ℝ (Fin d)) = d := by
-      simp
+      simp only [finrank_euclideanSpace, Fintype.card_fin]
     exact (ZLattice.rank (K := ℝ) (L := L)).trans hE
   let e : Module.Free.ChooseBasisIndex ℤ L ≃ Fin d :=
     Fintype.equivOfCardEq (by
-      simpa [hfinrank] using!
+      simpa only [Fintype.card_fin, hfinrank] using!
         (Module.finrank_eq_card_chooseBasisIndex (R := ℤ) (M := L)).symm)
   exact b₀.reindex e
 
@@ -51689,7 +51870,8 @@ noncomputable def latticeCoordinateEquiv (L : Submodule ℤ (EuclideanSpace ℝ 
 
 @[simp] lemma lattice_coordinate_equiv_apply_reference_basis (L : Submodule ℤ (EuclideanSpace ℝ (Fin d))) [DiscreteTopology L] [IsZLattice ℝ L]
     (i : Fin d) : (latticeCoordinateEquiv (d := d) L) ((referenceEuclideanBasis (d := d)) i) = (realLatticeCoordinateBasis (d := d) L) i := by
-  simpa [latticeCoordinateEquiv, referenceEuclideanBasis, realLatticeCoordinateBasis] using!
+  simpa only [latticeCoordinateEquiv, referenceEuclideanBasis, realLatticeCoordinateBasis,
+    OrthonormalBasis.coe_toBasis, EuclideanSpace.basisFun_apply, Basis.ofZLatticeBasis_apply, Equiv.refl_apply] using!
     (Basis.equiv_apply (b := referenceEuclideanBasis (d := d)) (b' := realLatticeCoordinateBasis (d := d) L) (e := Equiv.refl _)
       (i := i))
 
@@ -51697,22 +51879,23 @@ lemma coordinate_transport_maps_reference_lattice (L : Submodule ℤ (EuclideanS
     Submodule.map ((latticeCoordinateEquiv (d := d) L).toLinearMap.restrictScalars ℤ)
         (SchwartzMap.referenceIntegerLattice d) = L := by
   have hspan : Submodule.span ℤ (Set.range (realLatticeCoordinateBasis (d := d) L)) = L := by
-    simpa [realLatticeCoordinateBasis] using!
+    simpa only [realLatticeCoordinateBasis] using!
       (Module.Basis.ofZLatticeBasis_span (K := ℝ) (L := L) (b := integralLatticeCoordinateBasis (d := d) L))
   have himage :
       (fun a : (EuclideanSpace ℝ (Fin d)) => (latticeCoordinateEquiv (d := d) L) a) '' (Set.range (referenceEuclideanBasis (d := d))) =
         Set.range (realLatticeCoordinateBasis (d := d) L) := by
     have hfun : (fun a : (EuclideanSpace ℝ (Fin d)) => (latticeCoordinateEquiv (d := d) L) a) ∘ referenceEuclideanBasis (d := d) = realLatticeCoordinateBasis (d := d) L := by
       funext i
-      simp [Function.comp]
-    simpa [hfun] using!
+      simp only [Function.comp, lattice_coordinate_equiv_apply_reference_basis]
+    simpa only [hfun] using!
       (Set.range_comp (g := fun a : (EuclideanSpace ℝ (Fin d)) => (latticeCoordinateEquiv (d := d) L) a) (f := referenceEuclideanBasis (d := d))).symm
   calc
     Submodule.map ((latticeCoordinateEquiv (d := d) L).toLinearMap.restrictScalars ℤ) (SchwartzMap.referenceIntegerLattice d) =
         Submodule.span ℤ ((fun a : (EuclideanSpace ℝ (Fin d)) => (latticeCoordinateEquiv (d := d) L) a) '' Set.range (referenceEuclideanBasis (d := d))) := by
-          simp [SchwartzMap.referenceIntegerLattice, referenceEuclideanBasis, Submodule.map_span]
-    _ = Submodule.span ℤ (Set.range (realLatticeCoordinateBasis (d := d) L)) := by simp [himage]
-    _ = L := by simp [hspan]
+          simp only [referenceIntegerLattice, OrthonormalBasis.coe_toBasis, Submodule.map_span,
+            LinearMap.coe_restrictScalars, LinearEquiv.coe_coe, referenceEuclideanBasis]
+    _ = Submodule.span ℤ (Set.range (realLatticeCoordinateBasis (d := d) L)) := by simp only [himage]
+    _ = L := by simp only [hspan]
 
 section FundamentalDomain
 
@@ -51723,7 +51906,8 @@ lemma reference_basis_fundamental_region_volume :
       ZSpan.fundamentalDomain ((EuclideanSpace.basisFun (Fin d) ℝ).toBasis) =
         axisAlignedCell (d := d) 1 := by
     ext x
-    simp [ZSpan.mem_fundamentalDomain, axisAlignedCell]
+    simp only [ZSpan.mem_fundamentalDomain, OrthonormalBasis.coe_toBasis_repr_apply, EuclideanSpace.basisFun_repr,
+      Set.mem_Ico, axisAlignedCell, Set.mem_setOf_eq]
   rw [Measure.real, hdomain, PeriodicConstant.axis_cell_volume_formula]
   norm_num
 
@@ -51743,17 +51927,17 @@ lemma lattice_covolume_eq_coordinate_determinant :
     have hdetA :
         (LinearMap.det : ((EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) →* ℝ) ((latticeCoordinateEquiv L).toLinearMap) =
           (referenceEuclideanBasis (d := d)).det (realLatticeCoordinateBasis (d := d) L) := by
-      simp [latticeCoordinateEquiv, referenceEuclideanBasis]
+      simp only [latticeCoordinateEquiv, referenceEuclideanBasis, Basis.det_basis]
     have hr : realLatticeCoordinateBasis (d := d) L = fun i : Fin d => (bZ i : (EuclideanSpace ℝ (Fin d))) := by
       funext i
-      simp [realLatticeCoordinateBasis, bZ]
+      simp only [realLatticeCoordinateBasis, Basis.ofZLatticeBasis_apply, bZ]
     exact (congrArg ((referenceEuclideanBasis (d := d)).det) hr.symm).trans hdetA.symm
   have hcovol :
       ZLattice.covolume L = |(referenceEuclideanBasis (d := d)).det (fun i : Fin d => (bZ i : (EuclideanSpace ℝ (Fin d))))| := by
-    simpa [referenceEuclideanBasis, reference_basis_fundamental_region_volume (d := d)] using!
+    simpa only [referenceEuclideanBasis, reference_basis_fundamental_region_volume (d := d), mul_one] using!
       (ZLattice.covolume_eq_det_mul_measureReal
         (L := L) (b := bZ) (b₀ := referenceEuclideanBasis (d := d)) (μ := (volume : Measure (EuclideanSpace ℝ (Fin d)))))
-  simp [hcovol, hdet]
+  simp only [hcovol, hdet]
 
 end CovolumeDet
 
@@ -51771,12 +51955,12 @@ noncomputable def referenceLatticeCoordinateEquiv : SchwartzMap.referenceInteger
   (LinearEquiv.restrictScalars ℤ (latticeCoordinateTransport (d := d) (L := L))).ofSubmodules
     (SchwartzMap.referenceIntegerLattice d) L
     (by
-      simpa [LinearEquiv.restrictScalars_apply] using! (coordinate_transport_maps_reference_lattice (d := d) L))
+      simpa only [LinearEquiv.restrictScalars_toLinearMap] using! (coordinate_transport_maps_reference_lattice (d := d) L))
 
 @[simp]
 lemma reference_lattice_coordinate_equiv_apply (x : SchwartzMap.referenceIntegerLattice d) :
     ((referenceLatticeCoordinateEquiv (d := d) L x : L) : (EuclideanSpace ℝ (Fin d))) = (latticeCoordinateTransport (d := d) (L := L)) x := by
-  simp [referenceLatticeCoordinateEquiv]
+  simp only [referenceLatticeCoordinateEquiv, LinearEquiv.ofSubmodules_apply, LinearEquiv.restrictScalars_apply]
 
 lemma dual_transport_comp_coordinate_adjoint :
     (dualCoordinateTransport (d := d) L ∘ₗ latticeCoordinateAdjoint (d := d) L) = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by
@@ -51784,13 +51968,14 @@ lemma dual_transport_comp_coordinate_adjoint :
   let Bmap : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) := (latticeCoordinateTransport (d := d) (L := L)).symm.toLinearMap
   have hcomp : Amap ∘ₗ Bmap = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by
     ext x
-    simp [Amap, Bmap]
+    simp only [LinearEquiv.comp_coe, LinearEquiv.symm_trans_self, LinearEquiv.refl_toLinearMap, LinearMap.id_coe,
+      id_eq, Amap, Bmap]
   calc
     dualCoordinateTransport (d := d) L ∘ₗ latticeCoordinateAdjoint (d := d) L = Bmap.adjoint ∘ₗ Amap.adjoint := by
-      simp [dualCoordinateTransport, latticeCoordinateAdjoint, Amap, Bmap]
+      simp only [dualCoordinateTransport, latticeCoordinateAdjoint, Bmap, Amap]
     _ = (Amap ∘ₗ Bmap).adjoint := by
       exact (LinearMap.adjoint_comp Amap Bmap).symm
-    _ = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by simp [hcomp]
+    _ = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by simp only [hcomp, LinearMap.IsSymmetric.id, LinearMap.IsSymmetric.adjoint_eq]
 
 lemma coordinate_adjoint_comp_dual_transport :
     (latticeCoordinateAdjoint (d := d) L ∘ₗ dualCoordinateTransport (d := d) L) = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by
@@ -51798,13 +51983,14 @@ lemma coordinate_adjoint_comp_dual_transport :
   let Bmap : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) := (latticeCoordinateTransport (d := d) (L := L)).symm.toLinearMap
   have hcomp : Bmap ∘ₗ Amap = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by
     ext x
-    simp [Amap, Bmap]
+    simp only [LinearEquiv.comp_coe, LinearEquiv.self_trans_symm, LinearEquiv.refl_toLinearMap, LinearMap.id_coe,
+      id_eq, Bmap, Amap]
   calc
     latticeCoordinateAdjoint (d := d) L ∘ₗ dualCoordinateTransport (d := d) L = Amap.adjoint ∘ₗ Bmap.adjoint := by
-      simp [dualCoordinateTransport, latticeCoordinateAdjoint, Amap, Bmap]
+      simp only [latticeCoordinateAdjoint, dualCoordinateTransport, Amap, Bmap]
     _ = (Bmap ∘ₗ Amap).adjoint := by
       exact (LinearMap.adjoint_comp Bmap Amap).symm
-    _ = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by simp [hcomp]
+    _ = (LinearMap.id : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d))) := by simp only [hcomp, LinearMap.IsSymmetric.id, LinearMap.IsSymmetric.adjoint_eq]
 
 noncomputable def dualAdjointCoordinateEquiv : (EuclideanSpace ℝ (Fin d)) ≃ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) :=
   { toLinearMap := dualCoordinateTransport (d := d) L
@@ -51812,32 +51998,36 @@ noncomputable def dualAdjointCoordinateEquiv : (EuclideanSpace ℝ (Fin d)) ≃�
     left_inv := by
       intro x
       have h := coordinate_adjoint_comp_dual_transport (d := d) (L := L)
-      simpa using! congrArg (fun f : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) => f x) h
+      simpa only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom, LinearMap.coe_comp, Function.comp_apply,
+        LinearMap.id_coe, id_eq] using! congrArg (fun f : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) => f x) h
     right_inv := by
       intro x
       have h := dual_transport_comp_coordinate_adjoint (d := d) (L := L)
-      simpa using! congrArg (fun f : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) => f x) h }
+      simpa only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom, LinearMap.coe_comp, Function.comp_apply,
+        LinearMap.id_coe, id_eq] using! congrArg (fun f : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) => f x) h }
 
 lemma dual_coordinate_transport_maps_reference_lattice :
     Submodule.map ((dualCoordinateTransport (d := d) L).restrictScalars ℤ) (referenceIntegerLattice d) =
       polarIntegerLattice (d := d) L := by
   ext x
   have hdualStd : polarIntegerLattice (d := d) (referenceIntegerLattice d) = referenceIntegerLattice d := by
-    simpa [polarIntegerLattice] using! (PoissonSummation.Standard.reference_lattice_dual_self (d := d))
+    simpa only [polarIntegerLattice] using! (PoissonSummation.Standard.reference_lattice_dual_self (d := d))
   constructor
   · rintro ⟨y, hy, rfl⟩
     intro z hz
     rcases (show (z : (EuclideanSpace ℝ (Fin d))) ∈
         Submodule.map ((latticeCoordinateTransport (d := d) L).toLinearMap.restrictScalars ℤ) (referenceIntegerLattice d) by
-      simpa [latticeCoordinateTransport, coordinate_transport_maps_reference_lattice (d := d) L] using! hz) with ⟨w, hw, rfl⟩
+      simpa only [latticeCoordinateTransport, coordinate_transport_maps_reference_lattice (d := d) L] using! hz) with ⟨w, hw, rfl⟩
     have hydual : y ∈ polarIntegerLattice (d := d) (referenceIntegerLattice d) := by
-      simpa [hdualStd] using! hy
+      simpa only [hdualStd, SetLike.mem_coe] using! hy
     have hinter :
         inner ℝ ((dualCoordinateTransport (d := d) L) y) ((latticeCoordinateTransport (d := d) (L := L)) w) = inner ℝ y w := by
-      simpa [dualCoordinateTransport, latticeCoordinateTransport] using!
+      simpa only [dualCoordinateTransport, latticeCoordinateTransport, LinearEquiv.coe_coe,
+        LinearEquiv.symm_apply_apply] using!
         (LinearMap.adjoint_inner_left ((latticeCoordinateTransport (d := d) (L := L)).symm.toLinearMap)
           ((latticeCoordinateTransport (d := d) (L := L)) w) y)
-    simpa [polarIntegerLattice, innerₗ_apply_apply, hinter] using! hydual w hw
+    simpa only [LinearMap.coe_restrictScalars, LinearEquiv.coe_coe, innerₗ_apply_apply, hinter, Submodule.mem_one,
+      algebraMap_int_eq, eq_intCast] using! hydual w hw
   · intro hx
     refine ⟨(latticeCoordinateAdjoint (d := d) L) x, ?_, ?_⟩
     · have hydual : (latticeCoordinateAdjoint (d := d) L) x ∈ polarIntegerLattice (d := d) (referenceIntegerLattice d) := by
@@ -51847,24 +52037,25 @@ lemma dual_coordinate_transport_maps_reference_lattice :
               Submodule.map (((latticeCoordinateTransport (d := d) (L := L)).toLinearMap).restrictScalars ℤ)
                 (referenceIntegerLattice d) :=
             ⟨w, hw, rfl⟩
-          simpa [latticeCoordinateTransport, coordinate_transport_maps_reference_lattice (d := d) L] using! this
+          simpa only [latticeCoordinateTransport, coordinate_transport_maps_reference_lattice (d := d) L] using! this
         have hinner :
             inner ℝ ((latticeCoordinateAdjoint (d := d) L) x) w = inner ℝ x ((latticeCoordinateTransport (d := d) (L := L)) w) := by
-          simpa [latticeCoordinateAdjoint, latticeCoordinateTransport] using!
+          simpa only [latticeCoordinateAdjoint, latticeCoordinateTransport, LinearEquiv.coe_coe] using!
             (LinearMap.adjoint_inner_left ((latticeCoordinateTransport (d := d) (L := L)).toLinearMap) w x)
-        simpa [polarIntegerLattice, innerₗ_apply_apply, hinner] using!
+        simpa only [innerₗ_apply_apply, hinner, Submodule.mem_one, algebraMap_int_eq, eq_intCast] using!
           hx ((latticeCoordinateTransport (d := d) (L := L)) w) hwL
-      simpa [hdualStd] using! hydual
+      simpa only [SetLike.mem_coe, hdualStd] using! hydual
     ·
       have h := dual_transport_comp_coordinate_adjoint (d := d) (L := L)
-      simpa using! congrArg (fun f : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) => f x) h
+      simpa only [LinearMap.coe_restrictScalars, LinearMap.coe_comp, Function.comp_apply, LinearMap.id_coe,
+        id_eq] using! congrArg (fun f : (EuclideanSpace ℝ (Fin d)) →ₗ[ℝ] (EuclideanSpace ℝ (Fin d)) => f x) h
 
 noncomputable def referenceLatticePolarEquiv :
     SchwartzMap.referenceIntegerLattice d ≃ₗ[ℤ] polarIntegerLattice (d := d) L :=
   (LinearEquiv.restrictScalars ℤ (dualAdjointCoordinateEquiv (d := d) (L := L))).ofSubmodules
     (SchwartzMap.referenceIntegerLattice d) (polarIntegerLattice (d := d) L)
     (by
-      simpa [LinearEquiv.restrictScalars_apply] using!
+      simpa only [LinearEquiv.restrictScalars_toLinearMap] using!
         (dual_coordinate_transport_maps_reference_lattice (d := d) (L := L)))
 
 noncomputable def integerVectorPolarLatticeEquiv : (Fin d → ℤ) ≃ polarIntegerLattice (d := d) L :=
@@ -51874,13 +52065,15 @@ noncomputable def integerVectorPolarLatticeEquiv : (Fin d → ℤ) ≃ polarInte
 @[simp]
 lemma reference_lattice_polar_equiv_apply (x : SchwartzMap.referenceIntegerLattice d) :
     ((referenceLatticePolarEquiv (d := d) L x : polarIntegerLattice (d := d) L) : (EuclideanSpace ℝ (Fin d))) =
-      (dualCoordinateTransport (d := d) L) x := by simp [referenceLatticePolarEquiv, dualAdjointCoordinateEquiv]
+      (dualCoordinateTransport (d := d) L) x := by simp only [referenceLatticePolarEquiv, dualAdjointCoordinateEquiv, LinearEquiv.ofSubmodules_apply,
+                                                     LinearEquiv.restrictScalars_apply, LinearEquiv.coe_mk]
 
 @[simp]
 lemma integer_vector_polar_equiv_coe (n : Fin d → ℤ) :
     ((integerVectorPolarLatticeEquiv (d := d) L n : polarIntegerLattice (d := d) L) : (EuclideanSpace ℝ (Fin d))) =
       (dualCoordinateTransport (d := d) L) (SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n) := by
-  simp [integerVectorPolarLatticeEquiv, PoissonSummation.Standard.integerVectorLatticeEquiv]
+  simp only [integerVectorPolarLatticeEquiv, PoissonSummation.Standard.integerVectorLatticeEquiv,
+    Equiv.trans_apply, Equiv.ofBijective_apply, LinearEquiv.coe_toEquiv, reference_lattice_polar_equiv_apply]
 
 theorem integer_lattice_poisson_identity (f : SchwartzMap (EuclideanSpace ℝ (Fin d)) ℂ) (v : (EuclideanSpace ℝ (Fin d))) :
     (∑' ℓ : L, f (v + (ℓ : (EuclideanSpace ℝ (Fin d))))) =
@@ -51900,9 +52093,10 @@ theorem integer_lattice_poisson_identity (f : SchwartzMap (EuclideanSpace ℝ (F
       (∑' ℓ : SchwartzMap.referenceIntegerLattice d, g (A.symm v + (ℓ : (EuclideanSpace ℝ (Fin d))))) =
           ∑' ℓ : SchwartzMap.referenceIntegerLattice d, f (v + A (ℓ : (EuclideanSpace ℝ (Fin d)))) := by
             refine tsum_congr fun ℓ ↦ ?_
-            simp [g, map_add]
+            simp only [compCLMOfContinuousLinearEquiv_apply, LinearEquiv.coe_toContinuousLinearEquiv',
+              Function.comp_apply, map_add, LinearEquiv.apply_symm_apply, g]
       _ = ∑' ℓ : L, f (v + (ℓ : (EuclideanSpace ℝ (Fin d)))) := by
-          simpa [reference_lattice_coordinate_equiv_apply] using!
+          simpa only [LinearEquiv.coe_toEquiv, reference_lattice_coordinate_equiv_apply] using!
             ((referenceLatticeCoordinateEquiv (d := d) L).toEquiv.tsum_eq
               (f := fun ℓ : L => f (v + (ℓ : (EuclideanSpace ℝ (Fin d))))))
   have hrhs :
@@ -51929,14 +52123,14 @@ theorem integer_lattice_poisson_identity (f : SchwartzMap (EuclideanSpace ℝ (F
           Complex.exp (2 * π * Complex.I * ⟪v, (dualCoordinateTransport (d := d) L) w⟫_[ℝ]) := by
       have hinner : ⟪A.symm v, w⟫_[ℝ] = ⟪v, (dualCoordinateTransport (d := d) L) w⟫_[ℝ] := by
         have : inner ℝ (A.symm v) w = inner ℝ v ((dualCoordinateTransport (d := d) L) w) := by
-          simpa [A, dualCoordinateTransport] using!
+          simpa only [dualCoordinateTransport, LinearEquiv.coe_coe] using!
             (LinearMap.adjoint_inner_right ((A.symm : (EuclideanSpace ℝ (Fin d)) ≃ₗ[ℝ] (EuclideanSpace ℝ (Fin d))).toLinearMap) v w).symm
-        simpa [RCLike.inner_eq_wInner_one] using! this
-      simp [hinner]
+        simpa only [RCLike.inner_eq_wInner_one] using! this
+      simp only [hinner]
     have hdetC : cC = (1 / ZLattice.covolume L) := by
       have hcovol : ZLattice.covolume L = abs detA := by
-        simpa [A, latticeCoordinateTransport, detA] using! (lattice_covolume_eq_coordinate_determinant (d := d) (L := L))
-      simp [cC, hcovol, one_div]
+        simpa only [latticeCoordinateTransport] using! (lattice_covolume_eq_coordinate_determinant (d := d) (L := L))
+      simp only [Complex.ofReal_inv, hcovol, one_div, cC]
     have hsum :
         (∑' n : Fin d → ℤ,
             (𝓕 (fun x : (EuclideanSpace ℝ (Fin d)) => g x) (SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n)) *
@@ -51952,15 +52146,15 @@ theorem integer_lattice_poisson_identity (f : SchwartzMap (EuclideanSpace ℝ (F
                   ⟪A.symm v, SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n⟫_[ℝ])) =
             ∑' n : Fin d → ℤ, cC * F (integerVectorPolarLatticeEquiv (d := d) L n) := by
               refine tsum_congr fun n ↦ ?_
-              simpa [F, mul_assoc] using!
+              simpa only [mul_assoc, integer_vector_polar_equiv_coe, F] using!
                 congrArg₂ (· * ·)
                   (hfourier (w := SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n))
                   (hexp (w := SchwartzMap.PoissonSummation.Standard.embeddedIntegerVector (d := d) n))
         _ = cC * ∑' n : Fin d → ℤ, F (integerVectorPolarLatticeEquiv (d := d) L n) := tsum_mul_left
         _ = cC * ∑' m : polarIntegerLattice (d := d) L, F m := by
               rw [(integerVectorPolarLatticeEquiv (d := d) L).tsum_eq]
-    simp [hsum, hdetC, F]
-  simpa [hlhs, hrhs] using! hstd
+    simp only [hsum, hdetC, one_div, F]
+  simpa only [one_div, hlhs, hrhs] using! hstd
 
 end SchwartzMap.PoissonSummationLattices
 
@@ -51985,7 +52179,7 @@ theorem latticePoissonSummationFormula (f : SchwartzMap (EuclideanSpace ℝ (Fin
   (v : EuclideanSpace ℝ (Fin d)) : ∑' ℓ : Λ, f (v + ℓ) = (1 / ZLattice.covolume Λ) *
   ∑' m : polarIntegerLattice (d := d) Λ, (𝓕 ⇑f m) *
     Complex.exp (2 * Real.pi * Complex.I * ⟪v, m⟫_[ℝ]) := by
-  simpa using! (SchwartzMap.integer_lattice_poisson_identity (d := d) (L := Λ) f v)
+  simpa only [one_div] using! (SchwartzMap.integer_lattice_poisson_identity (d := d) (L := Λ) f v)
 
 section FourierSchwartz
 
@@ -52049,7 +52243,7 @@ theorem Continuous.nonnegative_integral_vanishes_iff_function_vanishes {f : E �
       (integral_pos_iff_support_of_nonneg hnn hf₂).2 hmeasure
     linarith
   · intro hzero
-    simp [hzero]
+    simp only [hzero, Pi.zero_apply, integral_zero]
 
 end Integration
 
@@ -52107,7 +52301,8 @@ instance (Λ : Submodule ℤ (EuclideanSpace ℝ (Fin d))) [DiscreteTopology Λ]
     constructor <;> intro x hx
     all_goals
       have : ⟪x, x⟫ = (0 : ℝ) := by
-        simpa [innerₗ_apply_apply] using! hx x
+        simpa only [inner_self_eq_norm_sq_to_K, Real.ringHom_apply, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+          pow_eq_zero_iff, norm_eq_zero, innerₗ_apply_apply] using! hx x
       exact inner_self_eq_zero.1 this
   have hdual :
       LinearMap.BilinForm.dualSubmodule (B := innerₗ (EuclideanSpace ℝ (Fin d))) Λ =
@@ -52150,7 +52345,7 @@ lemma summable_norm_on_translated_integral_lattice (f : 𝓢(EuclideanSpace ℝ 
   let k : ℕ := Module.finrank ℤ Λ + 1
   obtain ⟨C, hCpos, hC⟩ := f.decay k 0
   have hdecay : ∀ x : EuclideanSpace ℝ (Fin d), ‖x‖ ^ k * ‖f x‖ ≤ C := by
-    simpa [norm_iteratedFDeriv_zero] using! hC
+    simpa only [norm_iteratedFDeriv_zero] using! hC
   let R : ℝ := max (2 * ‖a‖) 1
   have hfinite : ({ℓ : Λ | ‖(ℓ : EuclideanSpace ℝ (Fin d))‖ ≤ R} : Set Λ).Finite := by
     haveI : DiscreteTopology Λ.toAddSubgroup :=
@@ -52166,18 +52361,19 @@ lemma summable_norm_on_translated_integral_lattice (f : 𝓢(EuclideanSpace ℝ 
         (e ⁻¹' (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) R ∩
           (Λ : Set (EuclideanSpace ℝ (Fin d))))).Finite := by
       apply Set.Finite.preimage_embedding e
-      simpa [Submodule.coe_toAddSubgroup] using! hfiniteAmbient
+      simpa only [AddSubgroup.coe_set_mk, Submodule.coe_toAddSubmonoid] using! hfiniteAmbient
     have hset :
         e ⁻¹' (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) R ∩
           (Λ : Set (EuclideanSpace ℝ (Fin d)))) =
             {ℓ : Λ | ‖(ℓ : EuclideanSpace ℝ (Fin d))‖ ≤ R} := by
       ext ℓ
-      simp [e, Metric.mem_closedBall, dist_eq_norm]
-    simpa [hset] using! hpreimage
+      simp only [Function.Embedding.coeFn_mk, Set.preimage_inter, Set.mem_inter_iff, Set.mem_preimage,
+        Metric.mem_closedBall, dist_eq_norm, sub_zero, Subtype.coe_prop, and_true, Set.mem_setOf_eq, e]
+    simpa only [hset] using! hpreimage
   have hsumPow :
       Summable (fun ℓ : Λ =>
         (‖(ℓ : EuclideanSpace ℝ (Fin d))‖⁻¹ ^ k : ℝ)) := by
-    simpa [k] using!
+    simpa only [inv_pow, AddSubgroupClass.coe_norm] using!
       (ZLattice.summable_norm_pow_inv (L := Λ) (n := k)
         (Nat.lt_succ_self (Module.finrank ℤ Λ)))
   have hsumBound :
@@ -52188,7 +52384,7 @@ lemma summable_norm_on_translated_integral_lattice (f : 𝓢(EuclideanSpace ℝ 
   refine Summable.of_norm_bounded_eventually hsumBound ?_
   filter_upwards [hfinite.eventually_cofinite_notMem] with ℓ hℓ
   have hR : R < ‖(ℓ : EuclideanSpace ℝ (Fin d))‖ :=
-    lt_of_not_ge (by simpa using! hℓ)
+    lt_of_not_ge (by simpa only [not_le] using! hℓ)
   have hlarge : 2 * ‖a‖ < ‖(ℓ : EuclideanSpace ℝ (Fin d))‖ :=
     lt_of_le_of_lt (le_max_left _ _) hR
   have hpositive : 0 < ‖(ℓ : EuclideanSpace ℝ (Fin d))‖ :=
@@ -52199,7 +52395,7 @@ lemma summable_norm_on_translated_integral_lattice (f : 𝓢(EuclideanSpace ℝ 
     have htriangle :
         ‖(ℓ : EuclideanSpace ℝ (Fin d))‖ - ‖a‖ ≤
           ‖a + (ℓ : EuclideanSpace ℝ (Fin d))‖ := by
-      simpa [add_comm] using!
+      simpa only [tsub_le_iff_right, add_comm, norm_neg, sub_neg_eq_add] using!
         (norm_sub_norm_le (ℓ : EuclideanSpace ℝ (Fin d)) (-a))
     linarith
   have htranslatePositive :
@@ -52225,7 +52421,7 @@ lemma summable_norm_on_translated_integral_lattice (f : 𝓢(EuclideanSpace ℝ 
         (2 ^ k : ℝ) *
           (‖(ℓ : EuclideanSpace ℝ (Fin d))‖⁻¹ ^ k) := by
     have h := one_div_le_one_div_of_le hsourcePositive hpower
-    simpa [one_div, mul_pow, mul_inv_rev, inv_pow, mul_assoc, mul_comm]
+    simpa only [inv_pow, ge_iff_le, one_div, mul_pow, mul_inv_rev, inv_inv, mul_comm]
       using! h
   have hfinal :=
     (mul_le_mul_of_nonneg_left hinverse hCpos.le)
@@ -52238,8 +52434,8 @@ lemma summable_norm_on_translated_integral_lattice (f : 𝓢(EuclideanSpace ℝ 
           C / ‖a + (ℓ : EuclideanSpace ℝ (Fin d))‖ ^ k := hbound
       _ ≤ (C * (2 ^ k : ℝ)) *
           (‖(ℓ : EuclideanSpace ℝ (Fin d))‖⁻¹ ^ k) := by
-        simpa [div_eq_mul_inv, mul_assoc] using! hfinal
-  simpa [Real.norm_of_nonneg (norm_nonneg _)] using! hresult
+        simpa only [div_eq_mul_inv, inv_pow, mul_assoc] using! hfinal
+  simpa only [norm_norm, inv_pow, ge_iff_le] using! hresult
 
 end SpherePacking.CohnElkies.LPBoundAux.ZLatticeSummability
 
@@ -52269,11 +52465,13 @@ lemma origin_character_sum_norm_sq_eq_orbit_count_sq {d : ℕ} (P : PeriodicSphe
       =
       (P.boundedCenterRepresentativeCount hd hD_isBounded : ℝ) ^ 2 := by
   letI := P.instFintypeBoundedCenterRepresentatives hd hD_isBounded
-  simp [PeriodicSpherePacking.boundedCenterRepresentativeCount]
+  simp only [WithLp.ofLp_zero, RCLike.wInner_zero_right, Complex.ofReal_zero, mul_zero, Complex.exp_zero,
+    tsum_fintype, Finset.sum_const, Finset.card_univ, Set.fintypeCard_eq_ncard, nsmul_eq_mul, mul_one,
+    RCLike.norm_natCast, PeriodicSpherePacking.boundedCenterRepresentativeCount]
 
 lemma inverse_product_rearrangement {α : Type*} [DivisionCommMonoid α] (c a b : α) :
     (1 / c) * a * b = b * a / c := by
-  simp [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
+  simp only [div_eq_mul_inv, mul_comm, mul_one, mul_left_comm, mul_assoc]
 
 lemma nonnegative_weighted_nonzero_frequency_sum {d : ℕ}
     (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ)) (P : PeriodicSpherePacking d)
@@ -52290,10 +52488,10 @@ lemma nonnegative_weighted_nonzero_frequency_sum {d : ℕ}
                   (m : EuclideanSpace ℝ (Fin d))⟫_[ℝ])) ^ 2)) := by
   refine tsum_nonneg (fun m => ?_)
   by_cases hm : m = (0 : ↥(SchwartzMap.polarIntegerLattice (d := d) P.lattice))
-  · simp [hm]
+  · simp only [hm, ↓reduceIte, Std.le_refl]
   · have hf : 0 ≤ (𝓕 ⇑f m).re := by
-      simpa using! hCohnElkies₂ (m : EuclideanSpace ℝ (Fin d))
-    simpa [centerFourierExponentialSum, hm] using! (mul_nonneg hf (sq_nonneg (norm (centerFourierExponentialSum P D m))))
+      simpa only [ge_iff_le] using! hCohnElkies₂ (m : EuclideanSpace ℝ (Fin d))
+    simpa only [hm, ↓reduceIte, ge_iff_le, centerFourierExponentialSum] using! (mul_nonneg hf (sq_nonneg (norm (centerFourierExponentialSum P D m))))
 
 end SpherePacking.CohnElkies
 
@@ -52334,7 +52532,7 @@ lemma packing_spectral_sum_exchange (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
   have hFourierNorm :
       Summable (fun m : SchwartzMap.polarIntegerLattice (d := d) P.lattice =>
         ‖(𝓕 f) (m : EuclideanSpace ℝ (Fin d))‖) := by
-    simpa using
+    simpa only [zero_add] using
       (LPBoundAux.summable_norm_on_translated_integral_lattice
         (SchwartzMap.polarIntegerLattice (d := d) P.lattice) (𝓕 f)
         (0 : EuclideanSpace ℝ (Fin d)))
@@ -52344,7 +52542,9 @@ lemma packing_spectral_sum_exchange (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
           ⟪(x : EuclideanSpace ℝ (Fin d)) - (y : EuclideanSpace ℝ (Fin d)),
             (m : EuclideanSpace ℝ (Fin d))⟫_[ℝ])) := by
     apply Summable.of_norm
-    simpa [norm_mul, Complex.norm_exp, Complex.mul_re, mul_assoc] using hFourierNorm
+    simpa only [mul_assoc, WithLp.ofLp_sub, Complex.norm_mul, norm_exp, mul_re, re_ofNat, ofReal_re, I_re,
+      zero_mul, I_im, ofReal_im, mul_zero, sub_self, mul_im, one_mul, zero_add, im_ofNat, add_zero, Real.exp_zero,
+      mul_one] using hFourierNorm
   have hSwap
       (g : ↑(P.centers ∩ D) →
         SchwartzMap.polarIntegerLattice (d := d) P.lattice → ℂ)
@@ -52356,12 +52556,12 @@ lemma packing_spectral_sum_exchange (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
         Summable (fun m => ∑ x ∈ s, g x m) ∧
           (∑ x ∈ s, ∑' m, g x m) = ∑' m, ∑ x ∈ s, g x m := by
       induction s using Finset.induction_on with
-      | empty => simp
+      | empty => simp only [Finset.sum_empty, summable_zero, tsum_zero, and_self]
       | @insert x s hx ih =>
         constructor
-        · simpa [hx] using (hg x).add ih.1
-        · simpa [hx, ih.2] using ((hg x).tsum_add ih.1).symm
-    simpa using hAux Finset.univ
+        · simpa only [hx, not_false_eq_true, Finset.sum_insert] using (hg x).add ih.1
+        · simpa only [hx, not_false_eq_true, Finset.sum_insert, ih.2] using ((hg x).tsum_add ih.1).symm
+    simpa only  using hAux Finset.univ
   let c : ℂ := 1 / ZLattice.covolume P.lattice volume
   have hInner (x : ↑(P.centers ∩ D)) :
       Summable (fun m : SchwartzMap.polarIntegerLattice (d := d) P.lattice =>
@@ -52422,7 +52622,7 @@ lemma packing_spectral_sum_exchange (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
             (𝓕 f m) * exp (2 * π * I *
               ⟪(x : EuclideanSpace ℝ (Fin d)) - (y : EuclideanSpace ℝ (Fin d)),
                 (m : EuclideanSpace ℝ (Fin d))⟫_[ℝ]) := by
-        simp [Finset.mul_sum]
+        simp only [WithLp.ofLp_sub, Finset.mul_sum]
       _ = c * ∑ x : ↑(P.centers ∩ D),
           ∑' m : SchwartzMap.polarIntegerLattice (d := d) P.lattice,
             ∑ y : ↑(P.centers ∩ D),
@@ -52441,7 +52641,7 @@ lemma packing_spectral_sum_exchange (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
         congr 1
         apply tsum_congr
         intro m
-        simp [Finset.mul_sum, mul_assoc]
+        simp only [mul_assoc, WithLp.ofLp_sub, Finset.mul_sum]
   have hRealCoeff (m : SchwartzMap.polarIntegerLattice (d := d) P.lattice) :
       (((𝓕 f m).re : ℝ) : ℂ) = 𝓕 f m :=
     hRealFourier (m : EuclideanSpace ℝ (Fin d))
@@ -52515,21 +52715,21 @@ def fundamentalCentersLatticeProductEquiv (P : PeriodicSpherePacking d) [Nonempt
       symm
       apply (Classical.choose_spec
         (hD_unique_covers ((g : E) + (x : E)))).2
-      simpa [Submodule.vadd_def, vadd_eq_add, add_assoc] using x.property.2
+      simpa only [Submodule.vadd_def, NegMemClass.coe_neg, vadd_eq_add, neg_add_cancel_left] using x.property.2
     change
       (⟨(k : E) + ((g : E) + (x : E)), _⟩, -k) = (x, g)
     apply Prod.ext
     · apply Subtype.ext
       change (k : E) + ((g : E) + (x : E)) = (x : E)
-      simp [hk]
+      simp only [hk, NegMemClass.coe_neg, neg_add_cancel_left]
     · change -k = g
-      simp [hk]
+      simp only [hk, neg_neg]
   · intro x
     let g := Classical.choose (hD_unique_covers (x : E))
     change
       (⟨((-g : P.lattice) : E) + ((g : E) + (x : E)), _⟩ : P.centers) = x
     apply Subtype.ext
-    simp
+    simp only [NegMemClass.coe_neg, neg_add_cancel_left]
 
 lemma center_double_sum_eq_region_lattice_sum
     (f : 𝓢(EuclideanSpace ℝ (Fin d), ℂ))
@@ -52582,7 +52782,7 @@ lemma center_double_sum_eq_region_lattice_sum
               (y : EuclideanSpace ℝ (Fin d)) +
               (ℓ : EuclideanSpace ℝ (Fin d)))).re := by
       induction s using Finset.induction_on with
-      | empty => simp
+      | empty => simp only [Finset.sum_empty, summable_zero, tsum_zero, and_self]
       | @insert y s hy ih =>
         constructor
         · simpa only [hy, not_false_eq_true, Finset.sum_insert] using
@@ -52724,7 +52924,7 @@ lemma real_lattice_sum_bounded_by_origin_term (hP : P.separation = 1)
       exact P.toSpherePacking.distinct_centers_separation_bound
         ((ℓ : E) + (x : E)) (y : E) hcenter y.property.1 hne
     apply hCohnElkies₁
-    simpa [dist_eq_norm, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    simpa only [sub_eq_add_neg, add_comm, add_left_comm, ge_iff_le, dist_eq_norm, add_assoc]
       using hdist
   by_cases hxy : x = y
   · subst y
@@ -52736,8 +52936,8 @@ lemma real_lattice_sum_bounded_by_origin_term (hP : P.separation = 1)
       intro ℓ hℓ
       have hne : ℓ ≠ 0 := by
         intro hzero
-        exact hℓ (by simp [hzero])
-      simp [hne]
+        exact hℓ (by simp only [hzero, Finset.mem_singleton])
+      simp only [hne, ↓reduceIte]
     calc
       (∑' ℓ : P.lattice,
         (f ((x : E) - (x : E) + (ℓ : E))).re)
@@ -52745,15 +52945,15 @@ lemma real_lattice_sum_bounded_by_origin_term (hP : P.separation = 1)
             apply Summable.tsum_le_tsum (hf := hsum) (hg := hmajor)
             intro ℓ
             by_cases hℓ : ℓ = 0
-            · simp [hℓ]
+            · simp only [sub_self, hℓ, ZeroMemClass.coe_zero, add_zero, ↓reduceIte, Std.le_refl]
             · simp only [if_neg hℓ]
               apply hnonpos ℓ
               intro heq
               apply hℓ
               apply Subtype.ext
               have hz := congrArg (fun z : E => z - (x : E)) heq
-              simpa using hz
-      _ = (f 0).re := by simp
+              simpa only [ZeroMemClass.coe_zero, ZeroMemClass.coe_eq_zero, add_sub_cancel_right, sub_self] using hz
+      _ = (f 0).re := by simp only [tsum_ite_eq]
   · simp only [if_neg hxy]
     have hterms (ℓ : P.lattice) :
         (f ((x : E) - (y : E) + (ℓ : E))).re ≤ 0 := by
@@ -52764,13 +52964,13 @@ lemma real_lattice_sum_bounded_by_origin_term (hP : P.separation = 1)
         rw [heq]
         exact y.property.2
       have hzeroD : (0 : P.lattice) +ᵥ (x : E) ∈ D := by
-        simpa using x.property.2
+        simpa only [zero_vadd] using x.property.2
       have hℓ : ℓ = (0 : P.lattice) :=
         (hD_unique_covers (x : E)).unique hℓD hzeroD
       apply hxy
       apply Subtype.ext
-      simpa [hℓ] using heq
-    simpa using
+      simpa only [hℓ, ZeroMemClass.coe_zero, zero_add] using heq
+    simpa only [ge_iff_le, tsum_zero] using
       (Summable.tsum_le_tsum hterms hsum
         (summable_zero : Summable (fun _ : P.lattice => (0 : ℝ))))
 
@@ -52802,7 +53002,7 @@ theorem imaginary_part_vanishes_of_real_valued (g : EuclideanSpace ℝ (Fin d) �
   (∀ x : EuclideanSpace ℝ (Fin d), ↑(g x).re = (g x)) →
   (∀ x : EuclideanSpace ℝ (Fin d), (g x).im = 0) := by
   intro hIsReal x
-  simpa [eq_comm] using! congrArg Complex.im (hIsReal x)
+  simpa only [ofReal_im, eq_comm] using! congrArg Complex.im (hIsReal x)
 
 include hRealFourier in
 @[simp]
@@ -52829,7 +53029,7 @@ theorem test_function_nonnegative_at_origin : 0 ≤ (f 0).re := by
   rw [← RCLike.re_eq_complex_re, ← integral_re fourier_transform_is_integrable]
   refine integral_nonneg ?_
   intro v
-  simpa [RCLike.re_eq_complex_re] using! hCohnElkies₂ v
+  simpa only [Pi.zero_apply, RCLike.re_to_complex, ge_iff_le] using! hCohnElkies₂ v
 
 include hReal hRealFourier hCohnElkies₂ hne_zero in
 theorem test_function_positive_at_origin : 0 < (f 0).re := by
@@ -52837,18 +53037,18 @@ theorem test_function_positive_at_origin : 0 < (f 0).re := by
   refine lt_of_le_of_ne h0 ?_
   intro hf0re
   have hf0 : f 0 = 0 := by
-    simpa [hf0re.symm] using! (hReal 0).symm
+    simpa only [hf0re.symm, ofReal_zero] using! (hReal 0).symm
   have hint0 : (∫ v : EuclideanSpace ℝ (Fin d), 𝓕 (⇑f) v) = 0 := by
     have hInv : 𝓕⁻ (𝓕 ⇑f) 0 = f 0 :=
       congrArg (fun g : EuclideanSpace ℝ (Fin d) → ℂ => g 0) (f.schwartz_fourier_inverse_identity)
-    simpa [fourierInv_eq, inner_zero_right, AddChar.map_zero_eq_one, one_smul, hf0] using! hInv
+    simpa only [fourierInv_eq, inner_zero_right, AddChar.map_zero_eq_one, one_smul, hf0] using! hInv
   have hintRe : ∫ v : EuclideanSpace ℝ (Fin d), (𝓕 (⇑f) v).re = 0 := by
     have : (∫ v : EuclideanSpace ℝ (Fin d), 𝓕 (⇑f) v).re = 0 := by
-      simpa using! congrArg Complex.re hint0
+      simpa only [zero_re] using! congrArg Complex.re hint0
     have hre :
         (∫ v : EuclideanSpace ℝ (Fin d), (𝓕 (⇑f) v).re) =
           (∫ v : EuclideanSpace ℝ (Fin d), 𝓕 (⇑f) v).re := by
-      simpa using!
+      simpa only [RCLike.re_to_complex] using!
         (integral_re (f := fun v : EuclideanSpace ℝ (Fin d) => 𝓕 (⇑f) v) fourier_transform_is_integrable)
     exact hre.trans this
   have hcont : Continuous (fun x : EuclideanSpace ℝ (Fin d) => (𝓕 f x).re) := by
@@ -52861,11 +53061,11 @@ theorem test_function_positive_at_origin : 0 < (f 0).re := by
           (E := 𝓢(EuclideanSpace ℝ (Fin d), ℂ)) f]
         exact ((FourierTransform.fourierCLE ℝ (SchwartzMap (EuclideanSpace ℝ (Fin d)) ℂ)) f).integrable
       exact h𝓕_int.re
-    simpa using! hintRe
+    simpa only  using! hintRe
   have h𝓕fzero : 𝓕 f = 0 := by
     ext x
-    have hx : (𝓕 f x).re = 0 := by simpa [hfun] using! congrArg (fun g => g x) hfun
-    simpa [hx] using! (hRealFourier x).symm
+    have hx : (𝓕 f x).re = 0 := by simpa only [Pi.zero_apply] using! congrArg (fun g => g x) hfun
+    simpa only [zero_apply, hx, ofReal_zero] using! (hRealFourier x).symm
   exact fourier_transform_nonzero hne_zero h𝓕fzero
 
 end Nonnegativity
@@ -52900,7 +53100,8 @@ theorem packing_bound_auxiliary_estimate (hd : 0 < d)
                   hP hD_unique_covers hCohnElkies₁ x y
     _ = ↑(P.boundedCenterRepresentativeCount hd hD_isBounded) *
           (f 0).re := by
-            simp [PeriodicSpherePacking.boundedCenterRepresentativeCount]
+            simp only [Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, Finset.sum_const, Finset.card_univ,
+              Set.fintypeCard_eq_ncard, nsmul_eq_mul, PeriodicSpherePacking.boundedCenterRepresentativeCount]
 
 omit [Nonempty ↑P.centers] in
 include hD_isBounded in
@@ -52912,7 +53113,7 @@ lemma packing_bound_complete_estimate_refined (hd : 0 < d) :
   refine tsum_congr fun x => ?_
   rw [re_tsum Summable.of_finite]
   refine tsum_congr fun y => ?_
-  simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using!
+  simpa only [sub_eq_add_neg, add_comm, add_left_comm] using!
     (re_tsum
         (SpherePacking.CohnElkies.LPBoundSummability.summable_lattice_shift_values (Λ := P.lattice)
           (f := f) (a := (↑x - ↑y : EuclideanSpace ℝ (Fin d))))).symm
@@ -53016,7 +53217,7 @@ theorem packing_bound_geometric_estimate (hd : 0 < d) :
   have hFourierNorm :
       Summable (fun m : SchwartzMap.polarIntegerLattice (d := d) P.lattice =>
         ‖(𝓕 f) (m : EuclideanSpace ℝ (Fin d))‖) := by
-    simpa using
+    simpa only [zero_add] using
       (SpherePacking.CohnElkies.LPBoundAux.summable_norm_on_translated_integral_lattice
         (SchwartzMap.polarIntegerLattice (d := d) P.lattice) (𝓕 f)
         (0 : EuclideanSpace ℝ (Fin d)))
@@ -53026,7 +53227,9 @@ theorem packing_bound_geometric_estimate (hd : 0 < d) :
           ⟪(x : EuclideanSpace ℝ (Fin d)) - (y : EuclideanSpace ℝ (Fin d)),
             (m : EuclideanSpace ℝ (Fin d))⟫_[ℝ])) := by
     apply Summable.of_norm
-    simpa [norm_mul, Complex.norm_exp, Complex.mul_re, mul_assoc] using hFourierNorm
+    simpa only [mul_assoc, WithLp.ofLp_sub, Complex.norm_mul, norm_exp, mul_re, re_ofNat, ofReal_re, I_re,
+      zero_mul, I_im, ofReal_im, mul_zero, sub_self, mul_im, one_mul, zero_add, im_ofNat, add_zero, Real.exp_zero,
+      mul_one] using hFourierNorm
   have hFull :
       Summable (fun m : SchwartzMap.polarIntegerLattice (d := d) P.lattice =>
         ∑ x : ↑(P.centers ∩ D), ∑ y : ↑(P.centers ∩ D),
@@ -53046,7 +53249,7 @@ theorem packing_bound_geometric_estimate (hd : 0 < d) :
     intro m
     rw [← hRealFourier (m : EuclideanSpace ℝ (Fin d)),
       ← hfactor m]
-    simp [tsum_fintype, Finset.mul_sum]
+    simp only [WithLp.ofLp_sub, ofReal_re, tsum_fintype, Finset.mul_sum]
   have hgeom :
       (∑' (x : ↑(P.centers ∩ D)) (y : ↑(P.centers ∩ D))
         (ℓ : ↥P.lattice), (f (↑x - ↑y + ↑ℓ)).re) =
@@ -53102,7 +53305,7 @@ theorem packing_bound_spectral_estimate (hd : 0 < d) :
   have hFourierNorm :
       Summable (fun m : SchwartzMap.polarIntegerLattice (d := d) P.lattice =>
         ‖(𝓕 f) (m : EuclideanSpace ℝ (Fin d))‖) := by
-    simpa using
+    simpa only [zero_add] using
       (SpherePacking.CohnElkies.LPBoundAux.summable_norm_on_translated_integral_lattice
         (SchwartzMap.polarIntegerLattice (d := d) P.lattice) (𝓕 f)
         (0 : EuclideanSpace ℝ (Fin d)))
@@ -53117,8 +53320,9 @@ theorem packing_bound_spectral_estimate (hd : 0 < d) :
           ⟪(x : EuclideanSpace ℝ (Fin d)),
             (m : EuclideanSpace ℝ (Fin d))⟫_[ℝ])‖ := norm_sum_le _ _
       _ = N := by
-        simp [N, PeriodicSpherePacking.boundedCenterRepresentativeCount,
-          Complex.norm_exp, Complex.mul_re, mul_assoc]
+        simp only [mul_assoc, norm_exp, mul_re, re_ofNat, ofReal_re, I_re, zero_mul, I_im, ofReal_im, mul_zero,
+          sub_self, mul_im, one_mul, zero_add, im_ofNat, add_zero, Real.exp_zero, Finset.sum_const, Finset.card_univ,
+          Set.fintypeCard_eq_ncard, nsmul_eq_mul, mul_one, PeriodicSpherePacking.boundedCenterRepresentativeCount, N]
   have hFnonneg (m : SchwartzMap.polarIntegerLattice (d := d) P.lattice) :
       0 ≤ F m := by
     exact mul_nonneg (hCohnElkies₂ _) (sq_nonneg _)
@@ -53205,8 +53409,9 @@ theorem LinearProgrammingBound' (hd : 0 < d) :
       volume (Metric.ball (0 : EuclideanSpace ℝ (Fin d)) (2 : ℝ)⁻¹) ≠ 0 := by
     simpa only [one_div] using hball
   by_cases hfourier_zero : (𝓕 f 0).re = 0
-  · simp [hfourier_zero, div_eq_mul_inv,
-      (Real.toNNReal_pos.mpr hfunction).ne', hball_inv]
+  · simp only [hfourier_zero, toNNReal_zero, ENNReal.coe_zero, div_eq_mul_inv, ENNReal.inv_zero, ne_eq,
+      ENNReal.coe_eq_zero, (Real.toNNReal_pos.mpr hfunction).ne', not_false_eq_true, ENNReal.mul_top, one_mul, hball_inv,
+      ENNReal.top_mul, le_top]
   · have hfourier : 0 < (𝓕 f 0).re :=
       lt_of_le_of_ne (hCohnElkies₂ 0) (Ne.symm hfourier_zero)
     have hcount_nat : 0 < P.centerOrbitCardinality := by
@@ -53225,12 +53430,12 @@ theorem LinearProgrammingBound' (hd : 0 < d) :
       let e := SchwartzMap.latticeCoordinateEquiv P.lattice
       have hcomp : e.toLinearMap * e.symm.toLinearMap = 1 := by
         ext x
-        simp
+        simp only [End.mul_apply, LinearEquiv.coe_coe, LinearEquiv.apply_symm_apply, End.one_apply]
       have hdetcomp := congrArg
         (LinearMap.det :
           ((EuclideanSpace ℝ (Fin d)) →ₗ[ℝ]
             (EuclideanSpace ℝ (Fin d))) →* ℝ) hcomp
-      simp [map_mul, hdet, e] at hdetcomp
+      simp only [map_mul, hdet, zero_mul, map_one, zero_ne_one, e] at hdetcomp
     have hestimate :=
       packing_bound_complete_estimate (f := f) hRealFourier hCohnElkies₁
         hCohnElkies₂ hP hD_isBounded hD_unique_covers hd
@@ -53245,7 +53450,7 @@ theorem LinearProgrammingBound' (hd : 0 < d) :
             (𝓕 f 0).re ≤
           (f 0).re * ZLattice.covolume P.lattice volume := by
       apply le_of_mul_le_mul_left _ hcount
-      simpa [pow_two, mul_assoc, mul_left_comm, mul_comm] using hscaled
+      simpa only [mul_comm, pow_two, mul_assoc, mul_left_comm] using hscaled
     have hreal :
         (P.boundedCenterRepresentativeCount hd hD_isBounded : ℝ) /
             ZLattice.covolume P.lattice volume ≤
@@ -53258,11 +53463,11 @@ theorem LinearProgrammingBound' (hd : 0 < d) :
       (P.boundedCenterRepresentativeCount hd hD_isBounded : ℝ≥0∞) /
           (ZLattice.covolume P.lattice volume).toNNReal ≤
         (f 0).re.toNNReal / (𝓕 f 0).re.toNNReal := by
-      simpa [ENNReal.ofReal] using hnonnegative
+      simpa only [ENNReal.ofReal, toNNReal_natCast, ENNReal.coe_natCast] using hnonnegative
     rw [P.density_eq_numReps_mul_volume_ball_div_covolume hd, hP,
       P.orbit_cardinality_eq_bounded_representatives hd hD_isBounded
         hD_unique_covers]
-    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using
+    simpa only [ENat.toENNReal_coe, div_eq_mul_inv, one_mul, mul_comm, mul_left_comm, mul_assoc, ge_iff_le] using
       mul_le_mul_left hnonnegative'
         (volume (Metric.ball (0 : EuclideanSpace ℝ (Fin d)) (1 / 2)))
 
@@ -53282,7 +53487,7 @@ theorem LinearProgrammingBound (hd : 0 < d) : SpherePackingConstant d ≤
   refine iSup_le fun hP => ?_
   cases isEmpty_or_nonempty ↑P.centers with
   | inl instEmpty =>
-      simp [P.packing_density_zero_of_empty_centers hd]
+      simp only [P.packing_density_zero_of_empty_centers hd, one_div, zero_le]
   | inr instNonempty =>
       let b : Basis (Fin d) ℤ ↥P.lattice :=
         ((ZLattice.module_free ℝ P.lattice).chooseBasis).reindex
@@ -53314,8 +53519,7 @@ theorem exact_limit :
         CohnElkies.linearProgram d ^ ((d : ℝ)⁻¹))
       atTop
       (nhds (Real.sqrt (Real.exp 1 / (2 * Real.pi)))) := by
-  simpa [CohnElkies.SharpPackingRootAsymptotic,
-    CohnElkies.criticalPackingBase] using!
+  simpa only [CohnElkies.SharpPackingRootAsymptotic, CohnElkies.criticalPackingBase] using!
     CohnElkies.sharpPackingRootAsymptotic
 
 theorem exact_binary_exponent :
@@ -53325,8 +53529,7 @@ theorem exact_binary_exponent :
       atTop
       (nhds (-(1 / 2 : ℝ) *
         Real.logb 2 (2 * Real.pi / Real.exp 1))) := by
-  simpa [CohnElkies.SharpBinaryLogAsymptotic,
-    CohnElkies.criticalBinaryExponent] using!
+  simpa only [one_div, neg_mul, CohnElkies.SharpBinaryLogAsymptotic, CohnElkies.criticalBinaryExponent] using!
     CohnElkies.sharpBinaryLogAsymptotic
 
 end PackingBounds.RadialMain
@@ -53352,7 +53555,7 @@ theorem volume_half_ball {d : ℕ} (hd : 0 < d) :
   simp only [Fintype.card_fin, CohnElkies.sqrt_pi_pow_eq_rpow]
   rw [← ENNReal.ofReal_pow (by positivity), ← ENNReal.ofReal_mul (by positivity)]
   congr 1
-  simp [CohnElkies.unitBallVolume]
+  simp only [one_div, inv_pow, CohnElkies.unitBallVolume]
   ring
 
 theorem sphere_packing_le_admissible
@@ -53364,20 +53567,20 @@ theorem sphere_packing_le_admissible
     intro hf
     have h := f.fourier_zero_pos
     rw [hf] at h
-    simp at h
+    simp only [FourierTransform.fourier_zero, zero_apply, Complex.zero_re, lt_self_iff_false] at h
   have hreal : ∀ x : CohnElkies.Euclidean d,
       ((f.function x).re : ℂ) = f.function x := by
     intro x
     apply Complex.ext
-    · simp
-    · simp [f.real x]
+    · simp only [Complex.ofReal_re]
+    · simp only [Complex.ofReal_im, f.real x]
   have hfourier : ∀ x : CohnElkies.Euclidean d,
       (((𝓕 f.function : CohnElkies.TestFunction d) x).re : ℂ) =
         (𝓕 f.function : CohnElkies.TestFunction d) x := by
     intro x
     apply Complex.ext
-    · simp
-    · simp [f.fourier_real x]
+    · simp only [Complex.ofReal_re]
+    · simp only [Complex.ofReal_im, f.fourier_real x]
   have h := LinearProgrammingBound hfne hreal hfourier
     (fun x hx => f.outside_nonpos x hx) f.fourier_nonneg hd
   rw [volume_half_ball hd] at h
@@ -53422,9 +53625,9 @@ theorem sphere_packing_le_radial_linear_program
       mul_nonneg hfactor.le (CohnElkies.quotient_pos f).le
     have h := ENNReal.toReal_le_of_le_ofReal hcost
       (sphere_packing_le_admissible hd f)
-    simpa [mul_comm] using! h
+    simpa only [ge_iff_le, mul_comm] using! h
   unfold CohnElkies.linearProgram
-  simpa [mul_comm] using! (div_le_iff₀ hfactor).1 hbound
+  simpa only [mul_comm, ge_iff_le] using! (div_le_iff₀ hfactor).1 hbound
 
 theorem sphere_packing_le_radial_linear_program_ennreal
     {d : ℕ} (hd : 0 < d) :
@@ -53577,7 +53780,7 @@ theorem orthogonal_entry_abs_le_one {d : ℕ}
   have hdiag := congrArg (fun B : Matrix (Fin d) (Fin d) ℝ => B i i)
     ((Matrix.mem_orthogonalGroup_iff (Fin d) ℝ).mp hA)
   have hsum : (∑ k : Fin d, A i k * A i k) = (1 : ℝ) := by
-    simpa [Matrix.mul_apply] using hdiag
+    simpa only [Matrix.mul_apply, transpose_apply, one_apply_eq] using hdiag
   have hterm : A i j * A i j ≤ ∑ k : Fin d, A i k * A i k := by
     exact Finset.single_le_sum (fun k _ => mul_self_nonneg (A i k))
       (Finset.mem_univ j)
@@ -53698,14 +53901,15 @@ theorem orthogonal_transitive {d : ℕ} {x y : Ambient d}
 
 def orthogonalPositiveCompacts (d : ℕ) :
     TopologicalSpace.PositiveCompacts (OrthogonalGroup d) :=
-  ⟨⟨Set.univ, isCompact_univ⟩, by simp⟩
+  ⟨⟨Set.univ, isCompact_univ⟩, by simp only [interior_univ, univ_nonempty]⟩
 
 def radialOrthogonalHaar (d : ℕ) : Measure (OrthogonalGroup d) :=
   Measure.haarMeasure (orthogonalPositiveCompacts d)
 
 @[simp] theorem radialOrthogonalHaar_univ (d : ℕ) :
     radialOrthogonalHaar d Set.univ = 1 := by
-  simpa [radialOrthogonalHaar, orthogonalPositiveCompacts] using
+  simpa only [radialOrthogonalHaar, orthogonalPositiveCompacts, TopologicalSpace.PositiveCompacts.coe_mk,
+    TopologicalSpace.Compacts.coe_mk] using
     (Measure.haarMeasure_self (K₀ := orthogonalPositiveCompacts d))
 
 instance radialOrthogonalHaar_probability (d : ℕ) :
@@ -53755,7 +53959,7 @@ theorem radialIsometrySchwartzOrbit_symm_apply {d : ℕ}
     radialIsometrySchwartzOrbit U.symm
       (radialIsometrySchwartzOrbit U f) = f := by
   ext x
-  simp
+  simp only [radialIsometrySchwartzOrbit_apply, LinearIsometryEquiv.apply_symm_apply]
 
 theorem radialIsometrySchwartzOrbit_iteratedFDeriv_norm {d : ℕ}
     (U : Ambient d ≃ₗᵢ[ℝ] Ambient d) (f : Schwartz d)
@@ -53810,7 +54014,7 @@ theorem radialIsometrySchwartzOrbit_seminorm_eq {d : ℕ}
   apply le_antisymm (radialIsometrySchwartzOrbit_seminorm_le U f k n)
   have h := radialIsometrySchwartzOrbit_seminorm_le U.symm
     (radialIsometrySchwartzOrbit U f) k n
-  simpa using h
+  simpa only [ge_iff_le, radialIsometrySchwartzOrbit_symm_apply] using h
 
 end SpherePacking.Alternative
 
@@ -53864,8 +54068,8 @@ theorem orthogonalSchwartzIteratedFDeriv_continuous
       (ContinuousMultilinearMap.hasStrictFDerivAt_compContinuousLinearMap
         p).continuousAt
   have h := hcomp.comp (hderiv.prodMk hmaps)
-  simpa [Function.comp_def, radialIsometrySchwartzOrbit_iteratedFDeriv,
-    orthogonalLinearIsometry_apply] using h
+  simpa only [radialIsometrySchwartzOrbit_iteratedFDeriv, orthogonalLinearIsometry_apply,
+    Function.comp_def] using h
 
 theorem orthogonalSchwartzInverseIteratedFDeriv_continuous
     {d : ℕ} (f : Schwartz d) (n : ℕ) (x : Ambient d) :
@@ -53988,7 +54192,7 @@ theorem radialSchwartzParametric_iteratedFDeriv_integral
       rw [ContinuousMultilinearMap.integral_apply
         (radialSchwartzParametricDerivativeIntegrable μ g C
           hmeas hbound 0 x)]
-      simp
+      simp only [iteratedFDeriv_zero_apply]
   | succ n ih =>
       rw [iteratedFDeriv_succ_eq_comp_left, Function.comp_apply]
       have hprevious :
@@ -54054,7 +54258,7 @@ theorem radialSymmetrizationAverage_integrable {d : ℕ}
   have hcontinuous : Continuous
       (fun U : OrthogonalGroup d ↦ f (orthogonalAction U⁻¹ x)) :=
     f.continuous.comp ((continuous_orthogonalAction_apply x).comp continuous_inv)
-  simpa using hcontinuous.continuousOn.integrableOn_compact isCompact_univ
+  simpa only [integrableOn_univ] using hcontinuous.continuousOn.integrableOn_compact isCompact_univ
 
 theorem radialSymmetrizationAverage_comp_orthogonal {d : ℕ}
     (f : Schwartz d) (A : OrthogonalGroup d) (x : Ambient d) :
@@ -54078,7 +54282,7 @@ theorem radialSymmetrizationAverage_comp_orthogonal {d : ℕ}
       filter_upwards with U
       simp only [mul_inv_rev, orthogonalAction_mul]
       rw [← orthogonalAction_mul A⁻¹ A x]
-      simp
+      simp only [inv_mul_cancel, orthogonalAction_one]
 
 theorem radialSymmetrizationAverage_eq_of_norm_eq {d : ℕ}
     (f : Schwartz d) {x y : Ambient d} (hxy : ‖x‖ = ‖y‖) :
@@ -54090,7 +54294,7 @@ theorem radialSymmetrizationAverage_eq_of_norm_eq {d : ℕ}
 @[simp] theorem radialSymmetrizationAverage_zero {d : ℕ}
     (f : Schwartz d) :
     radialSymmetrizationAverage f 0 = f 0 := by
-  simp [radialSymmetrizationAverage]
+  simp only [radialSymmetrizationAverage, orthogonalAction_zero, integral_const, probReal_univ, one_smul]
 
 end SpherePacking.Alternative
 
@@ -54138,7 +54342,7 @@ theorem scalarProbabilityAverage_weighted_iteratedFDeriv_le
           · exact Eventually.of_forall (fun _ ↦ by positivity)
           · exact integrable_const _
           · exact Eventually.of_forall (fun a ↦ hbound k n a x)
-    _ = C k n := by simp
+    _ = C k n := by simp only [integral_const, probReal_univ, smul_eq_mul, one_mul]
 
 noncomputable def scalarProbabilitySchwartzAverage
     {ι : Type*} [MeasurableSpace ι]
@@ -54357,7 +54561,9 @@ theorem IsRealValued.fourier_conj {d : ℕ} {f : Schwartz d}
   filter_upwards with y
   have hy : (starRingEnd ℂ) (f y) = f y :=
     Complex.conj_eq_iff_im.mpr (hf y)
-  simp [smul_eq_mul, ← Complex.exp_conj, hy, real_inner_comm, map_ofNat]
+  simp only [neg_mul, real_inner_comm, Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat,
+    smul_eq_mul, map_mul, ← Complex.exp_conj, map_neg, map_ofNat, Complex.conj_ofReal, Complex.conj_I, mul_neg, neg_neg,
+    hy, inner_neg_right]
 
 theorem IsRadial.fourier_realValued {d : ℕ} {f : Schwartz d}
     (hradial : IsRadial f) (hreal : IsRealValued f) :
@@ -54376,7 +54582,8 @@ theorem IsRadial.fourier_realValued {d : ℕ} {f : Schwartz d}
     funext y
     rw [hradial.neg_apply y]
     congr 2
-    simp
+    simp only [neg_mul, inner_neg_right, mul_neg, neg_neg, Complex.ofReal_mul, Complex.ofReal_ofNat,
+      inner_neg_left]
   simp only [smul_eq_mul]
   rw [hneg]
   exact (LinearIsometryEquiv.neg ℝ (E := Ambient d)).measurePreserving.integral_comp
@@ -54990,7 +55197,7 @@ theorem manuscriptQuotientRootSet_eq_literal (d : ℕ) :
       {q : ℝ | ∃ f : Admissible d,
         quotient f ^ ((d : ℝ)⁻¹) = q} := by
   ext q
-  simp [manuscriptQuotientRootSet]
+  simp only [manuscriptQuotientRootSet, Set.mem_range, Set.mem_setOf_eq]
 
 structure SharpCohnElkiesManuscriptConclusions : Prop where
   root_before_infimum :
@@ -55066,7 +55273,7 @@ theorem sharpCohnElkiesManuscriptConclusions :
       base_two_logarithmic_rate := ?_
       base_two_vanishing_exponential_error := ?_ }
   · simp_rw [← manuscriptQuotientRootSet_eq_literal]
-    simpa [one_div] using
+    simpa only [one_div] using
       (manuscriptQuotientRootInf_div_sqrt_tendsto
         sharpQuotientAsymptotic)
   · obtain ⟨err, herr, hformula⟩ :=
@@ -55074,27 +55281,27 @@ theorem sharpCohnElkiesManuscriptConclusions :
     refine ⟨err, (Asymptotics.isLittleO_one_iff ℝ).mp herr, ?_⟩
     intro d hd
     rw [← manuscriptQuotientRootSet_eq_literal]
-    simpa [one_div] using hformula d hd
-  · simpa [SharpPackingRootAsymptotic, criticalPackingBase] using
+    simpa only [one_div] using hformula d hd
+  · simpa only [SharpPackingRootAsymptotic, criticalPackingBase] using
       sharpPackingRootAsymptotic
-  · simpa [SharpLogAsymptotic] using sharpLogAsymptotic
+  · simpa only [one_div, SharpLogAsymptotic] using sharpLogAsymptotic
   · obtain ⟨err, herr, hformula⟩ := exists_manuscriptPackingIsLittleO
     refine ⟨err, (Asymptotics.isLittleO_one_iff ℝ).mp herr, ?_⟩
     filter_upwards [eventually_gt_atTop (0 : ℕ)] with d hd
-    simpa [criticalPackingBase] using hformula d hd
+    simpa only [criticalPackingBase] using hformula d hd
   · obtain ⟨δ, hδ, hnonneg, hbound⟩ :=
       exists_manuscriptUniversalPackingIsLittleO
     refine ⟨δ, (Asymptotics.isLittleO_one_iff ℝ).mp hδ, hnonneg, ?_⟩
     filter_upwards [eventually_gt_atTop (0 : ℕ)] with d hd f
-    simpa [criticalPackingBase] using hbound d hd f
-  · simpa [criticalBinaryExponent] using criticalBinaryExponent_pos
-  · simpa [criticalBinaryExponent] using
+    simpa only [criticalPackingBase] using hbound d hd f
+  · simpa only [one_div, inv_pos, Nat.ofNat_pos, mul_pos_iff_of_pos_left, criticalBinaryExponent] using criticalBinaryExponent_pos
+  · simpa only [one_div, Set.mem_Ioo, criticalBinaryExponent] using
       criticalBinaryExponent_mem_Ioo_d30
-  · simpa [SharpBinaryLogAsymptotic, criticalBinaryExponent] using
+  · simpa only [one_div, SharpBinaryLogAsymptotic, criticalBinaryExponent] using
       sharpBinaryLogAsymptotic
   · obtain ⟨err, herr, hformula⟩ := exists_manuscriptBinaryIsLittleO
     refine ⟨err, (Asymptotics.isLittleO_one_iff ℝ).mp herr, ?_⟩
-    simpa [criticalBinaryExponent] using hformula
+    simpa only [one_div, neg_add_rev, eventually_atTop, criticalBinaryExponent] using hformula
 
 end CohnElkies
 
@@ -55254,7 +55461,7 @@ def schwartzDilation {d : ℕ} (a : ℝ) (ha : a ≠ 0)
 @[simp] theorem schwartzDilation_zero {d : ℕ} (a : ℝ) (ha : a ≠ 0)
     (f : Schwartz d) :
     schwartzDilation a ha f 0 = f 0 := by
-  simp [schwartzDilation_apply]
+  simp only [schwartzDilation_apply, smul_zero]
 
 theorem fourier_schwartzDilation_apply {d : ℕ} (a : ℝ) (ha : 0 < a)
     (f : Schwartz d) (ξ : Ambient d) :
@@ -55277,9 +55484,11 @@ theorem fourier_schwartzDilation_apply {d : ℕ} (a : ℝ) (ha : 0 < a)
         ∫ y : Ambient d, g (a • y) := by
           apply integral_congr_ae
           filter_upwards with y
-          simp [g, schwartzDilation_apply, hinner y]
+          simp only [neg_mul, Complex.ofReal_neg, Complex.ofReal_mul, Complex.ofReal_ofNat, schwartzDilation_apply,
+            smul_eq_mul, hinner y, g]
     _ = (a ^ d)⁻¹ • ∫ y : Ambient d, g y := by
-          simpa [finrank_euclideanSpace] using
+          simpa only [Complex.real_smul, Complex.ofReal_inv, Complex.ofReal_pow, finrank_euclideanSpace,
+            Fintype.card_fin] using
             (Measure.integral_comp_smul_of_nonneg
               (volume : Measure (Ambient d)) g a (hR := ha.le))
     _ = (a ^ d)⁻¹ •
@@ -55437,9 +55646,9 @@ theorem fullQuotientRootSet_eq_radial (d : ℕ) :
       rw [← fullQuotientSet_eq_radial d]
       exact ⟨f, rfl⟩
     obtain ⟨g, hg⟩ := hf
-    exact ⟨g, by simpa [hg] using hq⟩
+    exact ⟨g, by simpa only [hg] using hq⟩
   · rintro ⟨f, hq⟩
-    exact ⟨radialToFull f, by simpa [fullQuotient_radialToFull] using hq⟩
+    exact ⟨radialToFull f, by simpa only [fullQuotient_radialToFull] using hq⟩
 
 structure SharpFullCohnElkiesManuscriptConclusions : Prop where
   root_before_infimum :
@@ -55535,7 +55744,7 @@ theorem SharpFullCohnElkiesManuscriptConclusions.ofRadial :
       rw [← fullQuotientSet_eq_radial d]
       exact ⟨f, rfl⟩
     obtain ⟨g, hg⟩ := hf
-    simpa [hg] using hd g
+    simpa only [ge_iff_le, hg] using hd g
   · simpa only [fullLinearProgram_eq_radial] using
       hradial.base_two_logarithmic_rate
   · obtain ⟨err, herr, hformula⟩ :=

@@ -23,15 +23,15 @@ theorem labelGraph_pullback_embedding {U V K : Type*}
       (SimpleGraph.TopEdgeLabeling.labelGraph_adj x y).mp hadj
     apply (SimpleGraph.TopEdgeLabeling.labelGraph_adj (f x) (f y)).mpr
     refine ⟨f.injective.ne hxy, ?_⟩
-    simpa [SimpleGraph.EdgeLabeling.get,
-      SimpleGraph.EdgeLabeling.pullback, SimpleGraph.Hom.mapEdgeSet] using hcolour
+    simpa only [EdgeLabeling.get, EdgeLabeling.pullback_apply, Hom.mapEdgeSet, RelHom.coeFn_mk, Sym2.map_mk] using
+      hcolour
   · intro hadj
     obtain ⟨hxy, hcolour⟩ :=
       (SimpleGraph.TopEdgeLabeling.labelGraph_adj (f x) (f y)).mp hadj
     apply (SimpleGraph.TopEdgeLabeling.labelGraph_adj x y).mpr
     refine ⟨fun heq => hxy (congrArg f heq), ?_⟩
-    simpa [SimpleGraph.EdgeLabeling.get,
-      SimpleGraph.EdgeLabeling.pullback, SimpleGraph.Hom.mapEdgeSet] using hcolour
+    simpa only [EdgeLabeling.get, EdgeLabeling.pullback_apply, Hom.mapEdgeSet, RelHom.coeFn_mk, Sym2.map_mk] using
+      hcolour
 
 theorem cliqueFree_pullback_embedding {U V K : Type*}
     (C : SimpleGraph.TopEdgeLabeling V K)
@@ -89,7 +89,7 @@ noncomputable def omittedColourEquiv (k : ℕ) (omitted : Fin (k + 1)) :
   apply Fintype.equivFinOfCardEq
   rw [Fintype.card_subtype_compl (fun colour : Fin (k + 1) =>
     colour = omitted)]
-  simp
+  simp only [Fintype.card_fin, Fintype.card_unique, add_tsub_cancel_right]
 
 noncomputable def activeColourEquiv (N t : ℕ) (P : Finset (Fin N))
     (hP : P.card = t) :
@@ -97,7 +97,7 @@ noncomputable def activeColourEquiv (N t : ℕ) (P : Finset (Fin N))
   classical
   refine (Fintype.equivFinOfCardEq ?_).symm
   rw [Fintype.card_subtype_compl (fun colour : Fin N => colour ∈ P)]
-  simp [Fintype.card_subtype, hP]
+  simp only [Fintype.card_fin, Fintype.card_subtype, subset_univ, filter_mem_eq_of_subset, hP]
 
 noncomputable def activeColourPreimage (N t : ℕ) (P : Finset (Fin N))
     (hP : P.card = t) (colour : Fin N) (hactive : colour ∉ P) :
@@ -124,7 +124,8 @@ theorem paletteRelabel_adj_iff {V : Type*} {N t : ℕ}
     refine ⟨hne, ?_⟩
     apply (activeColourEquiv N t P hP).injective
     apply Subtype.ext
-    simpa [paletteRelabel, activeColourPreimage] using hcolour
+    simpa only [activeColourPreimage, Equiv.apply_symm_apply, paletteRelabel, EdgeLabeling.compRight_get] using
+      hcolour
   · intro hadj
     obtain ⟨hne, hcolour⟩ :=
       (SimpleGraph.TopEdgeLabeling.labelGraph_adj u v).mp hadj
@@ -133,7 +134,7 @@ theorem paletteRelabel_adj_iff {V : Type*} {N t : ℕ}
     change (activeColourEquiv N t P hP (C.get u v hne)).val = colour
     have heq := congrArg
       (fun old => (activeColourEquiv N t P hP old).val) hcolour
-    simpa [activeColourPreimage] using heq
+    simpa only [activeColourPreimage, Equiv.apply_symm_apply] using heq
 
 theorem paletteRelabel_missing_no_adj {V : Type*} {N t : ℕ}
     (C : SimpleGraph.TopEdgeLabeling V (Fin (N - t)))
@@ -220,7 +221,7 @@ theorem triangleFree_deleteUnusedColour {n k : ℕ}
     have hvalue := congrArg
       (fun c : Fin k => ((omittedColourEquiv k omitted).symm c).val)
       hcolour
-    simpa [lifted] using hvalue
+    simpa only [ne_eq, Equiv.symm_apply_apply] using hvalue
   exact hC lifted t (ht.mono hmono)
 
 def ForcesMonochromaticTriangle (n k : ℕ) : Prop :=
@@ -249,10 +250,10 @@ theorem forcesMonochromaticTriangle_succ {n k : ℕ}
   let edgeColour : Fin (1 + (k + 1) * n) → Fin (k + 1) :=
     fun v => if h : root ≠ v then C.get root v h else 0
   have hothers : others.card = (k + 1) * n := by
-    simp [others]
+    simp only [mem_univ, card_erase_of_mem, card_univ, Fintype.card_fin, add_tsub_cancel_left, others]
   have hpigeon :
       (Finset.univ : Finset (Fin (k + 1))).card * n ≤ others.card := by
-    simp [hothers]
+    simp only [card_univ, Fintype.card_fin, hothers, Std.le_refl]
   obtain ⟨omitted, _, hfiber⟩ :=
     Finset.exists_le_card_fiber_of_mul_le_card_of_maps_to
       (f := edgeColour) (s := others)
@@ -261,7 +262,7 @@ theorem forcesMonochromaticTriangle_succ {n k : ℕ}
       (Finset.univ_nonempty) hpigeon
   let fiber := others.filter (fun v => edgeColour v = omitted)
   have hlarge : n ≤ fiber.card := by
-    simpa [fiber] using hfiber
+    exact hfiber
   let embedding : Fin n ↪ Fin (1 + (k + 1) * n) :=
     ((Fin.castLEEmb hlarge).trans
       (Finset.equivFin fiber).symm.toEmbedding).trans
@@ -449,7 +450,8 @@ theorem exists_maximal_separated_palette_cover {α : Type*} [DecidableEq α]
   let candidates := ambient.powerset.filter (IsPaletteSeparated s)
   have hcandidates : candidates.Nonempty := by
     refine ⟨∅, ?_⟩
-    simp [candidates, IsPaletteSeparated]
+    simp only [IsPaletteSeparated, ne_eq, mem_filter, mem_powerset, empty_subset, notMem_empty,
+      IsEmpty.forall_iff, implies_true, and_self, candidates]
   obtain ⟨family, hfamily, hmax⟩ :=
     Finset.exists_max_image candidates Finset.card hcandidates
   have hfamily' : family ⊆ ambient ∧ IsPaletteSeparated s family := by
@@ -464,7 +466,7 @@ theorem exists_maximal_separated_palette_cover {α : Type*} [DecidableEq α]
     intro hPF
     apply hnot
     refine ⟨P, hPF, ?_⟩
-    simpa using hs
+    simpa only [sdiff_self, bot_eq_empty, card_empty] using hs
   have hcards : ∀ Q ∈ family, Q.card = P.card := by
     intro Q hQ
     exact hequal Q (hfamily'.1 hQ) P hP
@@ -519,7 +521,7 @@ noncomputable def paletteShellEmbedding (N t d : ℕ)
     by_cases hx : x ∈ Q
     · have hmem := Finset.ext_iff.mp hleft x
       have hnegative : x ∉ P.val ↔ x ∉ P'.val := by
-        simpa [hx] using hmem
+        simpa only [Finset.mem_sdiff, hx, true_and] using hmem
       constructor
       · intro hP
         by_contra hP'
@@ -528,7 +530,7 @@ noncomputable def paletteShellEmbedding (N t d : ℕ)
         by_contra hP
         exact (hnegative.mp hP) hP'
     · have hmem := Finset.ext_iff.mp hright x
-      simpa [hx] using hmem
+      simpa only [Finset.mem_sdiff, hx, not_false_eq_true, and_true] using hmem
 
 theorem paletteShell_card_le (N t d : ℕ)
     (Q : Finset (Fin N)) (hQ : Q.card = t) :
@@ -548,7 +550,7 @@ theorem paletteShell_card_le (N t d : ℕ)
       rw [Fintype.card_prod, Fintype.card_coe, Fintype.card_coe,
         Finset.card_powersetCard, Finset.card_powersetCard,
         Finset.card_sdiff_of_subset (Finset.subset_univ Q)]
-      simp [hQ]
+      simp only [hQ, card_univ, Fintype.card_fin]
 
 theorem palette_packing_card_le {α : Type*} [DecidableEq α]
     (ambient family : Finset (Finset α)) (s ballBound : ℕ)
@@ -559,7 +561,7 @@ theorem palette_packing_card_le {α : Type*} [DecidableEq α]
   have hsubset : ambient ⊆ family.biUnion (fun Q => paletteBall ambient Q s) := by
     intro P hP
     obtain ⟨Q, hQ, hclose⟩ := hcover P hP
-    exact Finset.mem_biUnion.mpr ⟨Q, hQ, by simp [paletteBall, hP, hclose]⟩
+    exact Finset.mem_biUnion.mpr ⟨Q, hQ, by simp only [paletteBall, mem_filter, hP, hclose, and_self]⟩
   calc
     ambient.card ≤ (family.biUnion (fun Q => paletteBall ambient Q s)).card :=
       Finset.card_le_card hsubset
@@ -567,7 +569,7 @@ theorem palette_packing_card_le {α : Type*} [DecidableEq α]
       Finset.card_biUnion_le
     _ ≤ ∑ _Q ∈ family, ballBound :=
       Finset.sum_le_sum fun Q hQ => hball Q hQ
-    _ = family.card * ballBound := by simp
+    _ = family.card * ballBound := by simp only [sum_const, smul_eq_mul]
 
 theorem paletteBall_card_le_binomial_sum (N t s : ℕ)
     (Q : Finset (Fin N)) (hQ : Q.card = t) :
@@ -581,7 +583,7 @@ theorem paletteBall_card_le_binomial_sum (N t s : ℕ)
         (Finset.range s).biUnion (fun d => paletteShell N t Q d) := by
     intro P hP
     have hP' : P ∈ ambient ∧ (P \ Q).card < s := by
-      simpa [paletteBall] using hP
+      simpa only [paletteBall, mem_filter] using hP
     apply Finset.mem_biUnion.mpr
     refine ⟨(P \ Q).card, Finset.mem_range.mpr hP'.2, ?_⟩
     simpa [paletteShell, ambient] using hP'.1
@@ -612,7 +614,7 @@ theorem exists_separated_palette_packing (N t s : ℕ) (hs : 0 < s) :
     (∑ d ∈ Finset.range s, t.choose d * (N - t).choose d)
     hcover (fun Q hQ => paletteBall_card_le_binomial_sum N t s Q
       (Finset.mem_powersetCard.mp (hfamily hQ)).2)
-  simpa using hpacking
+  simpa only [ge_iff_le, card_powersetCard, card_univ, Fintype.card_fin] using hpacking
 
 def transversalCoordinateEmbedding (j t : ℕ) (choice : Fin t → Fin j) :
     Fin t ↪ Fin (j * t) where
@@ -638,7 +640,7 @@ noncomputable def transversalPaletteEmbedding (j t : ℕ) :
     { toFun := fun choice => ⟨transversalPalette j t choice, ?_⟩
       inj' := ?_ }
   · apply Finset.mem_powersetCard.mpr
-    exact ⟨Finset.subset_univ _, by simp [transversalPalette]⟩
+    exact ⟨Finset.subset_univ _, by simp only [transversalPalette, card_map, card_univ, Fintype.card_fin]⟩
   · intro choice₁ choice₂ heq
     have hpalettes :
         transversalPalette j t choice₁ =
@@ -672,12 +674,12 @@ theorem stage_palette_numerator_bound (j t : ℕ) :
     (transversalPaletteEmbedding j t)
     (transversalPaletteEmbedding j t).injective
   calc
-    j ^ t = Fintype.card (Fin t → Fin j) := by simp
+    j ^ t = Fintype.card (Fin t → Fin j) := by simp only [Fintype.card_pi, Fintype.card_fin, prod_const, card_univ]
     _ ≤ Fintype.card
       ↥((Finset.univ : Finset (Fin (j * t))).powersetCard t) := hcard
     _ = (j * t).choose t := by
       rw [Fintype.card_coe, Finset.card_powersetCard]
-      simp
+      simp only [card_univ, Fintype.card_fin]
 
 theorem choose_le_choose_of_le_half {N d s : ℕ}
     (hds : d ≤ s) (hhalf : 2 * s ≤ N) :
@@ -703,7 +705,7 @@ theorem factorial_exp_lower (s : ℕ) (hs : 0 < s) :
     ((s : ℝ) / Real.exp 1) ^ s ≤
         Real.sqrt (2 * Real.pi * (s : ℝ)) *
           ((s : ℝ) / Real.exp 1) ^ s := by
-      nlinarith [mul_nonneg (sub_nonneg.mpr hsqrt) hpower]
+      linarith [mul_nonneg (sub_nonneg.mpr hsqrt) hpower]
     _ ≤ (s.factorial : ℝ) := Stirling.le_factorial_stirling s
 
 theorem choose_le_exp_mul_div_pow (N s : ℕ) (hs : 0 < s) :
@@ -741,7 +743,7 @@ theorem palette_binomial_sum_le (N t s : ℕ)
       · exact choose_le_choose_of_le_half hds hhalf
       · exact (Nat.choose_le_choose d (Nat.sub_le N t)).trans
           (choose_le_choose_of_le_half hds hNhalf)
-    _ = s * t.choose s * N.choose s := by simp [mul_assoc]
+    _ = s * t.choose s * N.choose s := by simp only [sum_const, card_range, smul_eq_mul, mul_assoc]
 
 theorem exists_stage_palette_packing_binomial (j t s : ℕ)
     (hs : 0 < s) (hj : 0 < j) (hhalf : 2 * s ≤ t) :
@@ -850,13 +852,13 @@ theorem recursiveCrossColour_spec {K : Type*} {H s : ℕ}
   · let d := Fin.find (fun d => x d = f y d) hforward
     left
     refine ⟨d, ?_, Fin.find_spec hforward⟩
-    simp [recursiveCrossColour, hforward, d]
+    simp only [recursiveCrossColour, hforward, ↓reduceDIte, d]
   · have hbackward : ∃ d : Fin s, y d = g x d :=
       (hcover x y).resolve_left hforward
     let d := Fin.find (fun d => y d = g x d) hbackward
     right
     refine ⟨d, ?_, Fin.find_spec hbackward⟩
-    simp [recursiveCrossColour, hforward, d]
+    simp only [recursiveCrossColour, hforward, ↓reduceDIte, d]
 
 theorem recursiveCrossColour_changes_membership {K : Type*} [DecidableEq K]
     {H s : ℕ} (P Q : Finset K)
@@ -872,10 +874,10 @@ theorem recursiveCrossColour_changes_membership {K : Type*} [DecidableEq K]
     ⟨d, hcolour, _⟩ | ⟨d, hcolour, _⟩
   · rw [hcolour]
     have hmem := Finset.mem_sdiff.mp (ha d)
-    simp [hmem.1, hmem.2]
+    simp only [hmem.2, hmem.1, ne_eq, eq_iff_iff, iff_true, not_false_eq_true]
   · rw [hcolour]
     have hmem := Finset.mem_sdiff.mp (hb d)
-    simp [hmem.1, hmem.2]
+    simp only [hmem.1, hmem.2, ne_eq, eq_iff_iff, iff_false, not_true_eq_false, not_false_eq_true]
 
 theorem recursiveCrossColour_same_left_coordinate
     {K : Type*} [DecidableEq K] {H s : ℕ}
@@ -903,7 +905,7 @@ theorem recursiveCrossColour_same_left_coordinate
   obtain ⟨d, hd, hforced⟩ := select x hxy
   obtain ⟨d', hd', hforced'⟩ := select x' hx'y
   have hindex : d = d' := a.injective (hd.symm.trans hd')
-  exact ⟨d, hd, hforced.trans (by simpa [hindex] using hforced'.symm)⟩
+  exact ⟨d, hd, hforced.trans (by simpa only [hindex] using hforced'.symm)⟩
 
 theorem recursiveCrossColour_same_right_coordinate
     {K : Type*} [DecidableEq K] {H s : ℕ}
@@ -931,7 +933,7 @@ theorem recursiveCrossColour_same_right_coordinate
   obtain ⟨d, hd, hforced⟩ := select y hxy
   obtain ⟨d', hd', hforced'⟩ := select y' hxy'
   have hindex : d = d' := b.injective (hd.symm.trans hd')
-  exact ⟨d, hd, hforced.trans (by simpa [hindex] using hforced'.symm)⟩
+  exact ⟨d, hd, hforced.trans (by simpa only [hindex] using hforced'.symm)⟩
 
 noncomputable def paletteBlockVector {V : Type*} {N t j H s : ℕ}
     (C : SimpleGraph.TopEdgeLabeling V (Fin (N - t)))
@@ -1016,7 +1018,7 @@ theorem paletteCrossColour_same_left_label
         (paletteBlockLabel C hC P hP (a d)
           ((Finset.mem_sdiff.mp (ha d)).2) u') at hequal
   have hlabels := Fin.castLE_injective hj hequal
-  simpa [hd] using hlabels
+  simpa only [hd] using hlabels
 
 theorem paletteCrossColour_same_right_label
     {V : Type*} {N t j H s : ℕ}
@@ -1053,7 +1055,7 @@ theorem paletteCrossColour_same_right_label
         (paletteBlockLabel C hC Q hQ (b d)
           ((Finset.mem_sdiff.mp (hb d)).2) v') at hequal
   have hlabels := Fin.castLE_injective hj hequal
-  simpa [hd] using hlabels
+  simpa only [hd] using hlabels
 
 structure PaletteBlockCertificate {I V K : Type*} [DecidableEq K]
     (C : SimpleGraph.TopEdgeLabeling (I × V) K) (j : ℕ) where
@@ -1339,18 +1341,14 @@ theorem recursivePaletteEdgeColour_symm
   by_cases hsame : i = i'
   · subst i'
     have huv : u ≠ v := fun heq => hne (Prod.ext rfl heq)
-    simpa [recursivePaletteEdgeColour] using
-      (SimpleGraph.EdgeLabeling.get_comm
-        (C := paletteRelabel C i.val (hcard i.val i.property))
-        u v (Ne.symm huv))
+    simpa only [recursivePaletteEdgeColour, ↓reduceDIte] using
+      (SimpleGraph.EdgeLabeling.get_comm (C := paletteRelabel C i.val (hcard i.val i.property)) u v (Ne.symm huv))
   · have hrank :
         (Finset.equivFin family) i ≠ (Finset.equivFin family) i' :=
       fun heq => hsame ((Finset.equivFin family).injective heq)
     rcases lt_or_gt_of_ne hrank with horder | horder
-    · simp [recursivePaletteEdgeColour, hsame, Ne.symm hsame,
-        horder, not_lt_of_gt horder]
-    · simp [recursivePaletteEdgeColour, hsame, Ne.symm hsame,
-        horder, not_lt_of_gt horder]
+    · simp only [recursivePaletteEdgeColour, Ne.symm hsame, ↓reduceDIte, not_lt_of_gt horder, hsame, horder]
+    · simp only [recursivePaletteEdgeColour, Ne.symm hsame, ↓reduceDIte, horder, hsame, not_lt_of_gt horder]
 
 noncomputable def recursivePaletteColouring
     {V : Type*} {N t j H s : ℕ}
@@ -1411,7 +1409,7 @@ theorem recursivePaletteColouring_internal_adj_iff
     apply (SimpleGraph.TopEdgeLabeling.labelGraph_adj u v).mpr
     refine ⟨huv, ?_⟩
     rw [recursivePaletteColouring_get] at hcolour
-    simpa [recursivePaletteEdgeColour] using hcolour
+    simpa only [recursivePaletteEdgeColour, ↓reduceDIte] using hcolour
   · intro hadj
     obtain ⟨huv, hcolour⟩ :=
       (SimpleGraph.TopEdgeLabeling.labelGraph_adj u v).mp hadj
@@ -1421,7 +1419,7 @@ theorem recursivePaletteColouring_internal_adj_iff
     apply (SimpleGraph.TopEdgeLabeling.labelGraph_adj (i, u) (i, v)).mpr
     refine ⟨hne, ?_⟩
     rw [recursivePaletteColouring_get]
-    simpa [recursivePaletteEdgeColour] using hcolour
+    simpa only [recursivePaletteEdgeColour, ↓reduceDIte] using hcolour
 
 theorem recursivePaletteColouring_cross_adj_iff_of_lt
     {V : Type*} {N t j H s : ℕ}
@@ -1445,7 +1443,7 @@ theorem recursivePaletteColouring_cross_adj_iff_of_lt
     obtain ⟨hpair, hcolour⟩ :=
       (SimpleGraph.TopEdgeLabeling.labelGraph_adj (i, u) (i', v)).mp hadj
     rw [recursivePaletteColouring_get] at hcolour
-    simpa [recursivePaletteEdgeColour, hne, horder] using hcolour
+    simpa only [recursivePaletteEdgeColour, hne, ↓reduceDIte, horder] using hcolour
   · intro hcolour
     have hpair : (i, u) ≠ (i', v) := by
       intro heq
@@ -1453,7 +1451,7 @@ theorem recursivePaletteColouring_cross_adj_iff_of_lt
     apply (SimpleGraph.TopEdgeLabeling.labelGraph_adj (i, u) (i', v)).mpr
     refine ⟨hpair, ?_⟩
     rw [recursivePaletteColouring_get]
-    simpa [recursivePaletteEdgeColour, hne, horder] using hcolour
+    simpa only [recursivePaletteEdgeColour, hne, ↓reduceDIte, horder] using hcolour
 
 theorem paletteFamily_reverse_rank_lt {N : ℕ}
     (family : Finset (Finset (Fin N)))
@@ -1593,11 +1591,11 @@ theorem mem_missingSymbolRows (H m : ℕ)
   rw [missingSymbolRows, Fintype.mem_piFinset]
   constructor
   · intro hrow column hcolumn
-    simpa [hcolumn] using hrow column
+    simpa only [ne_eq, hcolumn, ↓reduceIte, mem_erase, mem_univ, and_true] using hrow column
   · intro hrow column
     by_cases hcolumn : column ∈ T
-    · simpa [hcolumn] using hrow column hcolumn
-    · simp [hcolumn]
+    · simpa only [hcolumn, ↓reduceIte, mem_erase, ne_eq, mem_univ, and_true] using hrow column hcolumn
+    · simp only [hcolumn, ↓reduceIte, mem_univ]
 
 theorem card_missingSymbolRows (H m : ℕ)
     (T : Finset (Fin m → Fin H)) (symbol : Fin H) :
@@ -1614,7 +1612,8 @@ theorem card_missingSymbolRows (H m : ℕ)
       split_ifs <;> simp
     _ = (H - 1) ^ T.card * H ^ (H ^ m - T.card) := by
       rw [Finset.prod_ite]
-      simp [Finset.filter_notMem_eq_sdiff, Finset.card_sdiff_of_subset]
+      simp only [subset_univ, filter_mem_eq_of_subset, prod_const, filter_notMem_eq_sdiff, card_sdiff_of_subset,
+        card_univ, Fintype.card_pi, Fintype.card_fin]
 
 theorem card_badSaturationRows_le (H m : ℕ)
     (T : Finset (Fin m → Fin H)) :
@@ -1626,7 +1625,7 @@ theorem card_badSaturationRows_le (H m : ℕ)
         (fun symbol => missingSymbolRows H m T symbol) := by
     intro row hrow
     have hbad : ¬ RowCovers T row := by
-      simpa [badSaturationRows] using hrow
+      simpa only [badSaturationRows, mem_filter, mem_univ, true_and] using hrow
     unfold RowCovers at hbad
     push Not at hbad
     obtain ⟨symbol, hsymbol⟩ := hbad
@@ -1641,7 +1640,7 @@ theorem card_badSaturationRows_le (H m : ℕ)
     _ ≤ ∑ symbol : Fin H, (missingSymbolRows H m T symbol).card :=
       Finset.card_biUnion_le
     _ = H * ((H - 1) ^ T.card * H ^ (H ^ m - T.card)) := by
-      simp [card_missingSymbolRows]
+      simp only [card_missingSymbolRows, sum_const, card_univ, Fintype.card_fin, smul_eq_mul]
 
 theorem missing_symbol_power_bound (H m : ℕ) (hH : 2 ≤ H)
     (hm : 2 * (H : ℝ) * Real.log (H : ℝ) ≤ (m : ℝ)) :
@@ -1672,7 +1671,7 @@ theorem missing_symbol_power_bound (H m : ℕ) (hH : 2 ≤ H)
         apply Real.exp_strictMono
         apply (div_lt_iff₀ hHpos).mpr
         push_cast
-        nlinarith
+        linarith
       _ = ((H : ℝ) ^ 2)⁻¹ := by
         rw [show -2 * Real.log (H : ℝ) =
           -(Real.log (H : ℝ) + Real.log (H : ℝ)) by ring]
@@ -1683,8 +1682,8 @@ theorem missing_symbol_power_bound (H m : ℕ) (hH : 2 ≤ H)
   have hcross := (div_lt_div_iff₀
     (pow_pos hHpos (m + 1)) (pow_pos hHpos 2)).mp
       (show ((H : ℝ) - 1) ^ (m + 1) / (H : ℝ) ^ (m + 1) <
-        1 / (H : ℝ) ^ 2 by simpa [one_div] using hfrac_strict)
-  simpa [mul_comm] using hcross
+        1 / (H : ℝ) ^ 2 by simpa only [one_div] using hfrac_strict)
+  simpa only [gt_iff_lt, mul_comm, mul_one] using hcross
 
 theorem missing_symbol_power_bound_nat (H m : ℕ) (hH : 2 ≤ H)
     (hm : 2 * (H : ℝ) * Real.log (H : ℝ) ≤ (m : ℝ)) :
@@ -1693,7 +1692,7 @@ theorem missing_symbol_power_bound_nat (H m : ℕ) (hH : 2 ≤ H)
   have hcast :
       ((H ^ 2 * (H - 1) ^ (m + 1) : ℕ) : ℝ) <
         ((H ^ (m + 1) : ℕ) : ℝ) := by
-    simpa [Nat.cast_sub (show 1 ≤ H by omega)] using hreal
+    simpa only [Nat.cast_mul, Nat.cast_pow, Nat.cast_sub (show 1 ≤ H by omega), Nat.cast_one] using hreal
   exact_mod_cast hcast
 
 theorem card_badSaturationRows_mul_lt (H m : ℕ) (hH : 2 ≤ H)
@@ -1704,7 +1703,7 @@ theorem card_badSaturationRows_mul_lt (H m : ℕ) (hH : 2 ≤ H)
     calc
       m + 1 = T.card := hT.symm
       _ ≤ Fintype.card (Fin m → Fin H) := Finset.card_le_univ T
-      _ = H ^ m := by simp
+      _ = H ^ m := by simp only [Fintype.card_pi, Fintype.card_fin, prod_const, card_univ]
   have hremaining : 0 < H ^ (H ^ m - (m + 1)) := by
     exact pow_pos (show 0 < H by omega) _
   calc
@@ -1744,7 +1743,7 @@ theorem card_badSaturationMatrices (H m s : ℕ)
     (badSaturationMatrices H m s T).card =
       (badSaturationRows H m T).card ^ s := by
   classical
-  simp [badSaturationMatrices, Fintype.card_piFinset]
+  simp only [badSaturationMatrices, Fintype.card_piFinset, prod_const, card_univ, Fintype.card_fin]
 
 theorem exists_saturated_of_bad_row_union_bound (H m s : ℕ)
     (hbound :
@@ -1768,7 +1767,7 @@ theorem exists_saturated_of_bad_row_union_bound (H m s : ℕ)
     obtain ⟨T, hTcard, hrows⟩ := hA
     apply Finset.mem_biUnion.mpr
     refine ⟨T, ?_, ?_⟩
-    · simp [columnSets, hTcard]
+    · simp only [mem_powersetCard, subset_univ, hTcard, and_self, columnSets]
     · simp only [badSaturationMatrices, Fintype.mem_piFinset,
         badSaturationRows, Finset.mem_filter, Finset.mem_univ, true_and]
       intro row
@@ -1783,7 +1782,7 @@ theorem exists_saturated_of_bad_row_union_bound (H m s : ℕ)
     calc
       Fintype.card (Fin s → (Fin m → Fin H) → Fin H) =
           (Finset.univ : Finset (Fin s → (Fin m → Fin H) → Fin H)).card := by
-            simp
+            simp only [Fintype.card_pi, Fintype.card_fin, prod_const, card_univ]
       _ ≤ (columnSets.biUnion
         (fun T => badSaturationMatrices H m s T)).card :=
         Finset.card_le_card hcover
@@ -1816,7 +1815,8 @@ theorem exists_saturated_matrix (H m : ℕ) (hH : 2 ≤ H)
       (card_badSaturationRows_lt_pow H m hH hm T hcard).le s
   have hnumber : columnSets.card ≤ (H ^ m) ^ (m + 1) := by
     dsimp [columnSets]
-    simpa using Nat.choose_le_pow (H ^ m) (m + 1)
+    simpa only [card_powersetCard, card_univ, Fintype.card_pi, Fintype.card_fin, prod_const] using
+      Nat.choose_le_pow (H ^ m) (m + 1)
   have hpositive : 0 < H ^ m := pow_pos (show 0 < H by omega) _
   change
     (∑ T ∈ columnSets, (badSaturationRows H m T).card ^ s) <
@@ -1828,7 +1828,7 @@ theorem exists_saturated_matrix (H m : ℕ) (hH : 2 ≤ H)
         (∑ T ∈ columnSets, (badSaturationRows H m T).card ^ s) ≤
             ∑ _T ∈ columnSets, (H ^ (H ^ m - 1)) ^ s := by
           exact Finset.sum_le_sum fun T hT => hterms T hT
-        _ = columnSets.card * (H ^ (H ^ m - 1)) ^ s := by simp
+        _ = columnSets.card * (H ^ (H ^ m - 1)) ^ s := by simp only [sum_const, smul_eq_mul]
     _ ≤ (H ^ m) ^ (m + 1) * (H ^ (H ^ m - 1)) ^ s :=
       Nat.mul_le_mul_right _ hnumber
     _ = H ^ (m * (m + 1) + (H ^ m - 1) * s) := by
@@ -1841,13 +1841,13 @@ theorem exists_saturated_matrix (H m : ℕ) (hH : 2 ≤ H)
           apply Nat.add_lt_add_right
           dsimp [s]
           omega
-        _ = 1 * s + (H ^ m - 1) * s := by simp
+        _ = 1 * s + (H ^ m - 1) * s := by simp only [one_mul]
         _ = (1 + (H ^ m - 1)) * s := by rw [Nat.add_mul]
         _ = H ^ m * s := by
           congr 1
           omega
     _ = Fintype.card (Fin s → (Fin m → Fin H) → Fin H) := by
-      simp [← pow_mul]
+      simp only [Fintype.card_pi, Fintype.card_fin, prod_const, card_univ, ← pow_mul]
 
 noncomputable def saturatedMatrixWidth (H : ℕ) : ℕ :=
   ⌈2 * (H : ℝ) * Real.log (H : ℝ)⌉₊
@@ -1863,8 +1863,7 @@ theorem exists_saturated_matrix_ceil (H : ℕ) (hH : 2 ≤ H) :
       2 * (H : ℝ) * Real.log (H : ℝ) ≤
         (saturatedMatrixWidth H : ℝ) := by
     exact Nat.le_ceil _
-  simpa [saturatedMatrixRows] using
-    exists_saturated_matrix H (saturatedMatrixWidth H) hH hwidth
+  simpa only [saturatedMatrixRows] using exists_saturated_matrix H (saturatedMatrixWidth H) hH hwidth
 
 noncomputable def exceptionalColumns {H m s : ℕ}
     (A : Fin s → (Fin m → Fin H) → Fin H)
@@ -1878,7 +1877,7 @@ theorem mem_exceptionalColumns {H m s : ℕ}
     z ∈ exceptionalColumns A y ↔
       ∀ row : Fin s, A row z ≠ y row := by
   classical
-  simp [exceptionalColumns]
+  simp only [exceptionalColumns, ne_eq, mem_filter, mem_univ, true_and]
 
 theorem card_exceptionalColumns_le {H m s : ℕ}
     (A : Fin s → (Fin m → Fin H) → Fin H)
@@ -1938,7 +1937,7 @@ theorem saturated_coordinate_covering {H m s : ℕ}
       intro row heq
       apply hback
       refine ⟨row, ?_⟩
-      simpa [backwardGuess, z] using heq.symm
+      simpa only [backwardGuess] using heq.symm
     let ez : exceptionalColumns A y := ⟨z, hz⟩
     let index := exceptionalColumnIndex A hA y
     let row : Fin s := Fin.castLE hms (index ez)
@@ -1963,7 +1962,7 @@ theorem exists_coordinate_covering (H : ℕ) (hH : 2 ≤ H) :
   obtain ⟨A, hA⟩ := exists_saturated_matrix_ceil H hH
   have hwidth : saturatedMatrixWidth H ≤ saturatedMatrixRows H := by
     dsimp [saturatedMatrixRows]
-    nlinarith [sq_nonneg (saturatedMatrixWidth H : ℤ)]
+    linarith [sq_nonneg (saturatedMatrixWidth H : ℤ)]
   exact saturated_coordinate_covering A hA (by omega) hwidth
 
 theorem exists_recursivePaletteColouring_fin
@@ -1987,7 +1986,7 @@ theorem exists_recursivePaletteColouring_fin
   let certificate := recursivePaletteCertificate C htriangle hC hj family
     hcard hseparated f g hcover
   have hproduct : Fintype.card (↥family × Fin n) = family.card * n := by
-    simp
+    simp only [Fintype.card_prod, Fintype.card_coe, Fintype.card_fin]
   let embedding : Fin (family.card * n) ↪ (↥family × Fin n) :=
     (Fintype.equivFinOfCardEq hproduct).symm.toEmbedding
   refine ⟨C'.pullback embedding, ?_, ?_⟩
@@ -2023,7 +2022,7 @@ theorem paletteGrowthBound_succ {a s j n B : ℕ}
     (((j + 1).factorial : ℕ) : ℝ) ^ (a * s) =
         ((j + 1 : ℕ) : ℝ) ^ (a * s) *
           (j.factorial : ℝ) ^ (a * s) := by
-      simp [Nat.factorial_succ, mul_pow]
+      simp only [Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one, mul_pow]
     _ ≤
         ((B : ℝ) * (s : ℝ) *
           (Real.exp 1 ^ 2 * (a : ℝ) ^ 2 *
@@ -2052,15 +2051,16 @@ theorem exists_recursivePaletteStage (H a j : ℕ)
         PaletteGrowthBound a (saturatedMatrixRows H) j n := by
   classical
   have hs : 0 < saturatedMatrixRows H := by
-    simp [saturatedMatrixRows]
+    simp only [saturatedMatrixRows, lt_add_iff_pos_left, Order.lt_add_one_iff, zero_le]
   induction j with
   | zero =>
-      refine ⟨1, (by simpa using singletonZeroColouring), ?_, ?_, ?_⟩
+      refine ⟨1, (by simpa only [zero_mul] using singletonZeroColouring), ?_, ?_, ?_⟩
       · intro colour
-        exact Fin.elim0 (by simpa using colour)
+        exact Fin.elim0 (by simpa only [zero_mul] using colour)
       · intro colour
-        exact Fin.elim0 (by simpa using colour)
-      · simp [PaletteGrowthBound]
+        exact Fin.elim0 (by simpa only [zero_mul] using colour)
+      · simp only [PaletteGrowthBound, Nat.factorial_zero, Nat.cast_one, one_pow, pow_zero, mul_one, Real.exp_one_pow,
+          Nat.cast_ofNat, mul_zero, Std.le_refl]
   | succ j ih =>
       obtain ⟨n, C, htriangle, hcolour, hgrowth⟩ := ih (by omega)
       obtain ⟨family, hfamily, hseparated, hstage⟩ :=
@@ -2074,7 +2074,7 @@ theorem exists_recursivePaletteStage (H a j : ℕ)
           (j + 1) * (a * saturatedMatrixRows H) -
             a * saturatedMatrixRows H =
               j * (a * saturatedMatrixRows H) := by
-        simp [Nat.succ_mul]
+        simp only [Nat.succ_mul, add_tsub_cancel_right]
       have hstep := @exists_recursivePaletteColouring_fin
         n ((j + 1) * (a * saturatedMatrixRows H))
         (a * saturatedMatrixRows H) (j + 1) H
@@ -2120,7 +2120,7 @@ theorem palette_exp_loss_bound (H a s : ℕ)
           (s : ℝ) * (2 + 2 * Real.log (a : ℝ)) ≤
         ((a : ℝ) - 1) * (s : ℝ) *
           (Real.log (H : ℝ) - 1) := by
-    nlinarith
+    linarith
   have hscaled := mul_le_mul_of_nonneg_left hcore hHpos.le
   have htargetlog :
       Real.log (((H : ℝ) / Real.exp 4) ^ (H * (a * s))) =
@@ -2154,7 +2154,7 @@ theorem palette_exp_loss_bound (H a s : ℕ)
     ring
   apply (Real.log_le_log_iff htargetpos hsourcepos).mp
   rw [htargetlog, hsourcelog]
-  nlinarith
+  linarith
 
 theorem recursivePaletteRamsey_exponential_bound (H a : ℕ)
     (hH : 2 ≤ H) (ha : 2 ≤ a)
@@ -2167,7 +2167,7 @@ theorem recursivePaletteRamsey_exponential_bound (H a : ℕ)
     exists_recursivePaletteStage H a H hH ha le_rfl
   have hramsey := triangleFree_lt_triangleRamseyNumber C htriangle
   have hs : 0 < saturatedMatrixRows H := by
-    simp [saturatedMatrixRows]
+    simp only [saturatedMatrixRows, lt_add_iff_pos_left, Order.lt_add_one_iff, zero_le]
   have hden :
       0 < (saturatedMatrixRows H : ℝ) ^ H *
         (Real.exp 1 ^ 2 * (a : ℝ) ^ 2) ^
@@ -2181,7 +2181,7 @@ theorem recursivePaletteRamsey_exponential_bound (H a : ℕ)
           ((a - 1) + 1) * saturatedMatrixRows H := by
         rw [Nat.sub_add_cancel (by omega)]
       _ = (a - 1) * saturatedMatrixRows H + saturatedMatrixRows H := by
-        simp [Nat.add_mul]
+        simp only [Nat.add_mul, one_mul]
   unfold PaletteGrowthBound at hgrowth
   nth_rewrite 1 [hsplit] at hgrowth
   rw [pow_add] at hgrowth
@@ -2236,7 +2236,7 @@ theorem recursivePaletteRamsey_exponential_bound (H a : ℕ)
             ((saturatedMatrixRows H : ℝ) ^ H *
               (Real.exp 1 ^ 2 * (a : ℝ) ^ 2) ^
                 (saturatedMatrixRows H * H)) := by
-          simpa [mul_assoc] using hcancel
+          simpa only [Real.exp_one_pow, Nat.cast_ofNat, mul_assoc] using hcancel
 
 noncomputable def paletteLogWidth (H : ℕ) : ℕ :=
   max 2 ⌈Real.log (H : ℝ)⌉₊
@@ -2265,7 +2265,7 @@ theorem stageWidths_succ_le (H : ℕ) (hH : 1 ≤ H) :
     exact_mod_cast hH
   have hinv : 1 / (H : ℝ) ≤ 1 := by
     apply (div_le_iff₀ hpos).mpr
-    simpa using hHreal
+    simpa only [one_mul, Nat.one_le_cast] using hHreal
   have hlogsucc :
       Real.log ((H + 1 : ℕ) : ℝ) ≤
         Real.log (H : ℝ) + 1 / (H : ℝ) := by
@@ -2288,7 +2288,7 @@ theorem stageWidths_succ_le (H : ℕ) (hH : 1 ≤ H) :
       have hlogsucc_real :
           Real.log ((H : ℝ) + 1) ≤
             Real.log (H : ℝ) + 1 / (H : ℝ) := by
-        simpa using hlogsucc
+        simpa only [one_div, Nat.cast_add, Nat.cast_one] using hlogsucc
       linarith [Nat.le_ceil (Real.log (H : ℝ))]
     change
       max 2 ⌈Real.log ((H + 1 : ℕ) : ℝ)⌉₊ ≤
@@ -2315,7 +2315,7 @@ theorem stageWidths_succ_le (H : ℕ) (hH : 1 ≤ H) :
         2 * ((H : ℝ) + 1) *
           (Real.log (H : ℝ) + 1 / (H : ℝ)) := by
             gcongr
-            simpa using hlogsucc
+            simpa only [one_div, Nat.cast_add, Nat.cast_one] using hlogsucc
       _ = 2 * (H : ℝ) * Real.log (H : ℝ) +
           2 * Real.log (H : ℝ) + 2 + 2 / (H : ℝ) := by
             field_simp
@@ -2382,10 +2382,10 @@ theorem paletteColourCount_mono {H H' : ℕ}
 theorem two_mul_stage_le_paletteColourCount (H : ℕ) :
     2 * H ≤ paletteColourCount H := by
   have hrows : 1 ≤ saturatedMatrixRows H := by
-    simp [saturatedMatrixRows]
+    simp only [saturatedMatrixRows, le_add_iff_nonneg_left, zero_le]
   have hfactor : 2 ≤ paletteLogWidth H * saturatedMatrixRows H := by
     calc
-      2 = 2 * 1 := by simp
+      2 = 2 * 1 := by simp only [mul_one]
       _ ≤ paletteLogWidth H * saturatedMatrixRows H :=
         Nat.mul_le_mul (paletteLogWidth_two_le H) hrows
   unfold paletteColourCount
@@ -2407,7 +2407,7 @@ theorem exists_paletteStage_bracket (k : ℕ)
   have hMpos : 1 ≤ M := by
     by_contra hnot
     have hzero : M = 0 := by omega
-    simp [hzero, paletteColourCount] at hM
+    simp only [paletteColourCount, hzero, zero_mul, not_lt_zero] at hM
   have hMlarge : 2 < M := by
     by_contra hnot
     have hMtwo : M ≤ 2 := by omega
@@ -2419,7 +2419,7 @@ theorem exists_paletteStage_bracket (k : ℕ)
     change ¬ k < paletteColourCount (M - 1) at hminimal
     omega
   · have hsucc : M - 1 + 1 = M := by omega
-    simpa [hsucc] using hM
+    simpa only [hsucc, gt_iff_lt] using hM
 
 theorem stage_mul_paletteWidth_le_matrixWidth_sharp (H : ℕ) (hH : 3 ≤ H) :
     H * paletteLogWidth H ≤ saturatedMatrixWidth H := by
@@ -2447,9 +2447,9 @@ theorem saturatedMatrixRows_adjacent_scaled_sharp (H : ℕ) (hH : 3 ≤ H) :
   let w := saturatedMatrixWidth H
   let a := paletteLogWidth H
   have ha : 2 ≤ a := by
-    simpa [a] using paletteLogWidth_two_le H
+    exact paletteLogWidth_two_le H
   have hwa : H * a ≤ w := by
-    simpa [a, w] using stage_mul_paletteWidth_le_matrixWidth_sharp H hH
+    exact stage_mul_paletteWidth_le_matrixWidth_sharp H hH
   have hthreea : 3 * a ≤ w :=
     (Nat.mul_le_mul_right a hH).trans hwa
   have hnext : saturatedMatrixWidth (H + 1) ≤ w + 4 * a := by
@@ -2475,9 +2475,9 @@ theorem saturatedMatrixRows_adjacent_scaled_sharp (H : ℕ) (hH : 3 ≤ H) :
             Nat.mul_le_mul_right _ hwa
           _ ≤ w * (14 * w + 4) :=
             Nat.mul_le_mul_left w (by omega)
-          _ ≤ 14 * (w * (w + 1) + 1) := by nlinarith) _
+          _ ≤ 14 * (w * (w + 1) + 1) := by linarith) _
     _ = (H + 14) * saturatedMatrixRows H := by
-      simp [w, saturatedMatrixRows]
+      simp only [saturatedMatrixRows, w]
       ring
 
 theorem paletteColourCount_adjacent_scaled_sharp (H : ℕ) (hH : 3 ≤ H) :
@@ -2487,17 +2487,17 @@ theorem paletteColourCount_adjacent_scaled_sharp (H : ℕ) (hH : 3 ≤ H) :
   let s := saturatedMatrixRows H
   let s' := saturatedMatrixRows (H + 1)
   have haH : a ≤ H := by
-    simpa [a] using paletteLogWidth_le_stage H (by omega)
+    exact paletteLogWidth_le_stage H (by omega)
   have ha' : paletteLogWidth (H + 1) ≤ a + 1 := by
-    simpa [a] using (stageWidths_succ_le H (by omega)).1
+    exact (stageWidths_succ_le H (by omega)).1
   have hrows : H * s' ≤ (H + 14) * s := by
-    simpa [s, s'] using saturatedMatrixRows_adjacent_scaled_sharp H hH
+    exact saturatedMatrixRows_adjacent_scaled_sharp H hH
   have hHreal : (3 : ℝ) ≤ H := by exact_mod_cast hH
   have hareal : (a : ℝ) ≤ H := by exact_mod_cast haH
   have hpolyreal :
       ((H : ℝ) + 1) * ((a : ℝ) + 1) * ((H : ℝ) + 14) ≤
         ((a : ℝ) + 34) * (H : ℝ) ^ 2 := by
-    nlinarith [
+    linarith [
       mul_nonneg (show 0 ≤ 15 * (H : ℝ) + 14 by positivity)
         (sub_nonneg.mpr hareal),
       mul_nonneg (show 0 ≤ (H : ℝ) - 3 by linarith)
@@ -2551,7 +2551,7 @@ theorem palette_exponential_adjacent_transfer_sharp
     Real.log_div hHpos.ne' (Real.exp_ne_zero 38),
     Real.log_div hHpos.ne' (Real.exp_ne_zero 4),
     Real.log_exp, Real.log_exp]
-  nlinarith
+  linarith
 
 theorem allColourPaletteRamsey_exponential_bound_sharp (k : ℕ)
     (hk : paletteColourCount 3 ≤ k) :
@@ -2569,7 +2569,7 @@ theorem allColourPaletteRamsey_exponential_bound_sharp (k : ℕ)
     by_contra hnot
     have htwoeq : H = 2 := by omega
     subst H
-    exact (Nat.not_lt_of_ge hk) (by simpa using hupper)
+    exact (Nat.not_lt_of_ge hk) (by simpa only [Nat.reduceAdd] using hupper)
   have hratio :
       paletteLogWidth H * k ≤
         (paletteLogWidth H + 34) * paletteColourCount H := by
@@ -2585,9 +2585,9 @@ theorem allColourPaletteRamsey_exponential_bound_sharp (k : ℕ)
         (log_le_paletteLogWidth H) hlower hratio
     _ ≤ (triangleRamseyNumber (paletteColourCount H) : ℝ) :=
       by
-        simpa [paletteColourCount] using
-          recursivePaletteRamsey_exponential_bound H (paletteLogWidth H)
-            (by omega) (paletteLogWidth_two_le H) (log_le_paletteLogWidth H)
+        simpa only [paletteColourCount] using
+          recursivePaletteRamsey_exponential_bound H (paletteLogWidth H) (by omega) (paletteLogWidth_two_le H)
+            (log_le_paletteLogWidth H)
     _ ≤ (triangleRamseyNumber k : ℝ) := by
       exact_mod_cast triangleRamseyNumber_mono hlower
 
@@ -2613,11 +2613,11 @@ theorem paletteColourCount_le_twenty_six_sharp (H : ℕ) (hH : 3 ≤ H) :
   have hm : (saturatedMatrixWidth H : ℝ) ≤ 3 * y := by
     unfold saturatedMatrixWidth
     dsimp [y]
-    nlinarith
+    linarith
   have hmsucc : (saturatedMatrixWidth H : ℝ) + 1 ≤ 4 * y := by
     linarith
   have hone : (1 : ℝ) ≤ y ^ 2 := by
-    nlinarith [sq_nonneg (y - 1)]
+    linarith [sq_nonneg (y - 1)]
   have hrows : (saturatedMatrixRows H : ℝ) ≤ 13 * y ^ 2 := by
     unfold saturatedMatrixRows
     push_cast
@@ -2696,15 +2696,15 @@ theorem paletteStage_cube_root_control_six_sharp (H k : ℕ)
 
 theorem paletteColourCount_three : paletteColourCount 3 = 342 := by
   have hlo : (1 : ℝ) < Real.log 3 := by
-    nlinarith [Real.log_three_gt_d9]
+    linarith [Real.log_three_gt_d9]
   have hhi : Real.log (3 : ℝ) < 7 / 6 := by
-    nlinarith [Real.log_three_lt_d9]
+    linarith [Real.log_three_lt_d9]
   have ha : ⌈Real.log (3 : ℝ)⌉₊ = 2 := by
     apply (Nat.ceil_eq_iff (by norm_num : (2 : ℕ) ≠ 0)).mpr
     constructor <;> norm_num <;> linarith
   have hm : ⌈(6 : ℝ) * Real.log (3 : ℝ)⌉₊ = 7 := by
     apply (Nat.ceil_eq_iff (by norm_num : (7 : ℕ) ≠ 0)).mpr
-    constructor <;> norm_num <;> nlinarith
+    constructor <;> norm_num <;> linarith
   norm_num [paletteColourCount, paletteLogWidth,
     saturatedMatrixRows, saturatedMatrixWidth, ha, hm]
 
@@ -2716,7 +2716,7 @@ theorem quantitativeLowerBound_explicit_small (k : ℕ)
   have hlog : (1 / 2 : ℝ) ≤ Real.log (k : ℝ) := by
     calc
       (1 / 2 : ℝ) ≤ Real.log 2 := by
-        nlinarith [Real.log_two_gt_d9]
+        linarith [Real.log_two_gt_d9]
       _ ≤ Real.log (k : ℝ) := by
         apply Real.log_le_log (by norm_num)
         exact_mod_cast hk
@@ -2728,7 +2728,7 @@ theorem quantitativeLowerBound_explicit_small (k : ℕ)
     norm_num
     exact_mod_cast (show k ≤ 343 by omega)
   have hexp : (39 : ℝ) ≤ Real.exp 38 := by
-    nlinarith [Real.add_one_le_exp (38 : ℝ)]
+    linarith [Real.add_one_le_exp (38 : ℝ)]
   have hbase :
       ((1 : ℝ) / (6 * Real.exp 38)) *
         (k : ℝ) ^ ((1 : ℝ) / 3) / Real.log (k : ℝ) ≤ 1 := by
@@ -2747,7 +2747,7 @@ theorem quantitativeLowerBound_explicit_small (k : ℕ)
       let C : SimpleGraph.TopEdgeLabeling (Fin 0) (Fin k) :=
         fun _ => ⟨0, by omega⟩
       exact_mod_cast triangleFree_lt_triangleRamseyNumber C
-        (fun _ => SimpleGraph.cliqueFree_of_card_lt (by simp))
+        (fun _ => SimpleGraph.cliqueFree_of_card_lt (by simp only [Fintype.card_eq_zero, Nat.ofNat_pos]))
 
 theorem quantitativeLowerBound_explicit_all :
     ∀ k : ℕ, 2 ≤ k →
@@ -2778,7 +2778,7 @@ theorem quantitativeLowerBound_explicit_all :
           field_simp
         _ ≤ (H : ℝ) / Real.exp 38 := by
           apply (div_le_div_iff₀ (by positivity) (by positivity)).mpr
-          nlinarith [mul_le_mul_of_nonneg_right hroot
+          linarith [mul_le_mul_of_nonneg_right hroot
             (Real.exp_pos 38).le]
     calc
       (((1 : ℝ) / (6 * Real.exp 38)) *
@@ -2802,15 +2802,14 @@ theorem triangleRamseyNumber_log_sharp_coefficients :
   have hsmall :
       ∀ᶠ k : ℕ in atTop,
         ‖Real.log (k : ℝ)‖ ≤ c * ‖(k : ℝ) ^ ε‖ := by
-    simpa [Function.comp_def] using
-      ((isLittleO_log_rpow_atTop hε).comp_tendsto
-        (tendsto_natCast_atTop_atTop (R := ℝ))).bound hc
+    simpa only [Real.norm_eq_abs, eventually_atTop, Function.comp_apply] using
+      ((isLittleO_log_rpow_atTop hε).comp_tendsto (tendsto_natCast_atTop_atTop (R := ℝ))).bound hc
   have hfour :
       ∀ᶠ k : ℕ in atTop,
         ‖Real.log (4 : ℝ)‖ ≤ ε * ‖Real.log (k : ℝ)‖ := by
-    simpa [Function.comp_def] using
-      ((Real.isLittleO_const_log_atTop (c := Real.log (4 : ℝ))).comp_tendsto
-        (tendsto_natCast_atTop_atTop (R := ℝ))).bound hε
+    simpa only [Real.norm_eq_abs, eventually_atTop, Function.comp_apply] using
+      ((Real.isLittleO_const_log_atTop (c := Real.log (4 : ℝ))).comp_tendsto (tendsto_natCast_atTop_atTop (R := ℝ))).bound
+        hε
   filter_upwards [hsmall, hfour, eventually_ge_atTop 2] with k hk hfour' hk2
   have hx : 0 < (k : ℝ) := by exact_mod_cast (by omega : 0 < k)
   have hlog : 0 < Real.log (k : ℝ) :=
@@ -2848,7 +2847,7 @@ theorem triangleRamseyNumber_log_sharp_coefficients :
           (c * (k : ℝ) ^ ((1 : ℝ) / 3) / Real.log (k : ℝ)) ^ k := by
             gcongr
       _ ≤ (triangleRamseyNumber k : ℝ) := by
-        simpa [c] using quantitativeLowerBound_explicit_all k hk2
+        simpa only [one_div, mul_inv_rev, c] using quantitativeLowerBound_explicit_all k hk2
   have hRamseyPositive : 0 < (triangleRamseyNumber k : ℝ) :=
     lt_of_lt_of_le (pow_pos hroot k) hRamseyLower
   have hRamseyUpper :
@@ -2873,7 +2872,7 @@ theorem triangleRamseyNumber_log_sharp_coefficients :
         rw [Real.log_mul (by norm_num) (pow_ne_zero _ hx.ne'), Real.log_pow]
       _ ≤ (1 + ε) * (k : ℝ) * Real.log (k : ℝ) := by
         have hkreal : (1 : ℝ) ≤ k := by exact_mod_cast (by omega : 1 ≤ k)
-        nlinarith [mul_nonneg (sub_nonneg.mpr hkreal)
+        linarith [mul_nonneg (sub_nonneg.mpr hkreal)
           (mul_nonneg hε.le hlog.le)]
 
 theorem triangleRamseyNumber_log_eventually_bounds :
@@ -2888,9 +2887,10 @@ theorem triangleRamseyNumber_log_eventually_bounds :
         ‖Real.log (k : ℝ)‖ ≤
           (1 / (6 * Real.exp 38) : ℝ) *
             ‖(k : ℝ) ^ ((1 : ℝ) / 6)‖ := by
-    simpa [Function.comp_def] using
+    simpa only [Real.norm_eq_abs, one_div, mul_inv_rev, eventually_atTop, Function.comp_apply] using
       ((isLittleO_log_rpow_atTop (by norm_num : (0 : ℝ) < 1 / 6)).comp_tendsto
-        (tendsto_natCast_atTop_atTop (R := ℝ))).bound hconstant
+            (tendsto_natCast_atTop_atTop (R := ℝ))).bound
+        hconstant
   filter_upwards [hlogsmall, eventually_ge_atTop 4] with k hsmall hk
   have hkpositive : 0 < (k : ℝ) := by exact_mod_cast (by omega : 0 < k)
   have hlogpositive : 0 < Real.log (k : ℝ) :=
@@ -2974,11 +2974,11 @@ theorem triangleRamseyNumber_log_isTheta :
     have hscale : 0 ≤ (k : ℝ) * Real.log (k : ℝ) :=
       mul_nonneg (Nat.cast_nonneg _) (Real.log_nonneg (by exact_mod_cast (by omega : 1 ≤ k)))
     have hlog : 0 ≤ Real.log (triangleRamseyNumber k : ℝ) := by
-      nlinarith [hbounds.1]
+      linarith [hbounds.1]
     change |Real.log (triangleRamseyNumber k : ℝ)| ≤
       (2 : ℝ) * |(k : ℝ) * Real.log (k : ℝ)|
     rw [abs_of_nonneg hlog, abs_of_nonneg hscale]
-    simpa [mul_assoc] using hbounds.2
+    simpa only [mul_assoc] using hbounds.2
   · apply Asymptotics.isBigO_iff.mpr
     refine ⟨6, ?_⟩
     filter_upwards [triangleRamseyNumber_log_eventually_bounds,
@@ -2986,11 +2986,11 @@ theorem triangleRamseyNumber_log_isTheta :
     have hscale : 0 ≤ (k : ℝ) * Real.log (k : ℝ) :=
       mul_nonneg (Nat.cast_nonneg _) (Real.log_nonneg (by exact_mod_cast (by omega : 1 ≤ k)))
     have hlog : 0 ≤ Real.log (triangleRamseyNumber k : ℝ) := by
-      nlinarith [hbounds.1]
+      linarith [hbounds.1]
     have hreverse :
         (k : ℝ) * Real.log (k : ℝ) ≤
           6 * Real.log (triangleRamseyNumber k : ℝ) := by
-      nlinarith [hbounds.1]
+      linarith [hbounds.1]
     change |(k : ℝ) * Real.log (k : ℝ)| ≤
       (6 : ℝ) * |Real.log (triangleRamseyNumber k : ℝ)|
     rw [abs_of_nonneg hscale, abs_of_nonneg hlog]
@@ -3030,7 +3030,7 @@ theorem divergentRamseyRoot :
       simpa only [one_div] using
         (Real.le_rpow_inv_iff_of_pos
           (by positivity) (by positivity) hkreal).mpr
-            (by simpa [Real.rpow_natCast] using hramsey)
+            (by simpa only [Real.rpow_natCast] using hramsey)
 
 theorem erdos_183 :
     Filter.Tendsto

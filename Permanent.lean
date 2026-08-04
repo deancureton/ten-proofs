@@ -15,7 +15,7 @@ theorem eq_monomial_of_unique_weight
   intro b
   by_cases h : b = d
   · subst b
-    simp
+    simp only [coeff_monomial, ↓reduceIte]
   · have hz : MvPolynomial.coeff b p = 0 := by
       by_contra hb
       exact h (hunique b (hp hb))
@@ -148,7 +148,8 @@ theorem criticalLocus_eq_zeroLocus_pderiv_span {ι : Type} (P : MvPolynomial ι 
         (Ideal.span (Set.range fun i : ι => MvPolynomial.pderiv i P)) := by
   rw [MvPolynomial.zeroLocus_span]
   ext point
-  simp [criticalLocus, MvPolynomial.aeval_def]
+  simp only [criticalLocus, Set.mem_setOf_eq, Set.mem_range, MvPolynomial.aeval_def, Algebra.algebraMap_self,
+    MvPolynomial.eval₂_id, forall_exists_index, forall_apply_eq_imp_iff]
 
 noncomputable def linearSubspaceCoordinatePolynomial {k m : ℕ}
     (E : (Fin k → ℂ) →ₗ[ℂ] (Fin m → ℂ)) (i : Fin m) :
@@ -164,10 +165,10 @@ theorem eval_linearSubspaceCoordinatePolynomial {k m : ℕ}
   calc
     MvPolynomial.eval u (linearSubspaceCoordinatePolynomial E i) =
         ∑ j : Fin k, (E (Pi.single j 1)) i * u j := by
-      simp [linearSubspaceCoordinatePolynomial]
+      simp only [linearSubspaceCoordinatePolynomial, map_sum, map_mul, MvPolynomial.eval_C, MvPolynomial.eval_X]
     _ = E u i := by
       conv_rhs => rw [pi_eq_sum_univ' u]
-      simp [Finset.sum_apply, mul_comm]
+      simp only [mul_comm, map_sum, map_smul, Finset.sum_apply, Pi.smul_apply, smul_eq_mul]
 
 noncomputable def linearSubspacePolynomialPullback {k m : ℕ}
     (E : (Fin k → ℂ) →ₗ[ℂ] (Fin m → ℂ)) :
@@ -266,7 +267,7 @@ theorem ker_submodulePolynomialRestriction_eq_vanishingIdeal {t : ℕ}
           ((Module.finBasis ℂ W).equivFun w)) : Fin t → ℂ) = v
       rw [LinearEquiv.symm_apply_apply]
     rw [hpoint] at heval
-    simpa [MvPolynomial.aeval_def] using heval
+    simpa only [MvPolynomial.aeval_def, Algebra.algebraMap_self, MvPolynomial.eval₂_id] using heval
   · intro hp
     apply MvPolynomial.funext
     intro u
@@ -299,7 +300,7 @@ theorem submoduleVanishingIdealCoordinateRing_ringKrullDim {t : ℕ}
     (submoduleVanishingIdealCoordinateRingEquiv W).toRingEquiv,
     MvPolynomial.ringKrullDim_of_isNoetherianRing,
     ringKrullDim_eq_zero_of_field]
-  simp
+  simp only [Nat.card_eq_fintype_card, Fintype.card_fin, zero_add]
 
 end Standalone_Geometry
 
@@ -315,7 +316,7 @@ theorem multiplication_gate_equation_totalDegree_le_two
         max (MvPolynomial.X j).totalDegree (left * right).totalDegree :=
       MvPolynomial.totalDegree_sub _ _
     _ ≤ max 1 (1 + 1) :=
-      max_le_max (by simp)
+      max_le_max (by simp only [MvPolynomial.totalDegree_X, Std.le_refl])
         ((MvPolynomial.totalDegree_mul _ _).trans
           (Nat.add_le_add hleft hright))
     _ = 2 := by decide
@@ -547,12 +548,12 @@ theorem permanent_rollout_output_chart_eq_of_mulVec_zero
   funext q
   induction q using Fin.succAboveCases ell with
   | p q =>
-      simp [permanentRolloutOutputChart]
+      simp only [permanentRolloutOutputChart, Fin.insertNth_apply_succAbove]
   | x =>
       simp only [permanentRolloutOutputChart,
         Fin.insertNth_apply_same, hnormalize]
       have hrow : ∑ q : Fin (m + 1), A r q * g w q = 0 := by
-        simpa [Matrix.mulVec, dotProduct] using congrFun hA r
+        simpa only [Matrix.mulVec, dotProduct, Pi.zero_apply] using congrFun hA r
       rw [Fin.sum_univ_succAbove (fun q => A r q * g w q) ell] at hrow
       field_simp
       linear_combination -hrow
@@ -578,7 +579,7 @@ theorem permanent_rollout_exists_output_matrix_of_smooth_homogeneous
           have hu : (fun _ : Fin (k + 1) => (1 : ℂ)) ≠ 0 := by
             intro h
             have := congrFun h (0 : Fin (k + 1))
-            simp at this
+            simp only [Pi.zero_apply, one_ne_zero] at this
           exact (hnonzero _ hu (Subsingleton.elim _ _)).elim
       | succ m =>
           let charts :
@@ -601,16 +602,16 @@ theorem permanent_rollout_exists_output_matrix_of_smooth_homogeneous
           refine ⟨A, ?_⟩
           intro u hu hzero
           obtain ⟨j, hj⟩ : ∃ j : Fin (k + 1), u j ≠ 0 := by
-            simpa [funext_iff] using hu
+            simpa only [ne_eq, funext_iff, Pi.zero_apply, not_forall] using hu
           let w : Fin (k + 1) → ℂ := (u j)⁻¹ • u
           have hwj : w j = 1 := by
-            simp [w, hj]
+            simp only [Pi.smul_apply, smul_eq_mul, ne_eq, hj, not_false_eq_true, inv_mul_cancel₀, w]
           have hw : w ≠ 0 := by
             intro h
             have := congrFun h j
-            simp [hwj] at this
+            simp only [hwj, Pi.zero_apply, one_ne_zero] at this
           obtain ⟨ell, hell⟩ : ∃ ell : Fin (m + 1), g w ell ≠ 0 := by
-            simpa [funext_iff] using hnonzero w hw
+            simpa only [ne_eq, funext_iff, Pi.zero_apply, not_forall] using hnonzero w hw
           have hAzero : Matrix.mulVec A (g w) = 0 := by
             rw [show w = (u j)⁻¹ • u from rfl, hscale]
             apply funext
@@ -669,9 +670,9 @@ noncomputable def permanentRolloutLinearCoordinateCombination
     (Fin m → ℂ) →ₗ[ℂ] MvPolynomial (Fin m) ℂ where
   toFun c := ∑ i, c i • MvPolynomial.X i
   map_add' c d := by
-    simp [add_smul, Finset.sum_add_distrib]
+    simp only [Pi.add_apply, add_smul, Finset.sum_add_distrib]
   map_smul' a c := by
-    simp [Finset.smul_sum, smul_smul]
+    simp only [Pi.smul_apply, smul_eq_mul, RingHom.id_apply, Finset.smul_sum, smul_smul]
 
 theorem permanent_rollout_exists_linear_avoiding_minimalPrimes
     {m : ℕ} (I : Ideal (MvPolynomial (Fin m) ℂ))
@@ -736,7 +737,7 @@ theorem permanent_rollout_homogeneousPrime_le_idealOfVars
   have hezero : exponent = 0 :=
     (Finsupp.degree_eq_zero_iff exponent).mp
       (Nat.lt_one_iff.mp hexponent)
-  simpa [hezero] using hconstant
+  simpa only [hezero] using hconstant
 
 theorem permanent_rollout_idealOfVars_isMaximal (m : ℕ) :
     (MvPolynomial.idealOfVars (Fin m) ℂ).IsMaximal := by
@@ -754,9 +755,9 @@ theorem permanent_rollout_idealOfVars_isMaximal (m : ℕ) :
       have hezero : exponent = 0 :=
         (Finsupp.degree_eq_zero_iff exponent).mp
           (Nat.lt_one_iff.mp hexponent)
-      simpa [hezero] using hf
+      simpa only [hezero] using hf
     · intro hf
-      exact hf 0 (by simp)
+      exact hf 0 (by simp only [map_zero, Order.lt_one_iff])
   rw [← hkernel]
   apply RingHom.ker_isMaximal_of_surjective
   intro a
@@ -978,7 +979,7 @@ theorem permanent_rollout_exists_iterated_independent_linear_ideal_dimension_zer
               (r : WithBot ℕ∞) := by
           apply ENat.WithBot.add_le_add_one_right_iff.mp
           have hstep := hxdrop.trans hdim
-          simpa [Nat.cast_add, Nat.cast_one] using hstep
+          simpa only [ge_iff_le, Nat.cast_add, Nat.cast_one] using hstep
         obtain ⟨q, d, hnq, hqbound, hdindependent, hdzero⟩ :=
           ih (Fin.snoc c x) hxindependent hxbound
         exact ⟨q, d, by omega, by omega, hdindependent, hdzero⟩
@@ -1022,7 +1023,7 @@ theorem permanent_rollout_exists_independent_linear_ideal_dimension_zero
     permanent_rollout_exists_iterated_independent_linear_ideal_dimension_zero
       I hI (Fin.elim0 : Fin 0 → Fin m → ℂ)
       linearIndependent_empty_type r hstart
-  exact ⟨q, c, by simpa using hq, hc, hzero⟩
+  exact ⟨q, c, by simpa only [zero_add] using hq, hc, hzero⟩
 
 end HomogeneousPrimeInputAvoidance
 
@@ -1051,7 +1052,7 @@ abbrev homogeneousMapClosedFiber {ι : Type*}
 theorem homogeneousMapFiberIdeal_zero {ι : Type*}
     (F : ι → MvPolynomial ι ℂ) :
     homogeneousMapFiberIdeal F 0 = homogeneousMapIdeal F := by
-  simp [homogeneousMapFiberIdeal, homogeneousMapIdeal]
+  simp only [homogeneousMapFiberIdeal, Pi.zero_apply, MvPolynomial.C_0, sub_zero, homogeneousMapIdeal]
 
 theorem zeroLocus_homogeneousMapIdeal {ι : Type*}
     (F : ι → MvPolynomial ι ℂ) :
@@ -1059,20 +1060,23 @@ theorem zeroLocus_homogeneousMapIdeal {ι : Type*}
       {point : ι → ℂ | ∀ i, MvPolynomial.eval point (F i) = 0} := by
   rw [homogeneousMapIdeal, MvPolynomial.zeroLocus_span]
   ext point
-  simp [MvPolynomial.aeval_def]
+  simp only [Set.mem_range, MvPolynomial.aeval_def, Algebra.algebraMap_self, MvPolynomial.eval₂_id,
+    forall_exists_index, forall_apply_eq_imp_iff, Set.mem_setOf_eq]
 
 theorem zeroLocus_idealOfVars {ι : Type*} :
     MvPolynomial.zeroLocus ℂ (MvPolynomial.idealOfVars ι ℂ) =
       ({0} : Set (ι → ℂ)) := by
   rw [MvPolynomial.idealOfVars, MvPolynomial.zeroLocus_span]
   ext point
-  simp [MvPolynomial.aeval_def, funext_iff]
+  simp only [Set.mem_range, MvPolynomial.aeval_def, Algebra.algebraMap_self, MvPolynomial.eval₂_id,
+    forall_exists_index, forall_apply_eq_imp_iff, MvPolynomial.eval_X, Set.mem_setOf_eq, Set.mem_singleton_iff,
+    funext_iff, Pi.zero_apply]
 
 theorem homogeneous_eval_zero_of_pos {ι : Type*} {f : MvPolynomial ι ℂ}
     {e : ℕ} (he : 0 < e) (hf : f.IsHomogeneous e) :
     MvPolynomial.eval (0 : ι → ℂ) f = 0 := by
   rw [MvPolynomial.eval_zero, MvPolynomial.constantCoeff_eq]
-  exact hf.coeff_eq_zero (by simpa using he.ne)
+  exact hf.coeff_eq_zero (by simpa only [map_zero, ne_eq] using he.ne)
 
 theorem vanishingIdeal_origin_eq_idealOfVars {ι : Type*} :
     MvPolynomial.vanishingIdeal ℂ ({0} : Set (ι → ℂ)) =
@@ -1088,9 +1092,9 @@ theorem vanishingIdeal_origin_eq_idealOfVars {ι : Type*} :
   · intro hp m hm
     have hmzero : m = 0 :=
       (Finsupp.degree_eq_zero_iff m).mp (Nat.lt_one_iff.mp hm)
-    simpa [hmzero, ← MvPolynomial.constantCoeff_eq] using hp
+    simpa only [hmzero, ← MvPolynomial.constantCoeff_eq] using hp
   · intro hp
-    simpa [← MvPolynomial.constantCoeff_eq] using hp 0 (by simp)
+    simpa only [← MvPolynomial.constantCoeff_eq] using hp 0 (by simp)
 
 theorem radical_homogeneousMapIdeal_eq_idealOfVars {ι : Type*} [Finite ι]
     (F : ι → MvPolynomial ι ℂ)
@@ -1101,7 +1105,7 @@ theorem radical_homogeneousMapIdeal_eq_idealOfVars {ι : Type*} [Finite ι]
       ({0} : Set (ι → ℂ)) := by
     rw [zeroLocus_homogeneousMapIdeal]
     ext point
-    simpa using hzero point
+    simpa only [Set.mem_setOf_eq, Set.mem_singleton_iff] using hzero point
   rw [← MvPolynomial.vanishingIdeal_zeroLocus_eq_radical (K := ℂ), hfiber,
     vanishingIdeal_origin_eq_idealOfVars]
 
@@ -1281,7 +1285,7 @@ theorem homogeneousMapIdeal_homogeneous_representation
   simp only [map_sum] at hcomponent
   simp_rw [homogeneousComponent_mul_of_right_isHomogeneous _ _ (hF _) hen]
     at hcomponent
-  simpa [MvPolynomial.homogeneousComponent_eq_self hp] using hcomponent
+  simpa only [MvPolynomial.homogeneousComponent_eq_self hp] using hcomponent
 
 theorem homogeneousMap_moduleFinite
     {ι : Type*} [Finite ι]
@@ -1331,7 +1335,7 @@ theorem homogeneousMap_moduleFinite
         have hscalar := M.smul_mem
           (⟨F i, homogeneousMap_coordinate_mem_subalgebra F i⟩ : T)
           hcoefficient
-        simpa [Algebra.smul_def, mul_comm] using hscalar
+        simpa only [mul_comm, Algebra.smul_def, Subalgebra.algebraMap_apply] using hscalar
   apply Module.Finite.of_fg_top
   refine ⟨generators, ?_⟩
   change M = ⊤
@@ -1366,7 +1370,7 @@ theorem homogeneousMap_isTranscendenceBasis
       (MvPolynomial ι ℂ) :=
     homogeneousMap_moduleFinite F e he hF hzero
   apply Algebra.IsAlgebraic.isTranscendenceBasis_of_le_trdeg_of_finite ℂ F
-  simp
+  simp only [MvPolynomial.trdeg_of_isDomain, Cardinal.lift_uzero, Std.le_refl]
 
 theorem homogeneousMap_algebraicIndependent
     {ι : Type*} [Finite ι]
@@ -1418,7 +1422,7 @@ theorem finite_of_totalDegree_power_reductions
       exact Nat.le_of_lt (hnone i)
     have hbound' :
         ∑ i : ι, m i ≤ Fintype.card ι * q := by
-      simpa using hbound
+      simpa only [Finset.sum_const, Finset.card_univ, smul_eq_mul] using hbound
     rw [Finsupp.degree_eq_sum] at hm
     dsimp [N] at hm
     omega
@@ -1443,7 +1447,7 @@ theorem finite_of_totalDegree_power_reductions
                 x i ^ q := by
           conv_lhs => rw [← hdecomp]
           rw [MvPolynomial.monomial_add_single, map_mul, map_pow]
-          simp
+          simp only [MvPolynomial.aeval_X]
         rw [hfactor, hrel i, (remainder i).as_sum, map_sum,
           Finset.mul_sum]
         apply M.sum_mem
@@ -1464,7 +1468,8 @@ theorem finite_of_totalDegree_power_reductions
               ((remainder i).coeff d) • MvPolynomial.aeval x
                 (MvPolynomial.monomial (m' + d) (1 : B)) := by
           rw [← map_mul, MvPolynomial.monomial_mul]
-          simp [Algebra.smul_def, MvPolynomial.aeval_monomial]
+          simp only [one_mul, MvPolynomial.aeval_monomial, Finsupp.prod_pow, Finsupp.coe_add, Pi.add_apply, map_one,
+            Algebra.smul_def]
         rw [hterm]
         exact M.smul_mem _ hmem
   have hfg : M.FG := Submodule.fg_span hfinite
@@ -1484,7 +1489,7 @@ theorem finite_of_totalDegree_power_reductions
         MvPolynomial.aeval x (MvPolynomial.monomial d (p.coeff d)) =
           (p.coeff d) •
             MvPolynomial.aeval x (MvPolynomial.monomial d (1 : B)) := by
-      simp [Algebra.smul_def, MvPolynomial.aeval_monomial]
+      simp only [MvPolynomial.aeval_monomial, Finsupp.prod_pow, map_one, one_mul, Algebra.smul_def]
     rw [hterm]
     exact M.smul_mem _ hmem
   apply Module.Finite.of_fg_top
@@ -1531,9 +1536,9 @@ theorem coordinateEsymm_succ_eq_deleted {t : ℕ}
     conv_lhs =>
       rw [← Finset.insert_erase (Finset.mem_univ i),
         Finset.insert_val_of_notMem (Finset.notMem_erase i _), Multiset.map_cons]
-  simp [coordinateEsymm, deletedCoordinateEsymm, hvars,
-    Multiset.esymm, Multiset.map_add, Multiset.map_map,
-    Multiset.sum_add, Multiset.sum_map_mul_left]
+  simp only [coordinateEsymm, Multiset.esymm, hvars, Finset.erase_val, Multiset.powersetCard_cons,
+    Multiset.map_add, Multiset.map_map, Function.comp_apply, Multiset.prod_cons, Multiset.sum_add,
+    Multiset.sum_map_mul_left, deletedCoordinateEsymm]
 
 theorem powersetCard_erase_eq_filter_not_mem {α : Type*} [DecidableEq α]
     (s : Finset α) (i : α) (q : ℕ) :
@@ -1586,8 +1591,8 @@ theorem sum_deletedCoordinateEsymm {t : ℕ}
         _ = ((t - q : ℕ) : ℂ) * ∏ j ∈ rows, u j := by
           rw [Finset.sum_boole]
           congr 1
-          simp [Finset.filter_notMem_eq_sdiff,
-            Finset.card_sdiff_of_subset (Finset.subset_univ rows), hcard]
+          simp only [Finset.filter_notMem_eq_sdiff, Finset.card_sdiff_of_subset (Finset.subset_univ rows),
+            Finset.card_univ, Fintype.card_fin, hcard]
 
 end Standalone_LeadingForms
 
@@ -1647,7 +1652,7 @@ theorem homogeneousPrime_le_idealOfVars {t : ℕ}
       IsUnit (MvPolynomial.C (MvPolynomial.coeff 0 p) :
         MvPolynomial (Fin t) ℂ) :=
     (isUnit_iff_ne_zero.mpr
-      (by simpa [MvPolynomial.constantCoeff_eq] using hconstant)).map
+      (by simpa only [ne_eq, Algebra.algebraMap_self, MvPolynomial.constantCoeff_eq, RingHom.id_apply] using hconstant)).map
         MvPolynomial.C
   exact (Ideal.notMem_of_isUnit P hunit) hcomponent
 
@@ -1686,9 +1691,8 @@ theorem homogeneousIdeal_vertex_not_minimal_of_ringKrullDim_pos {t : ℕ}
           MvPolynomial.idealOfVars (Fin t) ℂ) =
         (0 : WithBot ℕ∞) := by
     rw [← vanishingIdeal_origin_eq_idealOfVars]
-    simpa using
-      submoduleVanishingIdealCoordinateRing_ringKrullDim
-        (⊥ : Submodule ℂ (Fin t → ℂ))
+    simpa only [Submodule.bot_coe, finrank_bot, CharP.cast_eq_zero] using
+      submoduleVanishingIdealCoordinateRing_ringKrullDim (⊥ : Submodule ℂ (Fin t → ℂ))
   have hzero :
       ringKrullDim (MvPolynomial (Fin t) ℂ ⧸ I) =
         (0 : WithBot ℕ∞) := by
@@ -1914,7 +1918,7 @@ theorem homogeneousLinearSliceIdeal_exists_independent_zeroDimensional_extension
           (0 : WithBot ℕ∞) := by
   induction q generalizing p c with
   | zero =>
-      simpa using ⟨c, hindependent, hdimension⟩
+      simpa only [Nat.add_zero] using ⟨c, hindependent, hdimension⟩
   | succ q ih =>
       by_cases hpositive : (0 : WithBot ℕ∞) <
           ringKrullDim
@@ -1935,7 +1939,7 @@ theorem homogeneousLinearSliceIdeal_exists_independent_zeroDimensional_extension
                   (MvPolynomial (Fin t) ℂ ⧸
                     homogeneousLinearSliceIdeal I c) := hdrop
             _ ≤ (↑(q + 1) : WithBot ℕ∞) := hdimension
-            _ = (↑q : WithBot ℕ∞) + 1 := by simp
+            _ = (↑q : WithBot ℕ∞) + 1 := by simp only [Nat.cast_add, Nat.cast_one]
         have hlength' : (p + 1) + q ≤ t := by omega
         have hindex : (p + 1) + q = p + (q + 1) := by omega
         rw [← hindex]
@@ -1987,7 +1991,7 @@ theorem homogeneousIdeal_exists_independent_linear_zeroDimensional_slices
           (0 : WithBot ℕ∞) := by
   have hempty : homogeneousLinearSliceIdeal I
       (Fin.elim0 : Fin 0 → Fin t → ℂ) = I := by
-    simp [homogeneousLinearSliceIdeal]
+    simp only [homogeneousLinearSliceIdeal, Matrix.range_empty, Submodule.span_empty, bot_le, sup_of_le_left]
   have hbound : ringKrullDim
       (MvPolynomial (Fin t) ℂ ⧸
         homogeneousLinearSliceIdeal I
@@ -1997,7 +2001,7 @@ theorem homogeneousIdeal_exists_independent_linear_zeroDimensional_slices
   have hresult :=
     homogeneousLinearSliceIdeal_exists_independent_zeroDimensional_extension
       I hI (Fin.elim0 : Fin 0 → Fin t → ℂ)
-      linearIndependent_empty_type n (by simpa using hlength) hbound
+      linearIndependent_empty_type n (by simpa only [zero_add] using hlength) hbound
   rw [zero_add] at hresult
   exact hresult
 
@@ -2103,8 +2107,7 @@ theorem zeroLocus_gradientIdeal_eq_criticalLocus {m : ℕ}
     MvPolynomial.zeroLocus ℂ
         (homogeneousMapIdeal (fun i : Fin m => MvPolynomial.pderiv i P)) =
       criticalLocus P := by
-  simpa [homogeneousMapIdeal] using
-    (criticalLocus_eq_zeroLocus_pderiv_span P).symm
+  simpa only [homogeneousMapIdeal] using (criticalLocus_eq_zeroLocus_pderiv_span P).symm
 
 noncomputable def gradientVector {m : ℕ}
     (P : MvPolynomial (Fin m) ℂ) (v : Fin m → ℂ) : Fin m → ℂ :=
@@ -2113,7 +2116,7 @@ noncomputable def gradientVector {m : ℕ}
 theorem gradientVector_eq_zero_iff {m : ℕ}
     (P : MvPolynomial (Fin m) ℂ) (v : Fin m → ℂ) :
     gradientVector P v = 0 ↔ v ∈ criticalLocus P := by
-  simp [gradientVector, criticalLocus, funext_iff]
+  simp only [funext_iff, gradientVector, Pi.zero_apply, criticalLocus, Set.mem_setOf_eq]
 
 def projectiveCriticalLocus {m : ℕ}
     (P : MvPolynomial (Fin m) ℂ) : Set (ℙ ℂ (Fin m → ℂ)) :=
@@ -2147,10 +2150,10 @@ theorem linearCoordinatePolynomial_eval {k m : ℕ}
   calc
     MvPolynomial.eval u (linearCoordinatePolynomial W row) =
         ∑ j : Fin k, (W (Pi.single j 1)) row * u j := by
-      simp [linearCoordinatePolynomial]
+      simp only [linearCoordinatePolynomial, map_sum, map_mul, MvPolynomial.eval_C, MvPolynomial.eval_X]
     _ = W u row := by
       conv_rhs => rw [pi_eq_sum_univ' u]
-      simp [Finset.sum_apply, mul_comm]
+      simp only [mul_comm, map_sum, map_smul, Finset.sum_apply, Pi.smul_apply, smul_eq_mul]
 
 theorem eval_aeval_linearCoordinatePolynomial {k m : ℕ}
     (W : (Fin k → ℂ) →ₗ[ℂ] (Fin m → ℂ))
@@ -2201,7 +2204,7 @@ theorem slicedGradientPolynomial_eval {m k : ℕ}
       rw [eval_aeval_linearCoordinatePolynomial]
     _ = A (gradientVector P (W u)) i := by
       conv_rhs => rw [pi_eq_sum_univ' (gradientVector P (W u))]
-      simp [gradientVector, Finset.sum_apply, mul_comm]
+      simp only [gradientVector, map_sum, map_smul, Finset.sum_apply, Pi.smul_apply, smul_eq_mul, mul_comm]
 
 theorem slicedGradientPolynomial_isHomogeneous {m k d : ℕ}
     (P : MvPolynomial (Fin m) ℂ)
@@ -2236,7 +2239,8 @@ theorem homogeneous_fin_one_eq_C_mul_X_pow
   have hdegree : a.degree = e := by
     rw [Finsupp.degree_eq_weight_one]
     exact ha
-  simpa [Finsupp.degree_eq_sum] using hdegree
+  simpa only [Fin.isValue, Finsupp.single_eq_same, Finsupp.degree_eq_sum, Finset.univ_unique,
+    Fin.default_eq_zero, Finset.sum_singleton] using hdegree
 
 theorem homogeneous_fin_one_eval
     {f : MvPolynomial (Fin 1) ℂ} {e : ℕ}
@@ -2244,7 +2248,8 @@ theorem homogeneous_fin_one_eval
     MvPolynomial.eval u f =
       u 0 ^ e * MvPolynomial.eval (fun _ : Fin 1 => 1) f := by
   rw [homogeneous_fin_one_eq_C_mul_X_pow hf]
-  simp [mul_comm]
+  simp only [Fin.isValue, mul_comm, map_mul, map_pow, MvPolynomial.eval_X, MvPolynomial.eval_C, one_pow,
+    one_mul]
 
 noncomputable def oneDimensionalInputSlice {m : ℕ}
     (v : Fin m → ℂ) : (Fin 1 → ℂ) →ₗ[ℂ] (Fin m → ℂ) :=
@@ -2270,7 +2275,7 @@ theorem slicedGradient_zero_iff_mem_kernel {m k : ℕ}
     (∀ i, MvPolynomial.eval u (slicedGradientPolynomial P W A i) = 0) ↔
       gradientVector P (W u) ∈ LinearMap.ker A := by
   rw [LinearMap.mem_ker]
-  simp [slicedGradientPolynomial_eval, funext_iff]
+  simp only [slicedGradientPolynomial_eval, funext_iff, Pi.zero_apply]
 
 theorem slicedGradient_zero_fiber_of_kernel_avoidance {m k d : ℕ}
     (P : MvPolynomial (Fin m) ℂ)
@@ -2311,7 +2316,7 @@ theorem gradientVector_after_embedding_ne_zero_of_projective_disjoint
   intro hgradient
   have hWu : W u ≠ 0 := by
     intro hzero
-    exact hu (hW (by simpa using hzero))
+    exact hu (hW (by simpa only [map_zero] using hzero))
   have hpoint_range :
       Projectivization.mk ℂ (W u) hWu ∈
         (LinearMap.range W).projectivization :=
@@ -2448,7 +2453,7 @@ theorem gradientVector_smul_of_isHomogeneous {m d : ℕ}
     (a : ℂ) (v : Fin m → ℂ) :
     gradientVector P (a • v) = a ^ (d - 1) • gradientVector P v := by
   funext i
-  simpa [gradientVector] using
+  simpa only [gradientVector, Pi.smul_apply, smul_eq_mul] using
     homogeneous_eval_smul (MvPolynomial.pderiv i P) (hP.pderiv (i := i)) a v
 
 theorem gradientVector_comp_linearMap_contDiff {m k : ℕ}
@@ -2553,17 +2558,17 @@ theorem exists_injective_inputMap_into_linearCoordinateKernel
   let L : (Fin m → ℂ) →ₗ[ℂ] (Fin n → ℂ) :=
     Matrix.mulVecLin (c : Matrix (Fin n) (Fin m) ℂ)
   have hrange : Module.finrank ℂ (LinearMap.range L) ≤ n := by
-    simpa using (LinearMap.range L).finrank_le
+    simpa only [Module.finrank_fintype_fun_eq_card, Fintype.card_fin] using (LinearMap.range L).finrank_le
   have hnullity :
       Module.finrank ℂ (LinearMap.range L) +
         Module.finrank ℂ (LinearMap.ker L) = m := by
-    simpa using L.finrank_range_add_finrank_ker
+    simpa only [Module.finrank_fintype_fun_eq_card, Fintype.card_fin] using L.finrank_range_add_finrank_ker
   have hkernel : k ≤ Module.finrank ℂ (LinearMap.ker L) := by
     omega
   have hsource :
       Module.finrank ℂ (Fin k → ℂ) ≤
         Module.finrank ℂ (LinearMap.ker L) := by
-    simpa using hkernel
+    simpa only [Module.finrank_fintype_fun_eq_card, Fintype.card_fin] using hkernel
   obtain ⟨f, hf⟩ := finrank_le_iff_exists_linearMap.mp hsource
   refine ⟨(LinearMap.ker L).subtype.comp f,
     Subtype.val_injective.comp hf, ?_⟩
@@ -2596,9 +2601,8 @@ theorem eq_zero_of_mem_zeroLocus_of_linearCoordinateKernel_of_radical
       rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
       have hj := congrFun hkernel j
       change (∑ i, c j i * v i) = 0 at hj
-      simpa [permanentRolloutLinearCoordinateCombination,
-        MvPolynomial.aeval_def, Matrix.mulVecLin_apply,
-        Matrix.mulVec, dotProduct, smul_eq_mul] using hj
+      simpa only [permanentRolloutLinearCoordinateCombination, LinearMap.coe_mk, AddHom.coe_mk, map_sum, map_smul,
+        MvPolynomial.aeval_def, Algebra.algebraMap_self, MvPolynomial.eval₂_X, smul_eq_mul] using hj
   have hvJ : v ∈ MvPolynomial.zeroLocus ℂ J := by
     intro f hf
     exact hvanishing hf v (Set.mem_singleton v)
@@ -2612,7 +2616,7 @@ theorem eq_zero_of_mem_zeroLocus_of_linearCoordinateKernel_of_radical
   have hzero :=
     (MvPolynomial.radical_le_vanishingIdeal_zeroLocus (K := ℂ) J hXi)
       v hvJ
-  simpa [MvPolynomial.aeval_def] using hzero
+  simpa only [Pi.zero_apply, MvPolynomial.aeval_def, Algebra.algebraMap_self, MvPolynomial.eval₂_X] using hzero
 
 theorem criticalLinearSliceIdeal_radical_eq_idealOfVars_of_dimension_le_zero
     {m n d : ℕ} (P : MvPolynomial (Fin m) ℂ)
@@ -2733,7 +2737,7 @@ theorem exists_inputSlice_projective_disjoint_of_criticalLocusDimension
   have hWu : W u = 0 :=
     eq_zero_of_mem_zeroLocus_of_linearCoordinateKernel_of_radical
       I c hradical' hvanishing (hkernel u)
-  exact hu (hW (by simpa using hWu))
+  exact hu (hW (by simpa only [map_zero] using hWu))
 
 theorem exists_inputSlice_projective_disjoint_of_criticalLocus_codimension
     {m k c d : ℕ} (P : MvPolynomial (Fin m) ℂ)
@@ -2815,13 +2819,13 @@ theorem homogeneousMap_subalgebra_sub_target_mem_fiberIdeal
             ⟨F i, homogeneousMap_coordinate_mem_subalgebra F i⟩ := by
         apply Subtype.ext
         change MvPolynomial.bind₁ F (MvPolynomial.X i) = F i
-        simp
+        simp only [MvPolynomial.bind₁_X_right]
       have hφ : φ ⟨F i, homogeneousMap_coordinate_mem_subalgebra F i⟩ =
           target i := by
         change MvPolynomial.aeval target
           (E.symm ⟨F i, homogeneousMap_coordinate_mem_subalgebra F i⟩) = _
         rw [← hcoordinate, E.symm_apply_apply]
-        simp
+        simp only [MvPolynomial.aeval_X]
       rw [hφ]
       change F i - MvPolynomial.C (target i) ∈
         Ideal.span (Set.range fun j => F j - MvPolynomial.C (target j))
@@ -2829,7 +2833,7 @@ theorem homogeneousMap_subalgebra_sub_target_mem_fiberIdeal
   | algebraMap c =>
       change MvPolynomial.C c -
         MvPolynomial.C (φ (algebraMap ℂ T c)) ∈ I
-      simp
+      simp only [AlgHom.commutes, Algebra.algebraMap_self, RingHom.id_apply, sub_self, zero_mem]
   | add x y hx hy ihx ihy =>
       change x + y -
         MvPolynomial.C (φ (⟨x, hx⟩ + ⟨y, hy⟩)) ∈ I
@@ -3000,10 +3004,10 @@ theorem isSMulRegular_of_maximal_radical_and_regular_witness
   have hPprime : P.IsPrime := hPassociated.isPrime
   have hIP : I ≤ P := by
     have hann := hPassociated.annihilator_le
-    simpa [Submodule.annihilator_top, Ideal.annihilator_quotient] using hann
+    simpa only [ge_iff_le, Submodule.annihilator_top, Ideal.annihilator_quotient] using hann
   have hsupP : I ⊔ Ideal.span ({g} : Set R) ≤ P := by
     apply sup_le hIP
-    exact Ideal.span_le.mpr (by simpa using hgP)
+    exact Ideal.span_le.mpr (by simpa only [Set.singleton_subset_iff, SetLike.mem_coe] using hgP)
   have hmP : m ≤ P := by
     rw [← hrad]
     exact hPprime.radical_le_iff.mpr hsupP
@@ -3074,7 +3078,8 @@ theorem homogeneousMap_degreeSupport_eq_antidiagonal
         Set (ι →₀ ℕ)) := by
   classical
   ext d
-  simp [Finsupp.degree_eq_sum]
+  simp only [Finsupp.degree_eq_sum, Set.mem_setOf_eq, SetLike.mem_coe, Finset.mem_finsuppAntidiag,
+    Finset.subset_univ, and_true]
 
 theorem homogeneousMap_homogeneousSubmodule_finrank
     {ι : Type*} [Fintype ι] (n : ℕ) :
@@ -3138,7 +3143,7 @@ theorem homogeneousMap_coordinateSubset_quotient_ringKrullDim_le
       induction f using MvPolynomial.induction_on with
       | C c =>
           change psi (MvPolynomial.C c) ∈ phi.range
-          simp
+          simp only [MvPolynomial.algHom_C, algebraMap_mem]
       | add f g hf hg =>
           rw [map_add]
           exact phi.range.add_mem hf hg
@@ -3151,7 +3156,7 @@ theorem homogeneousMap_coordinateSubset_quotient_ringKrullDim_le
             exact phi.range.zero_mem
           · change psi (MvPolynomial.X i) ∈ phi.range
             exact ⟨MvPolynomial.X (⟨i, hi⟩ : remaining), by
-              simp [phi]⟩
+              simp only [AlgHom.toRingHom_eq_coe, RingHom.coe_coe, MvPolynomial.aeval_X, phi]⟩
     intro x
     obtain ⟨f, hf⟩ := hpsisurj x
     have hx : x ∈ psi.range := ⟨f, hf⟩
@@ -3167,7 +3172,7 @@ theorem homogeneousMap_coordinateSubset_quotient_ringKrullDim_le
         ringKrullDim_eq_zero_of_field, Nat.card_eq_fintype_card]
       simp only [zero_add]
       congr 1
-      simp [remaining]
+      simp only [Fintype.card_subtype_compl, Fintype.card_coe, remaining]
 
 theorem homogeneousMap_exists_coordinateSubset_independent_linear_origin_slices
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -3193,7 +3198,7 @@ theorem homogeneousMap_exists_coordinateSubset_independent_linear_origin_slices
   have hproper : I ≠ ⊤ := by
     intro htop
     have hone : (1 : MvPolynomial (Fin k) ℂ) ∈ I := by
-      simp [htop]
+      simp only [htop, Submodule.mem_top]
     have hcontain : I ≤
         RingHom.ker (MvPolynomial.eval (0 : Fin k → ℂ)) := by
       rw [show I = Ideal.span
@@ -3202,13 +3207,12 @@ theorem homogeneousMap_exists_coordinateSubset_independent_linear_origin_slices
       rintro _ ⟨i, _, rfl⟩
       exact homogeneous_eval_zero_of_pos he (hF i)
     have hbad := hcontain hone
-    simp at hbad
+    simp only [MvPolynomial.eval_zero, RingHom.mem_ker, map_one, one_ne_zero] at hbad
   have hdim :
       ringKrullDim (MvPolynomial (Fin k) ℂ ⧸ I) ≤
         ((k - coordinates.card : ℕ) : WithBot ℕ∞) := by
-    simpa [I] using
-      (homogeneousMap_coordinateSubset_quotient_ringKrullDim_le
-        F e he hF hzero coordinates)
+    simpa only [Fintype.card_fin] using
+      (homogeneousMap_coordinateSubset_quotient_ringKrullDim_le F e he hF hzero coordinates)
   exact homogeneousIdeal_exists_independent_linear_origin_slices
     I hI hproper (Nat.sub_le _ _) hdim
 
@@ -3260,7 +3264,8 @@ theorem homogeneousMapFiniteGradedQuotientSumLinearMap_injective
   rw [Submodule.piQuotientLift_mk] at hz
   have hsum := (Submodule.Quotient.mk_eq_zero
     (I.restrictScalars ℂ)).mp hz
-  simp [LinearMap.lsum_apply] at hsum
+  simp only [LinearMap.lsum_apply, LinearMap.coe_sum, LinearMap.coe_comp, Submodule.coe_subtype,
+    LinearMap.coe_proj, Finset.sum_apply, Function.comp_apply, Function.eval, Submodule.restrictScalars_mem] at hsum
   have hz0 : z = 0 := by
     apply funext
     intro i
@@ -3291,7 +3296,7 @@ theorem homogeneousMapFiniteGradedQuotientSumLinearMap_injective
             rw [if_neg]
             intro hij
             exact hj (Fin.ext hij.symm)
-          · simp
+          · simp only [Finset.mem_univ, not_true_eq_false, ↓reduceIte, ZeroMemClass.coe_eq_zero, IsEmpty.forall_iff]
         _ = p i := if_pos rfl
     rw [hcomponent_eq] at hcomponent
     exact hcomponent
@@ -3369,9 +3374,10 @@ theorem homogeneousMapFiniteGradedQuotientSumLinearMap_surjective
       intro j _
       apply hhigh (N + j) (Nat.le_add_right N j)
       exact MvPolynomial.homogeneousComponent_isHomogeneous (N + j) p
-    simp [LinearMap.lsum_apply]
+    simp only [LinearMap.lsum_apply, LinearMap.coe_sum, LinearMap.coe_comp, Submodule.coe_subtype,
+      LinearMap.coe_proj, Finset.sum_apply, Function.comp_apply, Function.eval, Submodule.restrictScalars_mem]
     rw [hsplit]
-    simpa using I.neg_mem htail
+    simpa only [sub_add_cancel_left, neg_mem_iff] using I.neg_mem htail
 
 noncomputable def homogeneousMapFiniteGradedQuotientEquiv
     {ι : Type*} (I : Ideal (MvPolynomial ι ℂ))
@@ -3486,7 +3492,7 @@ theorem homogeneousMapGradedSupSpanPiece_eq_sup
         homogeneousComponent_mul_of_right_isHomogeneous q f hf
           (Nat.le_add_right e n),
         MvPolynomial.homogeneousComponent_eq_self p.property] at hcomponent
-      simpa [Nat.add_sub_cancel_left, mul_comm] using hcomponent
+      simpa only [add_tsub_cancel_left, mul_comm] using hcomponent
     rw [← hsum]
     exact Submodule.add_mem_sup ha' hb'
   · intro hp
@@ -3553,7 +3559,7 @@ theorem homogeneousMapGradedSupSpan_finrank_add_of_regular
     intro p hp
     apply (isSMulRegular_quotient_iff_mem_of_smul_mem I f).mp hregular
       (p : MvPolynomial ι ℂ)
-    simpa [smul_eq_mul] using hp
+    simpa only [smul_eq_mul] using hp
   have hrec := homogeneousMapGradedQuotientMulLinearMap_finrank_quotient_add
     I f hf n hcolon
   have hequiv :=
@@ -3587,9 +3593,9 @@ theorem homogeneousMap_allRank_finSucc_linearCoordinateCombination_finSucc
       MvPolynomial.finSuccEquiv ℂ n (MvPolynomial.C z) =
         Polynomial.C (MvPolynomial.C z) :=
     (MvPolynomial.finSuccEquiv ℂ n).commutes z
-  simp [permanentRolloutLinearCoordinateCombination,
-    Fin.sum_univ_succ, MvPolynomial.finSuccEquiv_X_zero,
-    MvPolynomial.finSuccEquiv_X_succ, Algebra.smul_def, hC]
+  simp only [permanentRolloutLinearCoordinateCombination, Algebra.smul_def, MvPolynomial.algebraMap_eq,
+    Fin.sum_univ_succ, LinearMap.coe_mk, AddHom.coe_mk, map_add, map_mul, hC, MvPolynomial.finSuccEquiv_X_zero, map_sum,
+    MvPolynomial.finSuccEquiv_X_succ]
 
 theorem homogeneousMap_allRank_finSucc_linearCoordinateCombination_normalized
     {n : ℕ} (c : Fin (n + 1) → ℂ) (hc : c 0 ≠ 0) :
@@ -3645,7 +3651,7 @@ theorem homogeneousMap_allRank_finSucc_linearCoordinateCombination_normalized
       _ = Polynomial.C (MvPolynomial.C (c 0)) *
           (Polynomial.X - Polynomial.C
             (-(MvPolynomial.C ((c 0)⁻¹) * T))) := by
-          simp
+          simp only [map_neg, map_mul, sub_neg_eq_add]
   change Ideal.span
       ({Polynomial.C (MvPolynomial.C (c 0)) * Polynomial.X +
         Polynomial.C T} : Set (Polynomial (MvPolynomial (Fin n) ℂ))) = _
@@ -3693,7 +3699,7 @@ theorem homogeneousMap_allRank_linearCoordinateCombination_rename
     (fun i => MvPolynomial.C (c i) * MvPolynomial.X (equiv i))
     (fun i =>
       MvPolynomial.C (c (equiv.symm i)) * MvPolynomial.X i)
-    (by intro i; simp)
+    (by intro i; simp only [Equiv.symm_apply_apply])
 
 theorem homogeneousMap_allRank_finSucc_swappedPlaneIdeal
     {n : ℕ} (c : Fin (n + 1) → ℂ) (j : Fin (n + 1)) :
@@ -3777,7 +3783,9 @@ theorem homogeneousMapFinSuccFirstPivotPlaneMap_kernel
     ∑ i : Fin (n + 1),
       c i * homogeneousMapFinSuccFirstPivotPlaneMap c u i = 0 := by
   rw [Fin.sum_univ_succ]
-  simp [homogeneousMapFinSuccFirstPivotPlaneMap]
+  simp only [homogeneousMapFinSuccFirstPivotPlaneMap, neg_smul, LinearMap.pi_apply, Fin.cases_zero,
+    LinearMap.neg_apply, LinearMap.smul_apply, LinearMap.coe_sum, LinearMap.coe_smul, LinearMap.coe_proj,
+    Finset.sum_apply, Pi.smul_apply, Function.eval, smul_eq_mul, mul_neg, Fin.cases_succ]
   field_simp
   ring
 
@@ -3796,8 +3804,10 @@ theorem homogeneousMapFinSuccFirstPivotPlaneMap_coordinate_zero
   apply MvPolynomial.funext
   intro u
   rw [linearCoordinatePolynomial_eval]
-  simp [homogeneousMapFinSuccFirstPivotPlaneMap,
-    homogeneousMapFinSuccFirstPivotPlaneRoot]
+  simp only [homogeneousMapFinSuccFirstPivotPlaneMap, neg_smul, LinearMap.pi_apply, Fin.cases_zero,
+    LinearMap.neg_apply, LinearMap.smul_apply, LinearMap.coe_sum, LinearMap.coe_smul, LinearMap.coe_proj,
+    Finset.sum_apply, Pi.smul_apply, Function.eval, smul_eq_mul, homogeneousMapFinSuccFirstPivotPlaneRoot, map_neg,
+    map_mul, MvPolynomial.eval_C, map_sum, MvPolynomial.eval_X]
 
 theorem homogeneousMapFinSuccFirstPivotPlaneMap_coordinate_succ
     {n : ℕ} (c : Fin (n + 1) → ℂ) (i : Fin n) :
@@ -3808,7 +3818,8 @@ theorem homogeneousMapFinSuccFirstPivotPlaneMap_coordinate_succ
   apply MvPolynomial.funext
   intro u
   rw [linearCoordinatePolynomial_eval]
-  simp [homogeneousMapFinSuccFirstPivotPlaneMap]
+  simp only [homogeneousMapFinSuccFirstPivotPlaneMap, neg_smul, LinearMap.pi_apply, Fin.cases_succ,
+    LinearMap.coe_proj, Function.eval, MvPolynomial.eval_X]
 
 theorem homogeneousMapFinSuccFirstPivotPlaneMap_substitution
     {n : ℕ} (c : Fin (n + 1) → ℂ)
@@ -3821,16 +3832,16 @@ theorem homogeneousMapFinSuccFirstPivotPlaneMap_substitution
   classical
   induction p using MvPolynomial.induction_on with
   | C z =>
-      simpa using congrArg
-        (Polynomial.eval (homogeneousMapFinSuccFirstPivotPlaneRoot c))
-        ((MvPolynomial.finSuccEquiv ℂ n).commutes z)
-  | add f g hf hg => simp [map_add, Polynomial.eval_add, hf, hg]
+      simpa only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq,
+        Polynomial.algebraMap_apply, Polynomial.eval_C] using
+        congrArg (Polynomial.eval (homogeneousMapFinSuccFirstPivotPlaneRoot c)) ((MvPolynomial.finSuccEquiv ℂ n).commutes z)
+  | add f g hf hg => simp only [map_add, Polynomial.eval_add, hf, MvPolynomial.aeval_eq_bind₁, hg]
   | mul_X f i hf =>
       simp only [map_mul, Polynomial.eval_mul, MvPolynomial.aeval_X]
       rw [hf]
       cases i using Fin.cases with
       | zero =>
-          simp [MvPolynomial.finSuccEquiv_X_zero,
+          simp only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.finSuccEquiv_X_zero, Polynomial.eval_X,
             homogeneousMapFinSuccFirstPivotPlaneMap_coordinate_zero]
       | succ i =>
           rw [MvPolynomial.finSuccEquiv_X_succ,
@@ -3859,8 +3870,9 @@ theorem homogeneousMapFinSuccArbitraryPivotPlaneMap_injective
   funext i
   have hi := congrFun huv
     ((Equiv.swap (0 : Fin (n + 1)) j).symm i)
-  simpa [homogeneousMapFinSuccArbitraryPivotPlaneMap,
-    homogeneousMapFinSuccPivotPermutation] using hi
+  simpa only [Equiv.symm_swap, homogeneousMapFinSuccArbitraryPivotPlaneMap,
+    homogeneousMapFinSuccPivotPermutation, LinearMap.coe_comp, Function.comp_apply, LinearMap.pi_apply,
+    Equiv.swap_apply_self, LinearMap.coe_proj, Function.eval] using hi
 
 theorem homogeneousMapFinSuccArbitraryPivotPlaneMap_coordinate
     {n : ℕ} (c : Fin (n + 1) → ℂ)
@@ -3871,9 +3883,9 @@ theorem homogeneousMapFinSuccArbitraryPivotPlaneMap_coordinate
       (homogeneousMapFinSuccFirstPivotPlaneMap
         (fun q => c ((Equiv.swap (0 : Fin (n + 1)) j).symm q)))
       (Equiv.swap (0 : Fin (n + 1)) j i) := by
-  simp [linearCoordinatePolynomial,
-    homogeneousMapFinSuccArbitraryPivotPlaneMap,
-    homogeneousMapFinSuccPivotPermutation]
+  simp only [linearCoordinatePolynomial, homogeneousMapFinSuccArbitraryPivotPlaneMap,
+    homogeneousMapFinSuccPivotPermutation, Equiv.symm_swap, LinearMap.coe_comp, Function.comp_apply, LinearMap.pi_apply,
+    LinearMap.coe_proj, Function.eval]
 
 theorem homogeneousMapFinSuccArbitraryPivotPlaneMap_substitution
     {n : ℕ} (c : Fin (n + 1) → ℂ)
@@ -3916,8 +3928,9 @@ theorem homogeneousMapFinSuccArbitraryPivotPlaneMap_kernel
       (fun i : Fin (n + 1) =>
         d i * homogeneousMapFinSuccFirstPivotPlaneMap d u i) ?_
     intro i
-    simp [d, swap, homogeneousMapFinSuccArbitraryPivotPlaneMap,
-      homogeneousMapFinSuccPivotPermutation]
+    simp only [homogeneousMapFinSuccArbitraryPivotPlaneMap, homogeneousMapFinSuccPivotPermutation,
+      Equiv.symm_swap, LinearMap.coe_comp, Function.comp_apply, LinearMap.pi_apply, LinearMap.coe_proj, Function.eval,
+      Equiv.swap_apply_self, d, swap]
   rw [hreindex]
   exact hsum
 
@@ -3993,7 +4006,8 @@ theorem homogeneousMapFinSucc_source_prefix_plane_data
   classical
   have hcard :
       (Finset.univ.erase (Fin.last n) : Finset (Fin (n + 1))).card = n := by
-    simp
+    simp only [Finset.mem_univ, Finset.card_erase_of_mem, Finset.card_univ, Fintype.card_fin,
+      add_tsub_cancel_right]
   have hslices :
       ∃ c : Fin 1 → Fin (n + 1) → ℂ,
         LinearIndependent ℂ c ∧
@@ -4018,12 +4032,14 @@ theorem homogeneousMapFinSucc_source_prefix_plane_data
     constructor
     · rintro ⟨i, hi, rfl⟩
       have hlast : i ≠ Fin.last n := by
-        simpa using hi
+        simpa only [ne_eq, Finset.coe_erase, Finset.coe_univ, Set.mem_sdiff, Set.mem_univ, Set.mem_singleton_iff,
+          true_and] using hi
       obtain ⟨q, rfl⟩ := Fin.eq_castSucc_of_ne_last hlast
       exact ⟨q, rfl⟩
     · rintro ⟨i, rfl⟩
       refine ⟨i.castSucc, ?_, rfl⟩
-      simp
+      simp only [Finset.coe_erase, Finset.coe_univ, Set.mem_sdiff, Set.mem_univ, Set.mem_singleton_iff,
+        Fin.castSucc_ne_last, not_false_eq_true, and_self]
   refine ⟨c, hc, ?_⟩
   change MvPolynomial.zeroLocus ℂ
     (Ideal.span
@@ -4073,7 +4089,7 @@ theorem homogeneousMapFinSucc_exists_source_arbitraryPivot_restricted_zeroFiber
     constructor
     · rintro ⟨i, rfl⟩
       have hi : i = 0 := Subsingleton.elim i 0
-      exact ⟨0, by simp [hi]⟩
+      exact ⟨0, by simp only [Fin.isValue, hi]⟩
     · rintro ⟨i, rfl⟩
       exact ⟨0, rfl⟩
   have hradical :
@@ -4097,11 +4113,10 @@ theorem homogeneousMapFinSucc_exists_source_arbitraryPivot_restricted_zeroFiber
     homogeneousMapFinSuccArbitraryPivotPlaneMap_restricted_zeroFiber
       F e he hF (c 0) j hj hradical⟩
   intro i
-  simpa using (hF i.castSucc).aeval
-    (fun row => linearCoordinatePolynomial
-      (homogeneousMapFinSuccArbitraryPivotPlaneMap (c 0) j) row)
-    (fun row => linearCoordinatePolynomial_isHomogeneous
-      (homogeneousMapFinSuccArbitraryPivotPlaneMap (c 0) j) row)
+  simpa only [Fin.isValue, MvPolynomial.aeval_eq_bind₁, one_mul] using
+    (hF i.castSucc).aeval
+      (fun row => linearCoordinatePolynomial (homogeneousMapFinSuccArbitraryPivotPlaneMap (c 0) j) row)
+      (fun row => linearCoordinatePolynomial_isHomogeneous (homogeneousMapFinSuccArbitraryPivotPlaneMap (c 0) j) row)
 
 theorem homogeneousMap_allRank_finSucc_arbitraryPivotPlaneQuotientEquiv_mk_eq_aeval
     {n : ℕ} (c : Fin (n + 1) → ℂ)
@@ -4193,12 +4208,12 @@ theorem homogeneousMap_allRank_fin_last_mem_span_of_weaklyRegular_aux
       (fun i : Fin n => f i.castSucc)} = _
     congr 1
     ext x
-    simp
+    simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
   have hideal :
       Ideal.ofList rs • (⊤ : Submodule R R) =
         (Ideal.span (Set.range fun i : Fin n => f i.castSucc) :
           Submodule R R) := by
-    simp [hspan]
+    simp only [hspan, smul_eq_mul, Ideal.mul_top]
   have hmem :=
     (isSMulRegular_quotient_iff_mem_of_smul_mem
       (Ideal.ofList rs • (⊤ : Submodule R R))
@@ -4209,7 +4224,7 @@ theorem homogeneousMap_allRank_fin_last_mem_span_of_weaklyRegular_aux
   rw [← hideal]
   apply hmem a
   rw [hideal]
-  simpa [smul_eq_mul] using ha
+  simpa only [smul_eq_mul] using ha
 
 theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts_aux
     {R S : Type*} [CommRing R] [CommRing S]
@@ -4228,7 +4243,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts_aux
       intro f _ a _
       refine ⟨Fin.elim0, ?_, ?_⟩
       · exact fun i => Fin.elim0 i
-      · simp
+      · simp only [Finset.univ_eq_empty, Finset.sum_empty]
   | succ n ih =>
       intro f hregular a hrelation
       have hlist :
@@ -4250,7 +4265,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts_aux
       have hsum :
           (∑ i : Fin n, a i.castSucc * q (f i.castSucc)) +
             a (Fin.last n) * q (f (Fin.last n)) = 0 := by
-        simpa [Fin.sum_univ_castSucc] using hrelation
+        simpa only [Fin.sum_univ_castSucc] using hrelation
       have hproduct :
           q (f (Fin.last n)) * a (Fin.last n) ∈
             Ideal.span
@@ -4260,7 +4275,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts_aux
         calc
           (∑ i : Fin n, -a i.castSucc * q (f i.castSucc)) =
               -(∑ i : Fin n, a i.castSucc * q (f i.castSucc)) := by
-                simp
+                simp only [neg_mul, Finset.sum_neg_distrib]
           _ = q (f (Fin.last n)) * a (Fin.last n) := by
                 linear_combination -hsum
       have hlast :
@@ -4310,7 +4325,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts_aux
             rw [Fin.snoc_last]
             change q (∑ i : Fin n, d i * f i.castSucc) =
               a (Fin.last n)
-            simpa [map_sum, map_mul, hd] using ht
+            simpa only [map_sum, map_mul, hd] using ht
         | cast i =>
             change q ((Fin.snoc
               (fun i : Fin n => b i - d i * f (Fin.last n))
@@ -4353,14 +4368,14 @@ theorem homogeneousMap_allRank_fin_hyperplane_isSMulRegular_of_quotient_weaklyRe
     (Ideal.span (Set.range f)) ell).mpr
   intro p hp
   have hp' : ell * p ∈ Ideal.span (Set.range f) := by
-    simpa [smul_eq_mul] using hp
+    simpa only [smul_eq_mul] using hp
   obtain ⟨a, ha⟩ := Ideal.mem_span_range_iff_exists_fun.mp hp'
   let J : Ideal R := Ideal.span ({ell} : Set R)
   let q : R →+* R ⧸ J := Ideal.Quotient.mk J
   have hrelation : (∑ i : Fin n, q (a i) * q (f i)) = 0 := by
     calc
       (∑ i : Fin n, q (a i) * q (f i)) =
-          q (∑ i : Fin n, a i * f i) := by simp
+          q (∑ i : Fin n, a i * f i) := by simp only [map_sum, map_mul]
       _ = q (ell * p) := congrArg q ha
       _ = 0 := by
         apply Ideal.Quotient.eq_zero_iff_mem.mpr
@@ -4427,7 +4442,7 @@ theorem homogeneousMap_allRank_homogeneous_isSMulRegular_of_linear_hyperplane_au
         exact Ideal.mem_sup_left hfp
       obtain ⟨v, hv, w, hw, hvw⟩ := Submodule.mem_sup.mp hpmod
       obtain ⟨r, hr⟩ := Ideal.mem_span_singleton'.mp hw
-      have hdecomp : v + r * ell = p := by simpa [hr] using hvw
+      have hdecomp : v + r * ell = p := by simpa only [hr] using hvw
       have hvcomponent : MvPolynomial.homogeneousComponent m v ∈ I :=
         MvPolynomial.homogeneousComponent_mem_of_mem hI hv m
       by_cases hm : m = 0
@@ -4469,7 +4484,7 @@ theorem homogeneousMap_allRank_homogeneous_isSMulRegular_of_linear_hyperplane_au
         exact I.add_mem hvcomponent (I.mul_mem_right ell hr'I)
   apply (isSMulRegular_quotient_iff_mem_of_smul_mem I f).mpr
   intro p hp
-  have hp' : f * p ∈ I := by simpa [smul_eq_mul] using hp
+  have hp' : f * p ∈ I := by simpa only [smul_eq_mul] using hp
   apply (MvPolynomial.mem_iff_homogeneousComponent_mem hI p).mpr
   intro m
   apply homogeneous_aux m (MvPolynomial.homogeneousComponent m p)
@@ -4479,7 +4494,7 @@ theorem homogeneousMap_allRank_homogeneous_isSMulRegular_of_linear_hyperplane_au
   rw [mul_comm f p,
     homogeneousComponent_mul_of_right_isHomogeneous p f hf
       (by omega)] at hcomponent
-  simpa [Nat.add_sub_cancel_left, mul_comm] using hcomponent
+  simpa only [add_tsub_cancel_left, mul_comm] using hcomponent
 
 open scoped Pointwise BigOperators
 
@@ -4498,7 +4513,7 @@ theorem homogeneousMap_allRank_isSMulRegular_sup_of_quotient_map_aux
       (Ideal.Quotient.mk J g)).mp hregular
   apply (isSMulRegular_quotient_iff_mem_of_smul_mem (I ⊔ J) g).mpr
   intro p hp
-  have hp' : g * p ∈ I ⊔ J := by simpa [smul_eq_mul] using hp
+  have hp' : g * p ∈ I ⊔ J := by simpa only [smul_eq_mul] using hp
   have himage : Ideal.Quotient.mk J (g * p) ∈
       I.map (Ideal.Quotient.mk J) :=
     Ideal.mem_quotient_iff_mem_sup.mpr hp'
@@ -4506,7 +4521,7 @@ theorem homogeneousMap_allRank_isSMulRegular_sup_of_quotient_map_aux
       Ideal.Quotient.mk J g • Ideal.Quotient.mk J p ∈
         (I.map (Ideal.Quotient.mk J) :
           Submodule (R ⧸ J) (R ⧸ J)) := by
-    simpa [smul_eq_mul, map_mul] using himage
+    simpa only [smul_eq_mul, map_mul] using himage
   have hmember := hcolon (Ideal.Quotient.mk J p) hproduct
   exact Ideal.mem_quotient_iff_mem_sup.mp hmember
 
@@ -4561,7 +4576,7 @@ theorem homogeneousMap_allRank_homogeneous_fin_isWeaklyRegular_of_linear_quotien
         rw [Ideal.map_span]
         congr 1
         ext x
-        simp
+        simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_image, Set.mem_range, exists_exists_eq_and]
       have hquotientlast : IsSMulRegular
           ((R ⧸ J) ⧸ I.map q) (q g) := by
         have hlast :=
@@ -4575,7 +4590,7 @@ theorem homogeneousMap_allRank_homogeneous_fin_isWeaklyRegular_of_linear_quotien
             Ideal.ofList (List.ofFn fun i : Fin n => q (fp i)) •
                 (⊤ : Submodule (R ⧸ J) (R ⧸ J)) =
               (I.map q : Submodule (R ⧸ J) (R ⧸ J)) := by
-          simp [himage]
+          simp only [himage, smul_eq_mul, Ideal.mul_top]
         let E := Submodule.quotEquivOfEq _ _ hsub
         exact (E.isSMulRegular_congr (q g)).mp hlast
       have hgmod : IsSMulRegular (R ⧸ (I ⊔ J)) g :=
@@ -4602,12 +4617,12 @@ theorem homogeneousMap_allRank_homogeneous_fin_isWeaklyRegular_of_linear_quotien
           Ideal.span (Set.range fp)
         congr 1
         ext x
-        simp
+        simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
       have hsub :
           Ideal.ofList (List.ofFn fp) •
               (⊤ : Submodule R R) =
             (I : Submodule R R) := by
-        simp [hspan]
+        simp only [hspan, smul_eq_mul, Ideal.mul_top]
       let E := Submodule.quotEquivOfEq _ _ hsub
       exact (E.isSMulRegular_congr g).mpr hgI
 
@@ -4644,12 +4659,12 @@ theorem homogeneousMap_allRank_fin_last_mem_span_of_weaklyRegular
       (fun i : Fin n => f i.castSucc)} = _
     congr 1
     ext x
-    simp
+    simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
   have hideal :
       Ideal.ofList rs • (⊤ : Submodule R R) =
         (Ideal.span (Set.range fun i : Fin n => f i.castSucc) :
           Submodule R R) := by
-    simp [hspan]
+    simp only [hspan, smul_eq_mul, Ideal.mul_top]
   have hmem :=
     (isSMulRegular_quotient_iff_mem_of_smul_mem
       (Ideal.ofList rs • (⊤ : Submodule R R))
@@ -4660,7 +4675,7 @@ theorem homogeneousMap_allRank_fin_last_mem_span_of_weaklyRegular
   rw [← hideal]
   apply hmem a
   rw [hideal]
-  simpa [smul_eq_mul] using ha
+  simpa only [smul_eq_mul] using ha
 
 theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts
     {R S : Type*} [CommRing R] [CommRing S]
@@ -4679,7 +4694,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts
       intro f hregular a hrelation
       refine ⟨Fin.elim0, ?_, ?_⟩
       · exact fun i => Fin.elim0 i
-      · simp
+      · simp only [Finset.univ_eq_empty, Finset.sum_empty]
   | succ n ih =>
       intro f hregular a hrelation
       have hlist :
@@ -4699,7 +4714,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts
       have hsum :
           (∑ i : Fin n, a i.castSucc * q (f i.castSucc)) +
             a (Fin.last n) * q (f (Fin.last n)) = 0 := by
-        simpa [Fin.sum_univ_castSucc] using hrelation
+        simpa only [Fin.sum_univ_castSucc] using hrelation
       have hproduct :
           q (f (Fin.last n)) * a (Fin.last n) ∈
             Ideal.span
@@ -4709,7 +4724,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts
         calc
           (∑ i : Fin n, -a i.castSucc * q (f i.castSucc)) =
               -(∑ i : Fin n, a i.castSucc * q (f i.castSucc)) := by
-                simp
+                simp only [neg_mul, Finset.sum_neg_distrib]
           _ = q (f (Fin.last n)) * a (Fin.last n) := by
                 linear_combination -hsum
       have hlast :
@@ -4756,7 +4771,7 @@ theorem homogeneousMap_allRank_weaklyRegular_fin_syzygy_lifts
             simp only [result, Fin.snoc_last]
             change q (∑ i : Fin n, d i * f i.castSucc) =
               a (Fin.last n)
-            simpa [map_sum, map_mul, hd] using ht
+            simpa only [map_sum, map_mul, hd] using ht
         | cast i =>
             simp only [result, Fin.snoc_castSucc]
             rw [map_sub, map_mul, hb i, hd i]
@@ -4819,14 +4834,14 @@ theorem homogeneousMap_allRank_fin_hyperplane_isSMulRegular_of_quotient_weaklyRe
     (Ideal.span (Set.range f)) ell).mpr
   intro p hp
   have hp' : ell * p ∈ Ideal.span (Set.range f) := by
-    simpa [smul_eq_mul] using hp
+    simpa only [smul_eq_mul] using hp
   obtain ⟨a, ha⟩ := Ideal.mem_span_range_iff_exists_fun.mp hp'
   let J : Ideal R := Ideal.span ({ell} : Set R)
   let q : R →+* R ⧸ J := Ideal.Quotient.mk J
   have hrelation : (∑ i : Fin n, q (a i) * q (f i)) = 0 := by
     calc
       (∑ i : Fin n, q (a i) * q (f i)) =
-          q (∑ i : Fin n, a i * f i) := by simp
+          q (∑ i : Fin n, a i * f i) := by simp only [map_sum, map_mul]
       _ = q (ell * p) := congrArg q ha
       _ = 0 := by
         apply Ideal.Quotient.eq_zero_iff_mem.mpr
@@ -4926,7 +4941,7 @@ theorem homogeneousMap_allRank_finSucc_lastCoordinate_isSMulRegular_of_slice_wea
         rintro _ ⟨i, rfl⟩
         exact hgen i.castSucc
       · rw [Ideal.span_le]
-        simpa using hgen (Fin.last n)
+        simpa only [Set.singleton_subset_iff, SetLike.mem_coe] using hgen (Fin.last n)
     · rw [homogeneousMapIdeal, Ideal.span_le]
       rintro _ ⟨i, rfl⟩
       obtain ⟨q, rfl⟩ | rfl := Fin.eq_castSucc_or_eq_last i
@@ -5015,7 +5030,7 @@ theorem homogeneousMap_coordinatePolynomials_isWeaklyRegular
           (fun i : Fin n => F i.castSucc)} = _
         congr 1
         ext p
-        simp
+        simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
       have hsub :
           (Ideal.ofList (List.ofFn fun i : Fin n => F i.castSucc) •
             (⊤ : Submodule (MvPolynomial (Fin (n + 1)) ℂ)
@@ -5023,7 +5038,7 @@ theorem homogeneousMap_coordinatePolynomials_isWeaklyRegular
             (Ideal.span (Set.range fun i : Fin n => F i.castSucc) :
               Submodule (MvPolynomial (Fin (n + 1)) ℂ)
                 (MvPolynomial (Fin (n + 1)) ℂ)) := by
-        simp [hspan]
+        simp only [hspan, smul_eq_mul, Ideal.mul_top]
       exact ((Submodule.quotEquivOfEq _ _ hsub).isSMulRegular_congr
         (F (Fin.last n))).mpr hlast
 
@@ -5039,9 +5054,9 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_empty
     homogeneousMapAllKBoundedHomogeneousHilbertCoefficient k e n ∅ =
       (k + n - 1).choose n := by
   classical
-  simpa [homogeneousMapAllKBoundedHomogeneousHilbertCoefficient] using
-    (Finset.card_finsuppAntidiag_nat_eq_choose
-      (s := (Finset.univ : Finset (Fin k))) n)
+  simpa only [homogeneousMapAllKBoundedHomogeneousHilbertCoefficient, Finset.notMem_empty, IsEmpty.forall_iff,
+    implies_true, Finset.filter_true, Finset.card_univ, Fintype.card_fin] using
+    (Finset.card_finsuppAntidiag_nat_eq_choose (s := (Finset.univ : Finset (Fin k))) n)
 
 theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_insert_of_lt
     (k e n : ℕ) (restricted : Finset (Fin k)) (j : Fin k)
@@ -5061,7 +5076,7 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_insert_of
   · rintro ⟨hd, _⟩
     refine ⟨hd, fun i _ => ?_⟩
     have hdegree : d.degree = n := by
-      simpa [Finsupp.degree_eq_sum] using hd
+      simpa only [Finsupp.degree_eq_sum] using hd
     have hi := Finsupp.le_degree i d
     omega
 
@@ -5086,7 +5101,8 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_insert_re
     unfold homogeneousMapAllKBoundedHomogeneousHilbertCoefficient
     congr 1
     ext d
-    simp [s, and_left_comm, and_comm]
+    simp only [Finset.mem_filter, Finset.mem_finsuppAntidiag, Finset.subset_univ, and_comm, true_and,
+      and_left_comm, Finset.mem_insert, forall_eq_or_imp, s]
   have hbad :
       t.card = (s.filter (fun d => ¬ d j < e)).card := by
     refine Finset.card_bij (fun d _ => d + Finsupp.single j e) ?_ ?_ ?_
@@ -5097,16 +5113,18 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_insert_re
         Finset.subset_univ, and_true]
       refine ⟨⟨?_, ?_⟩, ?_⟩
       · have hdegree : d.degree = n := by
-          simpa [Finsupp.degree_eq_sum] using hd.1
+          simpa only [Finsupp.degree_eq_sum] using hd.1
         have hsum : (d + Finsupp.single j e).degree = n + e := by
-          simp [hdegree, Finsupp.degree_single]
-        simpa [Finsupp.degree_eq_sum, Nat.add_comm] using hsum
+          simp only [map_add, hdegree, Finsupp.degree_single]
+        simpa only [Finsupp.coe_add, Pi.add_apply, Finsupp.degree_eq_sum, Nat.add_comm] using hsum
       · intro i hi
         have hij : j ≠ i := by
           intro h
           exact hj (h ▸ hi)
-        simpa [Finsupp.single_apply, hij] using hd.2 i hi
-      · simp
+        simpa only [Finsupp.coe_add, Pi.add_apply, ne_eq, hij, not_false_eq_true, Finsupp.single_eq_of_ne', add_zero,
+          gt_iff_lt] using hd.2 i hi
+      · simp only [Finsupp.coe_add, Pi.add_apply, Finsupp.single_eq_same, add_lt_iff_neg_right, not_lt_zero,
+          not_false_eq_true]
     · intro d₁ _ d₂ _ h
       exact add_right_cancel h
     · intro d hd
@@ -5119,18 +5137,19 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_insert_re
         by_cases hi : j = i
         · subst i
           simpa [a] using Nat.sub_add_cancel hle
-        · simp [a, hi]
+        · simp only [Finsupp.coe_add, Finsupp.coe_tsub, Pi.add_apply, Pi.sub_apply, ne_eq, hi, not_false_eq_true,
+            Finsupp.single_eq_of_ne', tsub_zero, add_zero, a]
       refine ⟨a, ?_, hrecover⟩
       simp only [t, Finset.mem_filter, Finset.mem_finsuppAntidiag,
         Finset.subset_univ, and_true]
       refine ⟨?_, ?_⟩
       · have hdegree : d.degree = e + n := by
-          simpa [Finsupp.degree_eq_sum] using hd.1.1
+          simpa only [Finsupp.degree_eq_sum] using hd.1.1
         have hrecoverDegree := congrArg Finsupp.degree hrecover
         have hadegree : a.degree + e = e + n := by
-          simpa [Finsupp.degree_single, hdegree] using hrecoverDegree
+          simpa only [map_add, Finsupp.degree_single, hdegree] using hrecoverDegree
         have han : a.degree = n := by omega
-        simpa [Finsupp.degree_eq_sum] using han
+        simpa only [Finsupp.degree_eq_sum] using han
       · intro i hi
         have hji : j ≠ i := by
           intro h
@@ -5198,23 +5217,23 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ
     simp only [t, Finset.mem_filter, Finset.mem_univ, true_and]
     have hdegree :=
       (Finset.mem_finsuppAntidiag.mp (Finset.mem_filter.mp hd).1).1
-    simpa [φ] using hdegree
+    simpa only using hdegree
   · intro d₁ hd₁ d₂ hd₂ h
     apply Finsupp.ext
     intro i
-    simpa [φ] using congrArg (fun a : Fin k → Fin e => (a i : ℕ)) h
+    simpa only using congrArg (fun a : Fin k → Fin e => (a i : ℕ)) h
   · intro a ha
     have ha' : (∑ i : Fin k, (a i : ℕ)) = n := by
       simpa [t] using ha
     let d : Fin k →₀ ℕ :=
       Finsupp.equivFunOnFinite.symm (fun i => (a i : ℕ))
     have hdapply (i : Fin k) : d i = (a i : ℕ) := by
-      simp [d]
+      simp only [Finsupp.equivFunOnFinite_symm_apply_apply, d]
     have hd : d ∈ s := by
       simp only [s, Finset.mem_filter, Finset.mem_finsuppAntidiag,
         Finset.subset_univ, and_true]
       constructor
-      · simpa [hdapply] using ha'
+      · simpa only [hdapply] using ha'
       · intro i _
         rw [hdapply]
         exact (a i).isLt
@@ -5243,7 +5262,7 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ_sum
         exact Nat.le_of_lt (a i).isLt
       · refine ⟨⟨0, hk⟩, Finset.mem_univ _, ?_⟩
         exact (a ⟨0, hk⟩).isLt
-    simpa [f] using hstrict
+    simpa only [gt_iff_lt, Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul] using hstrict
   have hcard := Finset.card_eq_sum_card_fiberwise
     (s := (Finset.univ : Finset (Fin k → Fin e)))
     (t := Finset.range (k * e)) hf
@@ -5254,7 +5273,7 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ_sum
           (fun a => f a = n)).card at hcard
   rw [Fintype.card_fun, Fintype.card_fin, Fintype.card_fin] at hcard
   simp_rw [homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ]
-  simpa [homogeneousMapAllKBoxHilbertCoefficient, f] using hcard.symm
+  simpa only [homogeneousMapAllKBoxHilbertCoefficient] using hcard.symm
 
 theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ_eq_zero_of_le
     (k e n : ℕ) (hk : 0 < k) (hn : k * e ≤ n) :
@@ -5272,7 +5291,7 @@ theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ_eq_z
     · refine ⟨⟨0, hk⟩, Finset.mem_univ _, ?_⟩
       exact (a ⟨0, hk⟩).isLt
   have hlt : (∑ i : Fin k, (a i : ℕ)) < k * e := by
-    simpa using hstrict
+    simpa only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul] using hstrict
   omega
 
 theorem homogeneousMap_allRank_bounded_homogeneous_hilbert_coefficient_univ_sum_of_cutoff
@@ -5304,12 +5323,12 @@ def homogeneousMapAllKSourcePrefix (k j : ℕ) : Finset (Fin k) :=
 @[simp] theorem homogeneousMap_allRank_sourcePrefix_zero (k : ℕ) :
     homogeneousMapAllKSourcePrefix k 0 = ∅ := by
   ext i
-  simp [homogeneousMapAllKSourcePrefix]
+  simp only [homogeneousMapAllKSourcePrefix, not_lt_zero, Finset.filter_false, Finset.notMem_empty]
 
 @[simp] theorem homogeneousMap_allRank_sourcePrefix_full (k : ℕ) :
     homogeneousMapAllKSourcePrefix k k = Finset.univ := by
   ext i
-  simp [homogeneousMapAllKSourcePrefix]
+  simp only [homogeneousMapAllKSourcePrefix, Fin.is_lt, Finset.filter_true, Finset.mem_univ]
 
 theorem homogeneousMap_allRank_sourcePrefix_succ
     {k j : ℕ} (hj : j < k) :
@@ -5326,13 +5345,14 @@ theorem homogeneousMap_allRank_sourcePrefix_succ
   · intro hi
     rcases hi with hi | hi
     · subst i
-      simp
+      simp only [lt_add_iff_pos_right, Order.lt_one_iff]
     · omega
 
 theorem homogeneousMap_allRank_sourcePrefix_not_mem
     {k j : ℕ} (hj : j < k) :
     (⟨j, hj⟩ : Fin k) ∉ homogeneousMapAllKSourcePrefix k j := by
-  simp [homogeneousMapAllKSourcePrefix]
+  simp only [homogeneousMapAllKSourcePrefix, Finset.mem_filter, Finset.mem_univ, lt_self_iff_false, and_false,
+    not_false_eq_true]
 
 theorem homogeneousMap_allRank_sourcePrefix_ofList
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -5351,15 +5371,17 @@ theorem homogeneousMap_allRank_sourcePrefix_ofList
       simpa only [List.length_ofFn] using (lt_of_lt_of_le hi (Nat.min_le_right _ _))
     refine ⟨⟨i, hik⟩, ?_, ?_⟩
     · have hij : i < j := lt_of_lt_of_le hi (Nat.min_le_left _ _)
-      simpa [homogeneousMapAllKSourcePrefix] using hij
+      simpa only [homogeneousMapAllKSourcePrefix, Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_setOf_eq,
+        gt_iff_lt] using hij
     · simpa only [List.getElem_ofFn] using heq
   · rintro ⟨i, hi, rfl⟩
     have hij : i.val < j := by
-      simpa [homogeneousMapAllKSourcePrefix] using hi
+      simpa only [homogeneousMapAllKSourcePrefix, Finset.coe_filter, Finset.mem_univ, true_and,
+        Set.mem_setOf_eq] using hi
     apply List.mem_take_iff_getElem.mpr
     refine ⟨i.val, ?_, ?_⟩
     · simpa only [List.length_ofFn] using (lt_min hij i.isLt)
-    · simp
+    · simp only [List.getElem_ofFn, Fin.eta]
 
 theorem homogeneousMap_allRank_sourcePrefix_isSMulRegular
     (k : ℕ) (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -5389,7 +5411,7 @@ theorem homogeneousMap_allRank_sourcePrefix_isSMulRegular
           Submodule (MvPolynomial (Fin k) ℂ)
             (MvPolynomial (Fin k) ℂ)) := by
     rw [homogeneousMap_allRank_sourcePrefix_ofList F j]
-    simp
+    simp only [smul_eq_mul, Ideal.mul_top]
   apply ((Submodule.quotEquivOfEq _ _ hsub).isSMulRegular_congr
     (F ⟨j, hj⟩)).mp
   simpa only [List.getElem_ofFn] using hreg
@@ -5423,7 +5445,8 @@ theorem homogeneousMap_allRank_coordinateSubsetIdeal_insert
   rw [← Ideal.span_union]
   congr 1
   ext p
-  simp [eq_comm]
+  simp only [Finset.coe_insert, Set.mem_image, Set.mem_insert_iff, eq_comm, SetLike.mem_coe, exists_eq_or_imp',
+    Set.union_singleton]
 
 theorem homogeneousMap_allRank_coordinateSubsetIdeal_univ
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ) :
@@ -5432,12 +5455,12 @@ theorem homogeneousMap_allRank_coordinateSubsetIdeal_univ
   unfold homogeneousMapAllKCoordinateSubsetIdeal homogeneousMapIdeal
   congr 1
   ext p
-  simp
+  simp only [Finset.coe_univ, Set.image_univ, Set.mem_range]
 
 theorem homogeneousMap_allRank_coordinateSubsetIdeal_empty
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ) :
     homogeneousMapAllKCoordinateSubsetIdeal F ∅ = ⊥ := by
-  simp [homogeneousMapAllKCoordinateSubsetIdeal]
+  simp only [homogeneousMapAllKCoordinateSubsetIdeal, Finset.coe_empty, Set.image_empty, Submodule.span_empty]
 
 theorem homogeneousMap_allRank_coordinateSubsetGradedIdealPiece_eq_bot_of_lt
     {k e : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -5472,7 +5495,7 @@ theorem homogeneousMap_allRank_coordinateSubsetGradedIdealPiece_eq_bot_of_lt
   simp_rw [hterms, Finset.sum_const_zero,
     MvPolynomial.homogeneousComponent_eq_self p.property] at hcomponent
   have hpzero : p = 0 := Subtype.ext hcomponent.symm
-  simp [hpzero]
+  simp only [hpzero, zero_mem]
 
 noncomputable def homogeneousMapAllKActualCoordinateHilbert
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -5499,7 +5522,7 @@ theorem homogeneousMap_allRank_actualCoordinateHilbert_empty
       (⊥ : Ideal (MvPolynomial (Fin k) ℂ))) ↔
       p ∈ (⊥ : Submodule ℂ
         (MvPolynomial.homogeneousSubmodule (Fin k) ℂ n))
-    simp
+    simp only [Submodule.mem_bot, ZeroMemClass.coe_eq_zero]
   unfold homogeneousMapAllKActualCoordinateHilbert
   calc
     Module.finrank ℂ
@@ -5514,8 +5537,7 @@ theorem homogeneousMap_allRank_actualCoordinateHilbert_empty
         (MvPolynomial.homogeneousSubmodule (Fin k) ℂ n) :=
       (Submodule.quotEquivOfEqBot _ rfl).finrank_eq
     _ = (k + n - 1).choose n := by
-      simpa using
-        (homogeneousMap_homogeneousSubmodule_finrank (ι := Fin k) n)
+      simpa only [Fintype.card_fin] using (homogeneousMap_homogeneousSubmodule_finrank (ι := Fin k) n)
 
 theorem homogeneousMap_allRank_actualCoordinateHilbert_insert_of_lt
     {k e : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -5668,7 +5690,7 @@ theorem homogeneousMap_zeroFiberIdeal_finrank
   | zero =>
       have hI : homogeneousMapIdeal F =
           (⊥ : Ideal (MvPolynomial (Fin 0) ℂ)) := by
-        simp [homogeneousMapIdeal]
+        simp only [homogeneousMapIdeal, Matrix.range_empty, Submodule.span_empty]
       rw [hI]
       calc
         Module.finrank ℂ
@@ -5678,7 +5700,7 @@ theorem homogeneousMap_zeroFiberIdeal_finrank
           (Submodule.quotEquivOfEqBot _ rfl).finrank_eq
         _ = Module.finrank ℂ ℂ :=
           (MvPolynomial.isEmptyAlgEquiv ℂ (Fin 0)).toLinearEquiv.finrank_eq
-        _ = e ^ 0 := by simp
+        _ = e ^ 0 := by simp only [Module.finrank_self, pow_zero]
   | succ k =>
       exact homogeneousMap_zeroFiberIdeal_finrank_of_pos_rank
         (k + 1) (Nat.zero_lt_succ k) F e he hF hzero
@@ -5716,13 +5738,11 @@ theorem homogeneousMap_allTarget_totalDegree_sub_homogeneousComponent_le
   have hmq : m.degree ≠ q := by
     intro heq
     apply hmne
-    simp [MvPolynomial.coeff_sub,
-      MvPolynomial.coeff_homogeneousComponent, heq]
+    simp only [MvPolynomial.coeff_sub, MvPolynomial.coeff_homogeneousComponent, heq, ↓reduceIte, sub_self]
   have hmcoeff : MvPolynomial.coeff m f ≠ 0 := by
     intro hzero
     apply hmne
-    simp [MvPolynomial.coeff_sub,
-      MvPolynomial.coeff_homogeneousComponent, hmq, hzero]
+    simp only [MvPolynomial.coeff_sub, hzero, MvPolynomial.coeff_homogeneousComponent, hmq, ↓reduceIte, sub_self]
   have hmle : m.degree ≤ q :=
     (MvPolynomial.le_totalDegree
       (MvPolynomial.mem_support_iff.mpr hmcoeff)).trans hf
@@ -5746,7 +5766,7 @@ theorem homogeneousMap_allTarget_homogeneous_linear_sub_constant_isSMulRegular
     (t - MvPolynomial.C c)).mpr
   intro p hp
   have hp' : (t - MvPolynomial.C c) * p ∈ I := by
-    simpa [smul_eq_mul] using hp
+    simpa only [smul_eq_mul] using hp
   have haux : ∀ n : ℕ, ∀ q : MvPolynomial ι ℂ,
       q.totalDegree ≤ n →
       (t - MvPolynomial.C c) * q ∈ I → q ∈ I := by
@@ -5766,7 +5786,7 @@ theorem homogeneousMap_allTarget_homogeneous_linear_sub_constant_isSMulRegular
         mul_zero, sub_zero] at hcomp
       have htop : MvPolynomial.homogeneousComponent n q ∈ I := by
         apply htcolon (MvPolynomial.homogeneousComponent n q)
-        simpa [smul_eq_mul, mul_comm] using hcomp
+        simpa only [smul_eq_mul, add_tsub_cancel_right, mul_comm] using hcomp
       by_cases hn : n = 0
       · subst n
         have hqzero : q.totalDegree = 0 := Nat.eq_zero_of_le_zero hq
@@ -5823,18 +5843,18 @@ theorem homogeneousMap_allTarget_homogeneous_aeval_isSMulRegular
     intro roots
     induction roots using Multiset.induction_on with
     | empty =>
-        simp
+        simp only [Multiset.map_zero, Multiset.prod_zero, IsSMulRegular.one]
     | @cons a roots ih =>
-        simpa using
-          (homogeneousMap_allTarget_homogeneous_linear_sub_constant_isSMulRegular
-            I hI t ht htregular a).mul ih
+        simpa only [Multiset.map_cons, Multiset.prod_cons] using
+          (homogeneousMap_allTarget_homogeneous_linear_sub_constant_isSMulRegular I hI t ht htregular a).mul ih
   have hsplit := (IsAlgClosed.splits p).eq_prod_roots
   have heval := congrArg (Polynomial.aeval t) hsplit
   have heval' :
       Polynomial.aeval t p =
         MvPolynomial.C p.leadingCoeff *
           ((p.roots.map fun a => t - MvPolynomial.C a).prod) := by
-    simpa [map_multiset_prod] using heval
+    simpa only [map_mul, Polynomial.aeval_C, MvPolynomial.algebraMap_eq, map_multiset_prod, Multiset.map_map,
+      Function.comp_apply, Polynomial.aeval_sub, Polynomial.aeval_X] using heval
   rw [heval']
   exact hregularLeading.mul (hprod p.roots)
 
@@ -5869,7 +5889,7 @@ theorem homogeneousMapReesTargetHom_coordinate
         homogeneousMapSubalgebra F) := by
     apply Subtype.ext
     change MvPolynomial.aeval F (MvPolynomial.X i) = F i
-    simp
+    simp only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.bind₁_X_right]
   change (MvPolynomial.aeval fun q : ι =>
     Polynomial.C (target q) * Polynomial.X ^ e)
     (E.symm
@@ -5910,8 +5930,8 @@ noncomputable def homogeneousMapAllTargetReesZeroHyperplaneEquiv (k : ℕ) :
     Ideal.span ({Polynomial.X - Polynomial.C 0} :
       Set (Polynomial (MvPolynomial (Fin k) ℂ)))
   have hIJ : J = I.map E.toRingEquiv.toRingHom := by
-    simp [I, J, Ideal.map_span, E,
-      MvPolynomial.finSuccEquiv_X_zero]
+    simp only [map_zero, sub_zero, RingEquiv.toRingHom_eq_coe, AlgEquiv.toRingEquiv_toRingHom, Ideal.map_span,
+      RingHom.coe_coe, Set.image_singleton, MvPolynomial.finSuccEquiv_X_zero, J, E, I]
   exact (Ideal.quotientEquivAlg I J E hIJ).trans
     ((Polynomial.quotientSpanXSubCAlgEquiv
       (0 : MvPolynomial (Fin k) ℂ)).restrictScalars ℂ)
@@ -5931,14 +5951,14 @@ theorem homogeneousMap_allTarget_finSucc_rename_eval_zero
       (MvPolynomial.rename Fin.succ p)).eval 0 = p := by
   induction p using MvPolynomial.induction_on with
   | C a =>
-      simpa using congrArg (Polynomial.eval
-        (0 : MvPolynomial (Fin k) ℂ))
-        ((MvPolynomial.finSuccEquiv ℂ k).commutes a)
+      simpa only [MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq, Polynomial.algebraMap_apply,
+        Polynomial.eval_C] using
+        congrArg (Polynomial.eval (0 : MvPolynomial (Fin k) ℂ)) ((MvPolynomial.finSuccEquiv ℂ k).commutes a)
   | add p q hp hq =>
-      simp [map_add, Polynomial.eval_add, hp, hq]
+      simp only [map_add, Polynomial.eval_add, hp, hq]
   | mul_X p i hp =>
-      simp [map_mul, Polynomial.eval_mul,
-        MvPolynomial.finSuccEquiv_X_succ, hp]
+      simp only [map_mul, MvPolynomial.rename_X, MvPolynomial.finSuccEquiv_X_succ, Polynomial.eval_mul, hp,
+        Polynomial.eval_C]
 
 theorem homogeneousMap_allTarget_reesZeroHyperplaneEquiv_coordinate
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -6096,9 +6116,9 @@ noncomputable def homogeneousMapAllTargetReesChartHyperplaneEquiv
   have hIJ : J = I.map E.toRingEquiv.toRingHom := by
     have hC : E (MvPolynomial.C a) =
         Polynomial.C (MvPolynomial.C a : MvPolynomial (Fin k) ℂ) := by
-      simpa using E.commutes a
-    simp [I, J, homogeneousMapAllTargetReesChartIdeal,
-      Ideal.map_span, E, MvPolynomial.finSuccEquiv_X_zero, hC]
+      simpa only [MvPolynomial.algebraMap_eq, Polynomial.algebraMap_apply] using E.commutes a
+    simp only [RingEquiv.toRingHom_eq_coe, AlgEquiv.toRingEquiv_toRingHom, homogeneousMapAllTargetReesChartIdeal,
+      Ideal.map_span, RingHom.coe_coe, Set.image_singleton, map_sub, MvPolynomial.finSuccEquiv_X_zero, hC, J, E, I]
   exact (Ideal.quotientEquivAlg I J E hIJ).trans
     ((Polynomial.quotientSpanXSubCAlgEquiv
       (MvPolynomial.C a : MvPolynomial (Fin k) ℂ)).restrictScalars ℂ)
@@ -6119,14 +6139,14 @@ theorem homogeneousMap_allTarget_finSucc_rename_eval_constant
         (MvPolynomial.C a) = p := by
   induction p using MvPolynomial.induction_on with
   | C z =>
-      simpa using congrArg (Polynomial.eval
-        (MvPolynomial.C a : MvPolynomial (Fin k) ℂ))
-        ((MvPolynomial.finSuccEquiv ℂ k).commutes z)
+      simpa only [MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq, Polynomial.algebraMap_apply,
+        Polynomial.eval_C] using
+        congrArg (Polynomial.eval (MvPolynomial.C a : MvPolynomial (Fin k) ℂ)) ((MvPolynomial.finSuccEquiv ℂ k).commutes z)
   | add p q hp hq =>
-      simp [map_add, Polynomial.eval_add, hp, hq]
+      simp only [map_add, Polynomial.eval_add, hp, hq]
   | mul_X p i hp =>
-      simp [map_mul, Polynomial.eval_mul,
-        MvPolynomial.finSuccEquiv_X_succ, hp]
+      simp only [map_mul, MvPolynomial.rename_X, MvPolynomial.finSuccEquiv_X_succ, Polynomial.eval_mul, hp,
+        Polynomial.eval_C]
 
 theorem homogeneousMap_allTarget_reesChartHyperplaneEquiv_coordinate
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -6139,7 +6159,8 @@ theorem homogeneousMap_allTarget_reesChartHyperplaneEquiv_coordinate
   have hC : (MvPolynomial.finSuccEquiv ℂ k)
       (MvPolynomial.C (target i)) =
       Polynomial.C (MvPolynomial.C (target i) : MvPolynomial (Fin k) ℂ) := by
-    simpa using (MvPolynomial.finSuccEquiv ℂ k).commutes (target i)
+    simpa only [MvPolynomial.algebraMap_eq, Polynomial.algebraMap_apply] using
+      (MvPolynomial.finSuccEquiv ℂ k).commutes (target i)
   rw [homogeneousMap_allTarget_reesChartHyperplaneEquiv_mk]
   unfold homogeneousMapAllTargetReesCoordinate
   rw [map_sub, Polynomial.eval_sub, map_mul, Polynomial.eval_mul,
@@ -6147,7 +6168,7 @@ theorem homogeneousMap_allTarget_reesChartHyperplaneEquiv_coordinate
     MvPolynomial.finSuccEquiv_X_zero, Polynomial.eval_X,
     homogeneousMap_allTarget_finSucc_rename_eval_constant]
   rw [hC]
-  simp
+  simp only [Polynomial.eval_C, MvPolynomial.C_mul, MvPolynomial.C_pow]
 
 noncomputable def homogeneousMapAllTargetReesSourceRingHom
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -6191,10 +6212,10 @@ theorem homogeneousMap_allTarget_rees_source_coordinate
   have hC : (Polynomial.aeval
       (MvPolynomial.X (R := ℂ) (0 : Fin (k + 1))))
       (Polynomial.C (target i)) = MvPolynomial.C (target i) := by
-    simp
+    simp only [Polynomial.aeval_C, MvPolynomial.algebraMap_eq]
   rw [hC]
   apply sub_eq_zero.mp
-  simpa [homogeneousMapAllTargetReesCoordinate, map_sub] using hzero
+  simpa only [map_mul, map_pow, homogeneousMapAllTargetReesCoordinate, map_sub] using hzero
 
 theorem homogeneousMap_allTarget_rees_isScalarTower
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -6237,22 +6258,21 @@ theorem homogeneousMap_allTarget_rees_isScalarTower
   | C c =>
       have hEc : (E (MvPolynomial.C c) : MvPolynomial (Fin k) ℂ) =
           MvPolynomial.C c := by
-        simpa using congrArg
-          (fun z : homogeneousMapSubalgebra F =>
-            (z : MvPolynomial (Fin k) ℂ)) (E.commutes c)
-      simp [RingHom.algebraMap_toAlgebra,
-        homogeneousMapAllTargetReesSourceRingHom,
-        homogeneousMapAllTargetReesParameterRingHom,
-        homogeneousMapReesTargetHom, E, hEc]
+        simpa only [MvPolynomial.algebraMap_eq, Subalgebra.coe_algebraMap] using
+          congrArg (fun z : homogeneousMapSubalgebra F => (z : MvPolynomial (Fin k) ℂ)) (E.commutes c)
+      simp only [RingHom.algebraMap_toAlgebra, homogeneousMapAllTargetReesSourceRingHom, AlgHom.toRingHom_eq_coe,
+        RingHom.coe_comp, RingHom.coe_coe, Subalgebra.coe_val, Function.comp_apply, hEc, MvPolynomial.algHom_C,
+        MvPolynomial.algebraMap_eq, homogeneousMapAllTargetReesParameterRingHom, homogeneousMapReesTargetHom,
+        AlgHom.coe_comp, AlgEquiv.coe_toAlgHom, AlgEquiv.symm_apply_apply, Polynomial.algebraMap_eq, Polynomial.aeval_C, E]
   | add p q hp hq =>
-      simpa [map_add] using congrArg₂ (· + ·) hp hq
+      simpa only [map_add] using congrArg₂ (· + ·) hp hq
   | mul_X p i hp =>
       have hE : E (MvPolynomial.X i) =
           (⟨F i, homogeneousMap_coordinate_mem_subalgebra F i⟩ :
             homogeneousMapSubalgebra F) := by
         apply Subtype.ext
         change MvPolynomial.aeval F (MvPolynomial.X i) = F i
-        simp
+        simp only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.bind₁_X_right]
       rw [map_mul, map_mul, map_mul]
       rw [hp, hE]
       rw [map_mul]
@@ -6324,7 +6344,8 @@ theorem homogeneousMap_allTarget_rees_moduleFinite
           rw [L.commutes]
           change homogeneousMapAllTargetReesParameterRingHom F target e
             (Polynomial.C c) = _
-          simp [homogeneousMapAllTargetReesParameterRingHom, I]
+          simp only [homogeneousMapAllTargetReesParameterRingHom, AlgHom.toRingHom_eq_coe, RingHom.coe_comp,
+            RingHom.coe_coe, Function.comp_apply, Polynomial.aeval_C, MvPolynomial.algebraMap_eq, I]
       | add f g hf hg =>
           rw [map_add]
           exact L.range.add_mem hf hg
@@ -6340,13 +6361,16 @@ theorem homogeneousMap_allTarget_rees_moduleFinite
               rw [L.commutes]
               change homogeneousMapAllTargetReesParameterRingHom F target e
                 Polynomial.X = _
-              simp [homogeneousMapAllTargetReesParameterRingHom, I]
+              simp only [homogeneousMapAllTargetReesParameterRingHom, AlgHom.toRingHom_eq_coe, RingHom.coe_comp,
+                RingHom.coe_coe, Function.comp_apply, Polynomial.aeval_X, I]
           | succ i =>
               refine ⟨TensorProduct.tmul T (1 : P)
                 (MvPolynomial.X i), ?_⟩
               change L (TensorProduct.tmul T (1 : P)
                 (MvPolynomial.X i)) = _
-              simp [L, g, sourceMap, I]
+              simp only [AlgHom.toRingHom_eq_coe, Algebra.TensorProduct.lift_tmul, map_one, AlgHom.coe_mk,
+                RingHom.coe_comp, RingHom.coe_coe, Function.comp_apply, one_mul, L, g,
+                sourceMap, I]
               rw [MvPolynomial.rename_X]
     exact hrange
   exact Module.Finite.of_surjective L.toLinearMap hsurj
@@ -6374,7 +6398,7 @@ theorem homogeneousMap_allTarget_rees_complex_isScalarTower
       ((Polynomial.aeval
         (MvPolynomial.X (R := ℂ) (0 : Fin (k + 1))))
         (Polynomial.C c))
-  simp
+  simp only [Polynomial.aeval_C, MvPolynomial.algebraMap_eq]
 
 theorem homogeneousMap_allTarget_rees_free_of_finite
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -6439,7 +6463,7 @@ theorem homogeneousMap_allTarget_rees_parameterFiber_finrank
       F target e he hF hzero hfinite
   apply finiteFree_complexTargetFiber_finrank (Polynomial.aeval a)
   intro c
-  exact ⟨Polynomial.C c, by simp⟩
+  exact ⟨Polynomial.C c, by simp only [Polynomial.aeval_C, Algebra.algebraMap_self, RingHom.id_apply]⟩
 
 noncomputable def homogeneousMapAllTargetReesChart
     (k : ℕ) (a : ℂ) :
@@ -6461,7 +6485,7 @@ theorem homogeneousMapAllTargetReesChart_ker
     have hpzero :
         Ideal.Quotient.mk (homogeneousMapAllTargetReesChartIdeal k a) p = 0 :=
       (homogeneousMapAllTargetReesChartHyperplaneEquiv k a).injective
-        (by simpa using hp)
+        (by simpa only [map_zero, EmbeddingLike.map_eq_zero_iff] using hp)
     exact Ideal.Quotient.eq_zero_iff_mem.mp hpzero
   · intro hp
     rw [Ideal.Quotient.eq_zero_iff_mem.mpr hp, map_zero]
@@ -6574,7 +6598,7 @@ theorem homogeneousMapAllTargetReesParameterMaximalIdeal_map
         (Polynomial.aeval
           (MvPolynomial.X (0 : Fin (k + 1)))
           (Polynomial.X - Polynomial.C a)) = _
-    simp
+    simp only [Polynomial.aeval_X, Polynomial.aeval_C, MvPolynomial.algebraMap_eq, map_sub]
   rw [Polynomial.ker_evalRingHom,
     homogeneousMapAllTargetReesChartIdeal, Ideal.map_span, Ideal.map_span]
   simp only [Set.image_singleton]
@@ -6631,12 +6655,12 @@ theorem homogeneousMap_closedFiber_finrank_of_rees_finite
   have htarget_scale :
       (fun i : Fin k => target i * (1 : ℂ) ^ e) = target := by
     funext i
-    simp
+    simp only [one_pow, mul_one]
   have hzero_scale :
       (fun i : Fin k => target i * (0 : ℂ) ^ e) =
         (0 : Fin k → ℂ) := by
     funext i
-    simp [zero_pow he.ne']
+    simp only [zero_pow he.ne', mul_zero, Pi.zero_apply]
   rw [htarget_scale] at htarget
   rw [hzero_scale] at hzeroFiber
   calc
@@ -6730,23 +6754,25 @@ def gate {ι : Type*} (index : ℕ) : FreeAffineForm ι :=
       Finsupp.linearCombination ℂ MvPolynomial.X (0 : ι →₀ ℂ) +
       Finsupp.linearCombination ℂ (fun index => values.getD index 0)
         (0 : ℕ →₀ ℂ) = 0
-  simp
+  simp only [map_zero, add_zero, Array.getD_eq_getD_getElem?]
 
 @[simp] theorem eval_scalar {ι : Type*} (coefficient : ℂ)
     (values : Array (MvPolynomial ι ℂ)) :
     (scalar coefficient : FreeAffineForm ι).eval values =
       MvPolynomial.C coefficient := by
-  simp [eval, scalar]
+  simp only [eval, scalar, map_zero, add_zero, Array.getD_eq_getD_getElem?]
 
 @[simp] theorem eval_input {ι : Type*} (index : ι)
     (values : Array (MvPolynomial ι ℂ)) :
     (input index).eval values = MvPolynomial.X index := by
-  simp [eval, input]
+  simp only [eval, input, Finsupp.linearCombination_single, one_smul, zero_add, Array.getD_eq_getD_getElem?,
+    map_zero, add_zero]
 
 @[simp] theorem eval_gate {ι : Type*} (index : ℕ)
     (values : Array (MvPolynomial ι ℂ)) :
     (gate index : FreeAffineForm ι).eval values = values.getD index 0 := by
-  simp [eval, gate]
+  simp only [eval, gate, map_zero, add_zero, Array.getD_eq_getD_getElem?, Finsupp.linearCombination_single,
+    one_smul, zero_add]
 
 @[simp] theorem eval_add {ι : Type*} (left right : FreeAffineForm ι)
     (values : Array (MvPolynomial ι ℂ)) :
@@ -6757,7 +6783,7 @@ def gate {ι : Type*} (index : ℕ) : FreeAffineForm ι :=
         (left.inputCoefficients + right.inputCoefficients) +
       Finsupp.linearCombination ℂ (fun index => values.getD index 0)
         (left.gateCoefficients + right.gateCoefficients) = _
-  simp [eval, add_assoc, add_left_comm, add_comm]
+  simp only [map_add, add_assoc, Array.getD_eq_getD_getElem?, eval, add_left_comm, add_comm]
 
 @[simp] theorem eval_sub {ι : Type*} (left right : FreeAffineForm ι)
     (values : Array (MvPolynomial ι ℂ)) :
@@ -6768,7 +6794,8 @@ def gate {ι : Type*} (index : ℕ) : FreeAffineForm ι :=
         (left.inputCoefficients - right.inputCoefficients) +
       Finsupp.linearCombination ℂ (fun index => values.getD index 0)
         (left.gateCoefficients - right.gateCoefficients) = _
-  simp [eval, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+  simp only [sub_eq_add_neg, map_add, map_neg, add_assoc, Array.getD_eq_getD_getElem?, eval, neg_add_rev,
+    add_comm, add_left_comm]
 
 @[simp] theorem eval_smul {ι : Type*} (coefficient : ℂ)
     (form : FreeAffineForm ι) (values : Array (MvPolynomial ι ℂ)) :
@@ -6779,7 +6806,8 @@ def gate {ι : Type*} (index : ℕ) : FreeAffineForm ι :=
         (coefficient • form.inputCoefficients) +
       Finsupp.linearCombination ℂ (fun index => values.getD index 0)
         (coefficient • form.gateCoefficients) = _
-  simp [eval, MvPolynomial.smul_eq_C_mul]
+  simp only [MvPolynomial.C_mul, map_smul, MvPolynomial.smul_eq_C_mul, Array.getD_eq_getD_getElem?, eval,
+    smul_add]
 
 end FreeAffineForm
 
@@ -6827,9 +6855,9 @@ theorem eval_substituteInputs {ι κ : Type*} (form : FreeAffineForm ι)
         (fun index => (values.map φ).getD index 0) form.gateCoefficients =
         φ (Finsupp.linearCombination ℂ
           (fun index => values.getD index 0) form.gateCoefficients) := by
-    simpa [hgate, Function.comp_def] using
-      (Finsupp.apply_linearCombination ℂ φ.toLinearMap
-        (fun index => values.getD index 0) form.gateCoefficients).symm
+    simpa only [hgate, Array.getD_eq_getD_getElem?, AlgHom.coe_toLinearMap, Function.comp_def,
+      AlgHom.toLinearMap_apply] using
+      (Finsupp.apply_linearCombination ℂ φ.toLinearMap (fun index => values.getD index 0) form.gateCoefficients).symm
   have hinputCombination :
       φ (Finsupp.linearCombination ℂ MvPolynomial.X
         form.inputCoefficients) =
@@ -6850,12 +6878,9 @@ theorem eval_substituteInputs {ι κ : Type*} (form : FreeAffineForm ι)
             (MvPolynomial.C (substitution index).constant :
               MvPolynomial κ ℂ))
           form.inputCoefficients := by
-    simpa [Function.comp_def, Algebra.linearMap_apply,
-      MvPolynomial.algebraMap_eq] using
-      Finsupp.apply_linearCombination ℂ
-        (Algebra.linearMap ℂ (MvPolynomial κ ℂ))
-        (fun index => (substitution index).constant)
-        form.inputCoefficients
+    simpa only [Algebra.linearMap_apply, MvPolynomial.algebraMap_eq, Function.comp_def] using
+      Finsupp.apply_linearCombination ℂ (Algebra.linearMap ℂ (MvPolynomial κ ℂ))
+        (fun index => (substitution index).constant) form.inputCoefficients
   have hlinearCombination :
       Finsupp.linearCombination ℂ
         (MvPolynomial.X : κ → MvPolynomial κ ℂ)
@@ -6867,12 +6892,9 @@ theorem eval_substituteInputs {ι κ : Type*} (form : FreeAffineForm ι)
             (MvPolynomial.X : κ → MvPolynomial κ ℂ)
             (substitution index).inputCoefficients)
           form.inputCoefficients := by
-    simpa [Function.comp_def] using
-      Finsupp.apply_linearCombination ℂ
-        (Finsupp.linearCombination ℂ
-          (MvPolynomial.X : κ → MvPolynomial κ ℂ))
-        (fun index => (substitution index).inputCoefficients)
-        form.inputCoefficients
+    simpa only [Function.comp_def] using
+      Finsupp.apply_linearCombination ℂ (Finsupp.linearCombination ℂ (MvPolynomial.X : κ → MvPolynomial κ ℂ))
+        (fun index => (substitution index).inputCoefficients) form.inputCoefficients
   have hsplitCombination :
       Finsupp.linearCombination ℂ
         (fun index => (substitution index).polynomial)
@@ -6885,8 +6907,8 @@ theorem eval_substituteInputs {ι κ : Type*} (form : FreeAffineForm ι)
           (MvPolynomial.X : κ → MvPolynomial κ ℂ)
           (substitution index).inputCoefficients)
         form.inputCoefficients := by
-    simp [Finsupp.linearCombination_apply, Finsupp.sum,
-      FreeAffineInput.polynomial, Finset.sum_add_distrib, smul_add]
+    simp only [FreeAffineInput.polynomial, Finsupp.linearCombination_apply, Finsupp.sum, smul_add,
+      Finset.sum_add_distrib]
   change
     MvPolynomial.C
         (form.constant + Finsupp.linearCombination ℂ
@@ -6907,7 +6929,8 @@ theorem eval_substituteInputs {ι κ : Type*} (form : FreeAffineForm ι)
   rw [map_add, map_add, map_add, hconstantCombination,
     hlinearCombination, hinputCombination, hgateCombination,
     hsplitCombination]
-  simp [φ, MvPolynomial.algebraMap_eq, add_assoc]
+  simp only [add_assoc, MvPolynomial.aeval_eq_bind₁, Array.getD_eq_getD_getElem?, MvPolynomial.algHom_C,
+    MvPolynomial.algebraMap_eq, φ]
 
 end FreeAffineForm
 
@@ -6990,9 +7013,11 @@ theorem referencesBounded_ofInstruction {ι : Type}
     (ofInstruction instruction).referencesBounded position := by
   cases instruction with
   | input index =>
-    simp [ofInstruction, referencesBounded, FreeAffineForm.input]
+    simp only [referencesBounded, ofInstruction, FreeAffineForm.input, Finsupp.support_zero, Finset.notMem_empty,
+      IsEmpty.forall_iff, implies_true, decide_true]
   | scalar coefficient =>
-    simp [ofInstruction, referencesBounded, FreeAffineForm.scalar]
+    simp only [referencesBounded, ofInstruction, FreeAffineForm.scalar, Finsupp.support_zero, Finset.notMem_empty,
+      IsEmpty.forall_iff, implies_true, decide_true]
   | add left right =>
     simp only [Instruction.referencesBounded, Bool.and_eq_true,
       decide_eq_true_eq] at valid
@@ -7001,14 +7026,15 @@ theorem referencesBounded_ofInstruction {ι : Type}
     intro index hindex
     rw [Finsupp.mem_support_iff] at hindex
     by_cases hleft : index = left
-    · simpa [hleft] using valid.1
+    · simpa only [hleft] using valid.1
     · by_cases hright : index = right
-      · simpa [hright] using valid.2
+      · simpa only [hright] using valid.2
       · change
           ((Finsupp.single left (1 : ℂ) + Finsupp.single right 1 : ℕ →₀ ℂ)
             index) ≠ 0
           at hindex
-        simp [hleft, hright] at hindex
+        simp only [Finsupp.coe_add, Pi.add_apply, ne_eq, hleft, not_false_eq_true, Finsupp.single_eq_of_ne, hright,
+          add_zero, not_true_eq_false] at hindex
   | sub left right =>
     simp only [Instruction.referencesBounded, Bool.and_eq_true,
       decide_eq_true_eq] at valid
@@ -7017,16 +7043,17 @@ theorem referencesBounded_ofInstruction {ι : Type}
     intro index hindex
     rw [Finsupp.mem_support_iff] at hindex
     by_cases hleft : index = left
-    · simpa [hleft] using valid.1
+    · simpa only [hleft] using valid.1
     · by_cases hright : index = right
-      · simpa [hright] using valid.2
+      · simpa only [hright] using valid.2
       · change
           ((Finsupp.single left (1 : ℂ) - Finsupp.single right 1 : ℕ →₀ ℂ)
             index) ≠ 0
           at hindex
-        simp [hleft, hright] at hindex
+        simp only [Finsupp.coe_sub, Pi.sub_apply, ne_eq, hleft, not_false_eq_true, Finsupp.single_eq_of_ne, hright,
+          sub_self, not_true_eq_false] at hindex
   | mul left right =>
-    simpa [ofInstruction, referencesBounded,
+    simpa only [referencesBounded, ofInstruction, Bool.and_eq_true, decide_eq_true_eq,
       Instruction.referencesBounded] using valid
 
 end FreeAffineInstruction
@@ -7062,13 +7089,14 @@ def substituteInputs {ι κ : Type*} (circuit : FreeAffineCircuit ι)
   valid := by
     intro position
     have hposition : position.val < circuit.program.length := by
-      simpa using position.isLt
+      simpa only [List.length_map] using position.isLt
     have hvalid := circuit.valid ⟨position.val, hposition⟩
-    simpa using hvalid
+    simpa only [List.get_eq_getElem, List.getElem_map,
+      FreeAffineInstruction.referencesBounded_substituteInputs] using hvalid
   validOutputs := by
     intro form hform index hindex
     obtain ⟨original, horiginal, rfl⟩ := List.mem_map.mp hform
-    simpa using circuit.validOutputs original horiginal index hindex
+    simpa only [List.length_map] using circuit.validOutputs original horiginal index hindex
 
 @[simp] theorem multiplicationCount_substituteInputs {ι κ : Type*}
     (circuit : FreeAffineCircuit ι)
@@ -7082,7 +7110,7 @@ def substituteInputs {ι κ : Type*} (circuit : FreeAffineCircuit ι)
       (circuit.program.filter
         FreeAffineInstruction.isMultiplication).length
   induction circuit.program with
-  | nil => simp
+  | nil => simp only [List.map_nil, List.filter_nil, List.length_nil]
   | cons instruction tail ih =>
     cases instruction <;>
       simp [FreeAffineInstruction.substituteInputs,
@@ -7132,10 +7160,11 @@ def ofArithmetic {ι : Type} (circuit : ArithmeticCircuit ι) :
   valid := by
     intro position
     have hposition : position.val < circuit.program.length := by
-      simpa using position.isLt
+      simpa only [List.length_map] using position.isLt
     have hvalid := circuit.valid ⟨position.val, hposition⟩
-    simpa using FreeAffineInstruction.referencesBounded_ofInstruction
-      (circuit.program.get ⟨position.val, hposition⟩) position.val hvalid
+    simpa only [List.get_eq_getElem, List.getElem_map] using
+      FreeAffineInstruction.referencesBounded_ofInstruction (circuit.program.get ⟨position.val, hposition⟩) position.val
+        hvalid
   validOutputs := by
     intro form hform index hindex
     simp only [List.mem_singleton] at hform
@@ -7143,7 +7172,7 @@ def ofArithmetic {ι : Type} (circuit : ArithmeticCircuit ι) :
     change (Finsupp.single circuit.output (1 : ℂ)) index ≠ 0 at hindex
     have heq : index = circuit.output :=
       (Finsupp.single_apply_ne_zero.mp hindex).1
-    simpa [heq] using circuit.output_lt
+    simpa only [heq, List.length_map, gt_iff_lt] using circuit.output_lt
 
 @[simp] theorem values_ofArithmetic {ι : Type}
     (circuit : ArithmeticCircuit ι) :
@@ -7159,7 +7188,7 @@ theorem multiplicationCount_ofArithmetic_le {ι : Type}
       FreeAffineInstruction.isMultiplication).length ≤
       (circuit.program.filter Instruction.isArithmetic).length
   induction circuit.program with
-  | nil => simp
+  | nil => simp only [List.map_nil, List.filter_nil, List.length_nil, Std.le_refl]
   | cons instruction tail ih =>
     cases instruction <;>
       simp [FreeAffineInstruction.ofInstruction,
@@ -7181,9 +7210,8 @@ theorem pderiv_linearCombination {ι κ : Type*} (input : ι)
       Finsupp.linearCombination ℂ
         (fun index => MvPolynomial.pderiv input (family index))
         coefficients := by
-  simpa [Function.comp_def] using
-    Finsupp.apply_linearCombination ℂ
-      (MvPolynomial.pderiv input).toLinearMap family coefficients
+  simpa only [Derivation.coeFn_coe, Function.comp_def] using
+    Finsupp.apply_linearCombination ℂ (MvPolynomial.pderiv input).toLinearMap family coefficients
 
 theorem pderiv_input_linearCombination {ι : Type*} (input : ι)
     (coefficients : ι →₀ ℂ) :
@@ -7193,12 +7221,12 @@ theorem pderiv_input_linearCombination {ι : Type*} (input : ι)
   classical
   rw [pderiv_linearCombination]
   by_cases hinput : coefficients input = 0
-  · simp [Finsupp.linearCombination_apply, Finsupp.sum,
-      MvPolynomial.pderiv_X, Pi.single_apply, hinput,
-      Finsupp.mem_support_iff]
-  · simp [Finsupp.linearCombination_apply, Finsupp.sum,
-      MvPolynomial.pderiv_X, Pi.single_apply, hinput,
-      Finsupp.mem_support_iff, MvPolynomial.smul_eq_C_mul]
+  · simp only [MvPolynomial.pderiv_X, Pi.single_apply, Finsupp.linearCombination_apply, Finsupp.sum, smul_ite,
+      smul_zero, Finset.sum_ite_eq', Finsupp.mem_support_iff, hinput, ne_eq, not_true_eq_false, ↓reduceIte,
+      MvPolynomial.C_0]
+  · simp only [MvPolynomial.pderiv_X, Pi.single_apply, Finsupp.linearCombination_apply, Finsupp.sum, smul_ite,
+      MvPolynomial.smul_eq_C_mul, mul_one, smul_zero, Finset.sum_ite_eq', Finsupp.mem_support_iff, ne_eq, hinput,
+      not_false_eq_true, ↓reduceIte]
 
 theorem FreeAffineForm.pderiv_eval {ι : Type*}
     (form : FreeAffineForm ι) (values : Array (MvPolynomial ι ℂ))
@@ -7223,14 +7251,14 @@ def scaleCoefficients {ι κ : Type*}
     (adjoint : MvPolynomial ι ℂ) (coefficients : κ →₀ ℂ) :
     κ →₀ MvPolynomial ι ℂ :=
   coefficients.mapRange (fun coefficient =>
-    MvPolynomial.C coefficient * adjoint) (by simp)
+    MvPolynomial.C coefficient * adjoint) (by simp only [MvPolynomial.C_0, zero_mul])
 
 @[simp] theorem scaleCoefficients_apply {ι κ : Type*}
     (adjoint : MvPolynomial ι ℂ) (coefficients : κ →₀ ℂ)
     (index : κ) :
     scaleCoefficients adjoint coefficients index =
       MvPolynomial.C (coefficients index) * adjoint := by
-  simp [scaleCoefficients]
+  simp only [scaleCoefficients, Finsupp.mapRange_apply]
 
 theorem linearCombination_scaleCoefficients {ι κ : Type*}
     (adjoint : MvPolynomial ι ℂ) (coefficients : κ →₀ ℂ)
@@ -7242,9 +7270,8 @@ theorem linearCombination_scaleCoefficients {ι κ : Type*}
   simp only [Finsupp.linearCombination_apply, scaleCoefficients]
   rw [Finsupp.sum_mapRange_index
     (h := fun index coefficient => coefficient • family index)
-    (fun _ => by simp)]
-  simp [Finsupp.sum, Finset.mul_sum, MvPolynomial.smul_eq_C_mul,
-    mul_assoc, mul_left_comm]
+    (fun _ => by simp only [smul_eq_mul, zero_mul])]
+  simp only [Finsupp.sum, smul_eq_mul, mul_assoc, mul_left_comm, MvPolynomial.smul_eq_C_mul, Finset.mul_sum]
 
 theorem linearCombination_erase_add {ι κ : Type*}
     (adjoints : κ →₀ MvPolynomial ι ℂ)
@@ -7261,7 +7288,7 @@ theorem linearCombination_erase_add {ι κ : Type*}
           (adjoints.erase index) +
           Finsupp.linearCombination (MvPolynomial ι ℂ) family
             (Finsupp.single index (adjoints index)) := by
-              simp [Finsupp.linearCombination_single]
+              simp only [Finsupp.linearCombination_single, smul_eq_mul]
     _ = Finsupp.linearCombination (MvPolynomial ι ℂ) family
           (adjoints.erase index +
             Finsupp.single index (adjoints index)) := by
@@ -7286,7 +7313,7 @@ def affine {ι : Type*} (state : ReverseAdjoint ι)
       state.inputAdjoints input +
         MvPolynomial.C (form.inputCoefficients input) *
           state.gateAdjoints position := by
-  simp [affine]
+  simp only [affine, Finsupp.coe_add, Pi.add_apply, scaleCoefficients_apply]
 
 def mul {ι : Type*} (state : ReverseAdjoint ι)
     (values : Array (MvPolynomial ι ℂ))
@@ -7325,7 +7352,8 @@ theorem initial_potential {ι : Type*}
     (initial output).potential values input =
       MvPolynomial.pderiv input (output.eval values) := by
   rw [FreeAffineForm.pderiv_eval]
-  simp [potential, initial, linearCombination_scaleCoefficients]
+  simp only [potential, initial, scaleCoefficients_apply, mul_one, Array.getD_eq_getD_getElem?,
+    linearCombination_scaleCoefficients, one_mul]
 
 theorem potential_affine {ι : Type*}
     (state : ReverseAdjoint ι)
@@ -7421,9 +7449,9 @@ theorem foldl_potential {ι : Type*}
   | nil => rfl
   | cons instruction rest ih =>
     rw [List.foldl_cons, ih (step values state instruction)
-      (fun gate hmem => hgate gate (by simp [hmem]))]
+      (fun gate hmem => hgate gate (by simp only [List.mem_cons, hmem, or_true]))]
     exact step_potential values state instruction input
-      (hgate instruction (by simp))
+      (hgate instruction (by simp only [List.mem_cons, true_or]))
 
 def forwardStep {ι : Type*} (values : Array (MvPolynomial ι ℂ))
     (instruction : FreeAffineInstruction ι) :
@@ -7436,11 +7464,10 @@ theorem forwardFold_size {ι : Type*}
     (program.foldl forwardStep values).size =
       values.size + program.length := by
   induction program generalizing values with
-  | nil => simp
+  | nil => simp only [List.foldl_nil, List.length_nil, add_zero]
   | cons instruction rest ih =>
-    simpa [List.foldl_cons, forwardStep, Nat.add_assoc, Nat.add_comm,
-      Nat.add_left_comm] using
-      ih (forwardStep values instruction)
+    simpa only [List.foldl_cons, forwardStep, List.length_cons, Nat.add_comm, Array.size_push,
+      Nat.add_assoc] using ih (forwardStep values instruction)
 
 theorem forwardFold_getD_of_lt {ι : Type*}
     (program : List (FreeAffineInstruction ι))
@@ -7452,11 +7479,10 @@ theorem forwardFold_getD_of_lt {ι : Type*}
   | nil => rfl
   | cons instruction rest ih =>
     have hpush : index < (forwardStep values instruction).size := by
-      simpa [forwardStep] using
+      simpa only [forwardStep, Array.size_push, Order.lt_add_one_iff, Nat.succ_eq_add_one] using
         Nat.lt_trans hindex (Nat.lt_succ_self values.size)
     rw [List.foldl_cons, ih (forwardStep values instruction) hpush]
-    simp [forwardStep, Array.getD_eq_getD_getElem?,
-      Array.getElem?_push, Nat.ne_of_lt hindex]
+    simp only [forwardStep, Array.getD_eq_getD_getElem?, Array.getElem?_push, Nat.ne_of_lt hindex, ↓reduceIte]
 
 theorem eval_congr_of_referencesBounded {ι : Type*}
     (instruction : FreeAffineInstruction ι) (position : ℕ)
@@ -7479,8 +7505,8 @@ theorem eval_congr_of_referencesBounded {ι : Type*}
   | mul left right =>
     simp only [FreeAffineInstruction.referencesBounded,
       Bool.and_eq_true, decide_eq_true_eq] at hvalid
-    simp [FreeAffineInstruction.eval,
-      hvalues left hvalid.1, hvalues right hvalid.2]
+    simp only [FreeAffineInstruction.eval, hvalues left hvalid.1, Array.getD_eq_getD_getElem?,
+      hvalues right hvalid.2]
 
 theorem forwardFold_gateEquation {ι : Type*}
     (program : List (FreeAffineInstruction ι))
@@ -7499,16 +7525,18 @@ theorem forwardFold_gateEquation {ι : Type*}
     cases position using Fin.cases with
     | zero =>
       have hhead : instruction.referencesBounded values.size := by
-        simpa using hvalid 0
+        simpa only [List.length_cons, Fin.coe_ofNat_eq_mod, Nat.zero_mod, add_zero, List.get_eq_getElem,
+          List.getElem_cons_zero] using hvalid 0
       calc
         ((instruction :: rest).foldl forwardStep values).getD
             (values.size + (0 : Fin (instruction :: rest).length).val) 0 =
           (forwardStep values instruction).getD values.size 0 := by
             simp only [List.foldl_cons, Fin.val_zero, Nat.add_zero]
             apply forwardFold_getD_of_lt
-            simp [forwardStep]
+            simp only [forwardStep, Array.size_push, lt_add_iff_pos_right, Order.lt_one_iff]
         _ = instruction.eval values := by
-          simp [forwardStep, Array.getD_eq_getD_getElem?]
+          simp only [forwardStep, Array.getD_eq_getD_getElem?, Array.size_push, lt_add_iff_pos_right, Order.lt_one_iff,
+            getElem?_pos, Array.getElem_push_eq, Option.getD_some]
         _ = instruction.eval
               ((instruction :: rest).foldl forwardStep values) := by
           apply eval_congr_of_referencesBounded
@@ -7543,7 +7571,7 @@ theorem circuit_values_size {ι : Type*}
   change
     (circuit.program.foldl forwardStep
       (#[] : Array (MvPolynomial ι ℂ))).size = circuit.program.length
-  simpa using
+  simpa only [List.size_toArray, List.length_nil, zero_add] using
     forwardFold_size circuit.program (#[] : Array (MvPolynomial ι ℂ))
 
 theorem circuit_gateEquation {ι : Type*}
@@ -7555,16 +7583,15 @@ theorem circuit_gateEquation {ι : Type*}
       (circuit.program.get index).referencesBounded
         ((#[] : Array (MvPolynomial ι ℂ)).size + index.val) := by
     intro index
-    simpa using circuit.valid index
+    simpa only [List.size_toArray, List.length_nil, zero_add, List.get_eq_getElem] using circuit.valid index
   change
     (circuit.program.foldl forwardStep
       (#[] : Array (MvPolynomial ι ℂ))).getD position.val 0 =
       (circuit.program.get position).eval
         (circuit.program.foldl forwardStep
           (#[] : Array (MvPolynomial ι ℂ)))
-  simpa using
-    forwardFold_gateEquation circuit.program
-      (#[] : Array (MvPolynomial ι ℂ)) hvalid position
+  simpa only [Array.getD_eq_getD_getElem?, List.get_eq_getElem, List.size_toArray, List.length_nil,
+    zero_add] using forwardFold_gateEquation circuit.program (#[] : Array (MvPolynomial ι ℂ)) hvalid position
 
 theorem run_potential {ι : Type*}
     (circuit : FreeAffineCircuit ι)
@@ -7579,7 +7606,7 @@ theorem run_potential {ι : Type*}
       simpa only [List.mem_reverse] using hmem
     rcases instruction with ⟨gate, position⟩
     obtain ⟨hposition, hgate⟩ := List.mem_zipIdx' hzip
-    simpa [hgate] using
+    simpa only [Array.getD_eq_getD_getElem?, hgate, List.get_eq_getElem] using
       circuit_gateEquation circuit ⟨position, hposition⟩
 
 theorem step_gateAdjoints_lt {ι : Type*}
@@ -7599,7 +7626,7 @@ theorem step_gateAdjoints_lt {ι : Type*}
   have herase : (state.gateAdjoints.erase position) index = 0 := by
     by_cases heq : index = position
     · subst index
-      simp
+      simp only [Finsupp.erase_same]
     · rw [Finsupp.erase_ne heq]
       by_contra hindex
       have hbound := hstate index hindex
@@ -7613,13 +7640,16 @@ theorem step_gateAdjoints_lt {ι : Type*}
       have hbound := hvalid index
         (Finsupp.mem_support_iff.mpr hcoefficient)
       omega
-    simp [step, affine, herase, hcoefficient] at hnonzero
+    simp only [step, affine, Finsupp.coe_add, Pi.add_apply, herase, scaleCoefficients_apply, hcoefficient,
+      MvPolynomial.C_0, zero_mul, add_zero, ne_eq, not_true_eq_false] at hnonzero
   | mul left right =>
     simp only [FreeAffineInstruction.referencesBounded,
       Bool.and_eq_true, decide_eq_true_eq] at hvalid
     have hleft : left ≠ index := by omega
     have hright : right ≠ index := by omega
-    simp [step, mul, herase, hleft, hright] at hnonzero
+    simp only [step, mul, Array.getD_eq_getD_getElem?, Finsupp.single_mul, Finsupp.coe_add, Pi.add_apply, herase,
+      Finsupp.mul_apply, ne_eq, hleft, not_false_eq_true, Finsupp.single_eq_of_ne', mul_zero, add_zero, hright,
+      not_true_eq_false] at hnonzero
 
 theorem reverseFold_gateAdjoints_lt {ι : Type*}
     (program : List (FreeAffineInstruction ι))
@@ -7634,16 +7664,16 @@ theorem reverseFold_gateAdjoints_lt {ι : Type*}
         state).gateAdjoints index ≠ 0 → index < start := by
   induction program generalizing start state with
   | nil =>
-    simpa using hstate
+    simpa only [List.zipIdx_nil, List.reverse_nil, List.foldl_nil, ne_eq, List.length_nil, add_zero] using hstate
   | cons instruction rest ih =>
     have hhead : instruction.referencesBounded start := by
       apply hvalid (instruction, start)
-      simp
+      simp only [List.zipIdx_cons, List.mem_cons, true_or]
     have hrest : ∀ gate ∈ rest.zipIdx (start + 1),
         gate.1.referencesBounded gate.2 := by
       intro gate hgate
       apply hvalid gate
-      simp [hgate]
+      simp only [List.zipIdx_cons, List.mem_cons, hgate, or_true]
     have hbound : ∀ index, state.gateAdjoints index ≠ 0 →
         index < (start + 1) + rest.length := by
       intro index hindex
@@ -7667,7 +7697,7 @@ theorem initial_gateAdjoints_lt {ι : Type*}
   have hcoefficient : output.gateCoefficients index ≠ 0 := by
     intro hzero
     apply hindex
-    simp [initial, scaleCoefficients_apply, hzero]
+    simp only [initial, scaleCoefficients_apply, hzero, MvPolynomial.C_0, mul_one]
   exact circuit.validOutputs output houtput index hcoefficient
 
 theorem run_gateAdjoints_eq_zero {ι : Type*}
@@ -7679,10 +7709,10 @@ theorem run_gateAdjoints_eq_zero {ι : Type*}
     intro instruction hmem
     rcases instruction with ⟨gate, position⟩
     obtain ⟨hposition, hgate⟩ := List.mem_zipIdx' hmem
-    simpa [hgate] using circuit.valid ⟨position, hposition⟩
+    simpa only [hgate, List.get_eq_getElem] using circuit.valid ⟨position, hposition⟩
   have hbound := reverseFold_gateAdjoints_lt circuit.program
     circuit.values 0 (initial output) hvalid
-      (by simpa using initial_gateAdjoints_lt circuit output houtput)
+      (by simpa only [ne_eq, zero_add] using initial_gateAdjoints_lt circuit output houtput)
   apply Finsupp.ext
   intro index
   change (run circuit output).gateAdjoints index = 0
@@ -7701,7 +7731,7 @@ theorem run_inputAdjoints {ι : Type*}
   have hpotential := run_potential circuit output input
   rw [potential, run_gateAdjoints_eq_zero circuit output houtput]
     at hpotential
-  simpa using hpotential
+  simpa only [Array.getD_eq_getD_getElem?, map_zero, add_zero] using hpotential
 
 def appendInstruction {ι : Type*} (circuit : FreeAffineCircuit ι)
     (instruction : FreeAffineInstruction ι)
@@ -7725,7 +7755,7 @@ def appendInstruction {ι : Type*} (circuit : FreeAffineCircuit ι)
         ((circuit.program ++ [instruction])[position.val]).referencesBounded
           position.val
       rw [List.getElem_append_right (by omega)]
-      simpa [hlast] using hvalid
+      simpa only [hlast, tsub_self, List.getElem_cons_zero] using hvalid
   validOutputs := by
     intro form hform index hindex
     have hbound := circuit.validOutputs form hform index hindex
@@ -7746,7 +7776,7 @@ theorem appendInstruction_values {ι : Type*}
           (instruction.eval
             (circuit.program.foldl forwardStep
               (#[] : Array (MvPolynomial ι ℂ))))
-  simp [List.foldl_append, forwardStep]
+  simp only [List.foldl_append, List.foldl_cons, forwardStep, List.foldl_nil]
 
 def appendReverseProducts {ι : Type*}
     (circuit : FreeAffineCircuit ι) (adjoint : FreeAffineForm ι)
@@ -7764,7 +7794,7 @@ def appendReverseProducts {ι : Type*}
     exact hadjoint index (Finsupp.mem_support_iff.mp hindex)
   let first := appendInstruction circuit (.affine adjoint) haffine
   have hfirst : first.program.length = circuit.program.length + 1 := by
-    simp [first, appendInstruction]
+    simp only [appendInstruction, List.length_append, List.length_cons, List.length_nil, zero_add, first]
   have hrightProduct :
       (FreeAffineInstruction.mul circuit.program.length right :
         FreeAffineInstruction ι).referencesBounded
@@ -7777,7 +7807,8 @@ def appendReverseProducts {ι : Type*}
   let second := appendInstruction first
     (.mul circuit.program.length right) hrightProduct
   have hsecond : second.program.length = circuit.program.length + 2 := by
-    simp [second, first, appendInstruction]
+    simp only [appendInstruction, List.append_assoc, List.cons_append, List.nil_append, List.length_append,
+      List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, second, first]
   have hleftProduct :
       (FreeAffineInstruction.mul circuit.program.length left :
         FreeAffineInstruction ι).referencesBounded
@@ -7800,7 +7831,8 @@ theorem appendReverseProducts_program_length {ι : Type*}
     (appendReverseProducts circuit adjoint left right
       hadjoint hleft hright).program.length =
         circuit.program.length + 3 := by
-  simp [appendReverseProducts, appendInstruction]
+  simp only [appendReverseProducts, appendInstruction, List.append_assoc, List.cons_append, List.nil_append,
+    List.length_append, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd]
 
 theorem appendReverseProducts_values {ι : Type*}
     (circuit : FreeAffineCircuit ι) (adjoint : FreeAffineForm ι)
@@ -7818,14 +7850,15 @@ theorem appendReverseProducts_values {ι : Type*}
       (circuit.values.push (adjoint.eval circuit.values)).getD
         circuit.program.length 0 = adjoint.eval circuit.values := by
     rw [← circuit_values_size circuit]
-    simp [Array.getD_eq_getD_getElem?]
+    simp only [Array.getD_eq_getD_getElem?, Array.size_push, lt_add_iff_pos_right, Order.lt_one_iff, getElem?_pos,
+      Array.getElem_push_eq, Option.getD_some]
   have hrightFirst :
       (circuit.values.push (adjoint.eval circuit.values)).getD right 0 =
         circuit.values.getD right 0 := by
     have hne : right ≠ circuit.values.size := by
       rw [circuit_values_size]
       exact Nat.ne_of_lt hright
-    simp [Array.getD_eq_getD_getElem?, Array.getElem?_push, hne]
+    simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, hne, ↓reduceIte]
   have hsecond :
       ((circuit.values.push (adjoint.eval circuit.values)).push
         (adjoint.eval circuit.values *
@@ -7833,7 +7866,7 @@ theorem appendReverseProducts_values {ι : Type*}
         adjoint.eval circuit.values := by
     have hne : circuit.program.length ≠
         (circuit.values.push (adjoint.eval circuit.values)).size := by
-      simp [circuit_values_size]
+      simp only [Array.size_push, circuit_values_size, ne_eq, Nat.left_eq_add, one_ne_zero, not_false_eq_true]
     rw [Array.getD_eq_getD_getElem?, Array.getElem?_push,
       if_neg hne]
     simpa only [Array.getD_eq_getD_getElem?] using hfirst
@@ -7848,8 +7881,8 @@ theorem appendReverseProducts_values {ι : Type*}
     have hleftNext : left ≠ circuit.values.size + 1 := by
       rw [circuit_values_size]
       omega
-    simp [Array.getD_eq_getD_getElem?, Array.getElem?_push,
-      hleftFirst, hleftNext]
+    simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Array.size_push, hleftNext, ↓reduceIte,
+      hleftFirst]
   simp only [appendReverseProducts, appendInstruction_values,
     FreeAffineInstruction.eval, hfirst, hrightFirst, hsecond,
     hleftSecond]
@@ -7875,8 +7908,7 @@ theorem appendReverseProducts_values_getD_of_lt {ι : Type*}
     rw [circuit_values_size]
     omega
   rw [appendReverseProducts_values]
-  simp [Array.getD_eq_getD_getElem?, Array.getElem?_push,
-    hzero, hone, htwo]
+  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Array.size_push, htwo, ↓reduceIte, hone, hzero]
 
 theorem appendReverseProducts_values_right {ι : Type*}
     (circuit : FreeAffineCircuit ι) (adjoint : FreeAffineForm ι)
@@ -7894,14 +7926,15 @@ theorem appendReverseProducts_values_right {ι : Type*}
       ((circuit.values.push (adjoint.eval circuit.values)).push
         (adjoint.eval circuit.values *
           circuit.values.getD right 0)).size := by
-    simp
+    simp only [Array.getD_eq_getD_getElem?, Array.size_push, lt_add_iff_pos_right, Order.lt_one_iff]
   have hlast : circuit.values.size + 1 <
       (((circuit.values.push (adjoint.eval circuit.values)).push
         (adjoint.eval circuit.values *
           circuit.values.getD right 0)).push
             (adjoint.eval circuit.values *
               circuit.values.getD left 0)).size := by
-    simp
+    simp only [Array.getD_eq_getD_getElem?, Array.size_push, Order.lt_add_one_iff, le_add_iff_nonneg_right,
+      zero_le]
   calc
     (((circuit.values.push (adjoint.eval circuit.values)).push
         (adjoint.eval circuit.values *
@@ -7920,11 +7953,9 @@ theorem appendReverseProducts_values_right {ι : Type*}
             circuit.values.getD right 0))[circuit.values.size + 1]'hmiddle :=
                 Array.getElem_push_lt hmiddle
     _ = adjoint.eval circuit.values * circuit.values.getD right 0 := by
-      simpa using
-        (Array.getElem_push_eq
-          (xs := circuit.values.push (adjoint.eval circuit.values))
-          (x := adjoint.eval circuit.values *
-            circuit.values.getD right 0))
+      simpa only [Array.getD_eq_getD_getElem?, Array.size_push] using
+        (Array.getElem_push_eq (xs := circuit.values.push (adjoint.eval circuit.values)) (x :=
+          adjoint.eval circuit.values * circuit.values.getD right 0))
 
 theorem appendReverseProducts_values_left {ι : Type*}
     (circuit : FreeAffineCircuit ι) (adjoint : FreeAffineForm ι)
@@ -7944,7 +7975,7 @@ theorem appendReverseProducts_values_left {ι : Type*}
           circuit.values.getD right 0)).push
             (adjoint.eval circuit.values *
               circuit.values.getD left 0)).size := by
-    simp
+    simp only [Array.getD_eq_getD_getElem?, Array.size_push, lt_add_iff_pos_right, Order.lt_one_iff]
   calc
     (((circuit.values.push (adjoint.eval circuit.values)).push
         (adjoint.eval circuit.values *
@@ -7959,13 +7990,11 @@ theorem appendReverseProducts_values_left {ι : Type*}
               circuit.values.getD left 0))[circuit.values.size + 2]'hlast :=
                   (Array.getElem_eq_getD 0).symm
     _ = adjoint.eval circuit.values * circuit.values.getD left 0 := by
-      simpa using
-        (Array.getElem_push_eq
-          (xs := (circuit.values.push (adjoint.eval circuit.values)).push
-            (adjoint.eval circuit.values *
-              circuit.values.getD right 0))
-          (x := adjoint.eval circuit.values *
-            circuit.values.getD left 0))
+      simpa only [Array.getD_eq_getD_getElem?, Array.size_push] using
+        (Array.getElem_push_eq (xs :=
+          (circuit.values.push (adjoint.eval circuit.values)).push
+            (adjoint.eval circuit.values * circuit.values.getD right 0))
+          (x := adjoint.eval circuit.values * circuit.values.getD left 0))
 
 theorem appendReverseProducts_eval_form {ι : Type*}
     (circuit : FreeAffineCircuit ι) (adjoint : FreeAffineForm ι)
@@ -7998,8 +8027,11 @@ theorem appendReverseProducts_multiplicationCount {ι : Type*}
     (appendReverseProducts circuit adjoint left right
       hadjoint hleft hright).multiplicationCount =
         circuit.multiplicationCount + 2 := by
-  simp [appendReverseProducts, appendInstruction,
-    FreeAffineCircuit.multiplicationCount,     FreeAffineInstruction.isMultiplication]
+  simp only [FreeAffineCircuit.multiplicationCount, appendReverseProducts, appendInstruction,
+    List.append_assoc, List.cons_append, List.nil_append, List.filter_append,
+    FreeAffineInstruction.isMultiplication, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg,
+    List.filter_cons_of_pos, List.filter_nil, List.length_append, List.length_cons, List.length_nil,
+    zero_add, Nat.reduceAdd]
 
 theorem affineForm_gateBound_mono {ι : Type*}
     (form : FreeAffineForm ι) {oldBound newBound : ℕ}
@@ -8023,7 +8055,7 @@ theorem affineForm_gateBound_add {ι : Type*}
   · apply hright index
     intro hrightZero
     apply hindex
-    simp [hleftZero, hrightZero]
+    simp only [Finsupp.coe_add, Pi.add_apply, hleftZero, hrightZero, add_zero]
   · exact hleft index hleftZero
 
 theorem affineForm_gateBound_smul {ι : Type*}
@@ -8037,7 +8069,7 @@ theorem affineForm_gateBound_smul {ι : Type*}
   apply hvalid index
   intro hzero
   apply hindex
-  simp [hzero]
+  simp only [Finsupp.coe_smul, Pi.smul_apply, hzero, smul_eq_mul, mul_zero]
 
 theorem affineForm_gateBound_gate {ι : Type*}
     (position bound : ℕ) (hposition : position < bound) :
@@ -8047,7 +8079,7 @@ theorem affineForm_gateBound_gate {ι : Type*}
   intro index hindex
   change (Finsupp.single position (1 : ℂ)) index ≠ 0 at hindex
   have heq := (Finsupp.single_apply_ne_zero.mp hindex).1
-  simpa [heq] using hposition
+  simpa only [heq, gt_iff_lt] using hposition
 
 structure CircuitAdjoint (ι : Type*) where
   circuit : FreeAffineCircuit ι
@@ -8075,10 +8107,10 @@ def initial {ι : Type*} (circuit : FreeAffineCircuit ι)
     FreeAffineForm.scalar (output.gateCoefficients gate)
   validInputAdjoints := by
     intro input index hindex
-    simp [FreeAffineForm.scalar] at hindex
+    simp only [FreeAffineForm.scalar, Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hindex
   validGateAdjoints := by
     intro gate index hindex
-    simp [FreeAffineForm.scalar] at hindex
+    simp only [FreeAffineForm.scalar, Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hindex
 
 def affine {ι : Type*} (state : CircuitAdjoint ι)
     (position : ℕ) (form : FreeAffineForm ι) : CircuitAdjoint ι where
@@ -8108,7 +8140,7 @@ def affine {ι : Type*} (state : CircuitAdjoint ι)
     · subst gate
       simp only [] at hindex
       change ((0 : ℕ →₀ ℂ) index) ≠ 0 at hindex
-      simp at hindex
+      simp only [Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hindex
     · apply affineForm_gateBound_add
         (state.gateAdjoints gate)
         (form.gateCoefficients gate • state.gateAdjoints position)
@@ -8117,7 +8149,7 @@ def affine {ι : Type*} (state : CircuitAdjoint ι)
         (affineForm_gateBound_smul (form.gateCoefficients gate)
           (state.gateAdjoints position) state.circuit.program.length
           (state.validGateAdjoints position)) index
-      simpa [hgate] using hindex
+      simpa only [ne_eq, hgate, ↓reduceIte] using hindex
 
 def mul {ι : Type*} (state : CircuitAdjoint ι)
     (position left right : ℕ)
@@ -8166,10 +8198,9 @@ def mul {ι : Type*} (state : CircuitAdjoint ι)
         intro index hindex
         simp only [] at hindex
         change ((0 : ℕ →₀ ℂ) index) ≠ 0 at hindex
-        simp at hindex
-      · simpa [hgate] using
-          affineForm_gateBound_mono (state.gateAdjoints gate)
-            (by omega) (state.validGateAdjoints gate)
+        simp only [Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hindex
+      · simpa only [hgate, ↓reduceIte, ne_eq] using
+          affineForm_gateBound_mono (state.gateAdjoints gate) (by omega) (state.validGateAdjoints gate)
     have hleftForm :
         ∀ index,
           (if gate = left then
@@ -8177,14 +8208,12 @@ def mul {ι : Type*} (state : CircuitAdjoint ι)
           else (0 : FreeAffineForm ι)).gateCoefficients index ≠ 0 →
             index < next.program.length := by
       by_cases hgate : gate = left
-      · simpa [hgate] using
-          affineForm_gateBound_gate (ι := ι)
-            (state.circuit.program.length + 1)
-            next.program.length (by omega)
+      · simpa only [hgate, ↓reduceIte, ne_eq] using
+          affineForm_gateBound_gate (ι := ι) (state.circuit.program.length + 1) next.program.length (by omega)
       · simp only [hgate, ↓reduceIte]
         intro index hindex
         change ((0 : ℕ →₀ ℂ) index) ≠ 0 at hindex
-        simp at hindex
+        simp only [Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hindex
     have hrightForm :
         ∀ index,
           (if gate = right then
@@ -8192,14 +8221,12 @@ def mul {ι : Type*} (state : CircuitAdjoint ι)
           else (0 : FreeAffineForm ι)).gateCoefficients index ≠ 0 →
             index < next.program.length := by
       by_cases hgate : gate = right
-      · simpa [hgate] using
-          affineForm_gateBound_gate (ι := ι)
-            (state.circuit.program.length + 2)
-            next.program.length (by omega)
+      · simpa only [hgate, ↓reduceIte, ne_eq] using
+          affineForm_gateBound_gate (ι := ι) (state.circuit.program.length + 2) next.program.length (by omega)
       · simp only [hgate, ↓reduceIte]
         intro index hindex
         change ((0 : ℕ →₀ ℂ) index) ≠ 0 at hindex
-        simp at hindex
+        simp only [Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hindex
     exact affineForm_gateBound_add
       ((if gate = position then 0 else state.gateAdjoints gate) +
         (if gate = left then
@@ -8302,15 +8329,15 @@ theorem instructionCost_sum {ι : Type*}
     (program.map instructionCost).sum =
       2 * (program.filter FreeAffineInstruction.isMultiplication).length := by
   induction program with
-  | nil => simp
+  | nil => simp only [List.map_nil, List.sum_nil, List.filter_nil, List.length_nil, mul_zero]
   | cons instruction rest ih =>
     cases instruction with
     | affine form =>
-      simpa [instructionCost, FreeAffineInstruction.isMultiplication,
-        List.filter_cons] using ih
+      simpa only [List.map_cons, instructionCost, List.sum_cons, zero_add, FreeAffineInstruction.isMultiplication,
+        Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg] using ih
     | mul left right =>
-      simp [instructionCost, FreeAffineInstruction.isMultiplication,
-        ih, Nat.mul_add, Nat.add_comm]
+      simp only [List.map_cons, instructionCost, List.sum_cons, ih, FreeAffineInstruction.isMultiplication,
+        List.filter_cons_of_pos, List.length_cons, Nat.add_comm, Nat.mul_add, mul_one]
 
 theorem zipIdx_instructionCost_sum {ι : Type*}
     (program : List (FreeAffineInstruction ι)) (start : ℕ) :
@@ -8318,10 +8345,10 @@ theorem zipIdx_instructionCost_sum {ι : Type*}
       instructionCost instruction.1)).sum =
       (program.map instructionCost).sum := by
   induction program generalizing start with
-  | nil => simp
+  | nil => simp only [List.zipIdx_nil, List.map_nil, List.sum_nil]
   | cons instruction rest ih =>
-    simpa using congrArg (fun count : ℕ =>
-      instructionCost instruction + count) (ih (start + 1))
+    simpa only [List.zipIdx_cons, List.map_cons, List.sum_cons, Nat.add_left_cancel_iff] using
+      congrArg (fun count : ℕ => instructionCost instruction + count) (ih (start + 1))
 
 namespace CircuitAdjoint
 
@@ -8337,7 +8364,7 @@ theorem affine_inputAdjoints_eval {ι : Type*}
     (state.inputAdjoints input +
       form.inputCoefficients input • state.gateAdjoints position).eval
         state.circuit.values = _
-  simp [MvPolynomial.smul_eq_C_mul]
+  simp only [FreeAffineForm.eval_add, FreeAffineForm.eval_smul, MvPolynomial.smul_eq_C_mul]
 
 theorem affine_gateAdjoints_eval {ι : Type*}
     (state : CircuitAdjoint ι) (position : ℕ)
@@ -8354,8 +8381,8 @@ theorem affine_gateAdjoints_eval {ι : Type*}
         form.gateCoefficients gate • state.gateAdjoints position).eval
           state.circuit.values = _
   split_ifs with hgate
-  · simp
-  · simp [MvPolynomial.smul_eq_C_mul]
+  · simp only [FreeAffineForm.eval_zero]
+  · simp only [FreeAffineForm.eval_add, FreeAffineForm.eval_smul, MvPolynomial.smul_eq_C_mul]
 
 theorem mul_new_right {ι : Type*}
     (state : CircuitAdjoint ι) (position left right : ℕ)
@@ -8473,8 +8500,8 @@ def step {ι : Type*} (state : CircuitAdjoint ι)
   | mul left right =>
     by_cases h : left < state.sourceLength ∧
       right < state.sourceLength
-    · simp [step, h, mul]
-    · simp [step, h]
+    · simp only [step, h, and_self, ↓reduceDIte, mul]
+    · simp only [step, h, ↓reduceDIte]
 
 theorem step_multiplicationCount {ι : Type*}
     (state : CircuitAdjoint ι)
@@ -8488,16 +8515,15 @@ theorem step_multiplicationCount {ι : Type*}
   cases instruction with
   | affine form =>
     change state.circuit.multiplicationCount = _
-    simp [ReverseAdjoint.instructionCost]
+    simp only [instructionCost, add_zero]
   | mul left right =>
     simp only [FreeAffineInstruction.referencesBounded,
       Bool.and_eq_true, decide_eq_true_eq] at hvalid
     have hbounds : left < state.sourceLength ∧
         right < state.sourceLength := by
       constructor <;> omega
-    simpa [step, hbounds, ReverseAdjoint.instructionCost] using
-      mul_multiplicationCount state position left right
-        hbounds.1 hbounds.2
+    simpa only [step, hbounds, and_self, ↓reduceDIte, mul_circuit, instructionCost] using
+      mul_multiplicationCount state position left right hbounds.1 hbounds.2
 
 theorem foldl_multiplicationCount {ι : Type*}
     (instructions : List (FreeAffineInstruction ι × ℕ))
@@ -8511,21 +8537,21 @@ theorem foldl_multiplicationCount {ι : Type*}
         (instructions.map (fun instruction =>
           ReverseAdjoint.instructionCost instruction.1)).sum := by
   induction instructions generalizing state with
-  | nil => simp
+  | nil => simp only [List.foldl_nil, List.map_nil, List.sum_nil, add_zero]
   | cons instruction rest ih =>
-    have hheadPosition := hposition instruction (by simp)
-    have hheadValid := hvalid instruction (by simp)
+    have hheadPosition := hposition instruction (by simp only [List.mem_cons, true_or])
+    have hheadValid := hvalid instruction (by simp only [List.mem_cons, true_or])
     have hrestPosition : ∀ gate ∈ rest,
         gate.2 < (step state instruction).sourceLength := by
       intro gate hgate
       rw [step_sourceLength]
       apply hposition gate
-      simp [hgate]
+      simp only [List.mem_cons, hgate, or_true]
     have hrestValid : ∀ gate ∈ rest,
         gate.1.referencesBounded gate.2 := by
       intro gate hgate
       apply hvalid gate
-      simp [hgate]
+      simp only [List.mem_cons, hgate, or_true]
     simp only [List.foldl_cons, List.map_cons, List.sum_cons]
     rw [ih (step state instruction) hrestPosition hrestValid,
       step_multiplicationCount state instruction
@@ -8555,7 +8581,7 @@ theorem run_multiplicationCount {ι : Type*}
       simpa only [List.mem_reverse] using hmem
     rcases instruction with ⟨gate, position⟩
     obtain ⟨hposition, hgate⟩ := List.mem_zipIdx' hzip
-    simpa [hgate] using circuit.valid ⟨position, hposition⟩
+    simpa only [hgate, List.get_eq_getElem] using circuit.valid ⟨position, hposition⟩
   unfold run
   rw [foldl_multiplicationCount _ _ hposition hvalid]
   simp only [initial, List.map_reverse, List.sum_reverse]
@@ -8633,9 +8659,10 @@ theorem step_realizes {ι : Type*}
           have hlt := hvalid position
             (Finsupp.mem_support_iff.mpr hnonzero)
           omega
-        simp [hcoefficient]
-      · simp [heq, Finsupp.erase_ne heq,
-          hgate gate, hgate position]
+        simp only [↓reduceIte, Finsupp.coe_add, Pi.add_apply, Finsupp.erase_same, scaleCoefficients_apply,
+          hcoefficient, MvPolynomial.C_0, zero_mul, add_zero]
+      · simp only [heq, ↓reduceIte, hgate gate, hgate position, Finsupp.coe_add, Pi.add_apply, Finsupp.erase_ne heq,
+          scaleCoefficients_apply]
   | mul left right =>
     simp only [FreeAffineInstruction.referencesBounded,
       Bool.and_eq_true, decide_eq_true_eq] at hvalid
@@ -8647,7 +8674,7 @@ theorem step_realizes {ι : Type*}
     have hstep :
         step state (.mul left right, position) =
           state.mul position left right hbounds.1 hbounds.2 := by
-      simp [step, hbounds]
+      simp only [step, hbounds, and_self, ↓reduceDIte]
     rw [hstep]
     refine ⟨?_, ?_, ?_⟩
     · intro gate hbound
@@ -8720,8 +8747,8 @@ theorem foldl_realizes {ι : Type*}
   | nil =>
     exact ⟨hforward, hinput, hgate⟩
   | cons instruction rest ih =>
-    have hheadPosition := hposition instruction (by simp)
-    have hheadValid := hvalid instruction (by simp)
+    have hheadPosition := hposition instruction (by simp only [List.mem_cons, true_or])
+    have hheadValid := hvalid instruction (by simp only [List.mem_cons, true_or])
     obtain ⟨hnextForward, hnextInput, hnextGate⟩ :=
       step_realizes state adjoints sourceValues instruction
         hheadPosition hheadValid hforward hinput hgate
@@ -8730,23 +8757,23 @@ theorem foldl_realizes {ι : Type*}
       intro gate hmem
       rw [step_sourceLength]
       apply hposition gate
-      simp [hmem]
+      simp only [List.mem_cons, hmem, or_true]
     have hrestValid : ∀ gate ∈ rest,
         gate.1.referencesBounded gate.2 := by
       intro gate hmem
       apply hvalid gate
-      simp [hmem]
+      simp only [List.mem_cons, hmem, or_true]
     have hnextForward' : ∀ gate,
         gate < (step state instruction).sourceLength →
           (step state instruction).circuit.values.getD gate 0 =
             sourceValues.getD gate 0 := by
       intro gate hbound
       apply hnextForward gate
-      simpa using hbound
+      simpa only [step_sourceLength] using hbound
     have hresult := ih (step state instruction)
       (ReverseAdjoint.step sourceValues adjoints instruction)
       hrestPosition hrestValid hnextForward' hnextInput hnextGate
-    simpa [List.foldl_cons, step_sourceLength] using hresult
+    simpa only [List.foldl_cons, Array.getD_eq_getD_getElem?, step_sourceLength] using hresult
 
 theorem run_realizes {ι : Type*}
     (circuit : FreeAffineCircuit ι) (output : FreeAffineForm ι) :
@@ -8776,7 +8803,7 @@ theorem run_realizes {ι : Type*}
       simpa only [List.mem_reverse] using hmem
     rcases instruction with ⟨gate, position⟩
     obtain ⟨hposition, hgate⟩ := List.mem_zipIdx' hzip
-    simpa [hgate] using circuit.valid ⟨position, hposition⟩
+    simpa only [hgate, List.get_eq_getElem] using circuit.valid ⟨position, hposition⟩
   have hforward : ∀ gate,
       gate < (initial circuit output).sourceLength →
         (initial circuit output).circuit.values.getD gate 0 =
@@ -8788,18 +8815,15 @@ theorem run_realizes {ι : Type*}
           (initial circuit output).circuit.values =
         (ReverseAdjoint.initial output).inputAdjoints input := by
     intro input
-    simp [CircuitAdjoint.initial, ReverseAdjoint.initial,
-      ReverseAdjoint.scaleCoefficients_apply]
+    simp only [initial, FreeAffineForm.eval_scalar, ReverseAdjoint.initial, scaleCoefficients_apply, mul_one]
   have hgate : ∀ gate,
       ((initial circuit output).gateAdjoints gate).eval
           (initial circuit output).circuit.values =
         (ReverseAdjoint.initial output).gateAdjoints gate := by
     intro gate
-    simp [CircuitAdjoint.initial, ReverseAdjoint.initial,
-      ReverseAdjoint.scaleCoefficients_apply]
-  simpa [run, ReverseAdjoint.run, CircuitAdjoint.initial] using
-    foldl_realizes circuit.program.zipIdx.reverse
-      (initial circuit output) (ReverseAdjoint.initial output)
+    simp only [initial, FreeAffineForm.eval_scalar, ReverseAdjoint.initial, scaleCoefficients_apply, mul_one]
+  simpa only [run, initial, List.foldl_reverse, Array.getD_eq_getD_getElem?, ReverseAdjoint.run] using
+    foldl_realizes circuit.program.zipIdx.reverse (initial circuit output) (ReverseAdjoint.initial output)
       circuit.values hposition hvalid hforward hinput hgate
 
 theorem run_inputAdjoints {ι : Type*}
@@ -8883,7 +8907,7 @@ theorem finiteDimensional_quotient_of_zeroLocus_finite
     obtain ⟨n, hn⟩ := hp
     rw [mem_nilradical]
     refine ⟨n, ?_⟩
-    simpa using (Ideal.Quotient.eq_zero_iff_mem.mpr hn)
+    simpa only [map_pow] using (Ideal.Quotient.eq_zero_iff_mem.mpr hn)
   exact Module.finite_of_surjective_of_ker_le_nilradical φ hsurj hnil
     (IsNoetherian.noetherian _)
 
@@ -8927,8 +8951,8 @@ theorem affine_total_degree_filtered_piece_mem_iff
     x ∈ affineTotalDegreeFilteredPiece I n ↔
       ∃ p : MvPolynomial ι ℂ, p.totalDegree ≤ n ∧
         Ideal.Quotient.mk I p = x := by
-  simp [affineTotalDegreeFilteredPiece,
-    MvPolynomial.mem_restrictTotalDegree]
+  simp only [affineTotalDegreeFilteredPiece, Submodule.mem_map, MvPolynomial.mem_restrictTotalDegree,
+    AlgHom.toLinearMap_apply, Ideal.Quotient.mkₐ_eq_mk]
 
 theorem affine_total_degree_filtered_piece_mono
     {ι : Type*} (I : Ideal (MvPolynomial ι ℂ))
@@ -8953,15 +8977,14 @@ theorem affine_restrictTotalDegree_finrank
       MvPolynomial.restrictTotalDegree ι ℂ N =
         MvPolynomial.restrictSupport ℂ T := by
     ext p
-    simp [MvPolynomial.mem_restrictTotalDegree,
-      MvPolynomial.mem_restrictSupport_iff, T,
-      MvPolynomial.totalDegree, Finset.sup_le_iff,
-      Finsupp.degree_apply, Finsupp.sum, Set.subset_def]
+    simp only [MvPolynomial.mem_restrictTotalDegree, MvPolynomial.totalDegree, Finsupp.sum, Finset.sup_le_iff,
+      MvPolynomial.mem_support_iff, ne_eq, Finsupp.degree_apply, MvPolynomial.mem_restrictSupport_iff, Set.subset_def,
+      SetLike.mem_coe, Set.mem_setOf_eq, T]
   have hsubtype : Fintype.card T = s.card := by
     let E : T ≃ {d // d ∈ s} :=
       Equiv.subtypeEquiv (Equiv.refl (ι →₀ ℕ)) (by
         intro d
-        simp [s, T])
+        simp only [Set.mem_setOf_eq, Set.toFinite_toFinset, Equiv.refl_apply, Set.mem_toFinset, T, s])
     exact (Fintype.card_congr E).trans (Fintype.card_coe s)
   have hmaps :
       (s : Set (ι →₀ ℕ)).MapsTo Finsupp.degree
@@ -8999,7 +9022,7 @@ theorem affine_restrictTotalDegree_finrank
       intro n hn
       rw [hfiber n (Finset.mem_range.mp hn),
         Finset.card_finsuppAntidiag_nat_eq_multichoose]
-      simp
+      simp only [Finset.card_univ]
     _ = (N + Fintype.card ι).choose (Fintype.card ι) :=
       Nat.sum_range_multichoose N (Fintype.card ι)
 
@@ -9168,7 +9191,7 @@ theorem affine_total_degree_filtered_mul_injective
     exact h
   have hpI : p ∈ I := by
     apply (isSMulRegular_quotient_iff_mem_of_smul_mem I g).mp hregular p
-    simpa [smul_eq_mul] using hprod
+    simpa only [smul_eq_mul] using hprod
   apply sub_eq_zero.mp
   rw [← hp]
   exact Ideal.Quotient.eq_zero_iff_mem.mpr hpI
@@ -9199,7 +9222,7 @@ theorem affine_total_degree_filtered_mul_range_le_factor_ker
     exact
       (show Ideal.span ({g} : Set (MvPolynomial ι ℂ)) ≤
         I ⊔ Ideal.span ({g} : Set (MvPolynomial ι ℂ)) from le_sup_right)
-        (Ideal.subset_span (by simp))
+        (Ideal.subset_span (by simp only [Set.mem_singleton_iff]))
   change
     Ideal.Quotient.mk (I ⊔ Ideal.span ({g} : Set (MvPolynomial ι ℂ))) g *
       _ = 0
@@ -9254,7 +9277,7 @@ theorem affine_sum_range_degree_shift
     (∑ m ∈ Finset.range N, if d ≤ m then H (m - d) else 0) =
       ∑ m ∈ Finset.range (N - d), H m := by
   induction N with
-  | zero => simp
+  | zero => simp only [Finset.range_zero, Finset.sum_empty, zero_tsub]
   | succ N ih =>
       rw [Finset.sum_range_succ, ih]
       by_cases h : d ≤ N
@@ -9262,7 +9285,7 @@ theorem affine_sum_range_degree_shift
         rw [if_pos h, hs, Finset.sum_range_succ]
       · have hN : N - d = 0 := by omega
         have hs : N + 1 - d = 0 := by omega
-        simp [h, hN, hs]
+        simp only [hN, Finset.range_zero, Finset.sum_empty, h, ↓reduceIte, add_zero, hs]
 
 theorem affine_cumulative_le_degree_mul_of_filtered_step
     (Hprev Hnext : ℕ → ℕ) (d : ℕ)
@@ -9283,8 +9306,7 @@ theorem affine_cumulative_le_degree_mul_of_filtered_step
           ∑ m ∈ Finset.range N, Hprev m := by
     have h := Finset.sum_le_sum
       (s := Finset.range N) (fun m _ => hstep m)
-    simpa [Finset.sum_add_distrib,
-      affine_sum_range_degree_shift, a] using h
+    simpa only [ge_iff_le, Finset.sum_add_distrib, affine_sum_range_degree_shift] using h
   have hsplit :
       (∑ m ∈ Finset.range N, Hprev m) =
         (∑ m ∈ Finset.range a, Hprev m) +
@@ -9302,7 +9324,7 @@ theorem affine_cumulative_le_degree_mul_of_filtered_step
         have hj' := Finset.mem_range.mp hj
         dsimp [N] at har
         omega
-      _ = r * Hprev M := by simp
+      _ = r * Hprev M := by simp only [Finset.sum_const, Finset.card_range, smul_eq_mul]
   have hrd : r ≤ d := min_le_left _ _
   unfold affineCumulative
   change (∑ m ∈ Finset.range N, Hnext m) ≤ d * Hprev M
@@ -9363,7 +9385,7 @@ theorem affine_cumulative_iterate_le_degree_product
     induction j with
     | zero =>
         intro m
-        simp
+        simp only [Function.iterate_zero, id_eq, Finset.range_zero, Finset.prod_empty, one_mul, Std.le_refl]
     | succ j ih =>
         have hjn : j < n := by omega
         intro m
@@ -9397,7 +9419,8 @@ theorem affine_cumulative_iterate_eventual_constant_lower
       (affineCumulative^[n]) H (M₀ + m) := by
   induction n generalizing m with
   | zero =>
-      simpa using (heventual (M₀ + m) (by omega)).ge
+      simpa only [add_zero, Nat.choose_zero_right, mul_one, Function.iterate_zero, id_eq] using
+        (heventual (M₀ + m) (by omega)).ge
   | succ n ih =>
       rw [Function.iterate_succ_apply']
       change L * (m + (n + 1)).choose (n + 1) ≤
@@ -9410,9 +9433,7 @@ theorem affine_cumulative_iterate_eventual_constant_lower
             (affineCumulative^[n]) H i) +
           (∑ i ∈ Finset.range (m + 1),
             (affineCumulative^[n]) H (M₀ + i)) := by
-        simpa [Nat.add_assoc] using
-          (Finset.sum_range_add
-            (fun i => (affineCumulative^[n]) H i) M₀ (m + 1))
+        simpa only [Nat.add_assoc] using (Finset.sum_range_add (fun i => (affineCumulative^[n]) H i) M₀ (m + 1))
       calc
         L * (m + (n + 1)).choose (n + 1) =
             ∑ i ∈ Finset.range (m + 1),
@@ -9438,26 +9459,22 @@ theorem affine_tendsto_shifted_choose_ratio
       (fun m : ℕ => ((m + M₀ + n).choose n : ℝ)) ~[atTop]
         (fun m : ℕ =>
           ((m + M₀ + n : ℕ) : ℝ) ^ n / (n.factorial : ℝ)) := by
-    simpa [Function.comp_def, Nat.add_assoc] using
-      (isEquivalent_choose n).comp_tendsto
-        (tendsto_add_atTop_nat (M₀ + n))
+    simpa only [Nat.add_assoc, Nat.cast_add, Function.comp_def] using
+      (isEquivalent_choose n).comp_tendsto (tendsto_add_atTop_nat (M₀ + n))
   have hden :
       (fun m : ℕ => ((m + n).choose n : ℝ)) ~[atTop]
         (fun m : ℕ =>
           ((m + n : ℕ) : ℝ) ^ n / (n.factorial : ℝ)) := by
-    simpa [Function.comp_def] using
-      (isEquivalent_choose n).comp_tendsto
-        (tendsto_add_atTop_nat n)
+    simpa only [Nat.cast_add, Function.comp_def] using
+      (isEquivalent_choose n).comp_tendsto (tendsto_add_atTop_nat n)
   have hbase :
       Tendsto
         (fun m : ℕ =>
           (((M₀ + n : ℕ) : ℝ) + 1 * (m : ℝ)) /
             (((n : ℕ) : ℝ) + 1 * (m : ℝ)))
         atTop (𝓝 (1 : ℝ)) := by
-    simpa using
-      (tendsto_add_mul_div_add_mul_atTop_nhds
-        (((M₀ + n : ℕ) : ℝ)) (((n : ℕ) : ℝ))
-        (1 : ℝ) (one_ne_zero : (1 : ℝ) ≠ 0))
+    simpa only [Nat.cast_add, one_mul, ne_eq, one_ne_zero, not_false_eq_true, div_self] using
+      (tendsto_add_mul_div_add_mul_atTop_nhds (((M₀ + n : ℕ) : ℝ)) (((n : ℕ) : ℝ)) (1 : ℝ) (one_ne_zero : (1 : ℝ) ≠ 0))
   have hpow :
       Tendsto
         (fun m : ℕ =>
@@ -9466,8 +9483,8 @@ theorem affine_tendsto_shifted_choose_ratio
         atTop (𝓝 (1 : ℝ)) := by
     convert hbase.pow n using 1
     · ext m
-      simp [div_pow, Nat.cast_add, add_comm, add_assoc]
-    · simp
+      simp only [add_comm, Nat.cast_add, one_mul, add_assoc, div_pow]
+    · simp only [one_pow]
   have hfact : (n.factorial : ℝ) ≠ 0 := by
     exact_mod_cast n.factorial_ne_zero
   have hequiv :
@@ -9498,7 +9515,7 @@ theorem affine_le_of_shifted_choose_bounds
             (((m + M₀ + n).choose n : ℝ) /
               ((m + n).choose n : ℝ)))
         atTop (𝓝 (P : ℝ)) := by
-    simpa using tendsto_const_nhds.mul hratio
+    simpa only [mul_one] using tendsto_const_nhds.mul hratio
   have hle : ∀ m : ℕ,
       (L : ℝ) ≤
         (P : ℝ) *
@@ -9626,7 +9643,7 @@ theorem affine_finrank_le_degree_product_of_regular_prefix
       exact affine_total_degree_cumulative_iterate_regular
         I g n hzero hnext hregular (N + m)
     _ = P * (m + N + n).choose n := by
-      simp [Nat.add_comm]
+      simp only [Nat.add_comm]
 
 theorem affine_finrank_le_degree_product_of_weaklyRegular
     {ι : Type*} [Fintype ι]
@@ -9646,39 +9663,39 @@ theorem affine_finrank_le_degree_product_of_weaklyRegular
   let g : ℕ → MvPolynomial ι ℂ :=
     fun j => if h : j < n then f ⟨j, h⟩ else 0
   have hIzero : I 0 = ⊥ := by
-    simp [I]
+    simp only [List.take_zero, Ideal.ofList_nil, I]
   have hIn : I n = Ideal.span (Set.range f) := by
     change Ideal.ofList ((List.ofFn f).take (Fintype.card ι)) = _
     have htake :
         (List.ofFn f).take (Fintype.card ι) = List.ofFn f := by
-      exact List.take_of_length_le (by simp)
+      exact List.take_of_length_le (by simp only [List.length_ofFn, Std.le_refl])
     rw [htake]
     change Ideal.span {p : MvPolynomial ι ℂ | p ∈ List.ofFn f} =
       Ideal.span (Set.range f)
     congr 1
     ext p
-    simp
+    simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
   have hInext : ∀ j, j < n →
       I (j + 1) = I j ⊔
         Ideal.span ({g j} : Set (MvPolynomial ι ℂ)) := by
     intro j hj
     dsimp [I]
     rw [List.take_succ_eq_append_getElem
-      (show j < s.length by simpa [s, n] using hj)]
+      (show j < s.length by simpa only [List.length_ofFn, s, n] using hj)]
     rw [Ideal.ofList_append, Ideal.ofList_singleton]
-    simp [s, g, hj]
+    simp only [List.getElem_ofFn, hj, ↓reduceDIte, s, g]
   have hIregular : ∀ j, j < n →
       IsSMulRegular (MvPolynomial ι ℂ ⧸ I j) (g j) := by
     intro j hj
     have hprev := hweak.regular_mod_prev j
       (show j < (List.ofFn f).length by
-        simpa [n] using hj)
+        simpa only [List.length_ofFn, n] using hj)
     have hsub :
         Ideal.ofList ((List.ofFn f).take j) •
           (⊤ : Submodule (MvPolynomial ι ℂ) (MvPolynomial ι ℂ)) =
             (I j : Submodule (MvPolynomial ι ℂ)
               (MvPolynomial ι ℂ)) := by
-      simp [I, s]
+      simp only [smul_eq_mul, Ideal.mul_top, I, s]
     apply ((Submodule.quotEquivOfEq _ _ hsub).isSMulRegular_congr
       (g j)).mp
     simpa [g, hj] using hprev
@@ -9698,7 +9715,7 @@ theorem affine_finrank_le_degree_product_of_weaklyRegular
       _ = ∏ i : Fin n, (f i).totalDegree := by
         apply Finset.prod_congr rfl
         intro i _
-        simp [g, i.isLt]
+        simp only [i.isLt, ↓reduceDIte, Fin.eta, g]
   rw [hIn, hproduct] at hbound
   exact hbound
 
@@ -9715,7 +9732,7 @@ theorem affine_isSMulRegular_sup_span_swap
     (I ⊔ Ideal.span ({ell} : Set R)) f).mpr
   intro p hp
   have hfp : f * p ∈ I ⊔ Ideal.span ({ell} : Set R) := by
-    simpa [smul_eq_mul] using hp
+    simpa only [smul_eq_mul] using hp
   obtain ⟨a, ha, b, hb, hab⟩ := Submodule.mem_sup.mp hfp
   obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hb
   have hrel : f * p = a + ell * q := by
@@ -9732,7 +9749,7 @@ theorem affine_isSMulRegular_sup_span_swap
   have hqmem : q ∈ I ⊔ Ideal.span ({f} : Set R) := by
     apply (isSMulRegular_quotient_iff_mem_of_smul_mem
       (I ⊔ Ideal.span ({f} : Set R)) ell).mp hell
-    simpa [smul_eq_mul] using hellq
+    simpa only [smul_eq_mul] using hellq
   obtain ⟨u, hu, v, hv, huv⟩ := Submodule.mem_sup.mp hqmem
   obtain ⟨r, hr⟩ := Ideal.mem_span_singleton'.mp hv
   have hqdecomp : q = u + f * r := by
@@ -9749,7 +9766,7 @@ theorem affine_isSMulRegular_sup_span_swap
     exact I.add_mem ha (I.mul_mem_left ell hu)
   have hpminus : p - ell * r ∈ I := by
     apply (isSMulRegular_quotient_iff_mem_of_smul_mem I f).mp hf
-    simpa [smul_eq_mul] using hsmall
+    simpa only [smul_eq_mul] using hsmall
   have hdecomp : p = (p - ell * r) + ell * r := by ring
   rw [hdecomp]
   apply (I ⊔ Ideal.span ({ell} : Set R)).add_mem
@@ -9787,7 +9804,8 @@ theorem affineGateGraphEvaluation_kills {k q : ℕ}
         MvPolynomial.rename Sum.inl (gate j)) = 0 := by
     unfold affineGateGraphEvaluation
     rw [map_sub, MvPolynomial.aeval_X, MvPolynomial.aeval_rename]
-    simp [Function.comp_def]
+    simp only [Sum.elim_inr, Function.comp_def, Sum.elim_inl, MvPolynomial.aeval_eq_bind₁,
+      MvPolynomial.bind₁_X_left, AlgHom.coe_id, id_eq, sub_self]
   rw [hgate, mul_zero]
 
 noncomputable def affineGateGraphToInput {k q : ℕ}
@@ -9823,7 +9841,7 @@ theorem affineGateGraphToInput_comp_fromInput {k q : ℕ}
   change MvPolynomial.aeval (Sum.elim MvPolynomial.X gate)
       (MvPolynomial.rename Sum.inl (MvPolynomial.X i)) =
     MvPolynomial.X i
-  simp
+  simp only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.rename_X, MvPolynomial.bind₁_X_right, Sum.elim_inl]
 
 theorem affineGateGraphFromInput_comp_toInput {k q : ℕ}
     (gate : Fin q → MvPolynomial (Fin k) ℂ) :
@@ -9836,8 +9854,10 @@ theorem affineGateGraphFromInput_comp_toInput {k q : ℕ}
   apply MvPolynomial.algHom_ext
   intro i
   rcases i with i | j
-  · simp [affineGateGraphFromInput, affineGateGraphEvaluation]
-  · simpa [affineGateGraphFromInput, affineGateGraphEvaluation] using
+  · simp only [affineGateGraphFromInput, affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, AlgHom.coe_comp,
+      Ideal.Quotient.mkₐ_eq_mk, Function.comp_apply, MvPolynomial.bind₁_X_right, Sum.elim_inl, MvPolynomial.rename_X]
+  · simpa only [affineGateGraphFromInput, affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, AlgHom.coe_comp,
+      Ideal.Quotient.mkₐ_eq_mk, Function.comp_apply, MvPolynomial.bind₁_X_right, Sum.elim_inr] using
       (affineGateGraph_mk_gate_eq gate j).symm
 
 noncomputable def affineGateGraphInputAlgEquiv {k q : ℕ}
@@ -9880,10 +9900,12 @@ theorem affineGateRawOutputIdeal_map_evaluation {k q : ℕ}
   constructor
   · rintro ⟨_, ⟨i, rfl⟩, rfl⟩
     refine ⟨i, ?_⟩
-    simp [houtput i]
+    simp only [AlgHom.toRingHom_eq_coe, RingHom.coe_coe, map_sub, houtput i, MvPolynomial.algHom_C,
+      MvPolynomial.algebraMap_eq]
   · rintro ⟨i, rfl⟩
     refine ⟨_, ⟨i, rfl⟩, ?_⟩
-    simp [houtput i]
+    simp only [AlgHom.toRingHom_eq_coe, RingHom.coe_coe, map_sub, houtput i, MvPolynomial.algHom_C,
+      MvPolynomial.algebraMap_eq]
 
 theorem affineGateGraphOutputIdeal_map {k q : ℕ}
     (gate : Fin q → MvPolynomial (Fin k) ℂ)
@@ -9997,9 +10019,9 @@ theorem homogeneousMap_allTarget_rees_prefix_parameter_isSMulRegular
         (List.ofFn fun i : Fin k =>
           Ideal.Quotient.mk J (G i)).take j := by
     apply List.ext_getElem
-    · simp [hj]
+    · simp only [List.length_ofFn, List.length_take, hj, inf_of_le_left]
     · intro i hleft hright
-      simp [gp]
+      simp only [List.getElem_ofFn, List.getElem_take, gp]
   have hprefix : RingTheory.Sequence.IsWeaklyRegular (R ⧸ J)
       (List.ofFn fun i : Fin j => Ideal.Quotient.mk J (gp i)) := by
     rw [htake]
@@ -10019,15 +10041,15 @@ theorem homogeneousMap_allTarget_rees_prefix_parameter_isSMulRegular
         Ideal.span (Set.range gp) := by
     have hGtake : List.ofFn gp = (List.ofFn G).take j := by
       apply List.ext_getElem
-      · simp [hj]
+      · simp only [List.length_ofFn, List.length_take, hj, inf_of_le_left]
       · intro i hleft hright
-        simp [gp]
+        simp only [List.getElem_ofFn, List.getElem_take, gp]
     rw [← hGtake]
     change Ideal.span {x : R | x ∈ List.ofFn gp} =
       Ideal.span (Set.range gp)
     congr 1
     ext x
-    simp
+    simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
   rw [hspan]
   exact homogeneousMap_allRank_fin_hyperplane_isSMulRegular_of_quotient_weaklyRegular
     gp z (MvPolynomial.X_ne_zero (R := ℂ) (0 : Fin (k + 1))) hprefix
@@ -10103,10 +10125,10 @@ theorem homogeneousMap_allTarget_rees_chartCoordinate_isWeaklyRegular
     have hsub :
         Ideal.ofList ((List.ofFn G).take j) •
           (⊤ : Submodule R R) = (I : Submodule R R) := by
-      simp [I]
+      simp only [smul_eq_mul, Ideal.mul_top, I]
     apply ((Submodule.quotEquivOfEq _ _ hsub).isSMulRegular_congr
       (G idx)).mp
-    simpa [idx] using hprev
+    simpa only [smul_eq_mul, List.getElem_ofFn] using hprev
   have hnext :
       I ⊔ Ideal.span ({G idx} : Set R) =
         Ideal.ofList ((List.ofFn G).take (j + 1)) := by
@@ -10131,7 +10153,7 @@ theorem homogeneousMap_allTarget_rees_chartCoordinate_isWeaklyRegular
     have hlist :
         (List.ofFn fun i : Fin k => q (G i)).take j =
           ((List.ofFn G).take j).map q := by
-      simp [List.map_take, List.map_ofFn, Function.comp_def]
+      simp only [List.map_take, List.map_ofFn, Function.comp_def]
     change
       Ideal.span
         {x : R ⧸ J |
@@ -10152,7 +10174,7 @@ theorem homogeneousMap_allTarget_rees_chartCoordinate_isWeaklyRegular
     obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective p
     have hproduct : G idx * r ∈ I ⊔ J := by
       apply Ideal.mem_quotient_iff_mem_sup.mp
-      simpa [smul_eq_mul, map_mul] using hp
+      simpa only [map_mul, smul_eq_mul] using hp
     have hr : r ∈ I ⊔ J := by
       apply (isSMulRegular_quotient_iff_mem_of_smul_mem
         (I ⊔ J) (G idx)).mp hswap r
@@ -10163,10 +10185,9 @@ theorem homogeneousMap_allTarget_rees_chartCoordinate_isWeaklyRegular
           ((List.ofFn fun i : Fin k => q (G i)).take j) •
         (⊤ : Submodule (R ⧸ J) (R ⧸ J)) =
           (I.map q : Submodule (R ⧸ J) (R ⧸ J)) := by
-    simp [himage]
-  simpa [idx] using
-    ((Submodule.quotEquivOfEq _ _ hsub).isSMulRegular_congr
-      (q (G idx))).mpr hdouble
+    simp only [himage, smul_eq_mul, Ideal.mul_top]
+  simpa only [smul_eq_mul, List.getElem_ofFn] using
+    ((Submodule.quotEquivOfEq _ _ hsub).isSMulRegular_congr (q (G idx))).mpr hdouble
 
 theorem homogeneousMap_allTarget_translated_isWeaklyRegular
     {k : ℕ} (F : Fin k → MvPolynomial (Fin k) ℂ)
@@ -10192,9 +10213,8 @@ theorem homogeneousMap_allTarget_translated_isWeaklyRegular
         (homogeneousMapAllTargetReesChartIdeal k (1 : ℂ))
         (homogeneousMapAllTargetReesCoordinate F target e i)) =
           F i - MvPolynomial.C (target i) := by
-    simpa [E] using
-      homogeneousMap_allTarget_reesChartHyperplaneEquiv_coordinate
-        F target e (1 : ℂ) i
+    simpa only [RingEquiv.coe_mk, AlgEquiv.toEquiv_eq_coe, EquivLike.coe_coe, one_pow, mul_one] using
+      homogeneousMap_allTarget_reesChartHyperplaneEquiv_coordinate F target e (1 : ℂ) i
   simpa only [List.map_ofFn, Function.comp_def, hcoordinate] using himage
 
 noncomputable def affineGatePrefixGraphIdeal {k q : ℕ}
@@ -10242,10 +10262,8 @@ theorem affine_gate_prefix_graph_ideal_eq_ker {k q : ℕ}
         MvPolynomial.rename (Sum.inl : Fin k → Fin k ⊕ Fin q) (gate j) =
           MvPolynomial.aeval
             (fun i : Fin k => MvPolynomial.X (Sum.inl i)) (gate j) := by
-      simpa [Function.comp_def] using
-        DFunLike.congr_fun
-          (MvPolynomial.rename_eq_aeval
-            (R := ℂ) (Sum.inl : Fin k → Fin k ⊕ Fin q)) (gate j)
+      simpa only [MvPolynomial.aeval_eq_bind₁, Function.comp_def] using
+        DFunLike.congr_fun (MvPolynomial.rename_eq_aeval (R := ℂ) (Sum.inl : Fin k → Fin k ⊕ Fin q)) (gate j)
     rw [← hrename, sub_self]
   · intro p hp
     let I := affineGatePrefixGraphIdeal gate n
@@ -10257,13 +10275,15 @@ theorem affine_gate_prefix_graph_ideal_eq_ker {k q : ℕ}
       φ.comp (affineGatePrefixEvaluation gate n).toRingHom
     have hC : φ.comp MvPolynomial.C = ψ.comp MvPolynomial.C := by
       ext c
-      simp [φ, ψ, affineGatePrefixEvaluation]
+      simp only [RingHom.coe_comp, Function.comp_apply, affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁,
+        AlgHom.toRingHom_eq_coe, RingHom.coe_coe, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq, φ, ψ]
     have heq : φ p = ψ p := by
       apply MvPolynomial.hom_congr_vars hC (p₁ := p) (p₂ := p)
         (hp := rfl)
       intro v _ _
       rcases v with i | j
-      · simp [φ, ψ, affineGatePrefixEvaluation]
+      · simp only [affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁, AlgHom.toRingHom_eq_coe, RingHom.coe_comp,
+          RingHom.coe_coe, Function.comp_apply, MvPolynomial.bind₁_X_right, Sum.elim_inl, φ, ψ]
       · by_cases hj : j.val < n
         · have hmem : MvPolynomial.X (Sum.inr j) -
               MvPolynomial.rename Sum.inl (gate j) ∈ I :=
@@ -10277,7 +10297,8 @@ theorem affine_gate_prefix_graph_ideal_eq_ker {k q : ℕ}
             exact hmem
           simpa [φ, ψ, affineGatePrefixEvaluation, hj]
             using hquot
-        · simp [φ, ψ, affineGatePrefixEvaluation, hj]
+        · simp only [affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁, AlgHom.toRingHom_eq_coe, RingHom.coe_comp,
+            RingHom.coe_coe, Function.comp_apply, MvPolynomial.bind₁_X_right, Sum.elim_inr, hj, ↓reduceIte, φ, ψ]
     apply Ideal.Quotient.eq_zero_iff_mem.mp
     change φ p = 0
     rw [heq]
@@ -10303,7 +10324,7 @@ theorem affine_gate_graph_equation_ne_zero {k q : ℕ}
   have hvar : Sum.inr j ∈
       (MvPolynomial.rename Sum.inl (gate j)).vars := by
     rw [← heq]
-    simp
+    simp only [MvPolynomial.vars_X, Finset.mem_singleton]
   obtain ⟨i, _, hi⟩ := MvPolynomial.mem_vars_rename
     Sum.inl (gate j) hvar
   cases hi
@@ -10324,18 +10345,21 @@ theorem affine_gate_prefix_evaluation_eq_graph_of_previous
       (affineGateGraphEvaluation gate)).toRingHom
   have hC : φ.comp MvPolynomial.C = ψ.comp MvPolynomial.C := by
     ext c
-    simp [φ, ψ, affineGatePrefixEvaluation,
-      affineGateGraphEvaluation]
+    simp only [AlgHom.toRingHom_eq_coe, affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁, RingHom.coe_comp,
+      RingHom.coe_coe, Function.comp_apply, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq, MvPolynomial.coeff_C,
+      affineGateGraphEvaluation, AlgHom.coe_comp, φ, ψ]
   change φ p = ψ p
   apply MvPolynomial.hom_congr_vars hC (p₁ := p) (p₂ := p)
     (hp := rfl)
   intro v hv _
   rcases v with i | i
-  · simp [φ, ψ, affineGatePrefixEvaluation,
-      affineGateGraphEvaluation]
+  · simp only [AlgHom.toRingHom_eq_coe, affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁, RingHom.coe_coe,
+      MvPolynomial.bind₁_X_right, Sum.elim_inl, affineGateGraphEvaluation, AlgHom.coe_comp, Function.comp_apply,
+      MvPolynomial.rename_X, φ, ψ]
   · have hi : i.val < n := hprevious i hv
-    simp [φ, ψ, affineGatePrefixEvaluation,
-      affineGateGraphEvaluation, hi]
+    simp only [AlgHom.toRingHom_eq_coe, affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁, RingHom.coe_coe,
+      MvPolynomial.bind₁_X_right, Sum.elim_inr, hi, ↓reduceIte, affineGateGraphEvaluation, AlgHom.coe_comp,
+      Function.comp_apply, φ, ψ]
 
 theorem affine_gate_prefix_evaluation_instruction_eq_graph
     {k q : ℕ}
@@ -10355,7 +10379,8 @@ theorem affine_gate_prefix_evaluation_instruction_eq_graph
   have hX : affineGatePrefixEvaluation gate j.val
       (MvPolynomial.X (Sum.inr j)) =
         MvPolynomial.X (Sum.inr j) := by
-    simp [affineGatePrefixEvaluation]
+    simp only [affineGatePrefixEvaluation, Fin.val_fin_lt, MvPolynomial.aeval_eq_bind₁,
+      MvPolynomial.bind₁_X_right, Sum.elim_inr, lt_self_iff_false, ↓reduceIte]
   rw [hX, ← hgate]
 
 theorem affine_instruction_not_mem_prefix_graph
@@ -10435,7 +10460,9 @@ theorem affine_triangular_instruction_prefix_ideal_eq_graph
             (affineGateGraphEvaluation gate))).toRingHom
       have hC : φ.comp MvPolynomial.C = ψ.comp MvPolynomial.C := by
         ext c
-        simp [φ, ψ, affineGateGraphEvaluation]
+        simp only [RingHom.coe_comp, Function.comp_apply, AlgHom.toRingHom_eq_coe, affineGateGraphEvaluation,
+          MvPolynomial.aeval_eq_bind₁, RingHom.coe_coe, AlgHom.coe_comp, Ideal.Quotient.mkₐ_eq_mk, MvPolynomial.algHom_C,
+          MvPolynomial.algebraMap_eq, φ, ψ]
       have hprevious (p : MvPolynomial (Fin k ⊕ Fin q) ℂ)
           (hp : ∀ i : Fin q, Sum.inr i ∈ p.vars → i.val < j.val) :
           φ p = ψ p := by
@@ -10443,7 +10470,9 @@ theorem affine_triangular_instruction_prefix_ideal_eq_graph
           (hp := rfl)
         intro v hv _
         rcases v with i | i
-        · simp [φ, ψ, affineGateGraphEvaluation]
+        · simp only [AlgHom.toRingHom_eq_coe, affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, RingHom.coe_coe,
+            AlgHom.coe_comp, Ideal.Quotient.mkₐ_eq_mk, Function.comp_apply, MvPolynomial.bind₁_X_right, Sum.elim_inl,
+            MvPolynomial.rename_X, φ, ψ]
         · have him : i.val < m := hj ▸ hp i hv
           have hin : i.val < n := (hp i hv).trans hjn
           have himem := ih i.val him i rfl hin
@@ -10472,7 +10501,8 @@ theorem affine_triangular_instruction_prefix_ideal_eq_graph
           _ = ψ (rhs j) := hprevious (rhs j) (htop j)
           _ = Ideal.Quotient.mk I
                 (MvPolynomial.rename Sum.inl (gate j)) := by
-                simp [ψ, hgate j]
+                simp only [AlgHom.toRingHom_eq_coe, RingHom.coe_coe, AlgHom.coe_comp, Ideal.Quotient.mkₐ_eq_mk,
+                  Function.comp_apply, hgate j, ψ]
       rw [← Ideal.Quotient.eq_zero_iff_mem, map_sub, sub_eq_zero]
       exact heq
   apply le_antisymm
@@ -10487,7 +10517,8 @@ theorem affine_triangular_instruction_prefix_ideal_eq_graph
     have hX : affineGatePrefixEvaluation gate n
         (MvPolynomial.X (Sum.inr j)) =
           MvPolynomial.rename Sum.inl (gate j) := by
-      simp [affineGatePrefixEvaluation, hj]
+      simp only [affineGatePrefixEvaluation, MvPolynomial.aeval_eq_bind₁, MvPolynomial.bind₁_X_right, Sum.elim_inr,
+        hj, ↓reduceIte]
     rw [hX, ← hgate j, sub_self]
   · rw [affineGatePrefixGraphIdeal, Ideal.span_le]
     rintro _ ⟨⟨j, hj⟩, rfl⟩
@@ -10522,7 +10553,7 @@ theorem affine_triangular_instruction_prefix_ideal_ofList
     apply List.mem_take_iff_getElem.mpr
     refine ⟨i.val, ?_, ?_⟩
     · simpa only [List.length_ofFn] using (lt_min hi i.isLt)
-    · simp
+    · simp only [List.getElem_ofFn, Fin.eta]
 
 theorem affine_triangular_instructions_isWeaklyRegular
     {k q : ℕ}
@@ -10551,7 +10582,7 @@ theorem affine_triangular_instructions_isWeaklyRegular
     rw [affine_triangular_instruction_prefix_ideal_ofList rhs n,
       affine_triangular_instruction_prefix_ideal_eq_graph
         rhs gate hgate htop n]
-    simp [I]
+    simp only [smul_eq_mul, Ideal.mul_top, I]
   have hreg : IsSMulRegular (R ⧸ I)
       (MvPolynomial.X (Sum.inr j) - rhs j) :=
     affine_instruction_isSMulRegular_mod_prefix_graph
@@ -10583,13 +10614,13 @@ theorem affine_triangular_instruction_ideal_eq_graph
       affineTriangularInstructionIdeal
     congr 1
     ext p
-    simp
+    simp only [Set.mem_range, Subtype.exists, Fin.is_lt, exists_const]
   have hgraph : affineGatePrefixGraphIdeal gate q =
       affineGateGraphIdeal gate := by
     unfold affineGatePrefixGraphIdeal affineGateGraphIdeal
     congr 1
     ext p
-    simp
+    simp only [Set.mem_range, Subtype.exists, Fin.is_lt, exists_const]
   calc
     affineTriangularInstructionIdeal rhs =
         affineTriangularInstructionPrefixIdeal rhs q := hinstruction.symm
@@ -10662,7 +10693,7 @@ theorem affine_triangular_instruction_output_isWeaklyRegular
         (Ideal.Quotient.mk (affineTriangularInstructionIdeal rhs)
           (output i - MvPolynomial.C (target i))) = _
     rw [affineTriangularInstructionInputAlgEquiv_mk]
-    simp [houtput i]
+    simp only [map_sub, houtput i, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq]
   have hfun :
       (fun i : Fin k =>
         E.toRingEquiv
@@ -10711,12 +10742,12 @@ theorem affine_triangular_instruction_output_equations_isWeaklyRegular
         MvPolynomial.X (Sum.inr j) - rhs j)
     congr 1
     ext p
-    simp
+    simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
   have hsub :
       (Ideal.ofList gates • (⊤ : Submodule R R)) =
         (I : Submodule R R) := by
     rw [hlist]
-    simp
+    simp only [smul_eq_mul, Ideal.mul_top]
   have houtputquot :
       RingTheory.Sequence.IsWeaklyRegular (R ⧸ I)
         (List.ofFn fun i : Fin k =>
@@ -10828,7 +10859,7 @@ theorem affine_zeroLocus_finite_of_moduleFinite_quotient
           RingHom.ker (pointEval x).toRingHom := by
       change MvPolynomial.aeval (x : ι → ℂ)
         (MvPolynomial.X i - MvPolynomial.C ((x : ι → ℂ) i)) = 0
-      simp
+      simp only [MvPolynomial.aeval_eq_eval, map_sub, MvPolynomial.eval_X, MvPolynomial.eval_C, sub_self]
     have hymem :
         Ideal.Quotient.mk I
             (MvPolynomial.X i - MvPolynomial.C ((x : ι → ℂ) i)) ∈
@@ -10836,7 +10867,7 @@ theorem affine_zeroLocus_finite_of_moduleFinite_quotient
     change MvPolynomial.aeval (y : ι → ℂ)
       (MvPolynomial.X i - MvPolynomial.C ((x : ι → ℂ) i)) = 0 at hymem
     have heq : (y : ι → ℂ) i - (x : ι → ℂ) i = 0 := by
-      simpa using hymem
+      simpa only [MvPolynomial.aeval_eq_eval, map_sub, MvPolynomial.eval_X, MvPolynomial.eval_C] using hymem
     exact (sub_eq_zero.mp heq).symm
   exact Set.finite_coe_iff.mp (Finite.of_injective pointIdeal hinj)
 
@@ -10883,19 +10914,19 @@ theorem freeAffineExtendedForm_totalDegree_le_one
   apply max_le
   · apply (MvPolynomial.totalDegree_add _ _).trans
     apply max_le
-    · simp
+    · simp only [MvPolynomial.totalDegree_C, zero_le]
     · simp only [Finsupp.linearCombination_apply, Finsupp.sum]
       apply MvPolynomial.totalDegree_finsetSum_le
       intro i hi
       rw [MvPolynomial.smul_eq_C_mul]
-      exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
+      exact (MvPolynomial.totalDegree_mul _ _).trans (by simp only [MvPolynomial.totalDegree_C, MvPolynomial.totalDegree_X, zero_add, Std.le_refl])
   · simp only [Finsupp.linearCombination_apply, Finsupp.sum]
     apply MvPolynomial.totalDegree_finsetSum_le
     intro i hi
     rw [MvPolynomial.smul_eq_C_mul]
     exact (MvPolynomial.totalDegree_mul _ _).trans
-      (by simpa using
-        freeAffineGateReference_totalDegree_le_one (k := k) (n := n) i)
+      (by simpa only [MvPolynomial.totalDegree_C, zero_add] using
+            freeAffineGateReference_totalDegree_le_one (k := k) (n := n) i)
 
 theorem freeAffineGateReference_mem_vars
     {k n : ℕ} (r : ℕ) (i : Fin n)
@@ -10909,7 +10940,7 @@ theorem freeAffineGateReference_mem_vars
     simp only [MvPolynomial.vars_X, Finset.mem_singleton] at hi
     exact congrArg Fin.val (Sum.inr_injective hi)
   next h =>
-    simp at hi
+    simp only [MvPolynomial.vars_0, Finset.notMem_empty] at hi
 
 theorem freeAffineGateCombination_mem_vars
     {k n : ℕ} (coefficients : ℕ →₀ ℂ) (i : Fin n)
@@ -10932,7 +10963,7 @@ theorem freeAffineGateCombination_mem_vars
   rw [Finset.mem_union, MvPolynomial.vars_C] at hproduct
   have href : Sum.inr i ∈
       (freeAffineGateReference (k := k) (n := n) r).vars := by
-    simpa using hproduct
+    simpa only [Finset.notMem_empty, false_or] using hproduct
   exact ⟨r, hr, freeAffineGateReference_mem_vars r i href⟩
 
 theorem freeAffineInputCombination_not_mem_gate_vars
@@ -10953,7 +10984,8 @@ theorem freeAffineInputCombination_not_mem_gate_vars
   have hproduct := MvPolynomial.vars_mul
     (MvPolynomial.C (coefficients r))
     (MvPolynomial.X (Sum.inl r)) hvar
-  simp at hproduct
+  simp only [MvPolynomial.vars_C, MvPolynomial.vars_X, Finset.empty_union, Finset.mem_singleton,
+    reduceCtorEq] at hproduct
 
 theorem freeAffineExtendedForm_mem_gate_vars
     {k n : ℕ} (form : FreeAffineForm (Fin k))
@@ -10986,14 +11018,14 @@ theorem freeAffineExtendedForm_mem_gate_vars
           (fun a : Fin k => MvPolynomial.X (Sum.inl a))
           form.inputCoefficients :
             MvPolynomial (Fin k ⊕ Fin n) ℂ).vars := by
-      simpa using hinner
+      simpa only [Finset.notMem_empty, false_or] using hinner
     exact False.elim
       (freeAffineInputCombination_not_mem_gate_vars
         form.inputCoefficients i hinput)
   · obtain ⟨r, hr, heq⟩ :=
       freeAffineGateCombination_mem_vars
         form.gateCoefficients i hgate
-    simpa [heq] using hposition r hr
+    simpa only [heq, gt_iff_lt] using hposition r hr
 
 theorem freeAffineInstructionRhs_mem_gate_vars
     {k n : ℕ} (instruction : FreeAffineInstruction (Fin k))
@@ -11043,12 +11075,12 @@ theorem freeAffineCircuitGraphEvaluation_reference
   unfold freeAffineGateReference
   split
   next h =>
-    simp [freeAffineCircuitGraphEvaluation,
-      freeAffineCircuitGate]
+    simp only [freeAffineCircuitGraphEvaluation, MvPolynomial.aeval_eq_bind₁, MvPolynomial.bind₁_X_right,
+      Sum.elim_inr, freeAffineCircuitGate, Array.getD_eq_getD_getElem?]
   next h =>
     have hsize := ReverseAdjoint.circuit_values_size circuit
     have hout : circuit.values.size ≤ r := by omega
-    simp [Array.getD_eq_getD_getElem?, hout]
+    simp only [map_zero, Array.getD_eq_getD_getElem?, not_lt, hout, getElem?_neg, Option.getD_none]
 
 theorem freeAffineCircuitGraphEvaluation_extendedForm
     {k : ℕ} (circuit : FreeAffineCircuit (Fin k))
@@ -11058,15 +11090,14 @@ theorem freeAffineCircuitGraphEvaluation_extendedForm
         (n := circuit.program.length) form) =
       form.eval circuit.values := by
   classical
-  simp [freeAffineExtendedForm, FreeAffineForm.eval,
-    Finsupp.linearCombination_apply, Finsupp.sum,
-    freeAffineCircuitGraphEvaluation,
-    MvPolynomial.smul_eq_C_mul]
+  simp only [freeAffineCircuitGraphEvaluation, MvPolynomial.aeval_eq_bind₁, freeAffineExtendedForm,
+    Finsupp.linearCombination_apply, Finsupp.sum, MvPolynomial.smul_eq_C_mul, map_add, MvPolynomial.algHom_C,
+    MvPolynomial.algebraMap_eq, map_sum, map_mul, MvPolynomial.bind₁_X_right, Sum.elim_inl, FreeAffineForm.eval,
+    Array.getD_eq_getD_getElem?, add_right_inj]
   apply Finset.sum_congr rfl
   intro r _
   congr 1
-  simpa [freeAffineCircuitGraphEvaluation,
-    MvPolynomial.aeval_def, Array.getD_eq_getD_getElem?] using
+  simpa only [freeAffineCircuitGraphEvaluation, MvPolynomial.aeval_eq_bind₁, Array.getD_eq_getD_getElem?] using
     freeAffineCircuitGraphEvaluation_reference circuit r
 
 theorem freeAffineCircuitGraphEvaluation_instructionRhs
@@ -11120,7 +11151,7 @@ theorem freeAffineCircuitInstructionEquation_totalDegree_le
       simp only [FreeAffineInstruction.isMultiplication,
         Bool.false_eq_true, ↓reduceIte]
       exact (MvPolynomial.totalDegree_sub _ _).trans
-        (max_le (by simp)
+        (max_le (by simp only [MvPolynomial.totalDegree_X, Std.le_refl])
           (freeAffineExtendedForm_totalDegree_le_one form))
   | mul left right =>
       simp only [FreeAffineInstruction.isMultiplication,
@@ -11138,7 +11169,7 @@ theorem freeAffineInstruction_program_cost_product
       if instruction.isMultiplication then (2 : ℕ) else 1).prod =
       2 ^ (program.filter FreeAffineInstruction.isMultiplication).length := by
   induction program with
-  | nil => simp
+  | nil => simp only [List.map_nil, List.prod_nil, List.filter_nil, List.length_nil, pow_zero]
   | cons instruction rest ih =>
       cases instruction with
       | affine form =>
@@ -11202,8 +11233,7 @@ def powerSumParameter (d : ℕ) : ℕ := 2 ^ blockWidth d - 1
 def sliceRank (n d : ℕ) : ℕ := blockVariables n d / 4
 
 theorem two_mul_blockRows_le (n d : ℕ) : 2 * blockRows n d ≤ n := by
-  simpa [blockRows, blockCount, mul_assoc, mul_comm, mul_left_comm] using
-    Nat.div_mul_le_self n (2 * blockWidth d)
+  simpa only [blockRows, blockCount, mul_comm, mul_assoc] using Nat.div_mul_le_self n (2 * blockWidth d)
 
 theorem three_le_blockCount {n d : ℕ} (hd : 3 ≤ d)
     (hn : 6 * blockWidth d ≤ n) : 3 ≤ blockCount n d := by
@@ -11216,8 +11246,7 @@ theorem three_le_blockCount {n d : ℕ} (hd : 3 ≤ d)
 
 theorem three_mul_blockWidth_le_blockRows {n d : ℕ} (hd : 3 ≤ d)
     (hn : 6 * blockWidth d ≤ n) : 3 * blockWidth d ≤ blockRows n d := by
-  simpa [blockRows, mul_comm] using
-    Nat.mul_le_mul_right (blockWidth d) (three_le_blockCount hd hn)
+  simpa only [blockRows] using Nat.mul_le_mul_right (blockWidth d) (three_le_blockCount hd hn)
 
 theorem le_three_mul_blockRows {n d : ℕ} (hd : 3 ≤ d)
     (hn : 6 * blockWidth d ≤ n) : n ≤ 3 * blockRows n d := by
@@ -11228,8 +11257,7 @@ theorem le_three_mul_blockRows {n d : ℕ} (hd : 3 ≤ d)
   have hrows := three_mul_blockWidth_le_blockRows hd hn
   have hdecomp :
       n % (2 * blockWidth d) + 2 * blockRows n d = n := by
-    simpa [blockRows, blockCount, mul_assoc, mul_comm, mul_left_comm] using
-      Nat.mod_add_div n (2 * blockWidth d)
+    simpa only [blockRows, blockCount, mul_comm, mul_assoc] using Nat.mod_add_div n (2 * blockWidth d)
   omega
 
 theorem degree_le_blockRows {n d : ℕ} (hd : 3 ≤ d)
@@ -11267,19 +11295,19 @@ theorem square_le_six_mul_blockVariables {n d : ℕ} (hd : 3 ≤ d)
 
 theorem blockVariables_eq_four_mul (n d : ℕ) :
     blockVariables n d = 4 * (blockCount n d * blockColumns n d * d) := by
-  simp [blockVariables, blockRows, blockWidth, mul_assoc, mul_comm, mul_left_comm]
+  simp only [blockVariables, blockRows, blockWidth, mul_comm, mul_assoc, mul_left_comm]
 
 theorem blockVariables_div_four (n d : ℕ) :
     blockVariables n d / 4 = blockCount n d * blockColumns n d * d := by
   rw [blockVariables_eq_four_mul]
-  simp
+  simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, mul_div_cancel_left₀]
 
 theorem powerSum_cost_le_quarter {n d : ℕ}
     (hscale : 4 * powerSumParameter d ≤ blockWidth d * blockColumns n d) :
     blockCount n d * powerSumParameter d ≤ blockVariables n d / 4 := by
   apply (Nat.le_div_iff_mul_le (by omega : 0 < (4 : ℕ))).2
   have hmul := Nat.mul_le_mul_left (blockCount n d) hscale
-  simpa [blockVariables, blockRows, mul_assoc, mul_comm, mul_left_comm] using hmul
+  simpa only [mul_comm, blockVariables, blockRows, ge_iff_le, mul_left_comm] using hmul
 
 theorem minorSum_cost_lt_quarter {n d : ℕ} (hd : 3 ≤ d)
     (hn : 6 * blockWidth d ≤ n) :
@@ -11312,7 +11340,7 @@ theorem twice_criticalDimension_lt_blockVariables {n d dimension : ℕ}
   have hfloor := Nat.div_mul_le_self (blockVariables n d) 4
   have hbound : dimension ≤ blockCount n d * powerSumParameter d +
       blockCount n d * blockColumns n d * (d - 2) := by
-    simpa [mul_add, mul_assoc] using hdimension
+    simpa only [mul_assoc, mul_add] using hdimension
   omega
 
 theorem sliceRank_lt_blockVariables {n d : ℕ} (hm : 8 ≤ blockVariables n d) :
@@ -11360,7 +11388,7 @@ theorem exists_eventual_source_parameter_bounds {d : ℕ} (hd : 3 ≤ d) :
     simp only [blockWidth]
     omega
   have hwidth_n : n ≤ n * blockWidth d := by
-    simpa using Nat.mul_le_mul_left n hwidth
+    simpa only [mul_one] using Nat.mul_le_mul_left n hwidth
   have hcolumns := le_two_mul_blockColumns n d
   have hrho_columns : 4 * powerSumParameter d ≤ blockColumns n d := by
     omega
@@ -11368,7 +11396,7 @@ theorem exists_eventual_source_parameter_bounds {d : ℕ} (hd : 3 ≤ d) :
     calc
       4 * powerSumParameter d ≤ blockColumns n d := hrho_columns
       _ ≤ blockWidth d * blockColumns n d := by
-        simpa [mul_comm] using Nat.mul_le_mul_right (blockColumns n d) hwidth
+        simpa only [mul_comm, one_mul] using Nat.mul_le_mul_right (blockColumns n d) hwidth
   exact ⟨hlarge, le_trans hrho hwidth_n, hscale,
     eight_le_blockVariables hd hlarge⟩
 
@@ -11556,7 +11584,10 @@ noncomputable def sourceBlockMatchingOf
     sourceBlockMatchingOf r s d I J
         variableMatching constantMatching onesMatching (.inl row.val) =
       .inl (variableMatching row).val := by
-  simp [sourceBlockMatchingOf, row.property]
+  simp only [sourceBlockMatchingOf, Equiv.trans_def, Equiv.sumCongr_trans, Equiv.refl_trans, Equiv.trans_apply,
+    Equiv.sumCongr_apply, Equiv.coe_trans, Sum.map_inl, Function.comp_apply, row.property,
+    Equiv.sumCompl_symm_apply_of_pos, Subtype.coe_eta, Equiv.sumAssoc_apply_inl_inl, Equiv.coe_refl,
+    Equiv.sumComm_apply, id_eq, Equiv.sumAssoc_symm_apply_inl, Equiv.sumCompl_apply_inl]
 
 @[simp] theorem sourceBlockMatchingOf_apply_complement
     (r s d : ℕ) (I : Finset (Fin r)) (J : Finset (Fin s))
@@ -11567,7 +11598,10 @@ noncomputable def sourceBlockMatchingOf
     sourceBlockMatchingOf r s d I J
         variableMatching constantMatching onesMatching (.inl row.val) =
       .inr (constantMatching row) := by
-  simp [sourceBlockMatchingOf, row.property]
+  simp only [sourceBlockMatchingOf, Equiv.trans_def, Equiv.sumCongr_trans, Equiv.refl_trans, Equiv.trans_apply,
+    Equiv.sumCongr_apply, Equiv.coe_trans, Sum.map_inl, Function.comp_apply, row.property, not_false_eq_true,
+    Equiv.sumCompl_symm_apply_of_neg, Subtype.coe_eta, Sum.map_inr, Equiv.sumAssoc_apply_inl_inr, Equiv.coe_refl,
+    Equiv.sumComm_apply, Sum.swap_inl, Equiv.sumAssoc_symm_apply_inr_inr, id_eq]
 
 @[simp] theorem sourceBlockMatchingOf_apply_lower
     (r s d : ℕ) (I : Finset (Fin r)) (J : Finset (Fin s))
@@ -11578,7 +11612,9 @@ noncomputable def sourceBlockMatchingOf
     sourceBlockMatchingOf r s d I J
         variableMatching constantMatching onesMatching (.inr row) =
       .inl (onesMatching row).val := by
-  simp [sourceBlockMatchingOf]
+  simp only [sourceBlockMatchingOf, Equiv.trans_def, Equiv.sumCongr_trans, Equiv.refl_trans, Equiv.trans_apply,
+    Equiv.sumCongr_apply, Equiv.coe_trans, Sum.map_inr, Equiv.sumAssoc_apply_inr, Equiv.coe_refl, Equiv.sumComm_apply,
+    Sum.swap_inr, Equiv.sumAssoc_symm_apply_inr_inl, Sum.map_inl, Equiv.sumCompl_apply_inr]
 
 noncomputable def sourceBlockSelectedRows
     (r s d : ℕ)
@@ -11601,7 +11637,7 @@ noncomputable def sourceBlockSelectedColumns
     (row : Fin r) :
     row ∈ sourceBlockSelectedRows r s d matching ↔
       ∃ column : Fin s, matching (.inl row) = .inl column := by
-  simp [sourceBlockSelectedRows]
+  simp only [sourceBlockSelectedRows, Finset.mem_filter, Finset.mem_univ, true_and]
 
 @[simp] theorem sourceBlock_mem_selectedColumns
     (r s d : ℕ)
@@ -11610,7 +11646,7 @@ noncomputable def sourceBlockSelectedColumns
     (column : Fin s) :
     column ∈ sourceBlockSelectedColumns r s d matching ↔
       ∃ row : Fin r, matching (.inl row) = .inl column := by
-  simp [sourceBlockSelectedColumns]
+  simp only [sourceBlockSelectedColumns, Finset.mem_filter, Finset.mem_univ, true_and]
 
 theorem sourceBlockMatchingOf_isValid
     (r s d : ℕ) (I : Finset (Fin r)) (J : Finset (Fin s))
@@ -11761,7 +11797,7 @@ theorem sourceBlockConstantFunction_bijective
     cases hrow : matching.symm (.inr column) with
     | inl row =>
         have hhit : matching (.inl row) = .inr column := by
-          simpa [hrow] using hpre
+          simpa only [hrow] using hpre
         have hnot : row ∉ sourceBlockSelectedRows r s d matching := by
           intro hselected
           obtain ⟨left, hleft⟩ :=
@@ -11774,7 +11810,7 @@ theorem sourceBlockConstantFunction_bijective
             ⟨row, hnot⟩).symm.trans hhit)
     | inr row =>
         have hhit : matching (.inr row) = .inr column := by
-          simpa [hrow] using hpre
+          simpa only [hrow] using hpre
         obtain ⟨left, hleft⟩ := hvalid row
         rw [hleft] at hhit
         cases hhit
@@ -11858,13 +11894,13 @@ theorem sourceBlockOnesFunction_bijective
     cases hrow : matching.symm (.inl column.val) with
     | inl row =>
         have hhit : matching (.inl row) = .inl column.val := by
-          simpa [hrow] using hpre
+          simpa only [hrow] using hpre
         exact (column.property
           ((sourceBlock_mem_selectedColumns r s d matching column.val).mpr
             ⟨row, hhit⟩)).elim
     | inr row =>
         have hhit : matching (.inr row) = .inl column.val := by
-          simpa [hrow] using hpre
+          simpa only [hrow] using hpre
         refine ⟨row, ?_⟩
         apply Subtype.ext
         exact Sum.inl.inj
@@ -11955,8 +11991,7 @@ theorem sourceBlockSelectedRows_card_of_valid
     at hconstant
   simp only [Fintype.card_fin, Fintype.card_coe] at hconstant
   have hbound : (sourceBlockSelectedRows r s d matching).card ≤ r := by
-    simpa using Finset.card_le_univ
-      (sourceBlockSelectedRows r s d matching)
+    simpa only [Fintype.card_fin] using Finset.card_le_univ (sourceBlockSelectedRows r s d matching)
   omega
 
 theorem sourceBlockSelectedColumns_card_of_valid
@@ -12041,20 +12076,20 @@ theorem sourceBlockMatchingOf_injective
     apply Equiv.ext
     intro row
     apply Subtype.ext
-    simpa using congrArg
-      (fun matching => matching (.inl row.val)) hmatching
+    simpa only [SetLike.coe_eq_coe, sourceBlockMatchingOf_apply_selected, Sum.inl.injEq] using
+      congrArg (fun matching => matching (.inl row.val)) hmatching
   have hconstant : constant₁ = constant₂ := by
     apply Equiv.ext
     intro row
-    simpa using congrArg
-      (fun matching => matching (.inl row.val)) hmatching
+    simpa only [sourceBlockMatchingOf_apply_complement, Sum.inr.injEq] using
+      congrArg (fun matching => matching (.inl row.val)) hmatching
   have hones : ones₁ = ones₂ := by
     apply Equiv.ext
     intro row
     apply Subtype.ext
-    simpa using congrArg
-      (fun matching => matching (.inr row)) hmatching
-  simp [hvariable, hconstant, hones]
+    simpa only [sourceBlockMatchingOf_apply_lower, Sum.inl.injEq] using
+      congrArg (fun matching => matching (.inr row)) hmatching
+  simp only [hvariable, hconstant, hones]
 
 abbrev SourceBlockMatchingData (r s d : ℕ) : Type :=
   Σ I : ((Finset.univ : Finset (Fin r)).powersetCard d),
@@ -12186,26 +12221,29 @@ theorem sourceBlockMatchingOf_weight
         (sourceBlockMatchingOf r s d I J
           variableMatching constantMatching onesMatching (.inl row)))]
   rw [Fintype.prod_sum_type]
-  simp
+  simp only [Finset.univ_eq_attach, Equiv.sumCompl_apply_inl, sourceBlockMatchingOf_apply_selected,
+    sourceBlockMatrix_apply₁₁, Equiv.sumCompl_apply_inr, sourceBlockMatchingOf_apply_complement,
+    sourceBlockMatrix_apply₁₂, sourceBlockMatchingOf_apply_lower, sourceBlockMatrix_apply₂₁, Finset.prod_const_one,
+    mul_one]
 
 theorem sourceBlock_column_complement_card
     (s d : ℕ) (J : Finset (Fin s)) (hJ : J.card = d) :
     Fintype.card {column : Fin s // column ∉ J} = s - d := by
   rw [Fintype.card_subtype_compl (fun column : Fin s => column ∈ J)]
-  simp [Fintype.card_coe, hJ]
+  simp only [Fintype.card_fin, Fintype.card_coe, hJ]
 
 noncomputable def sourceBlockOnesEquiv
     (s d : ℕ) (J : Finset (Fin s)) (hJ : J.card = d) :
     Fin (s - d) ≃ {column : Fin s // column ∉ J} :=
   Fintype.equivOfCardEq (by
-    simp [sourceBlock_column_complement_card s d J hJ])
+    simp only [Fintype.card_fin, sourceBlock_column_complement_card s d J hJ])
 
 theorem sourceBlock_ones_matching_card
     (s d : ℕ) (J : Finset (Fin s)) (hJ : J.card = d) :
     Fintype.card
       (Fin (s - d) ≃ {column : Fin s // column ∉ J}) =
       (s - d).factorial := by
-  simpa using Fintype.card_equiv (sourceBlockOnesEquiv s d J hJ)
+  simpa only [Fintype.card_fin] using Fintype.card_equiv (sourceBlockOnesEquiv s d J hJ)
 
 private theorem sourceBlock_weighted_double_sum
     {α β R : Type*} [Fintype α] [Fintype β] [CommSemiring R]
@@ -12293,7 +12331,7 @@ theorem sourceBlockMatrix_matching_eq_zero_of_lower_right
     (∏ i, sourceBlockMatrix r s d X U i (matching i)) = 0 := by
   classical
   apply Finset.prod_eq_zero (Finset.mem_univ (.inr row))
-  simp [h]
+  simp only [h, sourceBlockMatrix_apply₂₂]
 
 theorem sourceBlockMatrix_matching_eq_zero_of_invalid
     {R : Type*} [CommSemiring R] (r s d : ℕ)
@@ -12350,7 +12388,7 @@ theorem sourceBlockMatrix_permanent_eq_valid_sum
   convert hsum using 1
   apply Finset.sum_congr
   · ext matching
-    simp
+    simp only [Finset.mem_univ]
   · intro matching _
     rfl
 
@@ -12465,7 +12503,9 @@ theorem rootOfUnity_node_product_algebra
         ((Polynomial.X : Polynomial (Polynomial ℂ)) -
           Polynomial.C ((Polynomial.C ζ) ^ j * alpha)) =
         x + algebraMap ℂ R (2 * ζ ^ j) * y := by
-    simp [coeffHom, alpha, Polynomial.eval₂_pow]
+    simp only [map_neg, neg_mul, mul_neg, map_mul, map_pow, sub_neg_eq_add, Polynomial.eval₂_add,
+      Polynomial.eval₂_X, Polynomial.eval₂_mul, Polynomial.eval₂_pow, Polynomial.eval₂_C, Polynomial.coe_eval₂RingHom,
+      add_right_inj, coeffHom, alpha]
     ring
   calc
     (∏ j ∈ Finset.range d,
@@ -12480,7 +12520,8 @@ theorem rootOfUnity_node_product_algebra
                 exact (hterm j).symm
     _ = x ^ d - (algebraMap ℂ R (-2) * y) ^ d := by
       rw [← hfactor]
-      simp [coeffHom, alpha, Polynomial.eval₂_pow]
+      simp only [map_neg, neg_mul, map_pow, map_mul, Polynomial.eval₂_sub, Polynomial.eval₂_pow, Polynomial.eval₂_X,
+        Polynomial.eval₂_neg, Polynomial.eval₂_mul, Polynomial.eval₂_C, Polynomial.coe_eval₂RingHom, coeffHom, alpha]
 
 theorem rootOfUnity_node_product_source_algebra
     {R : Type*} [CommRing R] [Algebra ℂ R]
@@ -12542,14 +12583,16 @@ theorem square_zero_add_pow_succ {R : Type*} [CommSemiring R]
     (x + y) ^ (n + 1) = (n + 1 : ℕ) * x * y ^ n := by
   classical
   rw [add_pow, Finset.sum_eq_single 1]
-  · simp [Nat.choose_one_right, mul_assoc, mul_comm, mul_left_comm]
+  · simp only [pow_one, add_tsub_cancel_right, Nat.choose_one_right, Nat.cast_add, Nat.cast_one, mul_assoc,
+      mul_comm, mul_left_comm]
   · intro j _ hj
     by_cases hzero : j = 0
     · subst j
-      simp [hy]
+      simp only [pow_zero, tsub_zero, hy, mul_zero, Nat.choose_zero_right, Nat.cast_one, mul_one]
     · have htwo : 2 ≤ j := by omega
-      simp [pow_eq_zero_of_le htwo hx]
-  · simp
+      simp only [pow_eq_zero_of_le htwo hx, zero_mul]
+  · simp only [Finset.mem_range, lt_add_iff_pos_left, Order.lt_add_one_iff, zero_le, not_true_eq_false, pow_one,
+      add_tsub_cancel_right, Nat.choose_one_right, Nat.cast_add, Nat.cast_one, IsEmpty.forall_iff]
 
 theorem square_zero_sum_pow_card_and_succ {R ι : Type*} [CommSemiring R]
     (s : Finset ι) (z : ι → R)
@@ -12558,10 +12601,11 @@ theorem square_zero_sum_pow_card_and_succ {R ι : Type*} [CommSemiring R]
       (∑ i ∈ s, z i) ^ (s.card + 1) = 0 := by
   classical
   induction s using Finset.induction_on with
-  | empty => simp
+  | empty => simp only [Finset.sum_empty, Finset.card_empty, pow_zero, Nat.factorial_zero, Nat.cast_one, Finset.prod_empty,
+               mul_one, zero_add, pow_one, and_self]
   | @insert a s ha ih =>
-    have hza : z a ^ 2 = 0 := hz a (by simp)
-    have hzs : ∀ i ∈ s, z i ^ 2 = 0 := fun i hi => hz i (by simp [hi])
+    have hza : z a ^ 2 = 0 := hz a (by simp only [Finset.mem_insert, true_or])
+    have hzs : ∀ i ∈ s, z i ^ 2 = 0 := fun i hi => hz i (by simp only [Finset.mem_insert, hi, or_true])
     obtain ⟨hcard, hnext⟩ := ih hzs
     constructor
     · rw [Finset.sum_insert ha, Finset.prod_insert ha,
@@ -12571,7 +12615,7 @@ theorem square_zero_sum_pow_card_and_succ {R ι : Type*} [CommSemiring R]
     · rw [Finset.sum_insert ha, Finset.card_insert_of_notMem ha]
       have hnext' : (∑ i ∈ s, z i) ^ (s.card + 1 + 1) = 0 := by
         rw [pow_succ, hnext, zero_mul]
-      simpa [hnext, Nat.add_assoc] using
+      simpa only [Nat.add_assoc, Nat.reduceAdd, Nat.cast_add, Nat.cast_ofNat, hnext, mul_zero] using
         (square_zero_add_pow_succ (n := s.card + 1) hza hnext')
 
 theorem squareZeroBlockSum_pow_card (r : ℕ) (block : Finset (Fin r)) :
@@ -12610,9 +12654,9 @@ theorem mem_leaves_iff {ι : Type*} [DecidableEq ι]
     (tree : BlockTree ι) (i : ι) :
     i ∈ tree.leaves ↔ i ∈ tree.leafList := by
   induction tree with
-  | leaf label => simp
+  | leaf label => simp only [leaves, Finset.mem_singleton, leafList, List.mem_cons, List.not_mem_nil, or_false]
   | branch left right left_ih right_ih =>
-    simp [left_ih, right_ih]
+    simp only [leaves, Finset.mem_union, left_ih, right_ih, leafList, List.mem_append]
 
 theorem disjoint_leaves_of_nodup {ι : Type*} [DecidableEq ι]
     {left right : BlockTree ι}
@@ -12642,7 +12686,8 @@ noncomputable def subtreeCoefficientTotal {ι : Type*} [DecidableEq ι]
 @[simp] theorem subtreeCoefficientTotal_leaf {ι : Type*} [DecidableEq ι]
     (lam : ℂ) (label : ι) :
     subtreeCoefficientTotal lam (.leaf label) = 1 := by
-  simp [subtreeCoefficientTotal]
+  simp only [subtreeCoefficientTotal, BlockTree.leaves, subtreeCoefficient, Finset.sum_ite_eq',
+    Finset.mem_singleton, ↓reduceIte]
 
 theorem subtreeCoefficient_eq_zero_of_not_mem {ι : Type*} [DecidableEq ι]
     (lam : ℂ) (tree : BlockTree ι) {i : ι} (hi : i ∉ tree.leaves) :
@@ -12657,7 +12702,7 @@ theorem subtreeCoefficient_eq_zero_of_not_mem {ι : Type*} [DecidableEq ι]
     have hi_right : i ∉ right.leaves := by
       intro h
       exact hi (Finset.mem_union_right _ h)
-    simp [subtreeCoefficient, left_ih hi_left, right_ih hi_right]
+    simp only [subtreeCoefficient, right_ih hi_right, mul_zero, left_ih hi_left, add_zero]
 
 theorem subtreeCoefficient_branch_right {ι : Type*} [DecidableEq ι]
     (lam : ℂ) {left right : BlockTree ι}
@@ -12667,8 +12712,8 @@ theorem subtreeCoefficient_branch_right {ι : Type*} [DecidableEq ι]
       subtreeCoefficientTotal lam left * subtreeCoefficient lam right i := by
   have hnot : i ∉ left.leaves :=
     fun h => (Finset.disjoint_left.mp hdisj) h hi
-  simp [subtreeCoefficient, subtreeCoefficientTotal,
-    subtreeCoefficient_eq_zero_of_not_mem lam left hnot]
+  simp only [subtreeCoefficient, subtreeCoefficient_eq_zero_of_not_mem lam left hnot, mul_zero, add_zero,
+    subtreeCoefficientTotal]
 
 theorem subtreeCoefficient_branch_left {ι : Type*} [DecidableEq ι]
     (lam : ℂ) {left right : BlockTree ι}
@@ -12678,8 +12723,8 @@ theorem subtreeCoefficient_branch_left {ι : Type*} [DecidableEq ι]
       lam * subtreeCoefficientTotal lam right * subtreeCoefficient lam left i := by
   have hnot : i ∉ right.leaves :=
     fun h => (Finset.disjoint_left.mp hdisj) hi h
-  simp [subtreeCoefficient, subtreeCoefficientTotal,
-    subtreeCoefficient_eq_zero_of_not_mem lam right hnot]
+  simp only [subtreeCoefficient, subtreeCoefficient_eq_zero_of_not_mem lam right hnot, mul_zero, zero_add,
+    subtreeCoefficientTotal]
 
 theorem subtreeCoefficientTotal_branch {ι : Type*} [DecidableEq ι]
     (lam : ℂ) {left right : BlockTree ι}
@@ -12739,7 +12784,8 @@ theorem subtreeCoefficient_and_total_ne_zero {ι : Type*} [DecidableEq ι]
       subtreeCoefficientTotal lam tree ≠ 0 := by
   induction tree with
   | leaf label =>
-    simp
+    simp only [BlockTree.leaves, Finset.mem_singleton, subtreeCoefficient, ne_eq, ite_eq_right_iff, one_ne_zero,
+      imp_false, Decidable.not_not, imp_self, implies_true, subtreeCoefficientTotal_leaf, not_false_eq_true, and_self]
   | branch left right left_ih right_ih =>
     have hparts := List.nodup_append.mp hnodup
     have hdisj := BlockTree.disjoint_leaves_of_nodup hnodup
@@ -12796,7 +12842,7 @@ theorem subtree_mul_add_pow_eq_of_annihilates
     (hp : p * z = 0) (d : ℕ) :
     p * (x + z) ^ d = p * x ^ d := by
   induction d with
-  | zero => simp
+  | zero => simp only [pow_zero, mul_one]
   | succ d ih =>
     calc
       p * (x + z) ^ (d + 1) =
@@ -12951,7 +12997,9 @@ theorem subtreeFormProduct_eq_expansion
           (y i ^ (t - d) * ∏ j ∈ tree.leaves.erase i, y j ^ t) := by
   induction tree with
   | leaf i =>
-      simp [subtreeFormProduct, subtreeCoefficient]
+      simp only [subtreeFormProduct, BlockTree.leaves, subtreeCoefficient, MonoidWithZeroHom.map_ite_one_zero,
+        ite_mul, one_mul, zero_mul, Finset.sum_ite_eq', Finset.mem_singleton, ↓reduceIte, Finset.erase_singleton,
+        Finset.prod_empty, mul_one]
   | branch left right ih_left ih_right =>
       have hparts := List.nodup_append.mp hnodup
       have hdisj := BlockTree.disjoint_leaves_of_nodup hnodup
@@ -12970,11 +13018,9 @@ theorem subtreeFormProduct_eq_expansion
               (∑ j ∈ left.leaves, y j) ^ d =
             algebraMap ℂ R (subtreeCoefficientTotal lam left) *
               ∏ j ∈ left.leaves, y j ^ t := by
-        simpa [subtreeCoefficientTotal, map_sum] using
-          subtree_weighted_sum_mul_block_sum_pow
-            left.leaves y
-            (fun i => algebraMap ℂ R (subtreeCoefficient lam left i))
-            t d hd hnil_left
+        simpa only [subtreeCoefficientTotal, map_sum] using
+          subtree_weighted_sum_mul_block_sum_pow left.leaves y (fun i => algebraMap ℂ R (subtreeCoefficient lam left i)) t d
+            hd hnil_left
       have hright_fill :
           (∑ i ∈ right.leaves,
             algebraMap ℂ R (subtreeCoefficient lam right i) *
@@ -12982,11 +13028,9 @@ theorem subtreeFormProduct_eq_expansion
               (∑ j ∈ right.leaves, y j) ^ d =
             algebraMap ℂ R (subtreeCoefficientTotal lam right) *
               ∏ j ∈ right.leaves, y j ^ t := by
-        simpa [subtreeCoefficientTotal, map_sum] using
-          subtree_weighted_sum_mul_block_sum_pow
-            right.leaves y
-            (fun i => algebraMap ℂ R (subtreeCoefficient lam right i))
-            t d hd hnil_right
+        simpa only [subtreeCoefficientTotal, map_sum] using
+          subtree_weighted_sum_mul_block_sum_pow right.leaves y (fun i => algebraMap ℂ R (subtreeCoefficient lam right i)) t d
+            hd hnil_right
       have hsum_left :
           (∑ i ∈ left.leaves,
             algebraMap ℂ R
@@ -13152,7 +13196,7 @@ theorem squareZero_subtreeLinearFormProduct_eq_expansion
   apply subtreeLinearFormProduct_eq_expansion
     (fun i => squareZeroBlockSum r (blocks i)) t d hdpos hd hζ tree hnodup
   intro i hi
-  simpa [hcard i hi] using squareZeroBlockSum_pow_card_succ r (blocks i)
+  simpa only [hcard i hi] using squareZeroBlockSum_pow_card_succ r (blocks i)
 
 end Standalone_Subtree
 
@@ -13167,13 +13211,14 @@ noncomputable def squareFreeExponent {ι : Type*} (rows : Finset ι) : ι →₀
     (rows : Finset ι) (i : ι) :
     squareFreeExponent rows i = if i ∈ rows then 1 else 0 := by
   classical
-  simp [squareFreeExponent, Finsupp.indicator_apply]
+  simp only [squareFreeExponent, Finsupp.indicator_apply, dite_eq_ite]
 
 @[simp] theorem squareFreeExponent_support {ι : Type*} (rows : Finset ι) :
     (squareFreeExponent rows).support = rows := by
   classical
   ext i
-  simp [Finsupp.mem_support_iff, squareFreeExponent_apply]
+  simp only [Finsupp.mem_support_iff, squareFreeExponent_apply, ne_eq, ite_eq_right_iff, one_ne_zero, imp_false,
+    Decidable.not_not]
 
 theorem eq_squareFreeExponent_support_of_le {ι : Type*}
     (rows : Finset ι) (exponent : ι →₀ ℕ)
@@ -13182,14 +13227,15 @@ theorem eq_squareFreeExponent_support_of_le {ι : Type*}
   classical
   ext i
   by_cases hi : exponent i = 0
-  · simp [squareFreeExponent_apply, Finsupp.mem_support_iff, hi]
+  · simp only [hi, squareFreeExponent_apply, Finsupp.mem_support_iff, ne_eq, not_true_eq_false, ↓reduceIte]
   · have hpos : 1 ≤ exponent i := Nat.one_le_iff_ne_zero.mpr hi
     have hupper : exponent i ≤ squareFreeExponent rows i := hle i
     have hbound : squareFreeExponent rows i ≤ 1 := by
       rw [squareFreeExponent_apply]
       split <;> omega
     have hone : exponent i = 1 := by omega
-    simp [squareFreeExponent_apply, Finsupp.mem_support_iff, hone]
+    simp only [hone, squareFreeExponent_apply, Finsupp.mem_support_iff, ne_eq, one_ne_zero, not_false_eq_true,
+      ↓reduceIte]
 
 noncomputable def squareFreeMonomial {ι : Type*}
     (rows : Finset ι) : MvPolynomial ι ℂ :=
@@ -13199,7 +13245,7 @@ theorem squareFreeMonomial_eq_monomial {ι : Type*} (rows : Finset ι) :
     squareFreeMonomial rows =
       MvPolynomial.monomial (squareFreeExponent rows) (1 : ℂ) := by
   classical
-  simpa [squareFreeMonomial, squareFreeExponent] using
+  simpa only [squareFreeMonomial, squareFreeExponent, pow_one] using
     (MvPolynomial.prod_X_pow (R := ℂ) (fun _ : ι => 1) rows)
 
 theorem coeff_squareFree_variable_sq_mul {ι : Type*}
@@ -13249,11 +13295,10 @@ theorem coeff_squareFree_eq_zero_of_mem_squareZeroIdeal
     | mem x hx =>
         obtain ⟨i, rfl⟩ := hx
         intro target
-        simpa using coeff_squareFree_variable_sq_mul
-          target i (1 : MvPolynomial (Fin r) ℂ)
+        simpa only [mul_one] using coeff_squareFree_variable_sq_mul target i (1 : MvPolynomial (Fin r) ℂ)
     | zero =>
         intro target
-        simp
+        simp only [MvPolynomial.coeff_zero]
     | add x y hx hy ihx ihy =>
         intro target
         rw [MvPolynomial.coeff_add, ihx target, ihy target, add_zero]
@@ -13287,7 +13332,7 @@ theorem squareFreeMonomial_quotient_eq_variable_product
     (r : ℕ) (rows : Finset (Fin r)) :
     Ideal.Quotient.mk (squareZeroIdeal r) (squareFreeMonomial rows) =
       ∏ i ∈ rows, squareZeroVariable r i := by
-  simp [squareFreeMonomial, squareZeroVariable]
+  simp only [squareFreeMonomial, map_prod, squareZeroVariable]
 
 noncomputable def columnLinearForm {r k : ℕ}
     (U : Matrix (Fin r) (Fin k) ℂ) (column : Fin k) :
@@ -13308,8 +13353,8 @@ theorem columnAssignmentExponent_apply {r k : ℕ}
       ((Finset.univ : Finset (Fin k)).filter
         (fun column => assignment column = row)).card := by
   classical
-  simp [columnAssignmentExponent, Finsupp.single_apply,
-    Finset.sum_boole]
+  simp only [columnAssignmentExponent, Finsupp.coe_finsetSum, Finset.sum_apply, Finsupp.single_apply,
+    Finset.sum_boole, Nat.cast_id]
 
 @[simp] theorem columnAssignmentExponent_support {r k : ℕ}
     (assignment : Fin k → Fin r) :
@@ -13317,7 +13362,9 @@ theorem columnAssignmentExponent_apply {r k : ℕ}
       (Finset.univ : Finset (Fin k)).image assignment := by
   classical
   ext row
-  simp [Finsupp.mem_support_iff, columnAssignmentExponent_apply]
+  simp only [Finsupp.mem_support_iff, columnAssignmentExponent_apply, ne_eq, Finset.card_eq_zero,
+    Finset.filter_eq_empty_iff, Finset.mem_univ, forall_const, not_forall, Decidable.not_not, Finset.mem_image,
+    true_and]
 
 theorem columnAssignment_injective_of_squareFree {r k : ℕ}
     (assignment : Fin k → Fin r) (rows : Finset (Fin r))
@@ -13336,7 +13383,7 @@ theorem columnAssignment_injective_of_squareFree {r k : ℕ}
       squareFreeExponent_apply]
     split <;> omega
   exact (Finset.card_le_one.mp hcard)
-    left (by simp [fiber]) right (by simp [fiber, heq])
+    left (by simp only [Finset.mem_filter, Finset.mem_univ, and_self, fiber]) right (by simp only [heq, Finset.mem_filter, Finset.mem_univ, and_self, fiber])
 
 theorem columnAssignment_image_eq_of_squareFree {r k : ℕ}
     (assignment : Fin k → Fin r) (rows : Finset (Fin r))
@@ -13355,12 +13402,9 @@ theorem columnAssignment_product_eq_monomial {r k : ℕ}
       MvPolynomial.monomial (columnAssignmentExponent assignment)
         (∏ column : Fin k, U (assignment column) column) := by
   classical
-  simpa [columnAssignmentExponent,
-    MvPolynomial.C_mul_X_eq_monomial] using
-    (MvPolynomial.monomial_sum_prod
-      (R := ℂ) (Finset.univ : Finset (Fin k))
-      (fun column => Finsupp.single (assignment column) 1)
-      (fun column => U (assignment column) column)).symm
+  simpa only [MvPolynomial.C_mul_X_eq_monomial, columnAssignmentExponent] using
+    (MvPolynomial.monomial_sum_prod (R := ℂ) (Finset.univ : Finset (Fin k))
+        (fun column => Finsupp.single (assignment column) 1) (fun column => U (assignment column) column)).symm
 
 theorem coeff_columnLinearFormProduct_eq_assignment_sum {r k : ℕ}
     (U : Matrix (Fin r) (Fin k) ℂ) (rows : Finset (Fin r)) :
@@ -13413,13 +13457,12 @@ theorem columnAssignmentExponent_equiv_apply {r k : ℕ}
           column = permutation.symm (permutation column) :=
             (permutation.symm_apply_apply column).symm
           _ = permutation.symm (rowEquiv.symm ⟨row, hrow⟩) := by
-            simpa using congrArg
-              (fun selected : {row // row ∈ rows} =>
-                permutation.symm (rowEquiv.symm selected)) hsubtype
+            simpa only [Equiv.symm_apply_apply] using
+              congrArg (fun selected : { row // row ∈ rows } => permutation.symm (rowEquiv.symm selected)) hsubtype
       · intro hcolumn
         subst column
-        simp
-    simp [hfiber, hrow]
+        simp only [Equiv.apply_symm_apply]
+    simp only [hfiber, Finset.card_singleton, hrow, ↓reduceIte]
   · have hfiber :
         ((Finset.univ : Finset (Fin k)).filter
           (fun column => (rowEquiv (permutation column)).val = row)) = ∅ := by
@@ -13429,7 +13472,7 @@ theorem columnAssignmentExponent_equiv_apply {r k : ℕ}
       apply hrow
       rw [← hvalue]
       exact (rowEquiv (permutation column)).property
-    simp [hfiber, hrow]
+    simp only [hfiber, Finset.card_empty, hrow, ↓reduceIte]
 
 noncomputable def squareFreeColumnMatchingPermutation {r k : ℕ}
     (rows : Finset (Fin r)) (rowEquiv : Fin k ≃ {row // row ∈ rows})
@@ -13450,7 +13493,7 @@ noncomputable def squareFreeColumnMatchingPermutation {r k : ℕ}
         apply columnAssignment_injective_of_squareFree
           assignment rows hassignment
         have hrows := congrArg rowEquiv hmatch
-        simpa using congrArg Subtype.val hrows
+        simpa only [Equiv.apply_symm_apply] using congrArg Subtype.val hrows
       · rfl)
 
 @[simp] theorem squareFreeColumnMatchingPermutation_apply {r k : ℕ}
@@ -13461,7 +13504,7 @@ noncomputable def squareFreeColumnMatchingPermutation {r k : ℕ}
     (rowEquiv
       (squareFreeColumnMatchingPermutation rows rowEquiv assignment
         hassignment column)).val = assignment column := by
-  simp [squareFreeColumnMatchingPermutation]
+  simp only [squareFreeColumnMatchingPermutation, Equiv.ofBijective_apply, Equiv.apply_symm_apply]
 
 theorem coeff_columnLinearFormProduct_eq_permanent {r k : ℕ}
     (U : Matrix (Fin r) (Fin k) ℂ) (rows : Finset (Fin r))
@@ -13543,7 +13586,7 @@ theorem partitionMobius_mul_neg_one_pow {t : ℕ} {rows : Finset (Fin t)}
         (∏ block ∈ partition.parts,
           (-1 : ℂ) ^ (block.card - 1) * ((block.card - 1).factorial : ℂ)) *
           ∏ _block ∈ partition.parts, (-1 : ℂ) := by
-      simp [partitionMobius]
+      simp only [partitionMobius, Finset.prod_const]
     _ = ∏ block ∈ partition.parts,
           ((-1 : ℂ) ^ (block.card - 1) * ((block.card - 1).factorial : ℂ)) * -1 :=
       Finset.prod_mul_distrib.symm
@@ -13583,7 +13626,7 @@ theorem minorSum_isHomogeneous (t s d : ℕ) :
         rows → MvPolynomial (Fin t × Fin s) ℂ)
     (fun _ => 1)
     (fun row _ => MvPolynomial.isHomogeneous_X ℂ (row.val, (matching row).val)) using 1
-  simp [hcard]
+  simp only [Finset.univ_eq_attach, Finset.sum_const, Finset.card_attach, hcard, smul_eq_mul, mul_one]
 
 end Standalone_Partition
 
@@ -13640,10 +13683,11 @@ theorem sourceMatchingEmbedding_bijective
       (Finset.univ : Finset rows).map embedding
     have hcard :
         columns ∈ (Finset.univ : Finset (Fin s)).powersetCard rows.card := by
-      simp [columns]
+      simp only [Finset.univ_eq_attach, Finset.mem_powersetCard, Finset.subset_univ, Finset.card_map,
+        Finset.card_attach, and_self, columns]
     let matching : rows ≃ columns := Equiv.ofBijective
       (fun row : rows => (⟨embedding row, by
-        simp [columns]⟩ : columns)) (by
+        simp only [Finset.univ_eq_attach, Finset.mem_map', Finset.mem_attach, columns]⟩ : columns)) (by
         constructor
         · intro left right h
           exact embedding.injective (congrArg Subtype.val h)
@@ -13703,10 +13747,10 @@ theorem minorSum_eq_source_embeddings (t s d : ℕ) :
   apply Finset.sum_congr rfl
   intro rows hrows
   have hcard : rows.card = d := by
-    simpa using hrows
-  simpa [hcard] using sourceMatching_sum_eq_embeddings rows
-    (fun row column =>
-      (MvPolynomial.X (row, column) : MvPolynomial (Fin t × Fin s) ℂ))
+    simpa only [Finset.mem_powersetCard, Finset.subset_univ, true_and] using hrows
+  simpa only [Finset.univ_eq_attach, hcard] using
+    sourceMatching_sum_eq_embeddings rows
+      (fun row column => (MvPolynomial.X (row, column) : MvPolynomial (Fin t × Fin s) ℂ))
 
 noncomputable def sourceFixedEdgeEmbedding
     {t s : ℕ} (rows : Finset (Fin t)) (i : Fin t) (column : Fin s)
@@ -13783,13 +13827,14 @@ theorem sourceFixedEdgeEmbedding_bijective
             (congrArg (fun r : rows.erase i => r.val) hembedding)
     let whole : rows ↪ Fin s := ⟨extend, hinjective⟩
     have hwhole : whole (⟨i, hrow⟩ : rows) = column := by
-      simp [whole, extend]
+      simp only [ne_eq, Function.Embedding.coeFn_mk, ↓reduceDIte, whole, extend]
     refine ⟨⟨whole, hwhole⟩, ?_⟩
     apply DFunLike.ext
     intro row
     apply Subtype.ext
     have hnot : row.val ≠ i := (Finset.mem_erase.mp row.property).1
-    simp [sourceFixedEdgeEmbedding, whole, extend, hnot]
+    simp only [ne_eq, sourceFixedEdgeEmbedding, Function.Embedding.coeFn_mk, Subtype.coe_eta, dite_eq_ite, hnot,
+      ↓reduceIte, whole, extend]
 
 theorem sourceFixedEdgeEmbedding_prod
     {t s : ℕ} (rows : Finset (Fin t)) (i : Fin t) (column : Fin s)
@@ -13862,7 +13907,7 @@ theorem sourceFixedEdgeEmbedding_weighted_sum
                     (⟨i, hrow⟩ : rows),
                     point (other.val, data.val other)
             rw [← Finset.sum_filter]
-            exact Finset.sum_subtype _ (by simp) _
+            exact Finset.sum_subtype _ (by simp only [Finset.mem_filter, Finset.mem_univ, true_and, implies_true]) _
     _ = ∑ embedding : (rows.erase i) ↪
           {other : Fin s // other ≠ column},
         ∏ other : rows.erase i,
@@ -13882,7 +13927,8 @@ private theorem sourceMatching_pderiv_finset_prod
           ∏ other ∈ indices.erase index, f other := by
   classical
   induction indices using Finset.induction_on with
-  | empty => simp
+  | empty => simp only [Finset.prod_empty, Derivation.map_one_eq_zero, Finset.notMem_empty, not_false_eq_true,
+               Finset.erase_eq_of_notMem, mul_one, Finset.sum_empty]
   | @insert index indices hnot ih =>
     rw [Finset.prod_insert hnot, MvPolynomial.pderiv_mul, ih,
       Finset.sum_insert hnot, Finset.mul_sum,
@@ -13925,8 +13971,10 @@ theorem eval_minorSum_pderiv_source_embeddings
   apply Finset.sum_congr rfl
   intro row _
   by_cases h : (row.val, embedding row) = (i, column)
-  · simp [MvPolynomial.pderiv_X, h]
-  · simp [MvPolynomial.pderiv_X, h]
+  · simp only [h, MvPolynomial.pderiv_X, Pi.single_eq_same, Finset.univ_eq_attach, one_mul, map_prod,
+      MvPolynomial.eval_X, ↓reduceIte]
+  · simp only [MvPolynomial.pderiv_X, ne_eq, h, not_false_eq_true, Pi.single_eq_of_ne, Finset.univ_eq_attach,
+      zero_mul, map_zero, ↓reduceIte]
 
 theorem sourceMatching_embedding_edge_sum
     {t s : ℕ} (rows : Finset (Fin t))
@@ -13947,24 +13995,25 @@ theorem sourceMatching_embedding_edge_sum
   classical
   split_ifs with hrow hcolumn
   · rw [Finset.sum_eq_single (⟨i, hrow⟩ : rows)]
-    · simp [hcolumn]
+    · simp only [hcolumn, ↓reduceIte, Finset.univ_eq_attach]
     · intro other _ hother
       have hne : other.val ≠ i := by
         intro heq
         exact hother (Subtype.ext heq)
-      simp [hne]
-    · simp
+      simp only [Prod.mk.injEq, hne, false_and, ↓reduceIte]
+    · simp only [Finset.univ_eq_attach, Finset.mem_attach, not_true_eq_false, Prod.mk.injEq, true_and,
+        ite_eq_right_iff, IsEmpty.forall_iff]
   · apply Finset.sum_eq_zero
     intro other _
     by_cases hother : other.val = i
     · have heq : other = (⟨i, hrow⟩ : rows) := Subtype.ext hother
       subst other
-      simp [hcolumn]
-    · simp [hother]
+      simp only [Prod.mk.injEq, hcolumn, and_false, ↓reduceIte]
+    · simp only [Prod.mk.injEq, hother, false_and, ↓reduceIte]
   · apply Finset.sum_eq_zero
     intro other _
     have hne : other.val ≠ i := fun heq => hrow (heq ▸ other.property)
-    simp [hne]
+    simp only [Prod.mk.injEq, hne, false_and, ↓reduceIte]
 
 theorem sourceMatching_row_derivative_eq_excluded_embeddings
     {t s : ℕ} (rows : Finset (Fin t))
@@ -13995,7 +14044,7 @@ theorem sourceMatching_row_derivative_eq_excluded_embeddings
         else 0 := by
           apply Finset.sum_congr rfl
           intro embedding _
-          simpa [hrow] using
+          simpa only [Finset.univ_eq_attach, Prod.mk.injEq, hrow, ↓reduceDIte] using
             sourceMatching_embedding_edge_sum rows i column point embedding
     _ = _ := sourceFixedEdgeEmbedding_weighted_sum
       rows i column hrow point
@@ -14046,7 +14095,7 @@ theorem eval_minorSum_pderiv_eq_excluded_embeddings
               else 0) = 0
         apply Finset.sum_eq_zero
         intro embedding _
-        simpa [hrow] using
+        simpa only [Finset.univ_eq_attach, Prod.mk.injEq, hrow, ↓reduceDIte] using
           sourceMatching_embedding_edge_sum rows i column point embedding
     _ = ∑ rows ∈ validRows, remainingWeight (rows.erase i) := by
         apply Finset.sum_congr rfl
@@ -14065,7 +14114,7 @@ theorem eval_minorSum_pderiv_eq_excluded_embeddings
             exact Finset.mem_erase.mpr
               ⟨(Finset.mem_erase.mp hrow).1, Finset.mem_univ row⟩
           · have hcard : rows.card = d := by
-              simpa [sourceRows] using hmem.1
+              simpa only [Finset.mem_powersetCard, Finset.subset_univ, true_and, sourceRows] using hmem.1
             rw [Finset.card_erase_of_mem hmem.2, hcard]
         · intro left hleft right hright herase
           have hlefti := (Finset.mem_filter.mp hleft).2
@@ -14091,7 +14140,7 @@ theorem eval_minorSum_pderiv_eq_excluded_embeddings
                 omega
             · exact Finset.mem_insert_self i rows
           refine ⟨whole, hwhole, ?_⟩
-          simp [whole, hnot]
+          simp only [Finset.erase_insert_eq_erase, hnot, not_false_eq_true, Finset.erase_eq_of_notMem, whole]
         · intro rows hrows
           rfl
 
@@ -14123,7 +14172,8 @@ theorem partition_cycle_factorial_empty (t : ℕ) :
     change partition = Finpartition.empty (Finset (Fin t))
     exact partition_empty_eq partition
   rw [huniv]
-  simp [emptyPartition, Finpartition.empty]
+  simp only [Finpartition.empty, Finset.bot_eq_empty, Finset.sum_singleton, Finset.prod_empty,
+    Nat.factorial_zero, emptyPartition]
 
 noncomputable def partitionRemovePart {α : Type*} [DecidableEq α]
     {rows : Finset α} (partition : Finpartition rows)
@@ -14144,7 +14194,7 @@ noncomputable def partitionRemovePart {α : Type*} [DecidableEq α]
       refine ⟨part, ⟨?_, hpart⟩, hrowpart⟩
       intro heq
       apply hnot
-      simpa [heq] using hrowpart)
+      simpa only [heq] using hrowpart)
 
 @[simp] theorem partitionRemovePart_parts {α : Type*} [DecidableEq α]
     {rows : Finset α} (partition : Finpartition rows)
@@ -14191,7 +14241,7 @@ theorem partition_weight_fiber {α R : Type*}
   have hsubset : block ⊆ rows := by
     intro row hrow
     rcases Finset.mem_insert.mp hrow with hrow | hrow
-    · simpa [hrow] using hdistinguished
+    · simpa only [hrow] using hdistinguished
     · exact (Finset.mem_erase.mp (hselected hrow)).2
   have hnot : distinguished ∉ selected := by
     intro hmem
@@ -14256,7 +14306,7 @@ theorem partition_weight_fiber {α R : Type*}
       apply Finset.mem_filter.mpr
       refine ⟨Finset.mem_univ partition, ?_⟩
       rw [hpart_block]
-      simp [block, hnot]
+      simp only [Finset.erase_insert_eq_erase, hnot, not_false_eq_true, Finset.erase_eq_of_notMem, block]
     refine ⟨partition, hfilter, ?_⟩
     apply Finpartition.ext
     change (insert block complement.parts).erase block = complement.parts
@@ -14325,10 +14375,9 @@ theorem partition_cycle_factorial_fiber
   have hnot : distinguished ∉ selected := by
     intro hmem
     exact Finset.notMem_erase distinguished rows (hselected hmem)
-  simpa [hnot] using
-    (partition_weight_fiber
-      (fun block : Finset α => (block.card - 1).factorial)
-      rows distinguished hdistinguished selected hselected)
+  simpa only [hnot, not_false_eq_true, Finset.card_insert_of_notMem, add_tsub_cancel_right] using
+    (partition_weight_fiber (fun block : Finset α => (block.card - 1).factorial) rows distinguished hdistinguished
+      selected hselected)
 
 theorem sum_powerset_factorial_mul_factorial {α : Type*}
     [DecidableEq α] (rows : Finset α) :
@@ -14360,12 +14409,11 @@ theorem sum_powerset_factorial_mul_factorial {α : Type*}
                 rw [Finset.card_sdiff_of_subset hsubset, hcard]
           _ = rows.card.choose k *
               (k.factorial * (rows.card - k).factorial) := by
-                simp [Finset.card_powersetCard]
+                simp only [Finset.sum_const, Finset.card_powersetCard, smul_eq_mul]
           _ = rows.card.factorial := by
-                simpa [mul_assoc] using
-                  (Nat.choose_mul_factorial_mul_factorial hkle)
+                simpa only [mul_assoc] using (Nat.choose_mul_factorial_mul_factorial hkle)
     _ = (rows.card + 1).factorial := by
-      simp [Nat.factorial_succ, mul_comm]
+      simp only [Finset.sum_const, Finset.card_range, smul_eq_mul, mul_comm, Nat.factorial_succ]
 
 theorem signed_factorial_powerset {α : Type*}
     [DecidableEq α] (others : Finset α) :
@@ -14403,12 +14451,14 @@ theorem signed_factorial_powerset {α : Type*}
           _ = (others.card.choose k : ℂ) *
                 (((-1 : ℂ) ^ k * (k.factorial : ℂ)) *
                   if others.card - k ≤ 1 then (1 : ℂ) else 0) := by
-              simp [Finset.card_powersetCard, nsmul_eq_mul]
+              simp only [tsub_le_iff_right, mul_ite, mul_one, mul_zero, Finset.sum_ite_irrel,
+                Finset.sum_const, Finset.card_powersetCard, nsmul_eq_mul]
     _ = if others.Nonempty then (0 : ℂ) else 1 := by
       cases hcard : others.card with
       | zero =>
         have hempty : others = ∅ := Finset.card_eq_zero.mp hcard
-        simp [hempty]
+        simp only [zero_add, Finset.range_one, zero_tsub, zero_le, ↓reduceIte, mul_one, Finset.sum_singleton,
+          Nat.choose_self, Nat.cast_one, pow_zero, Nat.factorial_zero, hempty, Finset.not_nonempty_empty]
       | succ n =>
         have hnonempty : others.Nonempty :=
           Finset.card_pos.mp (by omega)
@@ -14428,14 +14478,14 @@ theorem signed_factorial_powerset {α : Type*}
           have hne₁ : k ≠ n := by
             intro heq
             apply hnot
-            simp [heq]
+            simp only [heq, Finset.mem_insert, Finset.mem_singleton, Nat.left_eq_add, one_ne_zero, or_false]
           have hne₂ : k ≠ n + 1 := by
             intro heq
             apply hnot
-            simp [heq]
+            simp only [heq, Finset.mem_insert, Nat.add_eq_left, one_ne_zero, Finset.mem_singleton, or_true]
           have hlarge : ¬ others.card - k ≤ 1 := by
             omega
-          simp [hlarge]
+          simp only [hlarge, ↓reduceIte, mul_zero]
         calc
           (∑ k ∈ Finset.range (n + 1 + 1),
               ((n + 1).choose k : ℂ) *
@@ -14445,11 +14495,15 @@ theorem signed_factorial_powerset {α : Type*}
               ((n + 1).choose k : ℂ) *
                 (((-1 : ℂ) ^ k * (k.factorial : ℂ)) *
                   if n + 1 - k ≤ 1 then (1 : ℂ) else 0) := by
-              simpa [hcard] using
-                (Finset.sum_subset hsubset hzero).symm
+              simpa only [tsub_le_iff_right, Order.add_one_le_iff, mul_ite, mul_one, mul_zero, Finset.mem_singleton,
+                Nat.left_eq_add, one_ne_zero, not_false_eq_true, Finset.sum_insert, lt_add_iff_pos_left, Order.lt_one_iff,
+                ↓reduceIte, Nat.choose_succ_self_right, Nat.cast_add, Nat.cast_one, Finset.sum_singleton, Nat.choose_self, one_mul,
+                hcard] using (Finset.sum_subset hsubset hzero).symm
           _ = 0 := by
-            simp [Nat.choose_succ_self_right,
-              Nat.factorial_succ, pow_succ]
+            simp only [tsub_le_iff_right, Order.add_one_le_iff, mul_ite, mul_one, mul_zero, Finset.mem_singleton,
+              Nat.left_eq_add, one_ne_zero, not_false_eq_true, Finset.sum_insert, lt_add_iff_pos_left, Order.lt_one_iff,
+              ↓reduceIte, Nat.choose_succ_self_right, Nat.cast_add, Nat.cast_one, Finset.sum_singleton, Nat.choose_self, pow_succ,
+              mul_neg, Nat.factorial_succ, Nat.cast_mul, neg_mul, one_mul]
             split_ifs with h
             · ring
             · omega
@@ -14473,7 +14527,8 @@ theorem partitionMobius_sum {t : ℕ} (rows : Finset (Fin t)) :
         change partition = Finpartition.empty (Finset (Fin t))
         exact partition_empty_eq partition
       rw [huniv]
-      simp [partitionMobius, emptyPartition, Finpartition.empty]
+      simp only [Finpartition.empty, Finset.bot_eq_empty, partitionMobius, Finset.sum_singleton, Finset.prod_empty,
+        Finset.card_empty, zero_le, ↓reduceIte, emptyPartition]
     · obtain ⟨distinguished, hdistinguished⟩ :=
         Finset.nonempty_iff_ne_empty.mpr hempty
       let weight : Finset (Fin t) → ℂ := fun block =>
@@ -14484,7 +14539,7 @@ theorem partitionMobius_sum {t : ℕ} (rows : Finset (Fin t)) :
             partitionMobius partition) =
           ∑ partition : Finpartition rows,
             ∏ block ∈ partition.parts, weight block := by
-              simp [partitionMobius, weight]
+              simp only [partitionMobius, weight]
         _ = ∑ selected ∈ (rows.erase distinguished).powerset,
               weight (insert distinguished selected) *
                 ∑ partition :
@@ -14507,7 +14562,7 @@ theorem partitionMobius_sum {t : ℕ} (rows : Finset (Fin t)) :
               have hblock : insert distinguished selected ⊆ rows := by
                 intro row hrow
                 rcases Finset.mem_insert.mp hrow with hrow | hrow
-                · simpa [hrow] using hdistinguished
+                · simpa only [hrow] using hdistinguished
                 · exact (Finset.mem_erase.mp (hsubset hrow)).2
               have hnonempty :
                   (insert distinguished selected).Nonempty :=
@@ -14517,8 +14572,7 @@ theorem partitionMobius_sum {t : ℕ} (rows : Finset (Fin t)) :
                   rows \ insert distinguished selected =
                     (rows.erase distinguished) \ selected := by
                 ext row
-                simp [Finset.mem_sdiff, Finset.mem_erase,
-                  Finset.mem_insert, and_assoc, and_left_comm]
+                simp only [Finset.mem_sdiff, Finset.mem_insert, not_or, and_left_comm, Finset.mem_erase, ne_eq, and_assoc]
               have hinner :
                   (∑ partition :
                       Finpartition (rows \ insert distinguished selected),
@@ -14532,13 +14586,14 @@ theorem partitionMobius_sum {t : ℕ} (rows : Finset (Fin t)) :
                       ∑ partition :
                           Finpartition (rows \ insert distinguished selected),
                         partitionMobius partition := by
-                          simp [partitionMobius, weight]
+                          simp only [partitionMobius, weight]
                   _ = if (rows \ insert distinguished selected).card ≤ 1
                         then (1 : ℂ) else 0 :=
                     ih (rows \ insert distinguished selected)
                       (Finset.sdiff_ssubset hblock hnonempty)
               rw [hinner, hcomplement]
-              simp [weight, hnot]
+              simp only [hnot, not_false_eq_true, Finset.card_insert_of_notMem, add_tsub_cancel_right, mul_ite, mul_one,
+                mul_zero, weight]
         _ = if (rows.erase distinguished).Nonempty then (0 : ℂ) else 1 :=
               signed_factorial_powerset (rows.erase distinguished)
         _ = if rows.card ≤ 1 then (1 : ℂ) else 0 := by
@@ -14552,12 +14607,12 @@ theorem partitionMobius_sum {t : ℕ} (rows : Finset (Fin t)) :
               · have hnot : ¬ rows.card ≤ 1 := by
                   have hpos := Finset.card_pos.mpr hremaining
                   omega
-                simp [hremaining, hnot]
+                simp only [hremaining, ↓reduceIte, hnot]
               · have hzero : (rows.erase distinguished).card = 0 := by
                   apply Finset.card_eq_zero.mpr
                   exact Finset.not_nonempty_iff_eq_empty.mp hremaining
                 have hsmall : rows.card ≤ 1 := by omega
-                simp [hremaining, hsmall]
+                simp only [hremaining, ↓reduceIte, hsmall]
 
 theorem partition_cycle_factorial {t : ℕ} (rows : Finset (Fin t)) :
     (∑ partition : Finpartition rows,
@@ -14606,7 +14661,7 @@ theorem partition_cycle_factorial {t : ℕ} (rows : Finset (Fin t)) :
           have hblock : insert distinguished selected ⊆ rows := by
             intro row hrow
             rcases Finset.mem_insert.mp hrow with hrow | hrow
-            · simpa [hrow] using hdistinguished
+            · simpa only [hrow] using hdistinguished
             · exact (Finset.mem_erase.mp (hsubselected hrow)).2
           have hnonempty : (insert distinguished selected).Nonempty :=
             ⟨distinguished,
@@ -14622,8 +14677,7 @@ theorem partition_cycle_factorial {t : ℕ} (rows : Finset (Fin t)) :
               rows \ insert distinguished selected =
                 (rows.erase distinguished) \ selected := by
             ext row
-            simp [Finset.mem_sdiff, Finset.mem_erase, Finset.mem_insert,
-              and_assoc, and_left_comm]
+            simp only [Finset.mem_sdiff, Finset.mem_insert, not_or, and_left_comm, Finset.mem_erase, ne_eq, and_assoc]
           rw [hcomplement]
         _ = ((rows.erase distinguished).card + 1).factorial :=
           sum_powerset_factorial_mul_factorial (rows.erase distinguished)
@@ -14889,7 +14943,7 @@ theorem partitionMobius_bind
   unfold partitionMobius
   rw [Finpartition.bind_parts]
   rw [Finset.prod_biUnion]
-  · simp
+  · simp only [SetLike.eta, Finset.univ_eq_attach]
   · intro left _ right _ hne
     change Disjoint (refinements left).parts (refinements right).parts
     rw [Finset.disjoint_left]
@@ -15157,7 +15211,7 @@ theorem partition_block_assignment_sum_comm
         exact (Finset.sum_subtype
           ((Finset.univ : Finset (rows → column)).filter
             (compatible partition))
-          (by simp)
+          (by simp only [Finset.mem_filter, Finset.mem_univ, true_and, implies_true])
           (fun assignment : rows → column =>
             partitionMobius partition *
               ∏ row : rows, weight row.val (assignment row))).symm
@@ -15192,7 +15246,7 @@ noncomputable def selectedRowAssignmentExtend
     selectedRowAssignmentExtend rows assignment defaultColumn row.val =
       assignment row := by
   classical
-  simp [selectedRowAssignmentExtend, row.property]
+  simp only [selectedRowAssignmentExtend, row.property, ↓reduceDIte, Subtype.coe_eta]
 
 theorem selectedRowAssignmentExtend_injOn_iff
     {t s : ℕ} (rows : Finset (Fin t))
@@ -15320,7 +15374,7 @@ theorem selectedRowAssignment_partitionMobius_filter_sum
         partitionMobius partition.val := by
       apply Finset.sum_subtype
       intro partition
-      simp
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     _ = if Function.Injective assignment then (1 : ℂ) else 0 :=
       selectedRowAssignment_mobius_sum_refinements
         rows assignment defaultColumn
@@ -15423,7 +15477,7 @@ theorem partitionMobius_excluded_columns_eq_embeddings
           ∏ row : block, weight row.val other := by
         apply Finset.sum_subtype
         intro other
-        simp [ne_comm]
+        simp only [Finset.mem_erase, ne_eq, ne_comm, Finset.mem_univ, and_true]
   calc
     (∑ partition : Finpartition rows,
       partitionMobius partition *
@@ -15501,7 +15555,7 @@ theorem partitionMobius_excluded_columns_eq_embeddings
           ∏ row : rows, weight row.val (assignment.val row) := by
         apply Finset.sum_subtype
         intro assignment
-        simp
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     _ = ∑ embedding : rows ↪ column,
           ∏ row : rows, weight row.val (embedding row) := by
         apply Fintype.sum_equiv
@@ -15570,7 +15624,7 @@ noncomputable def incidenceParameterExtend {t : ℕ}
     (p : IncidenceParameter t) (block : Finset (Fin t))
     (hblock : block.Nonempty) :
     incidenceParameterExtend p block = p ⟨block, hblock⟩ := by
-  simp [incidenceParameterExtend, hblock]
+  simp only [incidenceParameterExtend, hblock, ↓reduceDIte]
 
 theorem incidence_partitionBlockFactor_congr_of_nonempty {t : ℕ}
     (p q : Finset (Fin t) → ℂ)
@@ -15647,9 +15701,10 @@ theorem deletedCoordinateEsymmPolynomial_eq_alternating
   classical
   induction q with
   | zero =>
-      simp [deletedCoordinateEsymmPolynomial,
-        partitionFiberCoordinateEsymmPolynomial,
-        MvPolynomial.esymm, Multiset.esymm]
+      simp only [deletedCoordinateEsymmPolynomial, Multiset.esymm, Finset.erase_val,
+        Multiset.powersetCard_zero_left, Multiset.map_singleton, Multiset.prod_zero, Multiset.sum_singleton, zero_add,
+        Finset.range_one, zero_tsub, pow_zero, partitionFiberCoordinateEsymmPolynomial, MvPolynomial.esymm, one_mul,
+        Finset.sum_singleton, Finset.powersetCard_zero, Finset.prod_empty]
   | succ q ih =>
       have hrec :=
         partitionFiberCoordinateEsymmPolynomial_succ_eq_deleted t q i
@@ -15683,7 +15738,7 @@ theorem deletedCoordinateEsymmPolynomial_eq_alternating
                 partitionFiberCoordinateEsymmPolynomial t j) +
               partitionFiberCoordinateEsymmPolynomial t (q + 1) := by
         rw [Finset.sum_range_succ]
-        simp
+        simp only [tsub_self, pow_zero, one_mul]
       calc
         deletedCoordinateEsymmPolynomial t (q + 1) i =
             partitionFiberCoordinateEsymmPolynomial t (q + 1) -
@@ -15713,7 +15768,7 @@ theorem partitionDerivative_incidencePowerParameters
         (fun block => MvPolynomial.eval x (powerSum t s block)) := by
   apply incidence_partitionDerivative_congr_of_nonempty
   intro block hblock
-  simp [incidenceParameterExtend, minorSumPowerParameters, hblock]
+  simp only [incidenceParameterExtend, hblock, ↓reduceDIte, minorSumPowerParameters]
 
 theorem eval_minorSum_pderiv_eq_incidencePartitionDerivative
     (t s d : ℕ) (hd : 0 < d)
@@ -15736,7 +15791,7 @@ theorem incidenceRowBlock_card (t : ℕ) :
   rw [Fintype.card_subtype]
   simp_rw [Finset.nonempty_iff_ne_empty]
   rw [Finset.filter_ne', Finset.card_erase_of_mem (Finset.mem_univ _)]
-  simp [Fintype.card_finset]
+  simp only [Finset.card_univ, Fintype.card_finset, Fintype.card_fin]
 
 abbrev IncidenceCoordinate (t s : ℕ) :=
   IncidenceRowBlock t ⊕ (Fin s × Fin t)
@@ -15857,8 +15912,8 @@ theorem partitionIncidence_monicReduction_mem
       (MvPolynomial.rename embed)
       (deletedCoordinateEsymmPolynomial_eq_alternating t i q)
     rw [Finset.sum_range_succ] at h
-    simpa [D, E, embed, map_add, map_sum, map_mul, map_pow, map_neg]
-      using h
+    simpa only [tsub_self, pow_zero, one_mul, map_add, map_sum, map_mul, map_pow, map_neg,
+      MvPolynomial.rename_X] using h
   have hsumQ :
       (∑ row : Fin t, Q row) =
         MvPolynomial.C a * MvPolynomial.C k * E q +
@@ -15966,16 +16021,16 @@ theorem partitionIncidenceGlobalColumnLift_aeval
               (IncidenceRowBlock t ⊕ (Fin s × Fin (d - 2))) ℂ)
             (PartitionIncidenceCoordinateRing t s d)
             (MvPolynomial.C c) := by
-          simp [partitionIncidenceGlobalColumnLift]
+          simp only [partitionIncidenceGlobalColumnLift, MvPolynomial.eval₂Hom_C, RingHom.coe_comp, Function.comp_apply,
+            MvPolynomial.algHom_C]
         _ = Ideal.Quotient.mk (partitionIncidenceIdeal t s d)
             (MvPolynomial.C c) := by
           change partitionIncidenceGlobalBaseProjection t s d
               (MvPolynomial.C c) = _
-          simpa [partitionIncidenceGlobalBaseProjection] using
-            (Ideal.Quotient.mk_algebraMap (R₁ := ℂ)
-              (partitionIncidenceIdeal t s d) c).symm
+          simpa only [partitionIncidenceGlobalBaseProjection, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq] using
+            (Ideal.Quotient.mk_algebraMap (R₁ := ℂ) (partitionIncidenceIdeal t s d) c).symm
   | add f g hf hg =>
-      simp [map_add, hf, hg]
+      simp only [map_add, hf, hg]
   | mul_X f coordinate hf =>
       calc
         _ = Ideal.Quotient.mk (partitionIncidenceIdeal t s d) f *
@@ -15997,13 +16052,13 @@ theorem partitionIncidenceGlobalColumnLift_aeval
               rw [show partitionIncidenceGlobalColumnLift t s d
                     (MvPolynomial.X (Sum.inl block)) =
                   MvPolynomial.C (MvPolynomial.X (Sum.inl block)) by
-                    simp [partitionIncidenceGlobalColumnLift],
+                    simp only [partitionIncidenceGlobalColumnLift, MvPolynomial.eval₂Hom_X', Sum.elim_inl],
                 MvPolynomial.aeval_C]
               change partitionIncidenceGlobalBaseProjection t s d
                 (MvPolynomial.X (Sum.inl block)) = _
-              simp [partitionIncidenceGlobalBaseProjection]
+              simp only [partitionIncidenceGlobalBaseProjection, MvPolynomial.aeval_X, Sum.elim_inl]
           | inr coordinate =>
-              simp [partitionIncidenceGlobalColumnLift]
+              simp only [partitionIncidenceGlobalColumnLift, MvPolynomial.eval₂Hom_X', Sum.elim_inr, MvPolynomial.aeval_X]
         _ = Ideal.Quotient.mk (partitionIncidenceIdeal t s d)
               (f * MvPolynomial.X coordinate) :=
           (map_mul (Ideal.Quotient.mk (partitionIncidenceIdeal t s d))
@@ -16300,7 +16355,7 @@ theorem incidenceUniversalPartitionBlockFactor_totalDegree
               ∑ row ∈ block,
                 (MvPolynomial.X (index row) : MvPolynomial ι B).totalDegree :=
               MvPolynomial.totalDegree_finsetProd _ _
-            _ ≤ block.card := by simp
+            _ ≤ block.card := by simp only [MvPolynomial.totalDegree_X, Finset.sum_const, smul_eq_mul, mul_one, Std.le_refl]
     _ = rows.card := partition.sum_card_parts
 
 theorem incidenceUniversalPartitionBlockFactor_homogeneousComponent
@@ -16320,7 +16375,7 @@ theorem incidenceUniversalPartitionBlockFactor_homogeneousComponent
       (fun row => (MvPolynomial.X (index row) : MvPolynomial ι B))
       (fun _ => 1)
       (fun row _ => MvPolynomial.isHomogeneous_X B (index row)) using 1
-    simp
+    simp only [Finset.sum_const, smul_eq_mul, mul_one]
   have hterm (selected : Finset (Finset (Fin t))) :
       (((-1 : MvPolynomial ι B) ^ selected.card *
           (∏ block ∈ partition.parts \ selected,
@@ -16341,7 +16396,7 @@ theorem incidenceUniversalPartitionBlockFactor_homogeneousComponent
         (fun _ => 0)
         (fun block _ => MvPolynomial.isHomogeneous_C ι (parameter block))
         using 1
-      simp
+      simp only [Finset.sum_const_zero]
     have hmonomials :
         (∏ block ∈ selected,
           ∏ row ∈ block,
@@ -16352,7 +16407,7 @@ theorem incidenceUniversalPartitionBlockFactor_homogeneousComponent
           (MvPolynomial.X (index row) : MvPolynomial ι B))
         (fun block => block.card)
         (fun block _ => hblock block)
-    simpa using (hsign.mul hconstants).mul hmonomials
+    simpa only [add_zero, zero_add] using (hsign.mul hconstants).mul hmonomials
   unfold incidenceUniversalPartitionBlockFactor
   rw [Finset.prod_sub, map_sum]
   refine (Finset.sum_eq_single_of_mem partition.parts
@@ -16387,7 +16442,7 @@ theorem incidenceUniversalPartitionBlockFactor_homogeneousComponent
         _ = ∏ row ∈ rows, MvPolynomial.X (index row) := by
           simp only [partition.biUnion_parts]
     rw [hprod]
-    simp
+    simp only [MvPolynomial.C_pow, MvPolynomial.C_neg, MvPolynomial.C_1]
 
 noncomputable def incidenceUniversalPartitionDerivative
     {t : ℕ} {ι B : Type*} [CommRing B] [Algebra ℂ B]
@@ -16532,8 +16587,7 @@ theorem partitionIncidenceGlobalColumnLift_equation
                 ((MvPolynomial (IncidenceRowBlock t ⊕ (Fin s × Fin (d - 2))) ℂ)))) := by
       apply Finset.prod_congr rfl
       intro block _
-      simp [partitionIncidenceGlobalUniversalParameter,
-        partition.nonempty_of_mem_parts block.2]
+      simp only [partitionIncidenceGlobalUniversalParameter, partition.nonempty_of_mem_parts block.2, ↓reduceDIte]
     _ = ∏ block ∈ partition.parts,
         (MvPolynomial.C
           (partitionIncidenceGlobalUniversalParameter t s d block) -
@@ -16565,13 +16619,11 @@ theorem incidence_totalDegree_sub_homogeneousComponent_universal
   have hmq : m.degree ≠ q := by
     intro heq
     apply hmne
-    simp [MvPolynomial.coeff_sub,
-      MvPolynomial.coeff_homogeneousComponent, heq]
+    simp only [MvPolynomial.coeff_sub, MvPolynomial.coeff_homogeneousComponent, heq, ↓reduceIte, sub_self]
   have hmcoeff : MvPolynomial.coeff m f ≠ 0 := by
     intro hzero
     apply hmne
-    simp [MvPolynomial.coeff_sub,
-      MvPolynomial.coeff_homogeneousComponent, hmq, hzero]
+    simp only [MvPolynomial.coeff_sub, hzero, MvPolynomial.coeff_homogeneousComponent, hmq, ↓reduceIte, sub_self]
   have hmle : m.degree ≤ q :=
     (MvPolynomial.le_totalDegree
       (MvPolynomial.mem_support_iff.mpr hmcoeff)).trans hf
@@ -16625,7 +16677,9 @@ theorem partitionIncidenceGlobalEquationRemainder_lift_eq
   rw [map_sub, map_mul, partitionIncidenceGlobalColumnLift_equation,
     partitionIncidenceGlobalColumnLift_deleted]
   congr 2
-  simp [partitionIncidenceGlobalColumnLift]
+  simp only [partitionIncidenceGlobalColumnLift, MvPolynomial.C_mul, MvPolynomial.C_pow, MvPolynomial.C_neg,
+    MvPolynomial.C_1, map_natCast, MvPolynomial.coe_eval₂Hom, MvPolynomial.eval₂_mul, MvPolynomial.eval₂_pow,
+    MvPolynomial.eval₂_neg, MvPolynomial.eval₂_one, MvPolynomial.eval₂_natCast, MvPolynomial.algebraMap_eq]
 
 theorem partitionIncidenceGlobalEquationRemainder_outer_totalDegree_aux
     (t s d : ℕ) (a : Fin s) (i : Fin t) :
@@ -16634,13 +16688,11 @@ theorem partitionIncidenceGlobalEquationRemainder_outer_totalDegree_aux
       d - 2 := by
   rw [partitionIncidenceGlobalEquationRemainder_lift_eq,
     ← incidenceUniversalPartitionDerivative_homogeneousComponent]
-  simpa [Nat.sub_sub] using
+  simpa only [Nat.sub_sub, Nat.reduceAdd] using
     (incidence_totalDegree_sub_homogeneousComponent_universal
-      (incidenceUniversalPartitionDerivative d i
-        (partitionIncidenceGlobalUniversalParameter t s d)
+      (incidenceUniversalPartitionDerivative d i (partitionIncidenceGlobalUniversalParameter t s d)
         (fun row : Fin t => (a, row)))
-      (incidenceUniversalPartitionDerivative_totalDegree d i
-        (partitionIncidenceGlobalUniversalParameter t s d)
+      (incidenceUniversalPartitionDerivative_totalDegree d i (partitionIncidenceGlobalUniversalParameter t s d)
         (fun row : Fin t => (a, row))))
 
 theorem partitionIncidenceGlobalEquationRemainder_outer_totalDegree
@@ -16679,9 +16731,8 @@ theorem partitionIncidenceGlobalPowerRemainder_totalDegree
       (partitionIncidenceGlobalColumnLift t s d (R row)).totalDegree ≤
         q - 1 := by
     dsimp [R, q]
-    simpa [Nat.sub_sub] using
-      partitionIncidenceGlobalEquationRemainder_outer_totalDegree
-        t s d coordinate.1 row
+    simpa only [Nat.sub_sub, Nat.reduceAdd] using
+      partitionIncidenceGlobalEquationRemainder_outer_totalDegree t s d coordinate.1 row
   have hlow : low.totalDegree ≤ q - 1 := by
     apply MvPolynomial.totalDegree_finsetSum_le
     intro j _
@@ -16781,10 +16832,10 @@ theorem minorSumGraphPullback_eval
     funext coordinate
     cases coordinate with
     | inl block =>
-        simp [incidenceCoordinatePoint, minorSumPowerParameters,
-          MvPolynomial.aeval_def]
+        simp only [Sum.elim_inl, MvPolynomial.aeval_def, Algebra.algebraMap_self, MvPolynomial.eval₂_id,
+          incidenceCoordinatePoint, minorSumPowerParameters]
     | inr coordinate =>
-        simp [incidenceCoordinatePoint, minorSumColumns]
+        simp only [Sum.elim_inr, MvPolynomial.aeval_X, incidenceCoordinatePoint, minorSumColumns]
   rw [MvPolynomial.comp_aeval_apply, hcoordinates]
 
 theorem minorSumGraphPullback_incidenceEquation
@@ -16885,7 +16936,7 @@ theorem blockIncidence_adjoin_column_coordinates
       rw [← heq]
       exact T.algebraMap_mem basec
   | add f g hf hg =>
-      simpa using T.add_mem hf hg
+      simpa only [map_add] using T.add_mem hf hg
   | mul_X f coordinate hf =>
       rw [map_mul]
       apply T.mul_mem hf
@@ -16902,7 +16953,7 @@ theorem blockIncidence_adjoin_column_coordinates
                   (MvPolynomial.X (h, Sum.inl block)) := by
             change blockIncidenceBaseProjection
               b t s d baseblock = _
-            simp [baseblock, blockIncidenceBaseProjection]
+            simp only [blockIncidenceBaseProjection, MvPolynomial.aeval_X, baseblock]
           rw [← heq]
           exact T.algebraMap_mem baseblock
       | inr coordinate =>
@@ -16916,7 +16967,7 @@ theorem blockIncidenceBase_ringKrullDim (b t s d : ℕ) :
     ringKrullDim_eq_zero_of_field, Nat.card_eq_fintype_card,
     Fintype.card_prod, Fintype.card_sum, Fintype.card_prod,
     incidenceRowBlock_card]
-  simp
+  simp only [Fintype.card_fin, Nat.cast_mul, Nat.cast_add, zero_add]
 
 theorem blockIncidence_ringKrullDim_le_of_power_reductions
     {b t s d : ℕ} (hd : 3 ≤ d)
@@ -17057,7 +17108,7 @@ theorem blockIncidenceBaseProjection_comm
           (Ideal.Quotient.mk (partitionIncidenceIdeal t s d)
             (MvPolynomial.X (Sum.inl z)))
     rw [blockIncidenceSingleBlockInclusion_mk]
-    simp
+    simp only [MvPolynomial.rename_X]
   · simp only [AlgHom.comp_apply, MvPolynomial.rename_X,
       blockIncidenceBaseProjection, partitionIncidenceGlobalBaseProjection,
       MvPolynomial.aeval_X]
@@ -17181,7 +17232,7 @@ theorem sourceSlicedGradientLinearInput_polynomial {k m : ℕ}
     Fintype.linearCombination_apply, linearCoordinatePolynomial]
   apply Finset.sum_congr rfl
   intro i _
-  simp [MvPolynomial.smul_eq_C_mul]
+  simp only [MvPolynomial.smul_eq_C_mul]
 
 noncomputable def sourceFreeAffineFormFiniteLinearCombination
     {ι α : Type*} [Fintype α]
@@ -17221,7 +17272,8 @@ theorem sourceFreeAffineFormFiniteLinearCombination_gate_bound
     by_contra hj
     exact hbound (hform j i hj)
   apply hi
-  simp [sourceFreeAffineFormFiniteLinearCombination, hzero]
+  simp only [sourceFreeAffineFormFiniteLinearCombination, Finsupp.coe_finsetSum, Finsupp.coe_smul,
+    Finset.sum_apply, Pi.smul_apply, hzero, smul_eq_mul, mul_zero, Finset.sum_const_zero]
 
 noncomputable def sourceSlicedGradientReverseOutputForm
     {k m : ℕ}
@@ -17258,8 +17310,8 @@ theorem sourceSlicedGradientReverseOutputForm_gate_bound
     ?_ index hindex
   intro j r hr
   have h := (ReverseAdjoint.CircuitAdjoint.run circuit output).validInputAdjoints j r
-    (by simpa [FreeAffineForm.substituteInputs] using hr)
-  simpa [FreeAffineCircuit.substituteInputs] using h
+    (by simpa only [ne_eq, FreeAffineForm.substituteInputs] using hr)
+  simpa only [FreeAffineCircuit.substituteInputs, List.length_map, gt_iff_lt] using h
 
 theorem exists_actual_slicedGradient_freeAffineCircuit
     {k m : ℕ}
@@ -17310,7 +17362,8 @@ theorem exists_actual_slicedGradient_freeAffineCircuit
         circuit output houtput j]
     refine DFunLike.congr_fun (MvPolynomial.algHom_ext ?_) _
     intro row
-    simpa using sourceSlicedGradientLinearInput_polynomial W row
+    simpa only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.bind₁_X_right] using
+      sourceSlicedGradientLinearInput_polynomial W row
 
 theorem exists_normalized_permanent_affine_specialization_circuit
     {n m : ℕ}
@@ -17334,8 +17387,8 @@ theorem exists_normalized_permanent_affine_specialization_circuit
     (FreeAffineForm.gate circuit.output).substituteInputs substitution
   let output : FreeAffineForm (Fin m) := c⁻¹ • raw
   have hraw : raw ∈ base.outputs := by
-    simp [base, free, raw, FreeAffineCircuit.substituteInputs,
-      FreeAffineCircuit.ofArithmetic]
+    simp only [FreeAffineCircuit.substituteInputs, FreeAffineCircuit.ofArithmetic, List.map_map, List.map_cons,
+      List.map_nil, List.mem_cons, List.not_mem_nil, or_false, base, free, raw]
   have hvalid : ∀ form ∈ ([output] : List (FreeAffineForm (Fin m))),
       ∀ index : ℕ,
         form.gateCoefficients index ≠ 0 → index < base.program.length := by
@@ -17346,10 +17399,10 @@ theorem exists_normalized_permanent_affine_specialization_circuit
       intro hz
       apply hindex
       change ((c⁻¹ • raw.gateCoefficients : ℕ →₀ ℂ) index) = 0
-      simp [hz]
+      simp only [Finsupp.coe_smul, Pi.smul_apply, hz, smul_eq_mul, mul_zero]
     exact base.validOutputs raw hraw index hrawne
   let D := base.withOutputs [output] hvalid
-  refine ⟨D, output, by simp [D, FreeAffineCircuit.withOutputs], ?_, ?_⟩
+  refine ⟨D, output, by simp only [FreeAffineCircuit.withOutputs, List.mem_cons, List.not_mem_nil, or_false, D], ?_, ?_⟩
   · change output.eval base.values = P
     change (c⁻¹ • raw).eval base.values = P
     rw [FreeAffineForm.eval_smul]
@@ -17367,7 +17420,7 @@ theorem exists_normalized_permanent_affine_specialization_circuit
       apply DFunLike.congr_fun (x := permanent n)
       apply MvPolynomial.algHom_ext
       intro ij
-      simp
+      simp only [MvPolynomial.aeval_eq_bind₁, MvPolynomial.bind₁_X_right]
     rw [hrawvalue, hspecialization]
     rw [MvPolynomial.smul_eq_C_mul, ← mul_assoc, ← map_mul,
       inv_mul_cancel₀ hc, map_one, one_mul]
@@ -17401,7 +17454,7 @@ theorem exists_normalized_permanent_slicedGradient_circuit
   refine ⟨D, ?_, ?_⟩
   · rw [hDcount]
     exact Nat.mul_le_mul_left 3 hcount
-  · simpa [hvalue] using hDpolynomials
+  · simpa only [hvalue] using hDpolynomials
 
 noncomputable def freeAffineCircuitSquareFamily
     {k : ℕ} (circuit : FreeAffineCircuit (Fin k))
@@ -17415,7 +17468,7 @@ noncomputable def freeAffineCircuitSquareFamily
         freeAffineExtendedForm
           (n := circuit.program.length) (output j) -
           MvPolynomial.C (target j))
-      (Fin.cast (by simp [Nat.add_comm]) i)
+      (Fin.cast (by simp only [Fintype.card_sum, Fintype.card_fin, Nat.add_comm]) i)
 
 theorem freeAffineCircuitSquareFamily_ofFn
     {k : ℕ} (circuit : FreeAffineCircuit (Fin k))
@@ -17433,12 +17486,12 @@ theorem freeAffineCircuitSquareFamily_ofFn
       (n := circuit.program.length) (output i) - MvPolynomial.C (target i)
   have hcard : circuit.program.length + k =
       Fintype.card (Fin k ⊕ Fin circuit.program.length) := by
-    simp [Nat.add_comm]
+    simp only [Nat.add_comm, Fintype.card_sum, Fintype.card_fin]
   have hcast :
       List.ofFn (freeAffineCircuitSquareFamily circuit output target) =
       List.ofFn (Fin.append gates outputs) := by
-    simpa [freeAffineCircuitSquareFamily, gates, outputs] using
-      (List.ofFn_congr hcard (Fin.append gates outputs)).symm
+    simpa only [Fintype.card_sum, Fintype.card_fin, freeAffineCircuitSquareFamily, Fin.cast_cast,
+      List.ofFn_fin_append] using (List.ofFn_congr hcard (Fin.append gates outputs)).symm
   rw [hcast, List.ofFn_fin_append]
 
 theorem sourceCircuit_ofList_ofFn_eq_span_range
@@ -17448,7 +17501,7 @@ theorem sourceCircuit_ofList_ofFn_eq_span_range
     Ideal.span (Set.range f)
   congr 1
   ext p
-  simp
+  simp only [List.mem_ofFn, Set.mem_setOf_eq, Set.mem_range]
 
 theorem freeAffineCircuitSquareFamily_span_range
     {k : ℕ} (circuit : FreeAffineCircuit (Fin k))
@@ -17517,7 +17570,7 @@ theorem freeAffineCircuitSquareFamily_degree_product_le
                         (target i)
                         (freeAffineExtendedForm_totalDegree_le_one
                           (n := circuit.program.length) (output i))
-              _ = 1 := by simp
+              _ = 1 := by simp only [Finset.prod_const_one]
     _ = 2 ^ circuit.multiplicationCount := Nat.mul_one _
 
 theorem freeAffineCircuitSquareFamily_isWeaklyRegular
@@ -17544,17 +17597,14 @@ theorem freeAffineCircuitSquareFamily_isWeaklyRegular
         (n := circuit.program.length) (output i))
     F target
   · intro j
-    simpa [affineGateGraphEvaluation,
-      freeAffineCircuitGraphEvaluation] using
-      freeAffineCircuitGate_eq_graphEvaluation_rhs circuit j
+    simpa only [affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, List.get_eq_getElem,
+      freeAffineCircuitGraphEvaluation] using freeAffineCircuitGate_eq_graphEvaluation_rhs circuit j
   · intro j i hi
     exact freeAffineInstructionRhs_mem_gate_vars
       (circuit.program.get j) j (circuit.valid j) i hi
   · intro i
-    simpa [affineGateGraphEvaluation,
-      freeAffineCircuitGraphEvaluation] using
-      (freeAffineCircuitGraphEvaluation_extendedForm
-        circuit (output i)).trans (houtput i)
+    simpa only [affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, freeAffineCircuitGraphEvaluation] using
+      (freeAffineCircuitGraphEvaluation_extendedForm circuit (output i)).trans (houtput i)
   · exact homogeneousMap_allTarget_translated_isWeaklyRegular
       F target e he hF hzero
 
@@ -17592,10 +17642,8 @@ theorem freeAffineCircuitSquareFamily_zeroLocus_finite
       (circuit.program.get j) j (circuit.valid j) i hi
   have hout : ∀ i, affineGateGraphEvaluation gate (out i) = F i := by
     intro i
-    simpa [gate, out, affineGateGraphEvaluation,
-      freeAffineCircuitGraphEvaluation] using
-      (freeAffineCircuitGraphEvaluation_extendedForm
-        circuit (output i)).trans (houtput i)
+    simpa only [affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, freeAffineCircuitGraphEvaluation] using
+      (freeAffineCircuitGraphEvaluation_extendedForm circuit (output i)).trans (houtput i)
   let E := affineTriangularInstructionOutputClosedFiberAlgEquiv
     rhs gate out F target hgate htop hout
   letI : Module.Finite ℂ (homogeneousMapClosedFiber F target) :=
@@ -17640,10 +17688,8 @@ theorem freeAffineCircuit_homogeneousFiberDegree_le_two_pow
       (circuit.program.get j) j (circuit.valid j) i hi
   have hout : ∀ i, affineGateGraphEvaluation gate (out i) = F i := by
     intro i
-    simpa [gate, out, affineGateGraphEvaluation,
-      freeAffineCircuitGraphEvaluation] using
-      (freeAffineCircuitGraphEvaluation_extendedForm
-        circuit (output i)).trans (houtput i)
+    simpa only [affineGateGraphEvaluation, MvPolynomial.aeval_eq_bind₁, freeAffineCircuitGraphEvaluation] using
+      (freeAffineCircuitGraphEvaluation_extendedForm circuit (output i)).trans (houtput i)
   let f := freeAffineCircuitSquareFamily circuit output target
   have hweak := freeAffineCircuitSquareFamily_isWeaklyRegular
     circuit output F e he hF hzero target houtput
@@ -17690,7 +17736,7 @@ theorem normalizedPermanent_slicedGradient_homogeneousFiberDegree_le_two_pow
         form.eval D.values = slicedGradientPolynomial P W A i := by
     have hmem : slicedGradientPolynomial P W A i ∈ D.polynomials := by
       rw [hpolynomials]
-      exact List.mem_map.mpr ⟨i, by simp, rfl⟩
+      exact List.mem_map.mpr ⟨i, by simp only [Finset.mem_toList, Finset.mem_univ], rfl⟩
     change slicedGradientPolynomial P W A i ∈
       D.outputs.map (fun form => form.eval D.values) at hmem
     obtain ⟨form, _, hform⟩ := List.mem_map.mp hmem
@@ -17737,21 +17783,21 @@ theorem treeQuotientLinearForm_block {r : ℕ}
     treeQuotientLinearForm (treeBlockVector block) =
       squareZeroBlockSum r block := by
   classical
-  simp [treeQuotientLinearForm, treeBlockVector,
-    squareZeroBlockSum]
+  simp only [treeQuotientLinearForm, treeBlockVector, MonoidWithZeroHom.map_ite_one_zero, ite_mul, one_mul,
+    zero_mul, Finset.sum_ite_mem, Finset.univ_inter, squareZeroBlockSum]
 
 theorem treeQuotientLinearForm_add {r : ℕ}
     (left right : Fin r → ℂ) :
     treeQuotientLinearForm (fun row => left row + right row) =
       treeQuotientLinearForm left + treeQuotientLinearForm right := by
-  simp [treeQuotientLinearForm, add_mul, Finset.sum_add_distrib]
+  simp only [treeQuotientLinearForm, map_add, add_mul, Finset.sum_add_distrib]
 
 theorem treeQuotientLinearForm_smul {r : ℕ}
     (a : ℂ) (vector : Fin r → ℂ) :
     treeQuotientLinearForm (fun row => a * vector row) =
       algebraMap ℂ (SquareZeroAlgebra r) a *
         treeQuotientLinearForm vector := by
-  simp [treeQuotientLinearForm, Finset.mul_sum, mul_assoc]
+  simp only [treeQuotientLinearForm, map_mul, mul_assoc, Finset.mul_sum]
 
 theorem treeQuotientLinearForm_sum {r : ℕ} {ι : Type*}
     (indices : Finset ι) (vectors : ι → Fin r → ℂ) :
@@ -17759,7 +17805,7 @@ theorem treeQuotientLinearForm_sum {r : ℕ} {ι : Type*}
       ∑ i ∈ indices, treeQuotientLinearForm (vectors i) := by
   classical
   induction indices using Finset.induction_on with
-  | empty => simp [treeQuotientLinearForm]
+  | empty => simp only [treeQuotientLinearForm, Finset.sum_empty, map_zero, zero_mul, Finset.sum_const_zero]
   | @insert i indices hi ih =>
       simp only [Finset.sum_insert hi]
       rw [treeQuotientLinearForm_add, ih]
@@ -17806,8 +17852,8 @@ theorem treeLinearFormVectors_quotient_prod {r : ℕ} {ι : Type*}
   classical
   induction tree with
   | leaf i =>
-      simp [treeLinearFormVectors, subtreeLinearFormProduct,
-        treeQuotientLinearForm_block]
+      simp only [treeLinearFormVectors, List.map_replicate, treeQuotientLinearForm_block, List.prod_replicate,
+        subtreeLinearFormProduct]
   | branch left right ihleft ihright =>
       simp only [treeLinearFormVectors, List.map_append,
         List.prod_append, subtreeLinearFormProduct, ihleft, ihright]
@@ -17823,7 +17869,7 @@ theorem treeLinearFormVectors_quotient_prod {r : ℕ} {ι : Type*}
 theorem tree_leafList_length_pos {ι : Type*} (tree : BlockTree ι) :
     0 < tree.leafList.length := by
   induction tree with
-  | leaf i => simp [BlockTree.leafList]
+  | leaf i => simp only [BlockTree.leafList, List.length_cons, List.length_nil, zero_add, Order.lt_one_iff]
   | branch left right ihleft ihright =>
       simp only [BlockTree.leafList, List.length_append]
       omega
@@ -17834,16 +17880,17 @@ theorem treeLinearFormVectors_length {r : ℕ} {ι : Type*}
     (treeLinearFormVectors blocks t d ζ tree).length =
       tree.leafList.length * t - d := by
   induction tree with
-  | leaf i => simp [treeLinearFormVectors, BlockTree.leafList]
+  | leaf i => simp only [treeLinearFormVectors, List.length_replicate, BlockTree.leafList, List.length_cons,
+                List.length_nil, zero_add, one_mul]
   | branch left right ihleft ihright =>
       have hleftone : 1 ≤ left.leafList.length :=
         tree_leafList_length_pos left
       have hrightone : 1 ≤ right.leafList.length :=
         tree_leafList_length_pos right
       have hleft : d ≤ left.leafList.length * t :=
-        le_trans hd (by simpa using Nat.mul_le_mul_right t hleftone)
+        le_trans hd (by simpa only [one_mul] using Nat.mul_le_mul_right t hleftone)
       have hright : d ≤ right.leafList.length * t :=
-        le_trans hd (by simpa using Nat.mul_le_mul_right t hrightone)
+        le_trans hd (by simpa only [one_mul] using Nat.mul_le_mul_right t hrightone)
       simp only [treeLinearFormVectors, List.length_append,
         List.length_ofFn, BlockTree.leafList, List.length_append,
         ihleft, ihright, Nat.add_mul]
@@ -17902,7 +17949,7 @@ theorem mem_sourceRowBlock {b t : ℕ} (h : Fin b)
   · intro hrow
     obtain ⟨j, _, hj⟩ := Finset.mem_image.mp hrow
     subst row
-    simp
+    simp only [Equiv.symm_apply_apply]
   · intro hrow
     let e : Fin b × Fin t ≃ Fin (b * t) := finProdFinEquiv
     refine Finset.mem_image.mpr
@@ -17943,11 +17990,11 @@ theorem squareFreeExponent_le_iff {ι : Type*}
   · intro h i hi
     by_contra hnot
     have hvalue := h i
-    simp [squareFreeExponent_apply, hi, hnot] at hvalue
+    simp only [squareFreeExponent_apply, hi, ↓reduceIte, hnot, nonpos_iff_eq_zero, one_ne_zero] at hvalue
   · intro h i
     by_cases hi : i ∈ left
-    · simp [squareFreeExponent_apply, hi, h hi]
-    · simp [squareFreeExponent_apply, hi]
+    · simp only [squareFreeExponent_apply, hi, ↓reduceIte, h hi, Std.le_refl]
+    · simp only [squareFreeExponent_apply, hi, ↓reduceIte, zero_le]
 
 theorem squareFreeExponent_sub {ι : Type*} [DecidableEq ι]
     (target removed : Finset ι) :
@@ -17970,7 +18017,7 @@ theorem coeff_squareFreeMonomial_mul {ι : Type*} [DecidableEq ι]
   classical
   rw [squareFreeMonomial_eq_monomial,
     MvPolynomial.coeff_monomial_mul']
-  simp [squareFreeExponent_le_iff, squareFreeExponent_sub]
+  simp only [squareFreeExponent_le_iff, squareFreeExponent_sub, one_mul]
 
 theorem squareZeroCoefficient_variable_product_mul (r : ℕ)
     (target removed : Finset (Fin r)) (p : SquareZeroAlgebra r) :
@@ -17989,8 +18036,8 @@ theorem squareZeroCoefficient_variable_product_mul (r : ℕ)
 theorem squareFreeExponent_sum {ι : Type*} (rows : Finset ι) :
     (squareFreeExponent rows).sum (fun _ n => n) = rows.card := by
   classical
-  simp [Finsupp.sum, squareFreeExponent_support,
-    squareFreeExponent_apply]
+  simp only [Finsupp.sum, squareFreeExponent_support, squareFreeExponent_apply, Finset.sum_ite_mem,
+    Finset.inter_self, Finset.sum_const, smul_eq_mul, mul_one]
 
 theorem squareFreeExponent_multinomial {ι : Type*}
     (rows : Finset ι) :
@@ -18007,7 +18054,7 @@ theorem squareFreeExponent_multinomial {ι : Type*}
     rw [Finsupp.prod, squareFreeExponent_support]
     apply Finset.prod_eq_one
     intro row hrow
-    simp [squareFreeExponent_apply, hrow]
+    simp only [squareFreeExponent_apply, hrow, ↓reduceIte, Nat.factorial_one]
   rw [hfactor, Nat.div_one]
 
 theorem squareFreeExponent_prod_treeBlockVector {r : ℕ}
@@ -18021,13 +18068,12 @@ theorem squareFreeExponent_prod_treeBlockVector {r : ℕ}
       squareFreeExponent_support]
     apply Finset.prod_eq_one
     intro row hrow
-    simp [squareFreeExponent_apply, treeBlockVector,
-      hrow, hsubset hrow]
+    simp only [treeBlockVector, hsubset hrow, ↓reduceIte, squareFreeExponent_apply, hrow, one_pow]
   · obtain ⟨row, hrow, hnot⟩ := Finset.not_subset.mp hsubset
     simp only [if_neg hsubset, Finsupp.prod,
       squareFreeExponent_support]
     apply Finset.prod_eq_zero hrow
-    simp [squareFreeExponent_apply, treeBlockVector, hrow, hnot]
+    simp only [treeBlockVector, hnot, ↓reduceIte, squareFreeExponent_apply, hrow, pow_one]
 
 theorem squareZeroCoefficient_squareZeroBlockSum_pow (r : ℕ)
     (rows block : Finset (Fin r)) (degree : ℕ) :
@@ -18042,7 +18088,8 @@ theorem squareZeroCoefficient_squareZeroBlockSum_pow (r : ℕ)
             treeBlockVector block row •
               (MvPolynomial.X row : MvPolynomial (Fin r) ℂ)) =
         squareZeroBlockSum r block := by
-    simp [treeBlockVector, squareZeroBlockSum, squareZeroVariable]
+    simp only [treeBlockVector, ite_smul, one_smul, zero_smul, Finset.sum_ite_mem, Finset.univ_inter, map_sum,
+      squareZeroBlockSum, squareZeroVariable]
   rw [← hblock, ← map_pow, squareZeroCoefficient_mk,
     MvPolynomial.coeff_linearCombination_X_pow_of_fintype,
     squareFreeExponent_sum, squareFreeExponent_multinomial,
@@ -18121,7 +18168,8 @@ theorem sourceRowBlock_biUnion_erase (b t : ℕ) (h : Fin b) :
       (Finset.univ : Finset (Fin (b * t))) \ sourceRowBlock b t h := by
   classical
   ext row
-  simp [mem_sourceRowBlock]
+  simp only [Finset.mem_biUnion, Finset.mem_erase, ne_eq, Finset.mem_univ, and_true, mem_sourceRowBlock,
+    finProdFinEquiv_symm_apply, exists_eq_right', Finset.mem_sdiff, true_and]
 
 theorem squareZeroCoefficient_sourceExceptionalBlock
     (b t d : ℕ) (omitted : Finset (Fin (b * t)))
@@ -18153,7 +18201,7 @@ theorem squareZeroCoefficient_sourceExceptionalBlock
             sourceRowBlock b t h) =
         sourceRowBlock b t h \ omitted := by
     ext row
-    simp [and_comm]
+    simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Decidable.not_not, and_comm]
   rw [hremaining]
   have hsubset_equiv :
       (Finset.univ \ sourceRowBlock b t h) ⊆
@@ -18168,12 +18216,14 @@ theorem squareZeroCoefficient_sourceExceptionalBlock
         (sourceRowBlock b t h \ omitted).card = t - d := by
       rw [Finset.card_sdiff_of_subset hsubset,
         sourceRowBlock_card, homitted]
-    simp [hsubset, hfirst, hcard]
+    simp only [hfirst, sdiff_le_iff, hsubset, sup_of_le_right, Std.le_refl, hcard, and_self, ↓reduceIte,
+      Finset.mem_univ, Finset.card_erase_of_mem, Finset.card_univ, Fintype.card_fin, Nat.cast_pow]
   · have hfirst :
         ¬(Finset.univ \ sourceRowBlock b t h) ⊆
           (Finset.univ \ omitted) :=
         fun hfirst => hsubset (hsubset_equiv.mp hfirst)
-    simp [hsubset, hfirst]
+    simp only [hfirst, sdiff_le_iff, Finset.sup_eq_union', Finset.subset_union_right, true_and, false_and,
+      ↓reduceIte, hsubset]
 
 theorem squareZeroCoefficient_sourceTree_expansion
     (b t d : ℕ) (hdpos : 0 < d) (hd : d ≤ t)
@@ -18235,7 +18285,7 @@ theorem squareZeroCoefficient_sourceTree_eq_zero
     b t d hdpos hd hζ tree hnodup hleaves omitted homitted]
   apply Finset.sum_eq_zero
   intro h _
-  simp [hnot h]
+  simp only [hnot h, ↓reduceIte, mul_zero]
 
 theorem squareZeroCoefficient_sourceTree_eq_factorial
     (b t d : ℕ) (hdpos : 0 < d) (hd : d ≤ t)
@@ -18262,15 +18312,16 @@ theorem squareZeroCoefficient_sourceTree_eq_factorial
   rw [squareZeroCoefficient_sourceTree_expansion
     b t d hdpos hd hζ tree hnodup hleaves omitted homitted,
     Finset.sum_eq_single h]
-  · simp [hsubset, Nat.cast_pow]
+  · simp only [hsubset, ↓reduceIte, Nat.cast_pow]
     ring
   · intro j _ hj
     have hother : ¬omitted ⊆ sourceRowBlock b t j := by
       intro hother
       exact hj (sourceRowBlock_exceptional_unique omitted
         hnonempty hother hsubset)
-    simp [hother]
-  · simp
+    simp only [hother, ↓reduceIte, mul_zero]
+  · simp only [Finset.mem_univ, not_true_eq_false, Nat.cast_pow, mul_ite, mul_zero, ite_eq_right_iff, mul_eq_zero,
+      pow_eq_zero_iff', Nat.cast_eq_zero, ne_eq, IsEmpty.forall_iff]
 
 theorem sourceTree_leafList_length (b : ℕ)
     (tree : BlockTree (Fin b))
@@ -18280,12 +18331,12 @@ theorem sourceTree_leafList_length (b : ℕ)
   classical
   have hset : tree.leafList.toFinset = tree.leaves := by
     ext i
-    simp [BlockTree.mem_leaves_iff]
+    simp only [List.mem_toFinset, BlockTree.mem_leaves_iff]
   calc
     tree.leafList.length = tree.leafList.toFinset.card :=
       (List.toFinset_card_of_nodup hnodup).symm
     _ = tree.leaves.card := congrArg Finset.card hset
-    _ = b := by simp [hleaves]
+    _ = b := by simp only [hleaves, Finset.card_univ, Fintype.card_fin]
 
 theorem sourceTreeLinearFormVectors_length
     (b t d : ℕ) (hd : d ≤ t) (ζ : ℂ)
@@ -18364,17 +18415,17 @@ theorem sourceBlockAlpha_eq_permanent {r d : ℕ}
       left_inv := by
         intro matching
         ext row
-        simp
+        simp only [Equiv.symm_trans, Equiv.symm_symm, Equiv.trans_apply, Equiv.apply_symm_apply]
       right_inv := by
         intro matching
         ext column
-        simp }
+        simp only [Equiv.symm_trans, Equiv.symm_symm, Equiv.trans_apply, Equiv.symm_apply_apply] }
   unfold sourceBlockAlpha Matrix.permanent
   refine Fintype.sum_equiv matchingEquiv _ _ ?_
   intro matching
   refine Fintype.prod_equiv matching _ _ ?_
   intro row
-  simp [matchingEquiv]
+  simp only [Equiv.coe_fn_mk, Equiv.trans_apply, Equiv.symm_apply_apply, Equiv.apply_symm_apply, matchingEquiv]
 
 noncomputable def sourceComplementRowEquiv
     (r d : ℕ) (omitted : Finset (Fin r))
@@ -18393,7 +18444,7 @@ noncomputable def sourceComplementSquareFreeRowEquiv
     Fin (r - d) ≃
       {row : Fin r // row ∈ (Finset.univ : Finset (Fin r)) \ omitted} :=
   (sourceComplementRowEquiv r d omitted homitted).trans
-    (Equiv.subtypeEquivRight (fun row => by simp))
+    (Equiv.subtypeEquivRight (fun row => by simp only [Finset.mem_sdiff, Finset.mem_univ, true_and]))
 
 theorem sourceBlockAlpha_eq_squareZeroCoefficient
     {r d : ℕ} (U : Matrix (Fin r) (Fin (r - d)) ℂ)
@@ -18480,7 +18531,7 @@ theorem sourceBlockAlpha_algebraMap
         (fun row column => algebraMap ℂ R (U row column)) omitted =
       algebraMap ℂ R (sourceBlockAlpha r d U omitted) := by
   classical
-  simp [sourceBlockAlpha, map_sum, map_prod]
+  simp only [sourceBlockAlpha, map_sum, map_prod]
 
 noncomputable def sourceRowBlockMinorSum
     {R : Type*} [CommSemiring R] (b t s d : ℕ)
@@ -18496,7 +18547,7 @@ theorem sourceRowBlock_powersetCard_eq_filter
         (fun omitted => omitted ⊆ sourceRowBlock b t h) := by
   classical
   ext omitted
-  simp [Finset.mem_powersetCard, and_comm]
+  simp only [Finset.mem_powersetCard, and_comm, Finset.mem_filter, Finset.subset_univ, true_and]
 
 theorem sourceTreeMatrix_alpha_eq_block_sum
     (b t d : ℕ) (hdpos : 0 < d) (hd : d ≤ t)
@@ -18531,12 +18582,12 @@ theorem sourceTreeMatrix_alpha_eq_block_sum
     rw [sourceTreeMatrix_alpha_eq_factorial
       b t d hdpos hd hζ tree hnodup hleaves omitted homitted h hh]
     simp_rw [hunique]
-    simp [mul_assoc, mul_left_comm, mul_comm]
+    simp only [mul_comm, mul_left_comm, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte, mul_assoc]
   · have hnone : ∀ h : Fin b, ¬ omitted ⊆ sourceRowBlock b t h := by
       simpa only [not_exists] using hblock
     rw [sourceTreeMatrix_alpha_eq_zero
       b t d hdpos hd hζ tree hnodup hleaves omitted homitted hnone]
-    simp [hnone]
+    simp only [hnone, ↓reduceIte, Finset.sum_const_zero, mul_zero]
 
 theorem sourceRowBlock_weighted_minor_sum
     {R : Type*} [CommSemiring R]
@@ -18555,7 +18606,8 @@ theorem sourceRowBlock_weighted_minor_sum
   intro h _
   unfold sourceRowBlockMinorSum
   rw [sourceRowBlock_powersetCard_eq_filter b t d h]
-  simp [Finset.sum_filter, Finset.mul_sum, ite_mul]
+  simp only [Finset.mul_sum, ite_mul, zero_mul, Finset.sum_ite_irrel, Finset.sum_const_zero, Finset.sum_filter,
+    mul_ite, mul_zero]
 
 theorem sourceTreeBlockMatrix_permanent_eq_separated
     {R : Type*} [CommSemiring R] [Algebra ℂ R]
@@ -18712,18 +18764,19 @@ theorem sourceBlockMinor_sourceRowBlockEmbedding
       left_inv := by
         intro matching
         ext row
-        simp
+        simp only [Equiv.trans_apply, Equiv.apply_symm_apply]
       right_inv := by
         intro matching
         ext row
-        simp }
+        simp only [Equiv.trans_apply, Equiv.symm_apply_apply] }
   unfold sourceBlockMinor
   refine Fintype.sum_equiv matchingEquiv _ _ ?_
   intro matching
   symm
   refine Fintype.prod_equiv rowEquiv _ _ ?_
   intro row
-  simp [matchingEquiv, rowEquiv, Finset.equivMap]
+  simp only [Finset.equivMap, Equiv.coe_fn_mk, Equiv.trans_apply, Equiv.ofBijective_apply, matchingEquiv,
+    rowEquiv]
 
 theorem sourceRowBlockMinorSum_eq_local_minors
     {R : Type*} [CommSemiring R]
@@ -18875,16 +18928,17 @@ theorem matrixPermanent_eq_rectangularPermanent_reindex
       left_inv := by
         intro σ
         ext i
-        simp
+        simp only [Equiv.symm_trans, Equiv.symm_symm, Equiv.trans_apply, Equiv.symm_apply_apply]
       right_inv := by
         intro matching
         ext i
-        simp }
+        simp only [Equiv.symm_trans, Equiv.symm_symm, Equiv.trans_apply, Equiv.apply_symm_apply] }
   refine Fintype.sum_equiv matchingEquiv _ _ ?_
   intro σ
   refine Fintype.prod_equiv (σ.trans row) _ _ ?_
   intro i
-  simp [matchingEquiv]
+  simp only [Equiv.trans_apply, Equiv.symm_trans, Equiv.symm_symm, Equiv.coe_fn_mk, Equiv.symm_apply_apply,
+    matchingEquiv]
 
 def sourceBlockAffineInput
     {r s d : ℕ}
@@ -19110,7 +19164,8 @@ theorem sourceTreeBlock_affine_permanent_specialization
     sourceBlockMatrix_rectangularPermanent_flatten]
   rw [sourceTreeBlockMatrix_permanent_eq_separated_minorSum
     b t s d (by omega) hdt hζ tree hnodup hleaves]
-  simp [sourceTreeBlockCommonFactor, sourceTreeSeparatedMinorSum, map_mul]
+  simp only [MvPolynomial.algebraMap_eq, map_natCast, map_mul, map_pow, map_sum, MvPolynomial.algHom_C,
+    MvPolynomial.rename_rename, sourceTreeBlockCommonFactor, sourceTreeSeparatedMinorSum]
 
 end
 
@@ -19176,7 +19231,8 @@ theorem separatedBlockMinorSum_pderiv
     rw [MvPolynomial.pderiv_C_mul,
       separatedBlockMinorSum_offBlock_pderiv
         b t s d hj.symm i a, mul_zero]
-  · simp
+  · simp only [Finset.mem_univ, not_true_eq_false, Derivation.leibniz, smul_eq_mul, MvPolynomial.derivation_C,
+      mul_zero, add_zero, mul_eq_zero, map_eq_zero, IsEmpty.forall_iff]
 
 def blockMinorGraphPullback (b t s : ℕ) :
     MvPolynomial (BlockIncidenceCoordinate b t s) ℂ →ₐ[ℂ]
@@ -19202,16 +19258,19 @@ theorem blockMinorGraphPullback_rename
         (minorSumGraphPullback t s f) := by
   classical
   induction f using MvPolynomial.induction_on with
-  | C c => simp [blockMinorGraphPullback, minorSumGraphPullback]
+  | C c => simp only [blockMinorGraphPullback, MvPolynomial.aeval_eq_bind₁, MvPolynomial.algHom_C,
+             MvPolynomial.algebraMap_eq, minorSumGraphPullback]
   | add f g hf hg =>
-      simp [map_add, hf, hg]
+      simp only [map_add, hf, hg]
   | mul_X f coordinate hf =>
       rw [map_mul, map_mul, map_mul, hf]
       cases coordinate with
       | inl block =>
-          simp [blockMinorGraphPullback, minorSumGraphPullback]
+          simp only [minorSumGraphPullback, MvPolynomial.aeval_eq_bind₁, blockMinorGraphPullback, MvPolynomial.rename_X,
+            MvPolynomial.bind₁_X_right, Sum.elim_inl, map_mul]
       | inr column =>
-          simp [blockMinorGraphPullback, minorSumGraphPullback]
+          simp only [minorSumGraphPullback, MvPolynomial.aeval_eq_bind₁, blockMinorGraphPullback, MvPolynomial.rename_X,
+            MvPolynomial.bind₁_X_right, Sum.elim_inr, map_mul]
 
 theorem blockMinorGraphPullback_equation
     (b t s d : ℕ) (hd : 0 < d)
@@ -19314,8 +19373,9 @@ theorem blockMinorGraphPullback_rename_matrix
           (blockMinorMatrixCoordinateLift b t s) f) = f := by
   classical
   induction f using MvPolynomial.induction_on with
-  | C c => simp [blockMinorGraphPullback]
-  | add f g hf hg => simp [map_add, hf, hg]
+  | C c => simp only [blockMinorGraphPullback, MvPolynomial.aeval_eq_bind₁, MvPolynomial.algHom_C,
+             MvPolynomial.algebraMap_eq]
+  | add f g hf hg => simp only [map_add, hf, hg]
   | mul_X f coordinate hf =>
       rw [map_mul, map_mul, hf]
       have hcoordinate :
@@ -19502,7 +19562,7 @@ theorem sourceTreeBlockWeight_ne_zero
     ∀ h : Fin b, sourceTreeBlockWeight b d tree h ≠ 0 := by
   intro h
   exact (rootOfUnity_subtreeCoefficient_and_total_ne_zero
-    hd tree hnodup).1 h (by simp [hleaves])
+    hd tree hnodup).1 h (by simp only [hleaves, Finset.mem_univ])
 
 def sourceSeparatedBlockMinorSum
     (n d : ℕ) (weight : Fin (blockCount n d) → ℂ) :
@@ -19559,15 +19619,14 @@ theorem forwardFold_size {ι : Type} (program : List (Instruction ι))
       (fun values instruction => values.push (instruction.eval values))
         previous).size = previous.size + program.length := by
   induction program generalizing previous with
-  | nil => simp
+  | nil => simp only [List.foldl_nil, List.length_nil, add_zero]
   | cons instruction rest ih =>
-    simpa [List.foldl_cons, Nat.add_assoc, Nat.add_comm,
-      Nat.add_left_comm] using
+    simpa only [List.foldl_cons, List.length_cons, Nat.add_comm, Array.size_push, Nat.add_assoc] using
       ih (previous.push (instruction.eval previous))
 
 theorem values_size {ι : Type} (state : CircuitPrefix ι) :
     state.values.size = state.program.length := by
-  simpa [values] using
+  simpa only [values, List.size_toArray, List.length_nil, zero_add] using
     forwardFold_size state.program (#[] : Array (MvPolynomial ι ℂ))
 
 def append {ι : Type} (state : CircuitPrefix ι)
@@ -19591,14 +19650,14 @@ def append {ι : Type} (state : CircuitPrefix ι)
         ((state.program ++ [instruction])[position.val]).referencesBounded
           position.val
       rw [List.getElem_append_right (by omega)]
-      simpa [hlast] using hvalid
+      simpa only [hlast, tsub_self, List.getElem_cons_zero] using hvalid
 
 theorem append_values {ι : Type} (state : CircuitPrefix ι)
     (instruction : Instruction ι)
     (hvalid : instruction.referencesBounded state.program.length) :
     (state.append instruction hvalid).values =
       state.values.push (instruction.eval state.values) := by
-  simp [values, append, List.foldl_append]
+  simp only [values, append, List.foldl_append, List.foldl_cons, List.foldl_nil]
 
 theorem append_values_getD_of_lt {ι : Type} (state : CircuitPrefix ι)
     (instruction : Instruction ι)
@@ -19608,9 +19667,8 @@ theorem append_values_getD_of_lt {ι : Type} (state : CircuitPrefix ι)
       state.values.getD index 0 := by
   rw [append_values]
   have hsize : index < state.values.size := by
-    simpa [values_size] using hindex
-  simp [Array.getD_eq_getD_getElem?, Array.getElem?_push,
-    Nat.ne_of_lt hsize]
+    simpa only [values_size] using hindex
+  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Nat.ne_of_lt hsize, ↓reduceIte]
 
 theorem append_values_getD_new {ι : Type} (state : CircuitPrefix ι)
     (instruction : Instruction ι)
@@ -19618,7 +19676,8 @@ theorem append_values_getD_new {ι : Type} (state : CircuitPrefix ι)
     (state.append instruction hvalid).values.getD
       state.program.length 0 = instruction.eval state.values := by
   rw [append_values, ← values_size state]
-  simp [Array.getD_eq_getD_getElem?]
+  simp only [Array.getD_eq_getD_getElem?, Array.size_push, lt_add_iff_pos_right, Order.lt_one_iff, getElem?_pos,
+    Array.getElem_push_eq, Option.getD_some]
 
 theorem exists_extension_computing {ι : Type}
     (polynomial : MvPolynomial ι ℂ) (state : CircuitPrefix ι) :
@@ -19633,12 +19692,14 @@ theorem exists_extension_computing {ι : Type}
     have hvalid :
         (Instruction.scalar coefficient : Instruction ι).referencesBounded
           state.program.length := by
-      simp [Instruction.referencesBounded]
+      simp only [Instruction.referencesBounded]
     let extension := state.append (.scalar coefficient) hvalid
     refine ⟨extension, state.program.length, ?_, ?_, ?_, ?_⟩
-    · simp [extension, append]
-    · simp [extension, append]
-    · simpa [extension, Instruction.eval] using
+    · simp only [append, List.length_append, List.length_cons, List.length_nil, zero_add, le_add_iff_nonneg_right,
+        zero_le, extension]
+    · simp only [append, List.length_append, List.length_cons, List.length_nil, zero_add, lt_add_iff_pos_right,
+        Order.lt_one_iff, extension]
+    · simpa only [Array.getD_eq_getD_getElem?, Instruction.eval] using
         append_values_getD_new state (.scalar coefficient) hvalid
     · intro index hindex
       exact append_values_getD_of_lt state (.scalar coefficient)
@@ -19653,13 +19714,14 @@ theorem exists_extension_computing {ι : Type}
     have hvalid :
         (Instruction.add leftIndex rightIndex : Instruction ι)
           |>.referencesBounded second.program.length := by
-      simp [Instruction.referencesBounded, hleftSecond, hrightIndex]
+      simp only [Instruction.referencesBounded, hleftSecond, decide_true, hrightIndex, Bool.and_self]
     let extension := second.append (.add leftIndex rightIndex) hvalid
     refine ⟨extension, second.program.length, ?_, ?_, ?_, ?_⟩
     · simp only [extension, append, List.length_append,
         List.length_singleton]
       omega
-    · simp [extension, append]
+    · simp only [append, List.length_append, List.length_cons, List.length_nil, zero_add, lt_add_iff_pos_right,
+        Order.lt_one_iff, extension]
     · rw [show extension = second.append
           (.add leftIndex rightIndex) hvalid from rfl,
         append_values_getD_new]
@@ -19679,23 +19741,25 @@ theorem exists_extension_computing {ι : Type}
     have hinput :
         (Instruction.input inputIndex : Instruction ι).referencesBounded
           first.program.length := by
-      simp [Instruction.referencesBounded]
+      simp only [Instruction.referencesBounded]
     let second := first.append (.input inputIndex) hinput
     have hpolynomialSecond : polynomialIndex < second.program.length := by
       simpa [second, append] using Nat.lt_succ_of_lt hpolynomialIndex
     have hvariableSecond : first.program.length < second.program.length := by
-      simp [second, append]
+      simp only [append, List.length_append, List.length_cons, List.length_nil, zero_add, lt_add_iff_pos_right,
+        Order.lt_one_iff, second]
     have hmul :
         (Instruction.mul polynomialIndex first.program.length : Instruction ι)
           |>.referencesBounded second.program.length := by
-      simp [Instruction.referencesBounded, hpolynomialSecond, hvariableSecond]
+      simp only [Instruction.referencesBounded, hpolynomialSecond, decide_true, hvariableSecond, Bool.and_self]
     let extension := second.append
       (.mul polynomialIndex first.program.length) hmul
     refine ⟨extension, second.program.length, ?_, ?_, ?_, ?_⟩
     · simp only [extension, second, append, List.length_append,
         List.length_singleton]
       omega
-    · simp [extension, append]
+    · simp only [append, List.length_append, List.length_cons, List.length_nil, zero_add, lt_add_iff_pos_right,
+        Order.lt_one_iff, extension]
     · rw [show extension = second.append
           (.mul polynomialIndex first.program.length) hmul from rfl,
         append_values_getD_new]
@@ -19724,22 +19788,20 @@ namespace ArithmeticCircuit
 
 theorem values_size {ι : Type} (circuit : ArithmeticCircuit ι) :
     circuit.values.size = circuit.program.length := by
-  simpa [ArithmeticCircuit.values] using
-    CircuitPrefix.forwardFold_size circuit.program
-      (#[] : Array (MvPolynomial ι ℂ))
+  simpa only [values, List.size_toArray, List.length_nil, zero_add] using
+    CircuitPrefix.forwardFold_size circuit.program (#[] : Array (MvPolynomial ι ℂ))
 
 theorem output_lt_values_size {ι : Type}
     (circuit : ArithmeticCircuit ι) :
     circuit.output < circuit.values.size := by
-  simpa [values_size circuit] using circuit.output_lt
+  simpa only [values_size circuit] using circuit.output_lt
 
 theorem polynomial_eq_getElem {ι : Type}
     (circuit : ArithmeticCircuit ι)
     (houtput : circuit.output < circuit.values.size) :
     circuit.polynomial =
       circuit.values[circuit.output]'houtput := by
-  simp [ArithmeticCircuit.polynomial, Array.getD_eq_getD_getElem?,
-    houtput]
+  simp only [polynomial, Array.getD_eq_getD_getElem?, houtput, getElem?_pos, Option.getD_some]
 
 theorem reference_lt_prefix_values_size {ι : Type}
     (circuit : ArithmeticCircuit ι) (position : Fin circuit.program.length)
@@ -19818,7 +19880,7 @@ theorem le_circuitComplexity_iff {ι : Type}
   · intro hbound
     obtain ⟨circuit, hpolynomial, hsize⟩ :=
       circuitComplexity_attained polynomial
-    simpa [hsize] using hbound circuit hpolynomial
+    simpa only [hsize] using hbound circuit hpolynomial
 
 theorem real_le_circuitComplexity_iff {ι : Type}
     (polynomial : MvPolynomial ι ℂ)
@@ -19833,7 +19895,7 @@ theorem real_le_circuitComplexity_iff {ι : Type}
   · intro hbound
     obtain ⟨circuit, hpolynomial, hsize⟩ :=
       circuitComplexity_attained polynomial
-    simpa [hsize] using hbound circuit hpolynomial
+    simpa only [hsize] using hbound circuit hpolynomial
 
 theorem homogeneous_logarithmic_product_bound_of_fiber_cardinalities
     {k e q cardinality : ℕ} (he : 0 < e)
@@ -19847,7 +19909,7 @@ theorem homogeneous_logarithmic_product_bound_of_fiber_cardinalities
     exact_mod_cast he
   have hlog := Real.logb_le_logb_of_le
     (by norm_num : (1 : ℝ) < 2) (pow_pos he_real k) hreal
-  simpa [Real.logb_pow] using hlog
+  simpa only [ge_iff_le, Real.logb_pow, Nat.one_lt_ofNat, Real.logb_self_eq_one, mul_one] using hlog
 
 theorem sliced_gradient_logarithmic_bound_of_fiber_cardinalities
     {k d q cardinality : ℕ} (hd : 2 ≤ d)
@@ -19858,9 +19920,8 @@ theorem sliced_gradient_logarithmic_bound_of_fiber_cardinalities
   have hcast : ((d - 1 : ℕ) : ℝ) = (d : ℝ) - 1 := by
     rw [Nat.cast_sub (by omega : 1 ≤ d)]
     norm_num
-  simpa [hcast] using
-    (homogeneous_logarithmic_product_bound_of_fiber_cardinalities
-      (k := k) (e := d - 1) (q := q) he hdegree hbezout)
+  simpa only [ge_iff_le, hcast] using
+    (homogeneous_logarithmic_product_bound_of_fiber_cardinalities (k := k) (e := d - 1) (q := q) he hdegree hbezout)
 
 theorem exists_source_parameter_slicedGradient
     {n d dimension : ℕ} (hd : 3 ≤ d)
@@ -19896,7 +19957,7 @@ theorem exists_source_parameter_slicedGradient
       criticalLocusDimension P ≤
         ((blockVariables n d -
           (blockVariables n d - dimension) : ℕ) : WithBot ℕ∞) := by
-    simpa [hsub] using hcritical
+    simpa only [hsub] using hcritical
   exact exists_slicedGradient_of_criticalLocus_codimension
     P (by omega) hP hk hm hcodimension
 
@@ -20043,7 +20104,7 @@ theorem exists_blockTree_leafList {ι : Type*}
         exact ⟨BlockTree.leaf head, rfl⟩
       · obtain ⟨tree, htree⟩ := ih htail
         exact ⟨BlockTree.branch (BlockTree.leaf head) tree, by
-          simp [htree]⟩
+          simp only [BlockTree.leafList, htree, List.cons_append, List.nil_append]⟩
 
 theorem exists_source_floor_blockTree
     {n d : ℕ} (hd : 3 ≤ d) (hn : 6 * blockWidth d ≤ n) :
@@ -20056,7 +20117,7 @@ theorem exists_source_floor_blockTree
   have hlabels : labels ≠ [] := by
     intro hempty
     have hmember : (⟨0, by omega⟩ : Fin (blockCount n d)) ∈ labels := by
-      simp [labels]
+      simp only [Finset.mem_toList, Finset.mem_univ, labels]
     rw [hempty] at hmember
     exact List.not_mem_nil hmember
   obtain ⟨tree, htree⟩ := exists_blockTree_leafList labels hlabels
@@ -20065,7 +20126,7 @@ theorem exists_source_floor_blockTree
     exact Finset.nodup_toList _
   · ext i
     rw [BlockTree.mem_leaves_iff, htree]
-    simp [labels]
+    simp only [Finset.mem_toList, Finset.mem_univ, labels]
 
 theorem sourceTreeSeparatedMinorSum_eq_separatedBlockMinorSum
     (b t s d : ℕ) (tree : BlockTree (Fin b)) :
@@ -20162,11 +20223,9 @@ theorem permanent_circuit_gradient_bound
     sourceTreeBlock_slicedGradient_homogeneousFiberDegree_le_two_pow
       hd hn circuit hpermanent tree hnodup hleaves W A
       hhomogeneous hzero
-  simpa using
-    (sliced_gradient_logarithmic_bound_of_fiber_cardinalities
-      (k := sliceRank n d) (d := d) (q := 3 * circuit.size)
-      (cardinality := (d - 1) ^ sliceRank n d)
-      (by omega) (le_refl _) hpower)
+  simpa only [ge_iff_le, Nat.cast_mul, Nat.cast_ofNat] using
+    (sliced_gradient_logarithmic_bound_of_fiber_cardinalities (k := sliceRank n d) (d := d) (q := 3 * circuit.size)
+      (cardinality := (d - 1) ^ sliceRank n d) (by omega) (le_refl _) hpower)
 
 theorem permanent_superquadratic :
     ∀ C : ℝ, 0 < C → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
@@ -20255,7 +20314,7 @@ theorem permanent_circuit_loglog_lower_bound {n : ℕ} (hn : 2 ^ 16 ≤ n) :
     exact_mod_cast (show 1 < n by omega)
   have hloglt : Real.logb 2 (n : ℝ) < (L + 1 : ℕ) := by
     have hpowlt : n < 2 ^ (L + 1) := by
-      simpa [L] using Nat.lt_pow_succ_log_self (by norm_num : 1 < 2) n
+      simpa only [Nat.succ_eq_add_one] using Nat.lt_pow_succ_log_self (by norm_num : 1 < 2) n
     have hcast : (n : ℝ) < (2 : ℝ) ^ (L + 1) := by
       exact_mod_cast hpowlt
     calc
@@ -20380,10 +20439,8 @@ theorem trdeg_intermediateField_adjoin_le_card
     apply IntermediateField.isAlgebraic_adjoin_iff_top.mp
     rw [htop]
     refine ⟨fun a => ?_⟩
-    simpa using
-      (isAlgebraic_algebraMap
-        (R := (⊤ : IntermediateField F K)) (A := K)
-        (⟨a, by simp⟩ : (⊤ : IntermediateField F K)))
+    simpa only [IntermediateField.algebraMap_apply] using
+      (isAlgebraic_algebraMap (R := (⊤ : IntermediateField F K)) (A := K) (⟨a, by simp⟩ : (⊤ : IntermediateField F K)))
   letI : Algebra.IsAlgebraic (Algebra.adjoin F (Set.range x)) K :=
     halgebraic
   change Algebra.trdeg F K ≤ (s.card : Cardinal)
@@ -20490,14 +20547,14 @@ theorem leafCount_le_vertexCount (f : Formula ι R) :
 theorem variableLeaves_le_leafCount (f : Formula ι R) :
     variableLeaves f ≤ leafCount f := by
   induction f with
-  | var i => simp [variableLeaves, leafCount]
-  | const c => simp [variableLeaves, leafCount]
+  | var i => simp only [variableLeaves, leafCount, Std.le_refl]
+  | const c => simp only [variableLeaves, leafCount, zero_le]
   | add f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
   | sub f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
   | mul f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
 
 end Formula
 
@@ -20591,16 +20648,16 @@ theorem vertexCount_eq_leafCount_add_internalGateCount
 theorem variableLeaves_le_leafCount (f : RationalFormula ι R) :
     variableLeaves f ≤ leafCount f := by
   induction f with
-  | var i => simp [variableLeaves, leafCount]
-  | const c => simp [variableLeaves, leafCount]
+  | var i => simp only [variableLeaves, leafCount, Std.le_refl]
+  | const c => simp only [variableLeaves, leafCount, zero_le]
   | add f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
   | sub f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
   | mul f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
   | div f g hf hg =>
-      simpa [variableLeaves, leafCount] using Nat.add_le_add hf hg
+      simpa only [variableLeaves, leafCount] using Nat.add_le_add hf hg
 
 theorem leafCount_le_vertexCount (f : RationalFormula ι R) :
     leafCount f ≤ vertexCount f := by
@@ -20692,41 +20749,47 @@ theorem splitCoefficientHom_eq_algebraMap [Field F] :
     splitEval (Z := Z) (F := F) (.var (.inl i)) =
       algebraMap (MvPolynomial Y (rationalCoefficientField Z F))
         (rationalSplitField Y Z F) (MvPolynomial.X i) := by
-  simp [splitEval, eval, splitPolynomialHom]
+  simp only [splitEval, eval, splitFractionHom_algebraMap, splitPolynomialHom, RingEquiv.toRingHom_eq_coe,
+    AlgEquiv.toRingEquiv_toRingHom, RingHom.coe_comp, RingHom.coe_coe, Function.comp_apply,
+    MvPolynomial.sumAlgEquiv_X_inl, MvPolynomial.map_X]
 
 @[simp] theorem splitEval_var_inr [Field F] (j : Z) :
     splitEval (Y := Y) (F := F) (.var (.inr j)) =
       splitCoefficientHom (Y := Y) (Z := Z) (F := F)
         (algebraMap (MvPolynomial Z F) (rationalCoefficientField Z F)
           (MvPolynomial.X j)) := by
-  simp [splitEval, eval, splitPolynomialHom, splitCoefficientHom]
+  simp only [splitEval, eval, splitFractionHom_algebraMap, splitPolynomialHom, RingEquiv.toRingHom_eq_coe,
+    AlgEquiv.toRingEquiv_toRingHom, RingHom.coe_comp, RingHom.coe_coe, Function.comp_apply,
+    MvPolynomial.sumAlgEquiv_X_inr, MvPolynomial.map_C, splitCoefficientHom]
 
 @[simp] theorem splitEval_const [Field F] (c : F) :
     splitEval (Y := Y) (Z := Z) (.const c) =
       splitCoefficientHom (Y := Y) (Z := Z) (F := F)
         (algebraMap (MvPolynomial Z F) (rationalCoefficientField Z F)
           (MvPolynomial.C c)) := by
-  simp [splitEval, eval, splitPolynomialHom, splitCoefficientHom]
+  simp only [splitEval, eval, splitFractionHom_algebraMap, splitPolynomialHom, RingEquiv.toRingHom_eq_coe,
+    AlgEquiv.toRingEquiv_toRingHom, RingHom.coe_comp, RingHom.coe_coe, Function.comp_apply,
+    MvPolynomial.sumAlgEquiv_C_inl, MvPolynomial.map_C, splitCoefficientHom]
 
 @[simp] theorem splitEval_add [Field F]
     (f g : RationalFormula (Y ⊕ Z) F) :
     splitEval (.add f g) = splitEval f + splitEval g := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, map_add]
 
 @[simp] theorem splitEval_sub [Field F]
     (f g : RationalFormula (Y ⊕ Z) F) :
     splitEval (.sub f g) = splitEval f - splitEval g := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, map_sub]
 
 @[simp] theorem splitEval_mul [Field F]
     (f g : RationalFormula (Y ⊕ Z) F) :
     splitEval (.mul f g) = splitEval f * splitEval g := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, map_mul]
 
 @[simp] theorem splitEval_div [Field F]
     (f g : RationalFormula (Y ⊕ Z) F) :
     splitEval (.div f g) = splitEval f / splitEval g := by
-  simp [splitEval, eval, map_div₀]
+  simp only [splitEval, eval, map_div₀]
 
 theorem exists_splitEval_eq_coefficient_of_yLeafCount_eq_zero [Field F]
     (f : RationalFormula (Y ⊕ Z) F) (h : yLeafCount f = 0) :
@@ -20735,7 +20798,7 @@ theorem exists_splitEval_eq_coefficient_of_yLeafCount_eq_zero [Field F]
   induction f with
   | var i =>
       cases i with
-      | inl i => simp [yLeafCount] at h
+      | inl i => simp only [yLeafCount, one_ne_zero] at h
       | inr j =>
           exact ⟨algebraMap (MvPolynomial Z F)
             (rationalCoefficientField Z F) (MvPolynomial.X j),
@@ -20899,15 +20962,15 @@ theorem permanentPermutationMonomial_pderiv
     have hbi := hsubset hmem
     obtain ⟨i, _, hi⟩ := Finset.mem_biUnion.mp hbi
     have hpair : (a, b) = (i.1, σ i.1) := by
-      simpa [MvPolynomial.vars_X] using hi
+      simpa only [ne_eq, Prod.mk.injEq, MvPolynomial.vars_X, Finset.mem_singleton] using hi
     exact i.property (congrArg Prod.fst hpair).symm
   by_cases hab : σ a = b
   · subst b
-    simp [hrest]
+    simp only [MvPolynomial.pderiv_X, Pi.single_eq_same, ne_eq, one_mul, hrest, mul_zero, add_zero, ↓reduceIte]
   · have hpair : (a, σ a) ≠ (a, b) := by
       intro h
       exact hab (congrArg Prod.snd h)
-    simp [hab, hrest, MvPolynomial.pderiv_X_of_ne hpair]
+    simp only [MvPolynomial.pderiv_X_of_ne hpair, ne_eq, zero_mul, hrest, mul_zero, add_zero, hab, ↓reduceIte]
 
 theorem permanentPolynomial_pderiv_eq_sum
     {n : ℕ} (a b : Fin n) :
@@ -20954,13 +21017,13 @@ theorem permanentPolynomial_pderiv_ne_zero
   classical
   have hnonempty :
       Nonempty {σ : Equiv.Perm (Fin n) // σ a = b} :=
-    ⟨⟨Equiv.swap a b, by simp⟩⟩
+    ⟨⟨Equiv.swap a b, by simp only [Equiv.swap_apply_left]⟩⟩
   letI : Nonempty {σ : Equiv.Perm (Fin n) // σ a = b} := hnonempty
   intro hzero
   have hcardzero :
       (Fintype.card {σ : Equiv.Perm (Fin n) // σ a = b} : ℂ) = 0 := by
     rw [← eval_one_permanentPolynomial_pderiv a b, hzero]
-    simp
+    simp only [map_zero]
   exact (Nat.cast_ne_zero.mpr
     (Fintype.card_ne_zero :
       Fintype.card {σ : Equiv.Perm (Fin n) // σ a = b} ≠ 0)) hcardzero
@@ -20977,7 +21040,7 @@ theorem pderiv_eval_eq_zero_of_blockLeaves_eq_zero
       intro hleaves
       have hj : j ∉ s := by
         intro hjs
-        simp [blockLeaves, hjs] at hleaves
+        simp only [blockLeaves, hjs, ↓reduceIte, one_ne_zero] at hleaves
       have hne : j ≠ i := by
         intro heq
         exact hj (heq.symm ▸ hi)
@@ -20993,7 +21056,7 @@ theorem pderiv_eval_eq_zero_of_blockLeaves_eq_zero
       have hright : blockLeaves s g = 0 := by
         simp only [blockLeaves] at hleaves
         omega
-      simp [eval, hf hleft, hg hright]
+      simp only [eval, map_add, hf hleft, hg hright, add_zero]
   | sub f g hf hg =>
       intro hleaves
       have hleft : blockLeaves s f = 0 := by
@@ -21002,7 +21065,7 @@ theorem pderiv_eval_eq_zero_of_blockLeaves_eq_zero
       have hright : blockLeaves s g = 0 := by
         simp only [blockLeaves] at hleaves
         omega
-      simp [eval, hf hleft, hg hright]
+      simp only [eval, map_sub, hf hleft, hg hright, sub_self]
   | mul f g hf hg =>
       intro hleaves
       have hleft : blockLeaves s f = 0 := by
@@ -21011,7 +21074,7 @@ theorem pderiv_eval_eq_zero_of_blockLeaves_eq_zero
       have hright : blockLeaves s g = 0 := by
         simp only [blockLeaves] at hleaves
         omega
-      simp [eval, hf hleft, hg hright]
+      simp only [eval, Derivation.leibniz, hg hright, smul_eq_mul, mul_zero, hf hleft, add_zero]
 
 theorem blockLeaves_pos_of_eval_eq_permanent
     {n : ℕ} (f : Formula (Fin n × Fin n) ℂ)
@@ -21034,7 +21097,7 @@ def matchingBlockRow {n k : ℕ} (hk : 0 < k)
     have hupper : ((j : ℕ) + 1) * k ≤ n :=
       (Nat.le_div_iff_mul_le hk).mp (Nat.succ_le_of_lt j.isLt)
     have hupper' : (j : ℕ) * k + k ≤ n := by
-      simpa [Nat.add_mul] using hupper
+      simpa only [Nat.add_mul, one_mul] using hupper
     exact (Nat.add_lt_add_left r.isLt ((j : ℕ) * k)).trans_le hupper'⟩
 
 theorem matchingBlockRow_injective {n k : ℕ} (hk : 0 < k) :
@@ -21050,8 +21113,8 @@ theorem matchingBlockRow_injective {n k : ℕ} (hk : 0 < k) :
     congrArg Fin.val h
   have hr : (r : ℕ) = (r' : ℕ) := by
     have hmod := congrArg (fun z : ℕ => z % k) hval
-    simpa [Nat.add_mod, Nat.mod_eq_of_lt r.isLt,
-      Nat.mod_eq_of_lt r'.isLt] using hmod
+    simpa only [Nat.add_mod, Nat.mul_mod_left, Nat.mod_eq_of_lt r.isLt, zero_add, Nat.mod_eq_of_lt r'.isLt] using
+      hmod
   have hmul : (j : ℕ) * k = (j' : ℕ) * k := by
     omega
   have hj : (j : ℕ) = (j' : ℕ) :=
@@ -21076,7 +21139,7 @@ theorem card_cyclicMatchingBlock {n k : ℕ}
   classical
   unfold cyclicMatchingBlock
   rw [Finset.card_image_of_injective]
-  · simp
+  · simp only [Finset.card_univ, Fintype.card_fin]
   · intro r r' heq
     have hrows : matchingBlockRow hk j r = matchingBlockRow hk j r' :=
       congrArg Prod.fst heq
@@ -21109,7 +21172,7 @@ theorem cyclicMatchingBlock_disjoint {n k : ℕ}
     congrArg Prod.snd hpair
   have hoffset : x.1 = y.1 := by
     apply add_left_cancel (a := matchingBlockRow hk x.2 r)
-    simpa [hrow] using hcol
+    simpa only [hrow, add_right_inj] using hcol
   have hblock : x.2 = y.2 :=
     congrArg Prod.fst
       (matchingBlockRow_injective hk
@@ -21163,7 +21226,7 @@ theorem matchingBlock_floor_bound (n k : ℕ)
     n ≤ 2 * (k * (n / k)) := by
   have hq : 0 < n / k := Nat.div_pos hkn hk
   have hkq : k ≤ k * (n / k) := by
-    simpa using Nat.mul_le_mul_left k (Nat.succ_le_of_lt hq)
+    simpa only [Nat.succ_eq_add_one, zero_add, mul_one] using Nat.mul_le_mul_left k (Nat.succ_le_of_lt hq)
   have hrem : n % k < k := Nat.mod_lt n hk
   have hdecomp : n % k + k * (n / k) = n := Nat.mod_add_div n k
   omega
@@ -21196,16 +21259,13 @@ theorem sum_blockLeaves_le_variableLeaves_of_disjoint
       have hib : i ∈ blocks b := (Finset.mem_filter.mp hb).2
       exact Finset.disjoint_left.mp (hdisjoint a b hne) hia hib
   | const _ =>
-      simp [blockLeaves, variableLeaves]
+      simp only [blockLeaves, Finset.sum_const_zero, variableLeaves, Std.le_refl]
   | add f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
   | sub f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
   | mul f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
 
 end Formula
 
@@ -21229,19 +21289,15 @@ theorem sum_blockLeaves_le_variableLeaves_of_disjoint
       have hib : i ∈ blocks b := (Finset.mem_filter.mp hb).2
       exact Finset.disjoint_left.mp (hdisjoint a b hne) hia hib
   | const _ =>
-      simp [blockLeaves, variableLeaves]
+      simp only [blockLeaves, Finset.sum_const_zero, variableLeaves, Std.le_refl]
   | add f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
   | sub f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
   | mul f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
   | div f g hf hg =>
-      simpa [blockLeaves, variableLeaves, Finset.sum_add_distrib]
-        using Nat.add_le_add hf hg
+      simpa only [blockLeaves, Finset.sum_add_distrib, variableLeaves] using Nat.add_le_add hf hg
 
 end RationalFormula
 
@@ -21260,7 +21316,7 @@ theorem cyclicMatchingBlock_square_sum_le_variableLeaves
   calc
     (n * (n / k)) * (m * m) =
         ∑ _x : Fin n × Fin (n / k), m * m := by
-          simp
+          simp only [Finset.sum_const, Finset.card_univ, Fintype.card_prod, Fintype.card_fin, smul_eq_mul]
     _ ≤ ∑ x : Fin n × Fin (n / k),
           4 * blockLeaves (cyclicMatchingBlock hk x.1 x.2) f := by
             exact Finset.sum_le_sum fun x _ => hblock x
@@ -21326,7 +21382,7 @@ theorem cyclicMatchingBlock_square_sum_le_variableLeaves
   calc
     (n * (n / k)) * (m * m) =
         ∑ _x : Fin n × Fin (n / k), m * m := by
-          simp
+          simp only [Finset.sum_const, Finset.card_univ, Fintype.card_prod, Fintype.card_fin, smul_eq_mul]
     _ ≤ ∑ x : Fin n × Fin (n / k),
           6 * blockLeaves (cyclicMatchingBlock hk x.1 x.2) f := by
             exact Finset.sum_le_sum fun x _ => hblock x
@@ -21430,10 +21486,11 @@ theorem coefficientTranscendenceDegree_ge_of_algebraicIndependent
     apply
       (AlgHom.algebraicIndependent_iff
         (coefficientField p).val Subtype.val_injective).mp
-    simpa [g, Function.comp_def] using hfrac
+    simpa only [IntermediateField.coe_val, Function.comp_def] using hfrac
   change (Fintype.card ι : Cardinal) ≤
     Algebra.trdeg F (coefficientField p)
-  simpa using hg.lift_cardinalMk_le_trdeg
+  simpa only [Cardinal.mk_fintype, Cardinal.lift_natCast, ge_iff_le, Cardinal.nat_le_lift_iff] using
+    hg.lift_cardinalMk_le_trdeg
 
 theorem coefficientTranscendenceDegree_ge_square_of_algebraicIndependent
     {Y Z F : Type*} [Field F] {m : ℕ}
@@ -21442,7 +21499,7 @@ theorem coefficientTranscendenceDegree_ge_square_of_algebraicIndependent
     (hind : AlgebraicIndependent F
       (fun de => coefficientPolynomial p (α de))) :
     ((m * m : ℕ) : Cardinal) ≤ coefficientTranscendenceDegree p := by
-  simpa using
+  simpa only [Nat.cast_mul, Fintype.card_prod, Fintype.card_fin] using
     coefficientTranscendenceDegree_ge_of_algebraicIndependent p α hind
 
 section Jacobian
@@ -21467,8 +21524,9 @@ theorem pderiv_bind₁_chain_rule [CommSemiring F] [Fintype ι]
           MvPolynomial.pderiv j (g i) := by
   classical
   induction H using MvPolynomial.induction_on with
-  | C c => simp
-  | add p q hp hq => simp [Finset.sum_add_distrib, add_mul, hp, hq]
+  | C c => simp only [MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq, MvPolynomial.derivation_C, map_zero, zero_mul,
+             Finset.sum_const_zero]
+  | add p q hp hq => simp only [map_add, hp, hq, add_mul, Finset.sum_add_distrib]
   | mul_X p i hp =>
       rw [map_mul, MvPolynomial.bind₁_X_right,
         MvPolynomial.pderiv_mul, hp]
@@ -21476,7 +21534,8 @@ theorem pderiv_bind₁_chain_rule [CommSemiring F] [Fintype ι]
         MvPolynomial.bind₁_X_right, MvPolynomial.pderiv_X,
         Pi.single_apply, add_mul]
       rw [Finset.sum_add_distrib]
-      simp [Finset.mul_sum, mul_assoc, mul_comm]
+      simp only [mul_comm, Finset.mul_sum, mul_assoc, MonoidWithZeroHom.map_ite_one_zero, ite_mul, one_mul,
+        zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
 
 theorem pderiv_aeval_chain_rule [CommSemiring F] [Fintype ι]
     (g : ι → MvPolynomial κ F) (H : MvPolynomial ι F) (j : κ) :
@@ -21496,7 +21555,8 @@ theorem relation_vecMul_jacobianMinor [CommRing F] [Fintype ι]
   funext j
   have hj := congrArg (MvPolynomial.pderiv (cols j)) hH
   rw [pderiv_aeval_chain_rule] at hj
-  simpa [Matrix.vecMul, dotProduct, jacobianMinor] using hj
+  simpa only [Matrix.vecMul, dotProduct, MvPolynomial.aeval_eq_bind₁, jacobianMinor, Pi.zero_apply,
+    map_zero] using hj
 
 theorem jacobianMinor_det_ne_zero_of_evaluated [CommRing F]
     [Fintype ι] [DecidableEq ι]
@@ -21534,7 +21594,8 @@ theorem totalDegree_succ_le_of_mem_pderiv_support [CommSemiring F]
   have hdegree := MvPolynomial.le_totalDegree hparent
   rw [Finsupp.card_toMultiset]
   change m.sum (fun _ e => e) + 1 ≤ p.totalDegree
-  simpa [Finsupp.sum_add_index'] using hdegree
+  simpa only [Order.add_one_le_iff, implies_true, Nat.add_left_cancel_iff, Finsupp.sum_add_index',
+    Finsupp.sum_single_index] using hdegree
 
 theorem totalDegree_pderiv_lt_of_ne_zero [CommSemiring F]
     (p : MvPolynomial ι F) (i : ι)
@@ -21559,7 +21620,7 @@ theorem eq_C_of_forall_pderiv_eq_zero [Field F] [CharZero F]
   intro m
   by_cases hm : m = 0
   · subst m
-    simp
+    simp only [MvPolynomial.coeff_C, ↓reduceIte]
   · obtain ⟨i, hi⟩ : ∃ i, m i ≠ 0 := by
       by_contra hnone
       apply hm
@@ -21575,7 +21636,7 @@ theorem eq_C_of_forall_pderiv_eq_zero [Field F] [CharZero F]
       Nat.cast_add_one_ne_zero _
     have hcoeff : MvPolynomial.coeff m p = 0 :=
       (mul_eq_zero.mp hder).resolve_right hcast
-    simpa [Ne.symm hm] using hcoeff
+    simpa only [MvPolynomial.coeff_C, Ne.symm hm, ↓reduceIte] using hcoeff
 
 theorem algebraicIndependent_of_jacobianMinor_det_ne_zero
     [Field F] [CharZero F] [Fintype ι] [DecidableEq ι]
@@ -21602,7 +21663,8 @@ theorem algebraicIndependent_of_jacobianMinor_det_ne_zero
               g cols p hdet hrelation i)
       have hconstant := eq_C_of_forall_pderiv_eq_zero p hpartials
       rw [hconstant] at hrelation ⊢
-      simpa using hrelation
+      simpa only [map_eq_zero, MvPolynomial.aeval_eq_bind₁, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq] using
+        hrelation
   exact hmain H.totalDegree H rfl hH
 
 theorem algebraicIndependent_of_evaluatedJacobianMinor_det_ne_zero
@@ -21654,7 +21716,7 @@ theorem polynomialCoefficientProjection_map
   change
     φ (MvPolynomial.coeff s (MvPolynomial.map (algebraMap K E) p)) =
       MvPolynomial.coeff s p
-  simpa [MvPolynomial.coeff_map] using hφ (MvPolynomial.coeff s p)
+  simpa only [MvPolynomial.coeff_map] using hφ (MvPolynomial.coeff s p)
 
 theorem polynomial_intersection_of_mul
     (f : MvPolynomial ι E) (p q : MvPolynomial ι K)
@@ -21673,15 +21735,14 @@ theorem polynomial_intersection_of_mul
   let g : MvPolynomial ι K := polynomialCoefficientProjection φ f
   have hg : q * g = p := by
     have he := congrArg (polynomialCoefficientProjection φ) h
-    simpa [g, polynomialCoefficientProjection_map_mul,
-      polynomialCoefficientProjection_map φ hφ] using he
+    simpa only [polynomialCoefficientProjection_map_mul, polynomialCoefficientProjection_map φ hφ] using he
   refine ⟨g, ?_⟩
   have hq' : MvPolynomial.map (algebraMap K E) q ≠ 0 := by
     intro hzero
     apply hq
     apply MvPolynomial.map_injective (algebraMap K E)
       (RingHom.injective (algebraMap K E))
-    simpa using hzero
+    simpa only [map_zero] using hzero
   apply mul_left_cancel₀ hq'
   calc
     MvPolynomial.map (algebraMap K E) q *
@@ -21749,7 +21810,8 @@ theorem coefficientRationalField_le_fractionRange (s : Finset E) :
         (IntermediateField.adjoin F (s : Set E))))
       (MvPolynomial.X i), ?_⟩
     rw [coefficientFractionEmbedding_algebraMap]
-    simp [coefficientPolynomialEmbedding]
+    simp only [coefficientPolynomialEmbedding, AlgHom.coe_comp, IsScalarTower.coe_toAlgHom', Function.comp_apply,
+      MvPolynomial.mapAlgHom_apply, MvPolynomial.map_X]
   · let ck : IntermediateField.adjoin F (s : Set E) :=
       ⟨c, IntermediateField.subset_adjoin F (s : Set E) hc⟩
     apply AlgHom.mem_fieldRange.mpr
@@ -21783,7 +21845,7 @@ theorem exists_polynomial_of_mem_coefficientRationalField
     intro hzero
     apply hbzero
     apply coefficientPolynomialEmbedding_injective (Y := Y) K
-    simpa using hzero
+    simpa only [map_zero] using hzero
   have hrat :
       coefficientPolynomialEmbedding (Y := Y) K a /
         coefficientPolynomialEmbedding (Y := Y) K b =
@@ -21796,7 +21858,7 @@ theorem exists_polynomial_of_mem_coefficientRationalField
         algebraMap (MvPolynomial Y E) (FractionRing (MvPolynomial Y E)) p =
           coefficientPolynomialEmbedding (Y := Y) K a := by
     have hcross := (div_eq_iff hbembed).mp hrat
-    simpa [mul_comm] using hcross.symm
+    simpa only [mul_comm] using hcross.symm
   have hcross :
       MvPolynomial.map (algebraMap K E) b * p =
         MvPolynomial.map (algebraMap K E) a := by
@@ -21804,7 +21866,8 @@ theorem exists_polynomial_of_mem_coefficientRationalField
     rw [← hval]
     apply IsFractionRing.injective (MvPolynomial Y E)
       (FractionRing (MvPolynomial Y E))
-    simpa [coefficientPolynomialEmbedding, map_mul] using hcrossFraction
+    simpa only [AlgHom.toRingHom_eq_coe, map_mul, coefficientPolynomialEmbedding, AlgHom.coe_comp,
+      IsScalarTower.coe_toAlgHom', Function.comp_apply, MvPolynomial.mapAlgHom_apply] using hcrossFraction
   exact polynomial_intersection_of_mul p a b hbzero hcross
 
 end RationalCoefficientExtraction
@@ -21899,7 +21962,7 @@ theorem matrix_ne_zero_of_fractionalDenominator_ne_zero
     (h : fractionalDenominator M q ≠ 0) : M ≠ 0 := by
   intro hM
   apply h
-  simp [fractionalDenominator, hM]
+  simp only [fractionalDenominator, hM, Fin.isValue, Matrix.zero_apply, map_zero, zero_mul, add_zero]
 
 def normalizedFractionalMatrix
     (M : Matrix (Fin 2) (Fin 2) E) (ij : Fin 2 × Fin 2) :
@@ -21910,20 +21973,21 @@ theorem normalizedFractionalMatrix_pivot
     (M : Matrix (Fin 2) (Fin 2) E) (ij : Fin 2 × Fin 2)
     (h : M ij.1 ij.2 ≠ 0) :
     normalizedFractionalMatrix M ij ij.1 ij.2 = 1 := by
-  simp [normalizedFractionalMatrix, Matrix.smul_apply, smul_eq_mul, h]
+  simp only [normalizedFractionalMatrix, Matrix.smul_apply, smul_eq_mul, ne_eq, h, not_false_eq_true,
+    inv_mul_cancel₀]
 
 theorem fractionalNumerator_smul
     (c : E) (M : Matrix (Fin 2) (Fin 2) E) (q : L) :
     fractionalNumerator (c • M) q =
       algebraMap E L c * fractionalNumerator M q := by
-  simp [fractionalNumerator, Matrix.smul_apply, smul_eq_mul, map_mul]
+  simp only [fractionalNumerator, Fin.isValue, Matrix.smul_apply, smul_eq_mul, map_mul]
   ring
 
 theorem fractionalDenominator_smul
     (c : E) (M : Matrix (Fin 2) (Fin 2) E) (q : L) :
     fractionalDenominator (c • M) q =
       algebraMap E L c * fractionalDenominator M q := by
-  simp [fractionalDenominator, Matrix.smul_apply, smul_eq_mul, map_mul]
+  simp only [fractionalDenominator, Fin.isValue, Matrix.smul_apply, smul_eq_mul, map_mul]
   ring
 
 theorem fractionalApply_smul
@@ -21960,7 +22024,8 @@ theorem card_projectiveMatrixGenerators_le_three
     ((Finset.univ.erase ij).image
       (fun ab => normalizedFractionalMatrix M ij ab.1 ab.2)).card ≤
         (Finset.univ.erase ij).card := Finset.card_image_le
-    _ = 3 := by simp
+    _ = 3 := by simp only [Finset.mem_univ, Finset.card_erase_of_mem, Finset.card_univ, Fintype.card_prod, Fintype.card_fin,
+                  Nat.reduceMul, Nat.add_one_sub_one]
 
 theorem normalizedFractionalMatrix_entry_mem_adjoin
     {F : Type*} [Field F] [Algebra F E]
@@ -22018,75 +22083,89 @@ def rationalReverseDivPathMatrix (c : E) : Matrix (Fin 2) (Fin 2) E :=
 @[simp] theorem fractionalDenominator_rationalAddPathMatrix
     (c : E) (q : L) :
     fractionalDenominator (rationalAddPathMatrix c) q = 1 := by
-  simp [rationalAddPathMatrix, fractionalDenominator]
+  simp only [fractionalDenominator, rationalAddPathMatrix, Fin.isValue, Matrix.of_apply, Matrix.cons_val',
+    Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_zero, zero_mul, map_one, zero_add]
 
 @[simp] theorem fractionalApply_rationalAddPathMatrix
     (c : E) (q : L) :
     fractionalApply (rationalAddPathMatrix c) q =
       q + algebraMap E L c := by
-  simp [rationalAddPathMatrix, fractionalApply, fractionalNumerator,
-    fractionalDenominator]
+  simp only [fractionalApply, fractionalNumerator, rationalAddPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, map_one, one_mul, Matrix.cons_val_one,
+    fractionalDenominator, map_zero, zero_mul, zero_add, div_one]
 
 @[simp] theorem fractionalDenominator_rationalSubPathMatrix
     (c : E) (q : L) :
     fractionalDenominator (rationalSubPathMatrix c) q = 1 := by
-  simp [rationalSubPathMatrix, fractionalDenominator]
+  simp only [fractionalDenominator, rationalSubPathMatrix, Fin.isValue, Matrix.of_apply, Matrix.cons_val',
+    Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_zero, zero_mul, map_one, zero_add]
 
 @[simp] theorem fractionalApply_rationalSubPathMatrix
     (c : E) (q : L) :
     fractionalApply (rationalSubPathMatrix c) q =
       q - algebraMap E L c := by
-  simp [rationalSubPathMatrix, fractionalApply, fractionalNumerator,
-    fractionalDenominator, sub_eq_add_neg]
+  simp only [fractionalApply, fractionalNumerator, rationalSubPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, map_one, one_mul, Matrix.cons_val_one, map_neg,
+    fractionalDenominator, map_zero, zero_mul, zero_add, div_one, sub_eq_add_neg]
 
 @[simp] theorem fractionalDenominator_rationalReverseSubPathMatrix
     (c : E) (q : L) :
     fractionalDenominator (rationalReverseSubPathMatrix c) q = 1 := by
-  simp [rationalReverseSubPathMatrix, fractionalDenominator]
+  simp only [fractionalDenominator, rationalReverseSubPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_zero, zero_mul, map_one,
+    zero_add]
 
 @[simp] theorem fractionalApply_rationalReverseSubPathMatrix
     (c : E) (q : L) :
     fractionalApply (rationalReverseSubPathMatrix c) q =
       algebraMap E L c - q := by
-  simp [rationalReverseSubPathMatrix, fractionalApply, fractionalNumerator,
-    fractionalDenominator, sub_eq_add_neg, add_comm]
+  simp only [fractionalApply, fractionalNumerator, rationalReverseSubPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, map_neg, map_one, neg_mul, one_mul,
+    Matrix.cons_val_one, fractionalDenominator, map_zero, zero_mul, zero_add, div_one, sub_eq_add_neg, add_comm]
 
 @[simp] theorem fractionalDenominator_rationalMulPathMatrix
     (c : E) (q : L) :
     fractionalDenominator (rationalMulPathMatrix c) q = 1 := by
-  simp [rationalMulPathMatrix, fractionalDenominator]
+  simp only [fractionalDenominator, rationalMulPathMatrix, Fin.isValue, Matrix.of_apply, Matrix.cons_val',
+    Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_zero, zero_mul, map_one, zero_add]
 
 @[simp] theorem fractionalApply_rationalMulPathMatrix
     (c : E) (q : L) :
     fractionalApply (rationalMulPathMatrix c) q =
       algebraMap E L c * q := by
-  simp [rationalMulPathMatrix, fractionalApply, fractionalNumerator,
-    fractionalDenominator]
+  simp only [fractionalApply, fractionalNumerator, rationalMulPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_zero, add_zero,
+    fractionalDenominator, zero_mul, map_one, zero_add, div_one]
 
 @[simp] theorem fractionalDenominator_rationalDivPathMatrix
     (c : E) (q : L) :
     fractionalDenominator (rationalDivPathMatrix c) q =
       algebraMap E L c := by
-  simp [rationalDivPathMatrix, fractionalDenominator]
+  simp only [fractionalDenominator, rationalDivPathMatrix, Fin.isValue, Matrix.of_apply, Matrix.cons_val',
+    Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_zero, zero_mul, zero_add]
 
 @[simp] theorem fractionalApply_rationalDivPathMatrix
     (c : E) (q : L) :
     fractionalApply (rationalDivPathMatrix c) q =
       q / algebraMap E L c := by
-  simp [rationalDivPathMatrix, fractionalApply, fractionalNumerator,
-    fractionalDenominator]
+  simp only [fractionalApply, fractionalNumerator, rationalDivPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, map_one, one_mul, Matrix.cons_val_one, map_zero,
+    add_zero, fractionalDenominator, zero_mul, zero_add]
 
 @[simp] theorem fractionalDenominator_rationalReverseDivPathMatrix
     (c : E) (q : L) :
     fractionalDenominator (rationalReverseDivPathMatrix c) q = q := by
-  simp [rationalReverseDivPathMatrix, fractionalDenominator]
+  simp only [fractionalDenominator, rationalReverseDivPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, Matrix.cons_val_one, map_one, one_mul, map_zero,
+    add_zero]
 
 @[simp] theorem fractionalApply_rationalReverseDivPathMatrix
     (c : E) (q : L) :
     fractionalApply (rationalReverseDivPathMatrix c) q =
       algebraMap E L c / q := by
-  simp [rationalReverseDivPathMatrix, fractionalApply, fractionalNumerator,
-    fractionalDenominator]
+  simp only [fractionalApply, fractionalNumerator, rationalReverseDivPathMatrix, Fin.isValue, Matrix.of_apply,
+    Matrix.cons_val', Matrix.cons_val_zero, Matrix.cons_val_fin_one, map_zero, zero_mul, Matrix.cons_val_one, zero_add,
+    fractionalDenominator, map_one, one_mul, add_zero]
 
 end MarkedPathGates
 
@@ -22107,11 +22186,13 @@ noncomputable def contractedRationalSkeletonVar [Field F] (i : Y) :
   core := algebraMap (MvPolynomial Y (rationalCoefficientField Z F))
     (rationalSplitField Y Z F) (MvPolynomial.X i)
   core_mem := marked_variable_mem_rationalSkeletonField ∅ i
-  denominator_ne := by simp [fractionalDenominator]
+  denominator_ne := by simp only [fractionalDenominator, Fin.isValue, ne_eq, one_ne_zero, not_false_eq_true, Matrix.one_apply_ne,
+                         map_zero, zero_mul, Matrix.one_apply_eq, map_one, zero_add]
   split_eq := by
-    simp [splitEval_var_inl, fractionalApply, fractionalNumerator,
-      fractionalDenominator]
-  generator_card := by simp [yLeafCount]
+    simp only [splitEval_var_inl, fractionalApply, fractionalNumerator, Matrix.one_apply_eq, map_one, one_mul,
+      Fin.isValue, ne_eq, zero_ne_one, not_false_eq_true, Matrix.one_apply_ne, map_zero, add_zero, fractionalDenominator,
+      one_ne_zero, zero_mul, zero_add, div_one]
+  generator_card := by simp only [Finset.card_empty, yLeafCount, mul_one, tsub_self, Std.le_refl]
 
 noncomputable def contractedRationalSkeletonCompose [Field F]
     {f h : RationalFormula (Y ⊕ Z) F}
@@ -22136,7 +22217,7 @@ noncomputable def contractedRationalSkeletonCompose [Field F]
       _ = fractionalApply (P * w.matrix) w.core :=
         (fractionalApply_mul P w.matrix w.core w.denominator_ne).symm
   generator_card := by
-    simpa [hleaves] using w.generator_card
+    simpa only [hleaves] using w.generator_card
 
 namespace ContractedRationalSkeleton
 
@@ -22152,7 +22233,7 @@ theorem exists_pivot [Field F]
     have hij : w.matrix i j = 0 := by
       by_contra hentry
       exact h ⟨(i, j), hentry⟩
-    simpa using hij
+    simpa only [Matrix.zero_apply] using hij
   exact (matrix_ne_zero_of_fractionalDenominator_ne_zero
     w.matrix w.core w.denominator_ne) hzero
 
@@ -22275,9 +22356,11 @@ noncomputable def contractedRationalSkeletonMerge [Field F]
         (ContractedRationalSkeleton.splitEval_mem_extended wf)
     · exact rationalSkeletonField_mono hright
         (ContractedRationalSkeleton.splitEval_mem_extended wg)
-  · simp [fractionalDenominator]
-  · simpa [fractionalApply, fractionalNumerator, fractionalDenominator]
-      using heval
+  · simp only [fractionalDenominator, Fin.isValue, ne_eq, one_ne_zero, not_false_eq_true, Matrix.one_apply_ne,
+      map_zero, zero_mul, Matrix.one_apply_eq, map_one, zero_add]
+  · simpa only [fractionalApply, fractionalNumerator, Matrix.one_apply_eq, map_one, one_mul, Fin.isValue, ne_eq,
+      zero_ne_one, not_false_eq_true, Matrix.one_apply_ne, map_zero, add_zero, fractionalDenominator, one_ne_zero,
+      zero_mul, zero_add, div_one] using heval
   · have hunion := Finset.card_union_le
       (ContractedRationalSkeleton.extendedGenerators wf)
       (ContractedRationalSkeleton.extendedGenerators wg)
@@ -22461,7 +22544,7 @@ theorem splitEval_ne_zero_of_eval_ne_zero [Field F]
   intro hzero
   apply h
   apply splitFractionHom_injective (Y := Y) (Z := Z) (F := F)
-  simpa [splitEval] using hzero
+  simpa only [map_zero, map_eq_zero, splitEval] using hzero
 
 theorem exists_contractedRationalSkeleton [Field F]
     (f : RationalFormula (Y ⊕ Z) F) :
@@ -22471,10 +22554,10 @@ theorem exists_contractedRationalSkeleton [Field F]
       intro _ hmarked
       cases i with
       | inl i => exact ⟨contractedRationalSkeletonVar i⟩
-      | inr i => simp [yLeafCount] at hmarked
+      | inr i => simp only [yLeafCount, lt_self_iff_false] at hmarked
   | const c =>
       intro _ hmarked
-      simp [yLeafCount] at hmarked
+      simp only [yLeafCount, lt_self_iff_false] at hmarked
   | add f g ihf ihg =>
       intro hvalid hmarked
       cases hvalid with
@@ -22579,8 +22662,7 @@ theorem rational_skeleton_trdeg [Field F]
   have hfields :
       rationalSkeletonField (Y := Y) s =
         coefficientRationalField (F := F) (Y := Y) s := by
-    simp [rationalSkeletonField, coefficientRationalField,
-      splitCoefficientHom_eq_algebraMap]
+    simp only [rationalSkeletonField, splitCoefficientHom_eq_algebraMap, coefficientRationalField]
   have hpY :
       algebraMap (MvPolynomial Y E)
         (FractionRing (MvPolynomial Y E)) pY ∈
@@ -22659,8 +22741,7 @@ noncomputable def matchingSquarefreeMonomial {Y : Type u}
     (S : Finset Y) (y : Y) :
     matchingSquarefreeMonomial S y = if y ∈ S then 1 else 0 := by
   classical
-  simp [matchingSquarefreeMonomial, Finsupp.finsetSum_apply,
-    Finsupp.single_apply, Finset.sum_ite_eq']
+  simp only [matchingSquarefreeMonomial, Finsupp.finsetSum_apply, Finsupp.single_apply, Finset.sum_ite_eq']
 
 noncomputable def matchingPermutationExponent {n : ℕ} {Y : Type u}
     (d : Y ↪ Fin n × Fin n) (σ : Equiv.Perm (Fin n)) : Y →₀ ℕ :=
@@ -22696,10 +22777,9 @@ theorem matchingPermutation_split_monomial
   rw [MvPolynomial.renameEquiv_apply, MvPolynomial.rename_X]
   cases h : (matchingVariableEquiv d).symm (i, σ i) with
   | inl y =>
-      simp [MvPolynomial.sumAlgEquiv_X_inl,
-        ← MvPolynomial.C_mul_X_eq_monomial]
+      simp only [MvPolynomial.sumAlgEquiv_X_inl, ← MvPolynomial.C_mul_X_eq_monomial, MvPolynomial.C_1, one_mul]
   | inr z =>
-      simp [MvPolynomial.sumAlgEquiv_X_inr]
+      simp only [MvPolynomial.sumAlgEquiv_X_inr, MvPolynomial.monomial_zero']
 
 theorem matchingMarkedPermanent_split_eq_sum
     {n : ℕ} {Y : Type u} (d : Y ↪ Fin n × Fin n) :
@@ -22730,7 +22810,7 @@ theorem matchingMarkedPermanent_coefficient_eq_sum
     MvPolynomial.coeff_sum]
   apply Finset.sum_congr rfl
   intro σ _
-  simp [MvPolynomial.coeff_monomial]
+  simp only [MvPolynomial.coeff_monomial]
 
 theorem matchingMarkedPermanent_coefficient_pderiv_eq_sum
     {n : ℕ} {Y : Type u} [DecidableEq Y]
@@ -22803,42 +22883,42 @@ theorem matchingPermutationOutsideProduct_pderiv
     obtain ⟨i, _, hi⟩ := Finset.mem_biUnion.mp (hsubset hmem)
     unfold matchingPermutationOutsideFactor at hi
     split at hi
-    · simp at hi
+    · simp only [MvPolynomial.vars_one, Finset.notMem_empty] at hi
     · rename_i w hw
       have hzw : z = w := by
-        simpa [MvPolynomial.vars_X] using hi
+        simpa only [MvPolynomial.vars_X, Finset.mem_singleton] using hi
       have hpair : (i.1, σ i.1) = z.1 := by
         have heq := congrArg (matchingVariableEquiv d) hw
-        simpa [hzw] using heq
+        simpa only [ne_eq, hzw, Equiv.apply_symm_apply, matchingVariableEquiv_inr] using heq
       exact i.property (congrArg Prod.fst hpair)
   by_cases hz : σ z.1.1 = z.1.2
   · have hmarked :
         (matchingVariableEquiv d).symm (z.1.1, σ z.1.1) =
           .inr z := by
         apply (matchingVariableEquiv d).injective
-        simp [hz]
+        simp only [hz, Prod.mk.eta, Equiv.apply_symm_apply, matchingVariableEquiv_inr]
     have hfactor :
         matchingPermutationOutsideFactor d σ z.1.1 =
           MvPolynomial.X z := by
       unfold matchingPermutationOutsideFactor
       rw [hmarked]
     rw [hrest, hfactor]
-    simp [hz]
+    simp only [MvPolynomial.pderiv_X, Pi.single_eq_same, ne_eq, one_mul, mul_zero, add_zero, hz, ↓reduceIte]
   · have hfirst :
         MvPolynomial.pderiv z
           (matchingPermutationOutsideFactor d σ z.1.1) = 0 := by
         unfold matchingPermutationOutsideFactor
         split
-        · simp
+        · simp only [Derivation.map_one_eq_zero]
         · rename_i w hw
           apply MvPolynomial.pderiv_X_of_ne
           intro hzw
           have hpair : (z.1.1, σ z.1.1) = z.1 := by
             have heq := congrArg (matchingVariableEquiv d) hw
-            simpa [hzw] using heq
+            simpa only [Equiv.apply_symm_apply, hzw, matchingVariableEquiv_inr] using heq
           exact hz (congrArg Prod.snd hpair)
     rw [hrest, hfirst]
-    simp [hz]
+    simp only [ne_eq, zero_mul, mul_zero, add_zero, hz, ↓reduceIte]
 
 theorem matchingMarkedPermanent_evaluated_coefficient_pderiv_eq_row_sum
     {n : ℕ} {Y : Type u} [DecidableEq Y]
@@ -22937,10 +23017,10 @@ theorem matchingPermutationOutsideFactor_internal_offDiagonal_eval
         (matchingBlockIndexEquiv ell m (.inl y),
           matchingBlockIndexEquiv ell m (.inl y')) = .inr z := by
     apply (matchingVariableEquiv (matchingDiagonalEmbedding ell m)).injective
-    simp [z]
+    simp only [Equiv.apply_symm_apply, matchingVariableEquiv_inr, z]
   unfold matchingPermutationOutsideFactor
   rw [hσ, hsplit]
-  simp [matchingPermanentSpecialization, z]
+  simp only [MvPolynomial.eval_X, matchingPermanentSpecialization, Equiv.symm_apply_apply, z]
 
 theorem matchingPermutationOutsideFactor_internal_product_zero
     {ell m : ℕ} (p q : Fin m → ℂ)
@@ -22984,10 +23064,10 @@ theorem matchingPermutationOutsideFactor_eval_of_not_mem_range
   let z : matchingOutside d := ⟨(i, j), houtside⟩
   have hsplit : (matchingVariableEquiv d).symm (i, j) = .inr z := by
     apply (matchingVariableEquiv d).injective
-    simp [z]
+    simp only [Equiv.apply_symm_apply, matchingVariableEquiv_inr, z]
   unfold matchingPermutationOutsideFactor
   rw [hij, hsplit]
-  simp [z]
+  simp only [MvPolynomial.eval_X, z]
 
 theorem matching_internal_external_not_mem_diagonal
     {ell m : ℕ} (y : Fin ell ⊕ Fin ell) (b : Fin m) :
@@ -23045,7 +23125,7 @@ theorem matchingPermutationOutsideFactor_fixed_diagonal_eval
     rfl
   unfold matchingPermutationOutsideFactor
   rw [hσ, hsplit]
-  simp
+  simp only [map_one]
 
 theorem matchingPermutationOutsideFactor_left_external_eval
     {ell m : ℕ} (p q : Fin m → ℂ)
@@ -23062,7 +23142,7 @@ theorem matchingPermutationOutsideFactor_left_external_eval
     (matchingBlockIndexEquiv ell m (.inl (.inl u)))
     (matchingBlockIndexEquiv ell m (.inr b)) hσ
     (matching_internal_external_not_mem_diagonal (.inl u) b)]
-  simp [matchingPermanentSpecialization]
+  simp only [matchingPermanentSpecialization, Equiv.symm_apply_apply]
 
 theorem matchingPermutationOutsideFactor_right_external_eval
     {ell m : ℕ} (p q : Fin m → ℂ)
@@ -23078,7 +23158,7 @@ theorem matchingPermutationOutsideFactor_right_external_eval
     (matchingBlockIndexEquiv ell m (.inl (.inr v)))
     (matchingBlockIndexEquiv ell m (.inr b)) hσ
     (matching_internal_external_not_mem_diagonal (.inr v) b)]
-  simp [matchingPermanentSpecialization]
+  simp only [matchingPermanentSpecialization, Equiv.symm_apply_apply]
 
 theorem matchingPermutationOutsideFactor_external_left_eval
     {ell m : ℕ} (p q : Fin m → ℂ)
@@ -23094,7 +23174,7 @@ theorem matchingPermutationOutsideFactor_external_left_eval
     (matchingBlockIndexEquiv ell m (.inr a))
     (matchingBlockIndexEquiv ell m (.inl (.inl u))) hσ
     (matching_external_internal_not_mem_diagonal a (.inl u))]
-  simp [matchingPermanentSpecialization]
+  simp only [matchingPermanentSpecialization, Equiv.symm_apply_apply]
 
 theorem matchingPermutationOutsideFactor_external_right_eval
     {ell m : ℕ} (p q : Fin m → ℂ)
@@ -23111,7 +23191,7 @@ theorem matchingPermutationOutsideFactor_external_right_eval
     (matchingBlockIndexEquiv ell m (.inr a))
     (matchingBlockIndexEquiv ell m (.inl (.inr v))) hσ
     (matching_external_internal_not_mem_diagonal a (.inr v))]
-  simp [matchingPermanentSpecialization]
+  simp only [matchingPermanentSpecialization, Equiv.symm_apply_apply]
 
 theorem matchingPermutationOutsideFactor_external_external_eval
     {ell m : ℕ} (p q : Fin m → ℂ)
@@ -23127,7 +23207,7 @@ theorem matchingPermutationOutsideFactor_external_external_eval
     (matchingBlockIndexEquiv ell m (.inr a))
     (matchingBlockIndexEquiv ell m (.inr b)) hσ
     (matching_external_external_not_mem_diagonal a b)]
-  simp [matchingPermanentSpecialization]
+  simp only [matchingPermanentSpecialization, Equiv.symm_apply_apply]
 
 structure MatchingCrossData (T A B : Type*) where
   rows : T ↪ B
@@ -23173,8 +23253,10 @@ noncomputable def MatchingCrossData.assemble
     {T A B : Type*} (c : MatchingCrossData T A B) (t : T) :
     c.assemble (.inr (c.cols t)) = .inl t := by
   classical
-  simp [MatchingCrossData.assemble,
-    Equiv.Set.sumCompl_symm_apply_of_mem]
+  simp only [assemble, Equiv.trans_apply, Equiv.sumCongr_apply, Equiv.coe_refl, Equiv.coe_trans, Sum.map_inr,
+    Function.comp_apply, Set.mem_range, EmbeddingLike.apply_eq_iff_eq, exists_eq, Equiv.Set.sumCompl_symm_apply_of_mem,
+    Sum.map_inl, Equiv.ofInjective_symm_apply, Equiv.sumAssoc_symm_apply_inr_inl, Equiv.sumComm_apply, Sum.swap_inr,
+    Equiv.sumAssoc_apply_inl_inl, id_eq]
 
 @[simp] theorem MatchingCrossData.assemble_remainder
     {T A B : Type*} (c : MatchingCrossData T A B)
@@ -23330,7 +23412,7 @@ theorem matchingCrossPermutation_external_card
     Fintype.card A = Fintype.card B := by
   letI := Fintype.ofFinite T
   have h := Fintype.card_congr σ.1
-  simpa using h
+  simpa only [Fintype.card_sum, Nat.add_left_cancel_iff] using h
 
 noncomputable def matchingCrossResidualEquiv
     {T A B : Type*} [Fintype T] [Fintype A] [Fintype B]
@@ -23391,7 +23473,7 @@ theorem MatchingCrossData.assemble_ofPermutation
           MatchingCrossData.assemble_cols
             (MatchingCrossData.ofPermutation σ) t
         rw [hleft]
-        simpa using congrArg σ.1 (matchingCrossCols_spec σ t)
+        simpa only [Equiv.apply_symm_apply] using congrArg σ.1 (matchingCrossCols_spec σ t)
       · have hx := MatchingCrossData.ofPermutation_remainder_spec
           σ (⟨a, ha⟩ : {a : A // a ∉ Set.range (matchingCrossCols σ)})
         rw [MatchingCrossData.assemble_remainder
@@ -23543,7 +23625,7 @@ theorem sum_matchingCrossPermutation
             {b : B // b ∉ Set.range rows}), w (e.symm z) := by
           refine Fintype.sum_equiv e _ _ ?_
           intro σ
-          simp
+          simp only [Equiv.symm_apply_apply]
     _ = ∑ rows : (T ↪ B), ∑ cols : (T ↪ A),
         ∑ remainder :
           ({a : A // a ∉ Set.range cols} ≃
@@ -23589,9 +23671,8 @@ theorem sum_matchingCrossPermutation_rows_cols
           apply Finset.sum_congr rfl
           intro cols _
           have hres := matching_card_residual_equiv rows cols hcard
-          simpa [matchingCrossRows_toPermutation,
-            matchingCrossCols_toPermutation, nsmul_eq_mul] using
-            congrArg (fun k : ℕ => (k : F) * w rows cols) hres
+          simpa only [matchingCrossRows_toPermutation, matchingCrossCols_toPermutation, Finset.sum_const,
+            Finset.card_univ, Set.mem_range, not_exists, nsmul_eq_mul] using congrArg (fun k : ℕ => (k : F) * w rows cols) hres
     _ = ((Fintype.card A - Fintype.card T).factorial : F) *
         ∑ rows : (T ↪ B), ∑ cols : (T ↪ A), w rows cols := by
           rw [Finset.mul_sum]
@@ -23623,7 +23704,7 @@ decreasing_by
 @[simp] theorem matchingPolynomial_empty {F : Type*} [CommRing F]
     {ell m : ℕ} (p : Fin m → F) :
     matchingPolynomial (ell := ell) p ∅ = 1 := by
-  simp [matchingPolynomial]
+  simp only [matchingPolynomial, Finset.not_nonempty_empty, ↓reduceDIte]
 
 theorem matchingPolynomial_of_nonempty {F : Type*} [CommRing F]
     {ell m : ℕ} (p : Fin m → F) (P : Finset (Fin ell))
@@ -23634,11 +23715,11 @@ theorem matchingPolynomial_of_nonempty {F : Type*} [CommRing F]
           (Polynomial.X : Polynomial F) ^ (2 ^ (u.1 : ℕ)) *
             matchingPolynomial p (P.erase u.1) := by
   rw [matchingPolynomial]
-  simp [hP]
+  simp only [hP, ↓reduceDIte, Finset.univ_eq_attach]
 
 @[simp] theorem matchingBinaryDegree_empty (ell : ℕ) :
     matchingBinaryDegree (ell := ell) ∅ = 0 := by
-  simp [matchingBinaryDegree]
+  simp only [matchingBinaryDegree, Finset.sum_empty]
 
 theorem matchingBinaryDegree_erase_add {ell : ℕ}
     (P : Finset (Fin ell)) (u : Fin ell) (hu : u ∈ P) :
@@ -23657,8 +23738,8 @@ theorem matchingPolynomial_natDegree_le {F : Type*} [CommRing F] [Nontrivial F]
   · rw [matchingPolynomial_of_nonempty p P hP]
     apply (Polynomial.natDegree_sub_le_of_le
       (m := matchingBinaryDegree P) (n := matchingBinaryDegree P) ?_ ?_).trans
-      (by simp)
-    · simp
+      (by simp only [max_self, Std.le_refl])
+    · simp only [Polynomial.natDegree_C, zero_le]
     · apply Polynomial.natDegree_sum_le_of_forall_le
       intro u _
       calc
@@ -23666,12 +23747,12 @@ theorem matchingPolynomial_natDegree_le {F : Type*} [CommRing F] [Nontrivial F]
           matchingPolynomial p (P.erase u.1)).natDegree
             ≤ 2 ^ (u.1 : ℕ) + matchingBinaryDegree (P.erase u.1) :=
               Polynomial.natDegree_mul_le_of_le
-                (by simp) (ih (P.erase u.1) (Finset.erase_ssubset u.property))
+                (by simp only [Polynomial.natDegree_X_pow, Std.le_refl]) (ih (P.erase u.1) (Finset.erase_ssubset u.property))
         _ = matchingBinaryDegree P := by
           rw [Nat.add_comm, matchingBinaryDegree_erase_add P u.1 u.property]
   · have h_empty : P = ∅ := Finset.not_nonempty_iff_eq_empty.mp hP
     subst P
-    simp
+    simp only [matchingPolynomial_empty, Polynomial.natDegree_one, matchingBinaryDegree_empty, Std.le_refl]
 
 theorem matchingBinaryDegree_pos {ell : ℕ}
     (P : Finset (Fin ell)) (hP : P.Nonempty) :
@@ -23704,12 +23785,14 @@ theorem matchingPolynomial_coeff_binaryDegree {F : Type*} [CommRing F]
     simp_rw [Polynomial.finsetSum_coeff, hterm]
     obtain ⟨r, hr⟩ := Nat.exists_eq_succ_of_ne_zero hP.card_ne_zero
     rw [hr]
-    simp [hr, Nat.factorial_succ, pow_succ, nsmul_eq_mul,
-      mul_assoc, mul_comm]
+    simp only [Finset.univ_eq_attach, Nat.succ_eq_add_one, add_tsub_cancel_right, mul_comm, Finset.sum_const,
+      Finset.card_attach, hr, nsmul_eq_mul, Nat.cast_add, Nat.cast_one, zero_sub, pow_succ, neg_mul, one_mul,
+      Nat.factorial_succ, Nat.cast_mul, mul_neg, mul_assoc, neg_inj]
     ac_rfl
   · have h_empty : P = ∅ := Finset.not_nonempty_iff_eq_empty.mp hP
     subst P
-    simp
+    simp only [matchingPolynomial_empty, matchingBinaryDegree_empty, Polynomial.coeff_one_zero, Finset.card_empty,
+      pow_zero, Nat.factorial_zero, Nat.cast_one, mul_one]
 
 theorem matchingPolynomial_coeff_binaryDegree_ne_zero
     {F : Type*} [Field F] [CharZero F]
@@ -23757,20 +23840,20 @@ def matchingInsertEmbedding {ell m : ℕ}
       · exfalso
         have heq :
             (rho ⟨w.1, Finset.mem_erase.mpr ⟨hw, w.property⟩⟩).1 = b := by
-          simpa [hv, hw] using h.symm
+          simpa only [ne_eq, hw, ↓reduceDIte, hv] using h.symm
         exact (rho ⟨w.1, Finset.mem_erase.mpr ⟨hw, w.property⟩⟩).property heq
     · by_cases hw : w.1 = u.1
       · exfalso
         have heq :
             (rho ⟨v.1, Finset.mem_erase.mpr ⟨hv, v.property⟩⟩).1 = b := by
-          simpa [hv, hw] using h
+          simpa only [ne_eq, hv, ↓reduceDIte, hw] using h
         exact (rho ⟨v.1, Finset.mem_erase.mpr ⟨hv, v.property⟩⟩).property heq
       · apply Subtype.ext
         have himage :
             rho ⟨v.1, Finset.mem_erase.mpr ⟨hv, v.property⟩⟩ =
               rho ⟨w.1, Finset.mem_erase.mpr ⟨hw, w.property⟩⟩ := by
           apply Subtype.ext
-          simpa [hv, hw] using h
+          simpa only [ne_eq, hv, ↓reduceDIte, hw] using h
         exact congrArg (fun x : ↥(P.erase u.1) => x.1)
           (rho.injective himage)
 
@@ -23781,14 +23864,15 @@ noncomputable def matchingHitEmbeddingEquiv {ell m : ℕ}
   toFun rho := matchingEraseEmbedding u b rho.1 rho.2
   invFun rho :=
     ⟨matchingInsertEmbedding u b rho, by
-      simp [matchingInsertEmbedding]⟩
+      simp only [matchingInsertEmbedding, SetLike.coe_eq_coe, ne_eq, Function.Embedding.coeFn_mk, ↓reduceDIte]⟩
   left_inv rho := by
     apply Subtype.ext
     apply Function.Embedding.ext
     intro v
     by_cases hv : v = u
     · subst v
-      simpa [matchingInsertEmbedding] using rho.property.symm
+      simpa only [matchingInsertEmbedding, SetLike.coe_eq_coe, ne_eq, Function.Embedding.coeFn_mk,
+        ↓reduceDIte] using rho.property.symm
     · have hv' : v.1 ≠ u.1 := fun h => hv (Subtype.ext h)
       change
         (if h : v.1 = u.1 then b
@@ -23805,7 +23889,8 @@ noncomputable def matchingHitEmbeddingEquiv {ell m : ℕ}
         (⟨v.1, (Finset.mem_erase.mp v.property).2⟩ : ↥P) ≠ u := by
       intro h
       exact hv (congrArg Subtype.val h)
-    simp [matchingEraseEmbedding, matchingInsertEmbedding, hv']
+    simp only [ne_eq, matchingEraseEmbedding, matchingInsertEmbedding, SetLike.coe_eq_coe,
+      Function.Embedding.coeFn_mk, Subtype.coe_eta, dite_eq_ite, hv', ↓reduceIte]
 
 noncomputable def matchingAvoidingInjectionSum {F : Type*} [CommSemiring F]
     {ell m : ℕ} (p : Fin m → F) (P : Finset (Fin ell)) (b : Fin m) : F := by
@@ -23866,7 +23951,7 @@ theorem matchingHitFiber_sum {F : Type*} [CommSemiring F]
               exact matchingEmbedding_prod_split p u b rho.1 rho.2
     _ = p b ^ (2 ^ (u.1 : ℕ)) *
           matchingAvoidingInjectionSum p (P.erase u.1) b := by
-            simp [matchingAvoidingInjectionSum, Finset.mul_sum]
+            simp only [ne_eq, Finset.univ_eq_attach, matchingAvoidingInjectionSum, Finset.mul_sum]
 
 def matchingAvoidingEmbeddingEquiv {ell m : ℕ}
     {P : Finset (Fin ell)} (b : Fin m) :
@@ -24004,7 +24089,8 @@ theorem matchingInjectionSum_partition {F : Type*} [CommSemiring F]
     (p : Fin m → F) (b : Fin m) :
     matchingAvoidingInjectionSum (ell := ell) p ∅ b = 1 := by
   classical
-  simp [matchingAvoidingInjectionSum]
+  simp only [matchingAvoidingInjectionSum, ne_eq, Finset.univ_unique, Finset.univ_eq_empty, Finset.prod_empty,
+    Finset.sum_const, Finset.card_singleton, one_smul]
 
 theorem matchingPolynomial_eval {F : Type*} [CommRing F]
     {ell m : ℕ} (p : Fin m → F) (P : Finset (Fin ell)) (b : Fin m) :
@@ -24028,10 +24114,10 @@ theorem matchingPolynomial_eval {F : Type*} [CommRing F]
       intro u _
       rw [ih (P.erase u.1) (Finset.erase_ssubset u.property)]
     rw [hterms, matchingInjectionSum_partition p P b]
-    simp
+    simp only [Finset.univ_eq_attach, add_sub_cancel_right]
   · have h_empty : P = ∅ := Finset.not_nonempty_iff_eq_empty.mp hP
     subst P
-    simp
+    simp only [matchingPolynomial_empty, Polynomial.eval_one, matchingAvoidingInjectionSum_empty]
 
 noncomputable def matchingPolynomialEvaluationMatrix
     {F : Type*} [CommRing F] {ell m : ℕ}
@@ -24077,9 +24163,9 @@ theorem matchingBitSubset_map_val (ell d : ℕ) (hd : d < 2 ^ ell) :
     obtain ⟨u, hu, rfl⟩ := Finset.mem_map.mp ha
     have hbit : (u : ℕ) ∈ d.bitIndices :=
       (Finset.mem_filter.mp hu).2
-    simpa using hbit
+    simpa only [Fin.valEmbedding_apply, List.mem_toFinset, Nat.mem_bitIndices] using hbit
   · intro ha
-    have hbit : a ∈ d.bitIndices := by simpa using ha
+    have hbit : a ∈ d.bitIndices := by simpa only [Nat.mem_bitIndices, List.mem_toFinset] using ha
     have hlt : a < ell := by
       apply (Nat.pow_lt_pow_iff_right (by decide : 1 < 2)).mp
       exact (Nat.two_pow_le_of_mem_bitIndices hbit).trans_lt hd
@@ -24135,8 +24221,11 @@ theorem matchingBivariateEvaluationMatrix_det_ne_zero
     Matrix.det_permute', Matrix.det_kronecker]
   rcases Int.units_eq_one_or
     (Equiv.Perm.sign (Equiv.prodComm (Fin m) (Fin m))) with hsign | hsign
-  · simp [hsign, hpdet, hqdet]
-  · simp [hsign, hpdet, hqdet]
+  · simp only [hsign, Units.val_one, Int.cast_one, Matrix.det_transpose, Fintype.card_fin, one_mul, ne_eq,
+      mul_eq_zero, pow_eq_zero_iff', hpdet, false_and, hqdet, or_self, not_false_eq_true]
+  · simp only [hsign, Units.val_neg, Units.val_one, Int.reduceNeg, Int.cast_neg, Int.cast_one,
+      Matrix.det_transpose, Fintype.card_fin, neg_mul, one_mul, ne_eq, neg_eq_zero, mul_eq_zero, pow_eq_zero_iff', hpdet,
+      false_and, hqdet, or_self, not_false_eq_true]
 
 def matchingJacobianWeight (m r s : ℕ) : ℕ :=
   (m - 1 - r - s).factorial *
@@ -24191,9 +24280,9 @@ theorem matchingWeightedBivariateEvaluationMatrix_det_ne_zero
   · apply Finset.prod_ne_zero_iff.mpr
     intro de _
     have hcardP : (P de.1).card ≤ ell := by
-      simpa using Finset.card_le_univ (P de.1)
+      simpa only [Fintype.card_fin] using Finset.card_le_univ (P de.1)
     have hcardQ : (Q de.2).card ≤ ell := by
-      simpa using Finset.card_le_univ (Q de.2)
+      simpa only [Fintype.card_fin] using Finset.card_le_univ (Q de.2)
     have hfit : (P de.1).card + (Q de.2).card < m := by omega
     exact Nat.cast_ne_zero.mpr
       ((matchingJacobianWeight_pos m (P de.1).card (Q de.2).card hfit).ne')
@@ -24228,14 +24317,14 @@ noncomputable def matchingBitCoefficientSet (ell m : ℕ)
     Sum.inl u ∈ matchingBitCoefficientSet ell m de ↔
       u ∉ matchingBitSubset ell (de.1 : ℕ) := by
   classical
-  simp [matchingBitCoefficientSet]
+  simp only [matchingBitCoefficientSet, Finset.mem_filter, Finset.mem_univ, true_and]
 
 @[simp] theorem matchingBitCoefficientSet_mem_inr (ell m : ℕ)
     (de : Fin m × Fin m) (v : Fin ell) :
     Sum.inr v ∈ matchingBitCoefficientSet ell m de ↔
       v ∉ matchingBitSubset ell (de.2 : ℕ) := by
   classical
-  simp [matchingBitCoefficientSet]
+  simp only [matchingBitCoefficientSet, Finset.mem_filter, Finset.mem_univ, true_and]
 
 noncomputable def matchingPermanentJacobian
     {ell m : ℕ} (p q : Fin m → ℂ) :
@@ -24307,7 +24396,7 @@ theorem sum_sumEmbedding_left_weight
             Fintype.card (↥(Set.range rho)ᶜ) =
               Fintype.card γ - Fintype.card α := by
           rw [Fintype.card_compl_set, Fintype.card_range]
-        simp [Fintype.card_embedding_eq, hcard, nsmul_eq_mul]
+        simp only [Finset.sum_const, Finset.card_univ, Fintype.card_embedding_eq, hcard, nsmul_eq_mul]
     _ = ((Fintype.card γ - Fintype.card α).descFactorial
           (Fintype.card β) : F) *
           ∑ rho : (α ↪ γ), w rho := by
@@ -24344,7 +24433,7 @@ theorem sum_sumEmbedding_right_weight
 theorem matching_card_omitted_external {m : ℕ} (b : Fin m) :
     Fintype.card {j : Fin m // j ≠ b} = m - 1 := by
   classical
-  simp
+  simp only [ne_eq, Fintype.card_subtype_compl, Fintype.card_fin, Fintype.card_unique]
 
 theorem matching_leftWeightedAvoidingInjectionSum
     {F : Type*} [CommSemiring F] {ell m : ℕ}
@@ -24415,7 +24504,7 @@ theorem matchingCrossWeight_sum
           (m - 1 - P.card - Q.card).factorial := by
     rw [matching_card_omitted_external]
     have hsum : Fintype.card (↥P ⊕ ↥Q) = P.card + Q.card := by
-      simp
+      simp only [Fintype.card_sum, Fintype.card_coe]
     rw [hsum]
     congr 1
     omega
@@ -24513,7 +24602,7 @@ theorem matchingWeightedCrossBitPermutation_sum
     {n : ℕ} {Y : Type u} (d : Y ↪ Fin n × Fin n) (y : Y) :
     (matchingVariableEquiv d).symm (d y) = .inl y := by
   apply (matchingVariableEquiv d).injective
-  simp
+  simp only [Equiv.apply_symm_apply, matchingVariableEquiv_inl]
 
 theorem matchingPermutationExponent_apply
     {n : ℕ} {Y : Type u}
@@ -24531,15 +24620,15 @@ theorem matchingPermutationExponent_apply
     | inl y' =>
         have hpair : (i, σ i) = d y' := by
           have heq := congrArg (matchingVariableEquiv d) h
-          simpa using heq
-        simp [Finsupp.single_apply, hpair, d.injective.eq_iff]
+          simpa only [Equiv.apply_symm_apply, matchingVariableEquiv_inl] using heq
+        simp only [Finsupp.single_apply, hpair, d.injective.eq_iff]
     | inr z =>
         have hne : (i, σ i) ≠ d y := by
           intro heq
           have himage := congrArg (matchingVariableEquiv d).symm heq
           rw [h, matchingVariableEquiv_symm_marked] at himage
           cases himage
-        simp [hne]
+        simp only [Finsupp.coe_zero, Pi.zero_apply, hne, ↓reduceIte]
   calc
     matchingPermutationExponent d σ y =
         ∑ i : Fin n, if (i, σ i) = d y then 1 else 0 := by
@@ -24558,13 +24647,13 @@ theorem matchingPermutationExponent_apply
             subst i
             exact Prod.ext rfl hfix
         simp_rw [hi]
-        simp [hfix]
+        simp only [Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte, hfix]
       · have hi (i : Fin n) : (i, σ i) ≠ d y := by
           intro heq
           have hrow := congrArg Prod.fst heq
           have hcol := congrArg Prod.snd heq
           exact hfix (hrow ▸ hcol)
-        simp [hi, hfix]
+        simp only [hi, ↓reduceIte, Finset.sum_const_zero, hfix]
 
 theorem matchingPermutationExponent_eq_squarefree_iff
     {n : ℕ} {Y : Type u}
@@ -24668,14 +24757,14 @@ theorem matchingRemainingIndexEmbedding_range
     cases h : e.symm i with
     | inl y =>
         have hyi : e (.inl y) = i := by
-          simpa [h] using e.apply_symm_apply i
+          simpa only [h] using e.apply_symm_apply i
         have hy : y ∉ S := by
           intro hmem
           exact hi ⟨.inl ⟨y, hmem⟩, hyi⟩
         exact ⟨.inl ⟨y, hy⟩, hyi⟩
     | inr j =>
         have hji : e (.inr j) = i := by
-          simpa [h] using e.apply_symm_apply i
+          simpa only [h] using e.apply_symm_apply i
         have hj : j ≠ a := by
           intro heq
           subst j
@@ -24766,13 +24855,13 @@ noncomputable def matchingBitSurvivorEquiv
     | inl u =>
         refine .inl ⟨u, ?_⟩
         have hnot : Sum.inl u ∉ matchingBitCoefficientSet ell m de := by
-          simpa [hy] using y.property
+          simpa only [matchingBitCoefficientSet_mem_inl, Decidable.not_not, hy] using y.property
         simpa only [matchingBitCoefficientSet_mem_inl, not_not]
           using hnot
     | inr v =>
         refine .inr ⟨v, ?_⟩
         have hnot : Sum.inr v ∉ matchingBitCoefficientSet ell m de := by
-          simpa [hy] using y.property
+          simpa only [matchingBitCoefficientSet_mem_inr, Decidable.not_not, hy] using y.property
         simpa only [matchingBitCoefficientSet_mem_inr, not_not]
           using hnot
   · rintro (u | v) <;> rfl
@@ -25185,7 +25274,8 @@ theorem matchingBitUnreduceCrossEquiv_toCross
         (Equiv.sumCongr (matchingBitSurvivorEquiv ell m de)
           (Equiv.refl _)))) x = _
   unfold matchingBitReducedEquiv
-  simp [Equiv.trans_apply, Equiv.sumCongr_apply]
+  simp only [ne_eq, Equiv.toFun_as_coe, Equiv.trans_apply, Equiv.sumCongr_apply, Equiv.coe_refl, Sum.map_map,
+    Equiv.self_comp_symm, CompTriple.comp_eq, Sum.map_id_id, id_eq]
 
 theorem matchingBitCrossSelectedToCross_toSelected
     {ell m : ℕ} {de ab : Fin m × Fin m}
@@ -25211,7 +25301,8 @@ theorem matchingBitCrossSelectedToCross_toSelected
   apply Equiv.ext
   intro x
   unfold matchingBitUnreduceCrossEquiv
-  simp [Equiv.trans_apply, Equiv.sumCongr_apply]
+  simp only [ne_eq, Equiv.trans_apply, Equiv.sumCongr_apply, Equiv.coe_refl, Sum.map_map, Equiv.symm_comp_self,
+    CompTriple.comp_eq, Sum.map_id_id, id_eq]
 
 theorem matchingBitCrossToSelected_toCross
     {ell m : ℕ} {de ab : Fin m × Fin m}
@@ -25626,7 +25717,7 @@ theorem matchingPermanentJacobian_eq_cross_selected_sum
     rw [← Finset.sum_filter]
     apply Finset.sum_subtype
     intro σ
-    simp
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
   have hvanish
       (σ : MatchingBitSelectedPermutation ell m de ab)
       (hnot : ¬ ∀ y : {y : Fin ell ⊕ Fin ell //
@@ -25727,32 +25818,32 @@ noncomputable def splitEval [Field F]
 
 @[simp] theorem splitEval_var_inl [Field F] (i : Y) :
     splitEval (Z := Z) (F := F) (.var (.inl i)) = MvPolynomial.X i := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, MvPolynomial.sumAlgEquiv_X_inl]
 
 @[simp] theorem splitEval_var_inr [Field F] (j : Z) :
     splitEval (Y := Y) (F := F) (.var (.inr j)) =
       MvPolynomial.C (MvPolynomial.X j) := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, MvPolynomial.sumAlgEquiv_X_inr]
 
 @[simp] theorem splitEval_const [Field F] (c : F) :
     splitEval (Y := Y) (Z := Z) (.const c) =
       MvPolynomial.C (MvPolynomial.C c) := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, MvPolynomial.sumAlgEquiv_C_inl]
 
 @[simp] theorem splitEval_add [Field F]
     (f g : Formula (Y ⊕ Z) F) :
     splitEval (.add f g) = splitEval f + splitEval g := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, map_add]
 
 @[simp] theorem splitEval_sub [Field F]
     (f g : Formula (Y ⊕ Z) F) :
     splitEval (.sub f g) = splitEval f - splitEval g := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, map_sub]
 
 @[simp] theorem splitEval_mul [Field F]
     (f g : Formula (Y ⊕ Z) F) :
     splitEval (.mul f g) = splitEval f * splitEval g := by
-  simp [splitEval, eval]
+  simp only [splitEval, eval, map_mul]
 
 theorem exists_splitEval_eq_C_of_yLeafCount_eq_zero [Field F]
     (f : Formula (Y ⊕ Z) F) (h : yLeafCount f = 0) :
@@ -25760,7 +25851,7 @@ theorem exists_splitEval_eq_C_of_yLeafCount_eq_zero [Field F]
   induction f with
   | var i =>
       cases i with
-      | inl i => simp [yLeafCount] at h
+      | inl i => simp only [yLeafCount, one_ne_zero] at h
       | inr i => exact ⟨MvPolynomial.X i, splitEval_var_inr i⟩
   | const c => exact ⟨MvPolynomial.C c, splitEval_const c⟩
   | add f g hf hg =>
@@ -25857,7 +25948,7 @@ theorem coeff_mem_intermediateField_C
   classical
   by_cases hα : α = 0
   · subst α
-    simpa using ha
+    simpa only [MvPolynomial.coeff_C, ↓reduceIte] using ha
   · rw [MvPolynomial.coeff_C_of_ne_zero hα, map_zero]
     exact S.zero_mem
 
@@ -25900,7 +25991,7 @@ noncomputable def contractedSkeletonAffine
   · rw [haffine, w.split_eq]
     simp only [map_mul, map_add]
     ring
-  · simpa [hleaves] using w.generator_card
+  · simpa only [hleaves] using w.generator_card
 
 noncomputable def contractedSkeletonBinaryExtras
     {f g : Formula (Y ⊕ Z) F}
@@ -26075,7 +26166,7 @@ noncomputable def contractedSkeletonBinary
       split_eq := ?_
       core_coeff_mem := ?_
       generator_card := ?_ }
-  · simpa using hsplit
+  · simpa only [MvPolynomial.C_1, one_mul, MvPolynomial.C_0, add_zero] using hsplit
   · exact hop _ (splitEval f) (splitEval g)
       (contractedSkeletonBinaryGenerators_coeff_mem_left wf wg)
       (contractedSkeletonBinaryGenerators_coeff_mem_right wf wg)
@@ -26103,8 +26194,8 @@ noncomputable def contractedSkeletonAdd
         (exists_splitEval_eq_C_of_yLeafCount_eq_zero f hfzero)
     apply contractedSkeletonAffine (wg hgpos) 1 q
     · rw [splitEval_add, hq]
-      simp [add_comm]
-    · simp [yLeafCount, hfzero]
+      simp only [add_comm, MvPolynomial.C_1, one_mul]
+    · simp only [yLeafCount, hfzero, zero_add]
   · have hfpos : 0 < yLeafCount f := Nat.pos_of_ne_zero hfzero
     by_cases hgzero : yLeafCount g = 0
     · let q := Classical.choose
@@ -26114,8 +26205,8 @@ noncomputable def contractedSkeletonAdd
           (exists_splitEval_eq_C_of_yLeafCount_eq_zero g hgzero)
       apply contractedSkeletonAffine (wf hfpos) 1 q
       · rw [splitEval_add, hq]
-        simp
-      · simp [yLeafCount, hgzero]
+        simp only [MvPolynomial.C_1, one_mul]
+      · simp only [yLeafCount, hgzero, add_zero]
     · have hgpos : 0 < yLeafCount g := Nat.pos_of_ne_zero hgzero
       exact contractedSkeletonBinary (wf hfpos) (wg hgpos) (· + ·)
         (fun S p q hp hq α => coeff_mem_intermediateField_add S p q hp hq α)
@@ -26141,7 +26232,7 @@ noncomputable def contractedSkeletonSub
     · rw [splitEval_sub, hq]
       simp only [map_neg, map_one]
       ring
-    · simp [yLeafCount, hfzero]
+    · simp only [yLeafCount, hfzero, zero_add]
   · have hfpos : 0 < yLeafCount f := Nat.pos_of_ne_zero hfzero
     by_cases hgzero : yLeafCount g = 0
     · let q := Classical.choose
@@ -26153,7 +26244,7 @@ noncomputable def contractedSkeletonSub
       · rw [splitEval_sub, hq]
         simp only [map_neg, map_one]
         ring
-      · simp [yLeafCount, hgzero]
+      · simp only [yLeafCount, hgzero, add_zero]
     · have hgpos : 0 < yLeafCount g := Nat.pos_of_ne_zero hgzero
       exact contractedSkeletonBinary (wf hfpos) (wg hgpos) (· - ·)
         (fun S p q hp hq α => coeff_mem_intermediateField_sub S p q hp hq α)
@@ -26177,8 +26268,8 @@ noncomputable def contractedSkeletonMul
         (exists_splitEval_eq_C_of_yLeafCount_eq_zero f hfzero)
     apply contractedSkeletonAffine (wg hgpos) q 0
     · rw [splitEval_mul, hq]
-      simp
-    · simp [yLeafCount, hfzero]
+      simp only [MvPolynomial.C_0, add_zero]
+    · simp only [yLeafCount, hfzero, zero_add]
   · have hfpos : 0 < yLeafCount f := Nat.pos_of_ne_zero hfzero
     by_cases hgzero : yLeafCount g = 0
     · let q := Classical.choose
@@ -26188,8 +26279,8 @@ noncomputable def contractedSkeletonMul
           (exists_splitEval_eq_C_of_yLeafCount_eq_zero g hgzero)
       apply contractedSkeletonAffine (wf hfpos) q 0
       · rw [splitEval_mul, hq]
-        simp [mul_comm]
-      · simp [yLeafCount, hgzero]
+        simp only [mul_comm, MvPolynomial.C_0, add_zero]
+      · simp only [yLeafCount, hgzero, add_zero]
     · have hgpos : 0 < yLeafCount g := Nat.pos_of_ne_zero hgzero
       exact contractedSkeletonBinary (wf hfpos) (wg hgpos) (· * ·)
         (fun S p q hp hq α => coeff_mem_intermediateField_mul S p q hp hq α)
@@ -26210,11 +26301,11 @@ noncomputable def contractedSkeleton
               split_eq := ?_
               core_coeff_mem := ?_
               generator_card := ?_ }
-          · simp
+          · simp only [splitEval_var_inl, MvPolynomial.C_1, one_mul, MvPolynomial.C_0, add_zero]
           · exact coeff_mem_intermediateField_X _ i
-          · simp [yLeafCount]
-      | inr i => simp [yLeafCount] at hmarked
-  | const c => simp [yLeafCount] at hmarked
+          · simp only [Finset.card_empty, yLeafCount, mul_one, tsub_self, Std.le_refl]
+      | inr i => simp only [yLeafCount, lt_self_iff_false] at hmarked
+  | const c => simp only [yLeafCount, lt_self_iff_false] at hmarked
   | add f g hf hg =>
       exact contractedSkeletonAdd f g hf hg hmarked
   | sub f g hf hg =>
@@ -26357,7 +26448,7 @@ noncomputable def matchingMarkedFinset {n : ℕ} {Y : Type u} [Fintype Y]
     (d : Y ↪ Fin n × Fin n) (i : Fin n × Fin n) :
     i ∈ matchingMarkedFinset d ↔ ∃ y : Y, d y = i := by
   classical
-  simp [matchingMarkedFinset]
+  simp only [matchingMarkedFinset, Finset.mem_image, Finset.mem_univ, true_and]
 
 theorem matchingMarkedPermanent_pderiv_ne_zero
     {n : ℕ} {Y : Type u} (d : Y ↪ Fin n × Fin n) (y : Y) :
@@ -26399,11 +26490,11 @@ def rename (e : ι ≃ κ) : Formula ι R → Formula κ R
 theorem eval_rename [CommRing R] (e : ι ≃ κ) (f : Formula ι R) :
     eval (rename e f) = MvPolynomial.renameEquiv R e (eval f) := by
   induction f with
-  | var i => simp [rename, eval, MvPolynomial.renameEquiv_apply]
-  | const c => simp [rename, eval, MvPolynomial.renameEquiv_apply]
-  | add f g hf hg => simp [rename, eval, hf, hg]
-  | sub f g hf hg => simp [rename, eval, hf, hg]
-  | mul f g hf hg => simp [rename, eval, hf, hg]
+  | var i => simp only [rename, eval, MvPolynomial.renameEquiv_apply, MvPolynomial.rename_X]
+  | const c => simp only [rename, eval, MvPolynomial.renameEquiv_apply, MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq]
+  | add f g hf hg => simp only [rename, eval, hf, MvPolynomial.renameEquiv_apply, hg, map_add]
+  | sub f g hf hg => simp only [rename, eval, hf, MvPolynomial.renameEquiv_apply, hg, map_sub]
+  | mul f g hf hg => simp only [rename, eval, hf, MvPolynomial.renameEquiv_apply, hg, map_mul]
 
 theorem yLeafCount_rename_matchingVariableEquiv
     {n : ℕ} {Y : Type u} [Fintype Y]
@@ -26417,10 +26508,10 @@ theorem yLeafCount_rename_matchingVariableEquiv
       | inl y =>
           have hi : d y = i := by
             have he := (matchingVariableEquiv d).apply_symm_apply i
-            simpa [h] using he
+            simpa only [h, matchingVariableEquiv_inl] using he
           have hmem : i ∈ matchingMarkedFinset d :=
             (mem_matchingMarkedFinset d i).mpr ⟨y, hi⟩
-          simp [rename, yLeafCount, blockLeaves, h, hmem]
+          simp only [rename, h, yLeafCount, blockLeaves, hmem, ↓reduceIte]
       | inr z =>
           have hi : i ∉ matchingMarkedFinset d := by
             intro hmem
@@ -26431,11 +26522,11 @@ theorem yLeafCount_rename_matchingVariableEquiv
                 using hy.symm
             rw [h] at he
             cases he
-          simp [rename, yLeafCount, blockLeaves, h, hi]
-  | const c => simp [rename, yLeafCount, blockLeaves]
-  | add f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
-  | sub f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
-  | mul f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
+          simp only [rename, h, yLeafCount, blockLeaves, hi, ↓reduceIte]
+  | const c => simp only [rename, yLeafCount, blockLeaves]
+  | add f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
+  | sub f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
+  | mul f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
 
 theorem eval_rename_eq_matchingMarkedPermanent
     {n : ℕ} {Y : Type u}
@@ -26482,15 +26573,15 @@ theorem eval_rename [Field R] (e : ι ≃ κ)
     eval (rename e f) = renameFractionEquiv e (eval f) := by
   induction f with
   | var i =>
-      simp [rename, eval, renameFractionEquiv_algebraMap,
-        MvPolynomial.renameEquiv_apply]
+      simp only [rename, eval, renameFractionEquiv_algebraMap, MvPolynomial.renameEquiv_apply,
+        MvPolynomial.rename_X]
   | const c =>
-      simp [rename, eval, renameFractionEquiv_algebraMap,
-        MvPolynomial.renameEquiv_apply]
-  | add f g hf hg => simp [rename, eval, hf, hg]
-  | sub f g hf hg => simp [rename, eval, hf, hg]
-  | mul f g hf hg => simp [rename, eval, hf, hg]
-  | div f g hf hg => simp [rename, eval, hf, hg, map_div₀]
+      simp only [rename, eval, renameFractionEquiv_algebraMap, MvPolynomial.renameEquiv_apply,
+        MvPolynomial.algHom_C, MvPolynomial.algebraMap_eq]
+  | add f g hf hg => simp only [rename, eval, hf, hg, map_add]
+  | sub f g hf hg => simp only [rename, eval, hf, hg, map_sub]
+  | mul f g hf hg => simp only [rename, eval, hf, hg, map_mul]
+  | div f g hf hg => simp only [rename, eval, hf, hg, map_div₀]
 
 theorem valid_rename [Field R] (e : ι ≃ κ)
     {f : RationalFormula ι R} (h : Valid f) :
@@ -26506,7 +26597,7 @@ theorem valid_rename [Field R] (e : ι ≃ κ)
       intro hzero
       apply hden
       apply (renameFractionEquiv e).injective
-      simpa [eval_rename] using hzero
+      simpa only [map_zero, EmbeddingLike.map_eq_zero_iff, eval_rename] using hzero
 
 theorem yLeafCount_rename_matchingVariableEquiv
     {n : ℕ} {Y : Type u} [Fintype Y]
@@ -26520,10 +26611,10 @@ theorem yLeafCount_rename_matchingVariableEquiv
       | inl y =>
           have hi : d y = i := by
             have he := (matchingVariableEquiv d).apply_symm_apply i
-            simpa [h] using he
+            simpa only [h, matchingVariableEquiv_inl] using he
           have hmem : i ∈ matchingMarkedFinset d :=
             (mem_matchingMarkedFinset d i).mpr ⟨y, hi⟩
-          simp [rename, yLeafCount, blockLeaves, h, hmem]
+          simp only [rename, h, yLeafCount, blockLeaves, hmem, ↓reduceIte]
       | inr z =>
           have hi : i ∉ matchingMarkedFinset d := by
             intro hmem
@@ -26534,12 +26625,12 @@ theorem yLeafCount_rename_matchingVariableEquiv
                 using hy.symm
             rw [h] at he
             cases he
-          simp [rename, yLeafCount, blockLeaves, h, hi]
-  | const c => simp [rename, yLeafCount, blockLeaves]
-  | add f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
-  | sub f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
-  | mul f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
-  | div f g hf hg => simp [rename, yLeafCount, blockLeaves, hf, hg]
+          simp only [rename, h, yLeafCount, blockLeaves, hi, ↓reduceIte]
+  | const c => simp only [rename, yLeafCount, blockLeaves]
+  | add f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
+  | sub f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
+  | mul f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
+  | div f g hf hg => simp only [rename, yLeafCount, hf, hg, blockLeaves]
 
 theorem eval_rename_eq_matchingMarkedPermanent
     {n : ℕ} {Y : Type u}
@@ -26586,7 +26677,9 @@ theorem yLeafCount_pos_of_eval_eq_matchingMarkedPermanent
         MvPolynomial.C c := by
     apply IsFractionRing.injective
       (MvPolynomial Y E) (rationalSplitField Y (matchingOutside d) ℂ)
-    simpa [splitPolynomialHom, splitCoefficientHom, E] using hsplit
+    simpa only [algebraMap.coe_inj, splitPolynomialHom, RingEquiv.toRingHom_eq_coe,
+      AlgEquiv.toRingEquiv_toRingHom, RingHom.coe_comp, RingHom.coe_coe, Function.comp_apply, splitCoefficientHom] using
+      hsplit
   obtain ⟨y⟩ := ‹Nonempty Y›
   have hderiv := congrArg (MvPolynomial.pderiv y) hpoly
   have hmarked :
@@ -26595,8 +26688,8 @@ theorem yLeafCount_pos_of_eval_eq_matchingMarkedPermanent
     apply MvPolynomial.map_injective
       (algebraMap (MvPolynomial (matchingOutside d) ℂ) E)
       (IsFractionRing.injective (MvPolynomial (matchingOutside d) ℂ) E)
-    simpa [MvPolynomial.pderiv_map, MvPolynomial.pderiv_sumAlgEquiv]
-      using hderiv
+    simpa only [map_zero, MvPolynomial.pderiv_map, MvPolynomial.pderiv_sumAlgEquiv,
+      MvPolynomial.derivation_C] using hderiv
   exact matchingMarkedPermanent_pderiv_ne_zero d y hmarked
 
 theorem blockLeaves_pos_of_eval_eq_permanent
@@ -26614,7 +26707,8 @@ theorem blockLeaves_pos_of_eval_eq_permanent
   letI : Nonempty (↥s) := ⟨⟨(a, b), hab⟩⟩
   have hset : matchingMarkedFinset d = s := by
     ext i
-    simp [matchingMarkedFinset, d]
+    simp only [matchingMarkedFinset, Function.Embedding.coeFn_mk, Finset.univ_eq_attach, Finset.attach_image_val,
+      d]
   have hrename := eval_rename_eq_matchingMarkedPermanent d f hf
   have hpos := yLeafCount_pos_of_eval_eq_matchingMarkedPermanent
     d (rename (matchingVariableEquiv d).symm f) hrename
@@ -26645,7 +26739,7 @@ theorem five_le_clog_two {n : ℕ} (hn : 32 ≤ n) :
   calc
     5 = Nat.clog 2 (2 ^ 5) :=
       (Nat.clog_pow 2 5 (by norm_num)).symm
-    _ ≤ Nat.clog 2 n := Nat.clog_mono_right 2 (by simpa using hn)
+    _ ≤ Nat.clog 2 n := Nat.clog_mono_right 2 (by simpa only [Nat.reducePow] using hn)
 
 theorem four_mul_clog_two_lt_self {n : ℕ} (hn : 32 ≤ n) :
     4 * Nat.clog 2 n < n := by
@@ -26654,9 +26748,7 @@ theorem four_mul_clog_two_lt_self {n : ℕ} (hn : 32 ≤ n) :
   · omega
   · have hsix : 6 ≤ Nat.clog 2 n := by omega
     have hpow : 2 ^ (Nat.clog 2 n - 1) < n := by
-      simpa using
-        (Nat.pow_pred_clog_lt_self (b := 2) (by norm_num)
-          (x := n) (by omega))
+      simpa only [Nat.pred_eq_sub_one] using (Nat.pow_pred_clog_lt_self (b := 2) (by norm_num) (x := n) (by omega))
     exact (four_mul_le_two_pow_pred (Nat.clog 2 n) hsix).trans_lt hpow
 
 theorem matching_block_size_le_half {n : ℕ} (hn : 32 ≤ n) :
@@ -26702,8 +26794,7 @@ theorem clog_two_cast_le_two_mul_logb {n : ℕ} (hn : 2 ≤ n) :
       (Nat.clog 2 n : ℝ) = ((Nat.clog 2 n).pred : ℝ) + 1 := by
     have hpred_nat :
         Nat.clog 2 n = (Nat.clog 2 n).pred + 1 := by
-      simpa [Nat.succ_eq_add_one] using
-        (Nat.succ_pred_eq_of_pos hclog).symm
+      simpa only [Nat.pred_eq_sub_one, Nat.succ_eq_add_one] using (Nat.succ_pred_eq_of_pos hclog).symm
     exact_mod_cast hpred_nat
   linarith
 
@@ -26764,7 +26855,7 @@ theorem two_le_leaves_of_fourth_power_bound
     calc
       n ^ 4 ≤ c * (2 * Nat.clog 2 n) * leaves := hbound
       _ ≤ c * (2 * Nat.clog 2 n) := by
-        simpa using Nat.mul_le_mul_left (c * (2 * Nat.clog 2 n)) hone
+        simpa only [mul_one] using Nat.mul_le_mul_left (c * (2 * Nat.clog 2 n)) hone
       _ ≤ 48 * (2 * Nat.clog 2 n) :=
         Nat.mul_le_mul_right (2 * Nat.clog 2 n) hc
       _ ≤ 48 * n := Nat.mul_le_mul_left 48 hclog
@@ -26941,8 +27032,9 @@ theorem permanentPolynomial_rename_prodCongr
       MvPolynomial.renameEquiv ℂ (Equiv.prodCongr r c)
         (permanentPolynomial n) =
           (M.submatrix r c).permanent := by
-    simp [permanentPolynomial, M, Matrix.permanent,
-      MvPolynomial.renameEquiv_apply, map_sum, map_prod]
+    simp only [permanentPolynomial, Matrix.permanent, Matrix.mvPolynomialX_apply, map_sum, map_prod,
+      MvPolynomial.renameEquiv_apply, Equiv.prodCongr_apply, MvPolynomial.rename_X, Prod.map_apply,
+      Matrix.submatrix_apply, M]
   calc
     MvPolynomial.renameEquiv ℂ (Equiv.prodCongr r c)
         (permanentPolynomial n) =
@@ -27003,9 +27095,14 @@ theorem coefficientPolynomial_rename_outside
     ext i
     cases i with
     | inl y =>
-        simp [L, R, MvPolynomial.renameEquiv_apply]
+        simp only [AlgHom.coe_comp, AlgEquiv.coe_toAlgHom, Function.comp_apply, MvPolynomial.renameEquiv_apply,
+          MvPolynomial.rename_X, Equiv.sumCongr_apply, Equiv.coe_refl, Sum.map_inl, id_eq, MvPolynomial.sumAlgEquiv_X_inl,
+          MvPolynomial.mapAlgHom_apply, AlgEquiv.toAlgHom_toRingHom, MvPolynomial.map_X, L, R]
     | inr z =>
-        simp [L, R, MvPolynomial.renameEquiv_apply]
+        simp only [AlgHom.coe_comp, AlgEquiv.coe_toAlgHom, Function.comp_apply, MvPolynomial.renameEquiv_apply,
+          MvPolynomial.rename_X, Equiv.sumCongr_apply, Equiv.coe_refl, Sum.map_inr, MvPolynomial.sumAlgEquiv_X_inr,
+          MvPolynomial.coeff_C, MvPolynomial.mapAlgHom_apply, AlgEquiv.toAlgHom_toRingHom, MvPolynomial.map_C,
+          RingHom.coe_coe, L, R]
   change MvPolynomial.coeff α
     ((MvPolynomial.sumAlgEquiv F Y W)
       (MvPolynomial.renameEquiv F
@@ -27041,9 +27138,11 @@ theorem matchingVariableEquiv_relabel_commutes
     rw [← hz, Equiv.apply_symm_apply]
   cases z with
   | inl y =>
-      simpa [← hx] using (he y).symm
+      simpa only [Equiv.sumCongr_apply, Equiv.coe_refl, Sum.map_inl, id_eq, matchingVariableEquiv_inl, ← hx] using
+        (he y).symm
   | inr w =>
-      simp [← hx, matchingOutsideRelabelEquiv_apply_val]
+      simp only [Equiv.sumCongr_apply, Equiv.coe_refl, Sum.map_inr, matchingVariableEquiv_inr,
+        matchingOutsideRelabelEquiv_apply_val, ← hx]
 
 theorem matchingMarkedPermanent_rename_prodCongr
     {n : ℕ} {Y : Type u}
@@ -27166,7 +27265,7 @@ noncomputable def matchingCyclicBlockIndexEquiv
     (t : Fin n) (j : Fin (n / (2 * ell))) :
     (Fin ell ⊕ Fin ell) ≃ ↥(cyclicMatchingBlock hk t j) := by
   apply Fintype.equivOfCardEq
-  simp [card_cyclicMatchingBlock, two_mul]
+  simp only [Fintype.card_sum, Fintype.card_fin, Fintype.card_coe, card_cyclicMatchingBlock, two_mul]
 
 noncomputable def matchingCyclicDiagonalEmbedding
     {n ell : ℕ} (hk : 0 < 2 * ell)
@@ -27442,10 +27541,10 @@ theorem permanent_divisionFree_formula_fourth_power_lower_bound
   let ell : ℕ := Nat.clog 2 n
   let m : ℕ := n - 2 * ell
   have hell : 5 ≤ ell := by
-    simpa [ell] using five_le_clog_two hn
+    simpa only using five_le_clog_two hn
   have hk : 0 < 2 * ell := by omega
   have hblockhalf : 2 * ell ≤ n / 2 := by
-    simpa [ell] using matching_block_size_le_half hn
+    simpa only using matching_block_size_le_half hn
   have hkn : 2 * ell ≤ n := by omega
   have hhalf : n ≤ 2 * m := by
     dsimp [m]
@@ -27471,7 +27570,7 @@ theorem permanent_divisionFree_formula_fourth_power_lower_bound
   have hfour :=
     Formula.cyclicMatchingBlock_fourth_power_bound_of_coefficientTranscendenceDegree
       hk hkn hhalf f hf hcertificate
-  simpa [ell] using hfour
+  simpa only [ge_iff_le] using hfour
 
 theorem permanent_rational_formula_fourth_power_lower_bound
     {n : ℕ} (hn : 32 ≤ n)
@@ -27488,10 +27587,10 @@ theorem permanent_rational_formula_fourth_power_lower_bound
   let ell : ℕ := Nat.clog 2 n
   let m : ℕ := n - 2 * ell
   have hell : 5 ≤ ell := by
-    simpa [ell] using five_le_clog_two hn
+    simpa only using five_le_clog_two hn
   have hk : 0 < 2 * ell := by omega
   have hblockhalf : 2 * ell ≤ n / 2 := by
-    simpa [ell] using matching_block_size_le_half hn
+    simpa only using matching_block_size_le_half hn
   have hkn : 2 * ell ≤ n := by omega
   have hhalf : n ≤ 2 * m := by
     dsimp [m]
@@ -27517,7 +27616,7 @@ theorem permanent_rational_formula_fourth_power_lower_bound
   have hfour :=
     RationalFormula.cyclicMatchingBlock_fourth_power_bound_of_coefficientTranscendenceDegree
       hk hkn hhalf f hvalid hf hcertificate
-  simpa [ell] using hfour
+  simpa only [ge_iff_le] using hfour
 
 theorem permanent_divisionFree_formula_lower_bound
     {n : ℕ} (hn : 32 ≤ n)

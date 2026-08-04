@@ -57,7 +57,7 @@ def normalizedHamming {Y : Type*} [Fintype Y] [DecidableEq Y]
 @[simp]
 theorem normalizedHamming_self {Y : Type*} [Fintype Y] [DecidableEq Y]
     (p : Equiv.Perm Y) : normalizedHamming p p = 0 := by
-  simp [normalizedHamming]
+  simp only [normalizedHamming, hammingDist_self, CharP.cast_eq_zero, zero_div]
 
 theorem normalizedHamming_comm {Y : Type*} [Fintype Y] [DecidableEq Y]
     (p q : Equiv.Perm Y) : normalizedHamming p q = normalizedHamming q p := by
@@ -100,7 +100,7 @@ theorem normalizedHamming_mul_left {Y : Type*} [Fintype Y] [DecidableEq Y]
       hammingDist (fun y => s (p y)) (fun y => s (q y)) =
         hammingDist (fun y => p y) (fun y => q y) :=
     hammingDist_comp (fun (_ : Y) (z : Y) => s z) (fun _ => s.injective)
-  simp [normalizedHamming, Equiv.Perm.mul_apply, hdist]
+  simp only [normalizedHamming, Equiv.Perm.mul_apply, hdist]
 
 theorem normalizedHamming_mul_right {Y : Type*} [Fintype Y] [DecidableEq Y]
     (s p q : Equiv.Perm Y) :
@@ -117,7 +117,7 @@ theorem normalizedHamming_mul_right {Y : Type*} [Fintype Y] [DecidableEq Y]
     · intro y hy z hz h
       exact s.injective h
     · intro y hy
-      refine ⟨s.symm y, ?_, by simp⟩
+      refine ⟨s.symm y, ?_, by simp only [Equiv.apply_symm_apply]⟩
       apply Finset.mem_filter.mpr
       refine ⟨Finset.mem_univ _, ?_⟩
       simpa only [Equiv.Perm.mul_apply, Equiv.apply_symm_apply] using
@@ -160,7 +160,7 @@ theorem normalizedHamming_permCongr
     unfold hammingDist
     apply Finset.card_equiv e.symm
     intro y
-    simp [Equiv.permCongr_apply, e.injective.eq_iff]
+    simp only [Equiv.permCongr_apply, ne_eq, e.injective.eq_iff, Finset.mem_filter, Finset.mem_univ, true_and]
   unfold normalizedHamming
   rw [hdist, ← Fintype.card_congr e]
 
@@ -183,7 +183,7 @@ theorem hammingDist_prodCongr_refl_left
         (Finset.univ : Finset X) ×ˢ
           (Finset.univ.filter fun y : Y => p y ≠ q y) := by
     ext z
-    simp
+    simp only [ne_eq, Prod.mk.injEq, true_and, Finset.mem_filter, Finset.mem_univ, Finset.mem_product]
   rw [hfilter, Finset.card_product]
   rfl
 
@@ -207,8 +207,9 @@ def amplifyModel {G : Type*} [Group G]
     ((Equiv.refl (Fin k)).prodCongr (M.action g))
   map_one := by
     ext x
-    simp [M.map_one, Equiv.permCongr_apply, Equiv.prodCongr,
-      Nat.mod_add_div]
+    simp only [Equiv.prodCongr, Equiv.coe_refl, M.map_one, Equiv.Perm.coe_one, Prod.map_id, Equiv.refl_symm,
+      Equiv.permCongr_apply, finProdFinEquiv_symm_apply, Equiv.coe_fn_mk, id_eq, finProdFinEquiv_apply_val,
+      Fin.coe_modNat, Fin.coe_divNat, Nat.mod_add_div]
 
 theorem amplifyModel_normalizedHamming
     {G : Type*} [Group G] (M : PermutationModel G)
@@ -223,7 +224,7 @@ theorem amplifyModel_normalizedHamming
       ((Equiv.refl (Fin k)).prodCongr (M.action h))) = _
   rw [normalizedHamming_permCongr]
   apply normalizedHamming_prodCongr_refl_left
-  simpa using hk.ne'
+  simpa only [Fintype.card_fin, ne_eq] using hk.ne'
 
 theorem amplifyModel_multiplicative_distance
     {G : Type*} [Group G] (M : PermutationModel G)
@@ -251,7 +252,7 @@ theorem amplifyModel_multiplicative_distance
         ((Equiv.refl (Fin k)).prodCongr (M.action h))) = _
   rw [← Equiv.permCongr_mul, normalizedHamming_permCongr, hprod]
   apply normalizedHamming_prodCongr_refl_left
-  simpa using hk.ne'
+  simpa only [Fintype.card_fin, ne_eq] using hk.ne'
 
 theorem amplifyModel_separation_distance
     {G : Type*} [Group G] (M : PermutationModel G)
@@ -284,7 +285,7 @@ def pullbackPermutationModel {G H : Type*} [Group G] [Group H]
   size := M.size
   size_pos := M.size_pos
   action h := M.action (f h)
-  map_one := by simpa using M.map_one
+  map_one := by simpa only [map_one] using M.map_one
 
 def pullbackSoficApproximation {G H : Type*} [Group G] [Group H]
     (f : H →* G) (hf : Function.Injective f)
@@ -304,7 +305,7 @@ def pullbackSoficApproximation {G H : Type*} [Group G] [Group H]
       intro he
       apply hg
       apply hf
-      simpa using he
+      simpa only [map_one] using he
     convert A.separated (f g) hfg using 1
     funext n
     rfl
@@ -354,7 +355,7 @@ theorem nonempty_soficApproximation_of_sofic
     exact (hgood n).multiplicative g hg h hh |>.le
   · intro g hg
     apply tendsto_of_tendsto_of_tendsto_of_le_of_le'
-      (by simpa using (tendsto_const_nhds.sub hε_lim))
+      (by simpa only [sub_zero] using (tendsto_const_nhds.sub hε_lim))
       tendsto_const_nhds
     · filter_upwards [hmem g] with n hn
       exact ((hgood n).separated g hn hg).le
@@ -399,7 +400,7 @@ theorem sofic_of_injective {G H : Type*} [Group G] [Group H]
     { size := M.size
       size_pos := M.size_pos
       action := fun g => M.action (f g)
-      map_one := by simpa using M.map_one }
+      map_one := by simpa only [map_one] using M.map_one }
   refine ⟨N, ?_⟩
   constructor
   · intro g hg h hh
@@ -411,7 +412,7 @@ theorem sofic_of_injective {G H : Type*} [Group G] [Group H]
     intro he
     apply hne
     apply hf
-    simpa using he
+    simpa only [map_one] using he
 
 theorem exists_finite_obstruction {G : Type*} [Group G] (hG : ¬ Sofic G) :
     ∃ (F : Finset G) (ε : ℝ), 1 ∈ F ∧ 0 < ε ∧ ε < 1 ∧
@@ -439,7 +440,8 @@ noncomputable def multiplicationTable {G : Type*} [Group G]
 theorem mem_multiplicationTable_of_mem {G : Type*} [Group G]
     {F : Finset G} {g : G} (hg : g ∈ F) : g ∈ multiplicationTable F := by
   classical
-  simp [multiplicationTable, hg]
+  simp only [multiplicationTable, Finset.product_eq_sprod, Finset.mem_union, hg, Finset.mem_image,
+    Finset.mem_product, Prod.exists, true_or]
 
 theorem mul_mem_multiplicationTable {G : Type*} [Group G]
     {F : Finset G} {g h : G} (hg : g ∈ F) (hh : h ∈ F) :
@@ -479,7 +481,8 @@ theorem tableGenerator_one {G : Type*} [Group G]
   change PresentedGroup.mk _ (FreeGroup.of _) = 1
   apply PresentedGroup.one_of_mem
   change FreeGroup.of _ ∈ tableRelators F h₁
-  simp [tableRelators]
+  simp only [tableRelators, Finset.product_eq_sprod, Finset.singleton_union, Finset.mem_insert,
+    Finset.mem_image, Finset.mem_product, Finset.mem_attach, and_self, true_and, Prod.exists, Subtype.exists, true_or]
 
 theorem tableGenerator_mul {G : Type*} [Group G]
     (F : Finset G) (h₁ : 1 ∈ F) {g h : G} (hg : g ∈ F) (hh : h ∈ F) :
@@ -497,7 +500,7 @@ theorem tableGenerator_mul {G : Type*} [Group G]
     apply Finset.mem_union_right
     apply Finset.mem_image.mpr
     refine ⟨(⟨g, hg⟩, ⟨h, hh⟩), ?_, rfl⟩
-    simp
+    simp only [Finset.product_eq_sprod, Finset.mem_product, Finset.mem_attach, and_self]
   simpa only [tableGenerator, PresentedGroup.of, map_mul] using
     PresentedGroup.mk_eq_mk_of_mul_inv_mem hrel
 
@@ -510,8 +513,8 @@ noncomputable def tableEvaluation {G : Type*} [Group G]
   simp only [tableRelators, Finset.mem_union, Finset.mem_singleton,
     Finset.mem_image] at hr
   rcases hr with rfl | ⟨⟨g, h⟩, _, rfl⟩
-  · simp
-  · simp
+  · simp only [FreeGroup.lift_apply_of]
+  · simp only [map_mul, FreeGroup.lift_apply_of, map_inv, mul_inv_rev, mul_mul_inv_mul_cancel, mul_inv_cancel]
 
 @[simp]
 theorem tableEvaluation_generator {G : Type*} [Group G]
@@ -525,7 +528,7 @@ theorem tableGenerator_ne_one {G : Type*} [Group G]
     tableGenerator F h₁ ⟨g, mem_multiplicationTable_of_mem hg⟩ ≠ 1 := by
   intro h
   apply hne
-  simpa using congrArg (tableEvaluation F h₁) h
+  simpa only [tableEvaluation_generator, map_one] using congrArg (tableEvaluation F h₁) h
 
 theorem tableGroup_finitelyPresented {G : Type*} [Group G]
     (F : Finset G) (h₁ : 1 ∈ F) :
@@ -556,8 +559,7 @@ noncomputable def pullbackTableModel {G : Type*} [Group G]
       action := fun g => if hg : g ∈ multiplicationTable F then
         M.action (tableGenerator F h₁ ⟨g, hg⟩) else 1
       map_one := ?_ }
-  simp [mem_multiplicationTable_of_mem h₁, tableGenerator_one F h₁,
-    M.map_one]
+  simp only [mem_multiplicationTable_of_mem h₁, ↓reduceDIte, tableGenerator_one F h₁, M.map_one]
 
 theorem pullbackTableModel_action_of_mem {G : Type*} [Group G]
     (F : Finset G) (h₁ : 1 ∈ F)
@@ -665,16 +667,16 @@ theorem exists_local_word_control {α : Type u} {G : Type v} [Group G]
   refine FreeGroup.induction_on z ?_ ?_ ?_ ?_
   · refine ⟨∅, ?_⟩
     intro H _ f hf
-    simp [hf.map_one]
+    simp only [map_one, hf.map_one]
   · intro a
     refine ⟨∅, ?_⟩
     intro H _ f _
-    simp
+    simp only [FreeGroup.lift_apply_of]
   · intro a _
     refine ⟨{φ (FreeGroup.of a), (φ (FreeGroup.of a))⁻¹}, ?_⟩
     intro H _ f hf
     simp only [map_inv, FreeGroup.lift_apply_of]
-    exact (hf.map_inv_of_mem (by simp) (by simp)).symm
+    exact (hf.map_inv_of_mem (by simp only [Finset.mem_insert, Finset.mem_singleton, true_or]) (by simp only [Finset.mem_insert, Finset.mem_singleton, or_true])).symm
   · intro x y hx hy
     obtain ⟨sx, hx⟩ := hx
     obtain ⟨sy, hy⟩ := hy
@@ -682,10 +684,10 @@ theorem exists_local_word_control {α : Type u} {G : Type v} [Group G]
     intro H _ f hf
     have hsx : sx ⊆ insert (φ x) (insert (φ y) (sx ∪ sy)) := by
       intro a ha
-      simp [ha]
+      simp only [Finset.mem_insert, Finset.mem_union, ha, true_or, or_true]
     have hsy : sy ⊆ insert (φ x) (insert (φ y) (sx ∪ sy)) := by
       intro a ha
-      simp [ha]
+      simp only [Finset.mem_insert, Finset.mem_union, ha, or_true]
     calc
       FreeGroup.lift (fun a => f (φ (FreeGroup.of a))) (x * y) =
           FreeGroup.lift (fun a => f (φ (FreeGroup.of a))) x *
@@ -693,7 +695,7 @@ theorem exists_local_word_control {α : Type u} {G : Type v} [Group G]
       _ = f (φ x) * f (φ y) :=
         congrArg₂ (· * ·) (hx H f (hf.mono hsx)) (hy H f (hf.mono hsy))
       _ = f (φ x * φ y) :=
-        (hf.map_mul (φ x) (by simp) (φ y) (by simp)).symm
+        (hf.map_mul (φ x) (by simp only [Finset.mem_insert, Finset.mem_union, true_or]) (φ y) (by simp only [Finset.mem_insert, Finset.mem_union, true_or, or_true])).symm
       _ = f (φ (x * y)) := by rw [map_mul]
 
 def boundary {V ι : Type*} [Fintype ι] [DecidableEq V]
@@ -713,9 +715,8 @@ theorem agreementSet_card_add_hammingDist {V : Type*}
     [Fintype V] [DecidableEq V] (c c' : Equiv.Perm V) :
     (agreementSet c c').card +
       hammingDist (fun x => c x) (fun x => c' x) = Fintype.card V := by
-  simpa [agreementSet, hammingDist] using
-    (Finset.card_filter_add_card_filter_not
-      (s := (Finset.univ : Finset V)) (fun x => c x = c' x))
+  simpa only [agreementSet, hammingDist, ne_eq, Finset.card_univ] using
+    (Finset.card_filter_add_card_filter_not (s := (Finset.univ : Finset V)) (fun x => c x = c' x))
 
 theorem boundary_agreementSet_le_commutationDefect {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -794,14 +795,14 @@ theorem hamming_dichotomy_of_expansion {V ι : Type*}
           hammingDist (fun x => c x) (fun x => c' x) =
             (agreementSet c c').card := by
       linarith [hcard']
-    simpa [hident] using hcut
+    simpa only [hident, Nat.cast_add, ge_iff_le] using hcut
   · left
     rw [min_eq_right (le_of_not_ge hhalf)] at hcut
     have hident :
         (Fintype.card V : ℝ) - (agreementSet c c').card =
           hammingDist (fun x => c x) (fun x => c' x) := by
       linarith [hcard']
-    simpa [hident] using hcut
+    simpa only [Nat.cast_add, ge_iff_le, hident] using hcut
 
 def inducedBoundary {V ι : Type*} [Fintype ι] [DecidableEq V]
     (σ : ι → Equiv.Perm V) (B E : Finset V) : ℕ :=
@@ -852,7 +853,8 @@ theorem boundary_le_induced_add_deleted {V ι : Type*}
             exact (Finset.card_le_card hsub).trans
               ((Finset.card_union_le _ _).trans (Nat.add_le_add_left hpre _))
     _ = (∑ i : ι, (E.filter fun x => σ i x ∉ B ∧ σ i x ∉ E).card) +
-        Fintype.card ι * B.card := by simp [Finset.sum_add_distrib]
+        Fintype.card ι * B.card := by simp only [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
+                                        smul_eq_mul]
 
 theorem maximal_bad_cut_induced_lower {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -922,7 +924,8 @@ theorem prune_permutation_multigraph {V ι : Type*}
     ell * (E.card : ℝ) ≤ (inducedBoundary σ B E : ℝ) := by
   classical
   rcases E.eq_empty_or_nonempty with rfl | hne
-  · simp [inducedBoundary]
+  · simp only [Finset.card_empty, CharP.cast_eq_zero, mul_zero, inducedBoundary, Finset.notMem_empty,
+      not_false_eq_true, and_true, Finset.filter_empty, Finset.sum_const_zero, Std.le_refl]
   by_cases hunion : 2 * (B ∪ E).card ≤ Fintype.card V
   · exact maximal_bad_cut_induced_lower σ B E ell hB hmax hdisj hne hunion
   have hBhalfReal :
@@ -955,7 +958,7 @@ theorem prune_permutation_multigraph {V ι : Type*}
     linarith
   have hcard := Finset.card_union_of_disjoint hdisj
   have hlargeNat : Fintype.card V < 2 * (B.card + E.card) := by
-    simpa [hcard] using Nat.lt_of_not_ge hunion
+    simpa only [hcard] using Nat.lt_of_not_ge hunion
   have hlargeCast :
       (Fintype.card V : ℝ) < 2 * ((B.card : ℝ) + (E.card : ℝ)) := by
     exact_mod_cast hlargeNat
@@ -993,13 +996,14 @@ theorem exists_maximal_bad_cut {V ι : Type*}
     refine ⟨B, hprops.1, hprops.2.le, ?_⟩
     intro A hhalf hbad
     apply hmax A
-    simp [candidates, hhalf, hbad]
-  · refine ⟨∅, by simp, by simp [boundary], ?_⟩
+    simp only [Finset.powerset_univ, Finset.mem_filter, Finset.mem_univ, hhalf, hbad, and_self, candidates]
+  · refine ⟨∅, by simp only [Finset.card_empty, mul_zero, zero_le], by simp only [boundary, Finset.notMem_empty, not_false_eq_true, Finset.filter_empty, Finset.card_empty,
+                             Finset.sum_const_zero, CharP.cast_eq_zero, mul_zero, Std.le_refl], ?_⟩
     intro A hhalf hbad
     exfalso
     apply hnonempty
     refine ⟨A, ?_⟩
-    simp [candidates, hhalf, hbad]
+    simp only [Finset.powerset_univ, Finset.mem_filter, Finset.mem_univ, hhalf, hbad, and_self, candidates]
 
 theorem exists_pruned_expander {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -1077,7 +1081,7 @@ theorem finpartition_dominant_matching_injOn
   exact disjoint_dominant_intersections_false C E (D C)
     (P.disjoint (hR hCR) (hR hER) hne)
     (hmajor C hCR)
-    (by simpa [heq] using hmajor E hER)
+    (by simpa only [heq] using hmajor E hER)
 
 theorem matchedRetainedSupport_subset
     {V : Type*} [DecidableEq V] {U : Finset V}
@@ -1086,7 +1090,7 @@ theorem matchedRetainedSupport_subset
     matchedRetainedSupport R ⊆ U := by
   intro x hx
   obtain ⟨C, hC, hxC⟩ := Finset.mem_biUnion.mp hx
-  exact P.subset (hR hC) (by simpa using hxC)
+  exact P.subset (hR hC) (by simpa only [id_eq] using hxC)
 
 theorem matchedCore_subset_retainedSupport
     {V : Type*} [DecidableEq V]
@@ -1095,7 +1099,7 @@ theorem matchedCore_subset_retainedSupport
   intro x hx
   obtain ⟨C, hC, hxC⟩ := Finset.mem_biUnion.mp hx
   exact Finset.mem_biUnion.mpr
-    ⟨C, hC, by simpa using (Finset.mem_inter.mp hxC).1⟩
+    ⟨C, hC, by simpa only [id_eq] using (Finset.mem_inter.mp hxC).1⟩
 
 theorem matchedCore_subset
     {V : Type*} [DecidableEq V] {U : Finset V}
@@ -1313,9 +1317,7 @@ theorem permutation_squared_increment_le_twice_decreasing
   have hsplit : B.sum d + C.sum d = 0 := by
     calc
       B.sum d + C.sum d = ∑ x, d x := by
-        simpa [B, C] using
-          Finset.sum_filter_add_sum_filter_not Finset.univ
-            (fun x : α => d x < 0) d
+        simpa only [not_lt, B, C] using Finset.sum_filter_add_sum_filter_not Finset.univ (fun x : α => d x < 0) d
       _ = 0 := hsum
   have habs_bad : B.sum (fun x => |d x|) = -(B.sum d) := by
     rw [← Finset.sum_neg_distrib]
@@ -1341,12 +1343,12 @@ theorem permutation_squared_increment_le_twice_decreasing
   have hbad : -(B.sum d) ≤ (B.card : ℝ) := by
     calc
       -(B.sum d) = B.sum (fun x => -d x) := by
-        simp
+        simp only [Finset.sum_neg_distrib]
       _ ≤ B.sum (fun _ => (1 : ℝ)) := by
         apply Finset.sum_le_sum
         intro x _
         linarith [hlower x]
-      _ = (B.card : ℝ) := by simp
+      _ = (B.card : ℝ) := by simp only [Finset.sum_const, nsmul_eq_mul, mul_one]
   have hsquare : (∑ x, d x ^ 2) ≤ ∑ x, |d x| := by
     apply Finset.sum_le_sum
     intro x _
@@ -1421,7 +1423,7 @@ theorem diagonalRadius_eventually_error_lt (e : ℕ → ℕ → ℝ)
       (Nat.findGreatest (fun k => e n k < 1 / ((k : ℝ) + 1)) n)
   exact Nat.findGreatest_spec
     (P := fun k => e n k < 1 / ((k : ℝ) + 1))
-    (Nat.zero_le n) (by simpa using hn)
+    (Nat.zero_le n) (by simpa only [CharP.cast_eq_zero, zero_add, ne_eq, one_ne_zero, not_false_eq_true, div_self] using hn)
 
 theorem diagonalRadius_error_tendsto_zero (e : ℕ → ℕ → ℝ)
     (hnonneg : ∀ n k, 0 ≤ e n k)
@@ -1467,12 +1469,12 @@ theorem finite_union_bad_density_tendsto_zero
       atTop (𝓝 0) := by
     induction I using Finset.induction_on with
     | empty =>
-        simp
+        simp only [Finset.sum_empty, tendsto_const_nhds_iff]
     | @insert i I hi ih =>
         have hfirst := hbad i (Finset.mem_insert_self i I)
         have hrest := ih (fun j hj =>
           hbad j (Finset.mem_insert_of_mem hj))
-        simpa [Finset.sum_insert, hi] using hfirst.add hrest
+        simpa only [hi, not_false_eq_true, Finset.sum_insert, add_zero] using hfirst.add hrest
   refine squeeze_zero (fun n => by positivity) ?_ hsum
   intro n
   have hcard :
@@ -1501,7 +1503,7 @@ theorem sum_card_inter_partition {α : Type*} [DecidableEq α]
   have hunion :
       P.parts.biUnion (fun C => C ∩ B) = U ∩ B := by
     ext x
-    simp [← P.biUnion_parts]
+    simp only [Finset.mem_biUnion, Finset.mem_inter, ← P.biUnion_parts, id_eq]
     aesop
   calc
     ∑ C ∈ P.parts, (C ∩ B).card =
@@ -1526,11 +1528,9 @@ theorem retained_bad_density_tendsto_zero
     (hcover.eventually (lt_mem_nhds (by norm_num : (1 / 2 : ℝ) < 1))).mono
       fun _ h => h.le
   refine squeeze_zero' (Eventually.of_forall fun n => by positivity) ?_
-    (by simpa using (tendsto_const_nhds.mul hbad :
-      Tendsto
-        (fun n => (2 : ℝ) *
-          (((V n ∩ B n).card : ℝ) / (V n).card))
-        atTop (𝓝 ((2 : ℝ) * 0))))
+    (by simpa only [mul_zero] using
+          (tendsto_const_nhds.mul hbad :
+            Tendsto (fun n => (2 : ℝ) * (((V n ∩ B n).card : ℝ) / (V n).card)) atTop (𝓝 ((2 : ℝ) * 0))))
   filter_upwards [hhalf] with n hn
   have hv : (0 : ℝ) < (V n).card := by
     exact_mod_cast (hV n).card_pos
@@ -1551,9 +1551,8 @@ theorem retained_bad_density_tendsto_zero
     _ ≤ 2 * (((V n ∩ B n).card : ℝ) / (V n).card) := by
       rw [← mul_div_assoc]
       apply (div_le_div_iff₀ hu hv).2
-      simpa [mul_assoc, mul_comm, mul_left_comm] using
-        (mul_le_mul_of_nonneg_left hmass
-          (Nat.cast_nonneg (α := ℝ) (V n ∩ B n).card))
+      simpa only [mul_comm, mul_left_comm] using
+        (mul_le_mul_of_nonneg_left hmass (Nat.cast_nonneg (α := ℝ) (V n ∩ B n).card))
 
 inductive LeavittGenerator where
   | s : Fin 2 → LeavittGenerator
@@ -1599,12 +1598,12 @@ def leavittT (i : Fin 2) : BinaryLeavitt :=
 
 theorem leavittT_mul_S (i j : Fin 2) :
     leavittT i * leavittS j = if i = j then 1 else 0 := by
-  simpa [leavittT, leavittS, leavittQuotient] using
+  simpa only [leavittT, leavittQuotient, leavittS, map_mul, MonoidWithZeroHom.map_ite_one_zero] using
     RingQuot.mkAlgHom_rel (ZMod 2) (LeavittRelation.inverse i j)
 
 theorem leavitt_partition :
     leavittS 0 * leavittT 0 + leavittS 1 * leavittT 1 = 1 := by
-  simpa [leavittT, leavittS, leavittQuotient] using
+  simpa only [leavittS, leavittQuotient, Fin.isValue, leavittT, map_add, map_mul, map_one] using
     RingQuot.mkAlgHom_rel (ZMod 2) LeavittRelation.partition
 
 abbrev leavittSequence : Type := ℕ → ZMod 2
@@ -1661,11 +1660,11 @@ theorem leavittFreeRepresentation_respects {x y : LeavittFree}
     leavittFreeRepresentation x = leavittFreeRepresentation y := by
   cases h with
   | inverse i j =>
-      simp [leavittFreeRepresentation, leavittGeneratorAction,
-        deletion_mul_prefix]
+      simp only [leavittFreeRepresentation, map_mul, FreeAlgebra.lift_ι_apply, leavittGeneratorAction,
+        deletion_mul_prefix, MonoidWithZeroHom.map_ite_one_zero]
   | partition =>
-      simpa [leavittFreeRepresentation, leavittGeneratorAction] using
-        prefix_deletion_partition
+      simpa only [leavittFreeRepresentation, Fin.isValue, map_add, map_mul, FreeAlgebra.lift_ι_apply,
+        leavittGeneratorAction, map_one] using prefix_deletion_partition
 
 def leavittRepresentation :
     BinaryLeavitt →ₐ[ZMod 2] Module.End (ZMod 2) leavittSequence :=
@@ -1674,13 +1673,13 @@ def leavittRepresentation :
 
 @[simp] theorem leavittRepresentation_S (i : Fin 2) :
     leavittRepresentation (leavittS i) = prefixOperator i := by
-  simp [leavittS, leavittQuotient, leavittRepresentation,
-    leavittFreeRepresentation, leavittGeneratorAction]
+  simp only [leavittRepresentation, leavittFreeRepresentation, leavittS, leavittQuotient,
+    RingQuot.liftAlgHom_mkAlgHom_apply, FreeAlgebra.lift_ι_apply, leavittGeneratorAction]
 
 @[simp] theorem leavittRepresentation_T (i : Fin 2) :
     leavittRepresentation (leavittT i) = deletionOperator i := by
-  simp [leavittT, leavittQuotient, leavittRepresentation,
-    leavittFreeRepresentation, leavittGeneratorAction]
+  simp only [leavittRepresentation, leavittFreeRepresentation, leavittT, leavittQuotient,
+    RingQuot.liftAlgHom_mkAlgHom_apply, FreeAlgebra.lift_ι_apply, leavittGeneratorAction]
 
 instance binaryLeavittNontrivial : Nontrivial BinaryLeavitt :=
   leavittRepresentation.toRingHom.domain_nontrivial
@@ -1690,18 +1689,21 @@ theorem prefix_deletion_ne_one :
   intro h
   have h' := congrArg
     (fun f : Module.End (ZMod 2) leavittSequence => f (fun _ => 1) 1) h
-  simp [prefixOperator, deletionOperator, Module.End.mul_apply] at h'
+  simp only [prefixOperator, Fin.isValue, Fin.coe_ofNat_eq_mod, Nat.zero_mod, deletionOperator, add_zero,
+    Module.End.mul_apply, LinearMap.coe_mk, AddHom.coe_mk, Nat.mod_succ, one_ne_zero, ↓reduceIte, Module.End.one_apply,
+    zero_ne_one] at h'
 
 theorem leavittS_mul_T_ne_one : leavittS 0 * leavittT 0 ≠ 1 := by
   intro h
   apply prefix_deletion_ne_one
-  simpa using congrArg leavittRepresentation h
+  simpa only [Fin.isValue, map_mul, leavittRepresentation_S, leavittRepresentation_T, map_one] using
+    congrArg leavittRepresentation h
 
 instance binaryLeavittInfinite : Infinite BinaryLeavitt where
   not_finite h := by
     letI := h
     apply leavittS_mul_T_ne_one
-    exact mul_eq_one_symm (by simpa using leavittT_mul_S 0 0)
+    exact mul_eq_one_symm (by simpa only [Fin.isValue, ↓reduceIte] using leavittT_mul_S 0 0)
 
 def leavittWordS : List (Fin 2) → BinaryLeavitt
   | [] => 1
@@ -1714,60 +1716,60 @@ def leavittWordT : List (Fin 2) → BinaryLeavitt
 theorem leavittWordT_mul_wordS_self (a : List (Fin 2)) :
     leavittWordT a * leavittWordS a = 1 := by
   induction a with
-  | nil => simp [leavittWordT, leavittWordS]
+  | nil => simp only [leavittWordT, leavittWordS, mul_one]
   | cons i a ih =>
       calc
         leavittWordT (i :: a) * leavittWordS (i :: a) =
             leavittWordT a *
               ((leavittT i * leavittS i) * leavittWordS a) := by
-                simp [leavittWordT, leavittWordS, mul_assoc]
-        _ = 1 := by simp [leavittT_mul_S, ih]
+                simp only [leavittWordT, leavittWordS, mul_assoc]
+        _ = 1 := by simp only [leavittT_mul_S, ↓reduceIte, one_mul, ih]
 
 theorem leavittWordT_mul_wordS_of_incomparable
     (a b : List (Fin 2)) (hab : ¬a <+: b) (hba : ¬b <+: a) :
     leavittWordT a * leavittWordS b = 0 := by
   induction a generalizing b with
-  | nil => exact (hab (by simp)).elim
+  | nil => exact (hab (by simp only [List.nil_prefix])).elim
   | cons i a ih =>
       cases b with
-      | nil => exact (hba (by simp)).elim
+      | nil => exact (hba (by simp only [List.nil_prefix])).elim
       | cons j b =>
           by_cases hij : i = j
           · subst j
             have hab' : ¬a <+: b := by
               intro hp
               apply hab
-              simpa using hp
+              simpa only [List.cons_prefix_cons, true_and] using hp
             have hba' : ¬b <+: a := by
               intro hp
               apply hba
-              simpa using hp
+              simpa only [List.cons_prefix_cons, true_and] using hp
             calc
               leavittWordT (i :: a) * leavittWordS (i :: b) =
                   leavittWordT a *
                     ((leavittT i * leavittS i) * leavittWordS b) := by
-                      simp [leavittWordT, leavittWordS, mul_assoc]
+                      simp only [leavittWordT, leavittWordS, mul_assoc]
               _ = leavittWordT a * leavittWordS b := by
-                simp [leavittT_mul_S]
+                simp only [leavittT_mul_S, ↓reduceIte, one_mul]
               _ = 0 := ih b hab' hba'
           · calc
               leavittWordT (i :: a) * leavittWordS (j :: b) =
                   leavittWordT a *
                     ((leavittT i * leavittS j) * leavittWordS b) := by
-                      simp [leavittWordT, leavittWordS, mul_assoc]
-              _ = 0 := by simp [leavittT_mul_S, hij]
+                      simp only [leavittWordT, leavittWordS, mul_assoc]
+              _ = 0 := by simp only [leavittT_mul_S, hij, ↓reduceIte, zero_mul, mul_zero]
 
 theorem leavittWordS_append (a b : List (Fin 2)) :
     leavittWordS (a ++ b) = leavittWordS a * leavittWordS b := by
   induction a with
-  | nil => simp [leavittWordS]
-  | cons i a ih => simp [leavittWordS, ih, mul_assoc]
+  | nil => simp only [List.nil_append, leavittWordS, one_mul]
+  | cons i a ih => simp only [List.cons_append, leavittWordS, ih, mul_assoc]
 
 theorem leavittWordT_append (a b : List (Fin 2)) :
     leavittWordT (a ++ b) = leavittWordT b * leavittWordT a := by
   induction a with
-  | nil => simp [leavittWordT]
-  | cons i a ih => simp [leavittWordT, ih, mul_assoc]
+  | nil => simp only [List.nil_append, leavittWordT, mul_one]
+  | cons i a ih => simp only [List.cons_append, leavittWordT, ih, mul_assoc]
 
 def leavittCylinder (a : List (Fin 2)) : BinaryLeavitt :=
   leavittWordS a * leavittWordT a
@@ -1781,10 +1783,10 @@ theorem leavittCylinder_split (a : List (Fin 2)) :
           (leavittS 0 * leavittT 0 + leavittS 1 * leavittT 1) *
           leavittWordT a := by
             rw [leavitt_partition]
-            simp [leavittCylinder]
+            simp only [leavittCylinder, mul_one]
     _ = leavittCylinder (a ++ [0]) + leavittCylinder (a ++ [1]) := by
-      simp [leavittCylinder, leavittWordS_append, leavittWordT_append,
-        leavittWordS, leavittWordT, mul_add, add_mul, mul_assoc]
+      simp only [Fin.isValue, mul_add, add_mul, mul_assoc, leavittCylinder, leavittWordS_append, leavittWordS,
+        mul_one, leavittWordT_append, leavittWordT, one_mul]
 
 namespace MatrixCorner
 
@@ -1806,8 +1808,9 @@ theorem decode_encode [DecidableEq ι] (s t : ι → A)
   calc
     t i * (∑ k, ∑ l, s k * M k l * t l) * s j =
         ∑ k, ∑ l, (t i * s k) * M k l * (t l * s j) := by
-          simp [Finset.mul_sum, Finset.sum_mul, mul_assoc]
-    _ = M i j := by simp [h]
+          simp only [mul_assoc, Finset.mul_sum, Finset.sum_mul]
+    _ = M i j := by simp only [h, ite_mul, one_mul, zero_mul, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq', Finset.mem_univ,
+                      ↓reduceIte, Finset.sum_ite_eq]
 
 theorem encode_decode (s t : ι → A) (x : A) :
     encode s t (decode s t x) =
@@ -1822,7 +1825,7 @@ theorem encode_decode (s t : ι → A) (x : A) :
           intro i _
           apply Finset.sum_congr rfl
           intro j _
-          simp [mul_assoc]
+          simp only [mul_assoc]
     _ = (∑ i, s i * t i) * x * (∑ j, s j * t j) := by
       simp only [Finset.sum_mul, Finset.mul_sum]
       exact Finset.sum_comm
@@ -1840,12 +1843,13 @@ theorem codeIdempotent_isIdempotent [DecidableEq ι] (s t : ι → A)
           rw [Finset.mul_sum]
           apply Finset.sum_congr rfl
           intro j _
-          simp [mul_assoc]
-    _ = ∑ i, s i * t i := by simp [h]
+          simp only [mul_assoc]
+    _ = ∑ i, s i * t i := by simp only [h, mul_ite, mul_one, mul_zero, ite_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
 
 theorem encode_one [DecidableEq ι] (s t : ι → A) :
     encode s t (1 : Matrix ι ι A) = codeIdempotent s t := by
-  simp [encode, codeIdempotent, Matrix.one_apply, mul_ite, ite_mul]
+  simp only [encode, Matrix.one_apply, mul_ite, mul_one, mul_zero, ite_mul, zero_mul, Finset.sum_ite_eq,
+    Finset.mem_univ, ↓reduceIte, codeIdempotent]
 
 theorem encode_mul [DecidableEq ι] (s t : ι → A)
     (h : ∀ i j, t i * s j = if i = j then 1 else 0)
@@ -1871,9 +1875,10 @@ theorem encode_mul [DecidableEq ι] (s t : ι → A)
             rw [Finset.mul_sum]
             apply Finset.sum_congr rfl
             intro l _
-            simp [mul_assoc]
+            simp only [mul_assoc]
     _ = ∑ i, ∑ j, ∑ l, s i * M i j * N j l * t l := by
-      simp [h]
+      simp only [h, mul_ite, mul_one, mul_zero, ite_mul, zero_mul, Finset.sum_ite_irrel, Finset.sum_const_zero,
+        Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
     _ = ∑ i, ∑ l, ∑ j, s i * M i j * N j l * t l := by
       apply Finset.sum_congr rfl
       intro i _
@@ -1887,7 +1892,7 @@ theorem encode_mul [DecidableEq ι] (s t : ι → A)
       rw [Finset.mul_sum, Finset.sum_mul]
       apply Finset.sum_congr rfl
       intro j _
-      simp [mul_assoc]
+      simp only [mul_assoc]
 
 def ringEquiv [DecidableEq ι] (s t : ι → A)
     (h : ∀ i j, t i * s j = if i = j then 1 else 0) :
@@ -1910,7 +1915,7 @@ def ringEquiv [DecidableEq ι] (s t : ι → A)
   map_mul' M N := Subtype.ext (encode_mul s t h M N)
   map_add' M N := Subtype.ext <| by
     change encode s t (M + N) = encode s t M + encode s t N
-    simp [encode, Matrix.add_apply, mul_add, add_mul, Finset.sum_add_distrib]
+    simp only [encode, Matrix.add_apply, mul_add, add_mul, Finset.sum_add_distrib]
 
 end MatrixCorner
 
@@ -1924,7 +1929,7 @@ theorem binaryPrefixCode_orthogonal {ι : Type*} [DecidableEq ι]
       if i = j then 1 else 0 := by
   by_cases hij : i = j
   · subst j
-    simp [leavittWordT_mul_wordS_self]
+    simp only [leavittWordT_mul_wordS_self, ↓reduceIte]
   · simp only [hij, ↓reduceIte]
     exact leavittWordT_mul_wordS_of_incomparable _ _
       (E.prefix_free hij) (E.prefix_free (Ne.symm hij))
@@ -1969,10 +1974,11 @@ theorem prefixTable_mul_reverse {ι : Type*} [Fintype ι] [DecidableEq ι]
               rw [Finset.mul_sum]
               apply Finset.sum_congr rfl
               intro j _
-              simp [mul_assoc]
+              simp only [mul_assoc]
     _ = ∑ i, leavittWordS (target.word i) *
           leavittWordT (target.word i) := by
-      simp [binaryPrefixCode_orthogonal]
+      simp only [binaryPrefixCode_orthogonal, mul_ite, mul_one, mul_zero, ite_mul, zero_mul, Finset.sum_ite_eq,
+        Finset.mem_univ, ↓reduceIte]
 
 def prefixTableUnit {ι : Type*} [Fintype ι] [DecidableEq ι]
     (source target : BinaryPrefixCode ι)
@@ -2064,11 +2070,11 @@ theorem alpha_cylinders :
   have h₀₀ :
       leavittCylinder [0, 0, 0] + leavittCylinder [0, 0, 1] =
         leavittCylinder [0, 0] := by
-    simpa using (leavittCylinder_split [0, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [0, 0]).symm
   have h₀ :
       leavittCylinder [0, 0] + leavittCylinder [0, 1] =
         leavittCylinder [0] := by
-    simpa using (leavittCylinder_split [0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [0]).symm
   change
     leavittCylinder [0, 0, 0] +
         leavittCylinder [0, 0, 1] +
@@ -2083,11 +2089,11 @@ theorem beta_cylinders :
   have h₁₀₀ :
       leavittCylinder [1, 0, 0, 0] + leavittCylinder [1, 0, 0, 1] =
         leavittCylinder [1, 0, 0] := by
-    simpa using (leavittCylinder_split [1, 0, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0, 0]).symm
   have h₁₀ :
       leavittCylinder [1, 0, 0] + leavittCylinder [1, 0, 1] =
         leavittCylinder [1, 0] := by
-    simpa using (leavittCylinder_split [1, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0]).symm
   change
     leavittCylinder [1, 0, 0, 0] +
         leavittCylinder [1, 0, 0, 1] +
@@ -2102,11 +2108,11 @@ theorem nu_cylinders :
   have h₁₁₀ :
       leavittCylinder [1, 1, 0, 0] + leavittCylinder [1, 1, 0, 1] =
         leavittCylinder [1, 1, 0] := by
-    simpa using (leavittCylinder_split [1, 1, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 1, 0]).symm
   have h₁₁ :
       leavittCylinder [1, 1, 0] + leavittCylinder [1, 1, 1] =
         leavittCylinder [1, 1] := by
-    simpa using (leavittCylinder_split [1, 1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 1]).symm
   change
     leavittCylinder [1, 1, 0, 0] +
         leavittCylinder [1, 1, 0, 1] +
@@ -2121,11 +2127,11 @@ theorem eta_cylinders :
   have h₁₀ :
       leavittCylinder [1, 0, 0] + leavittCylinder [1, 0, 1] =
         leavittCylinder [1, 0] := by
-    simpa using (leavittCylinder_split [1, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0]).symm
   have h₁ :
       leavittCylinder [1, 0] + leavittCylinder [1, 1] =
         leavittCylinder [1] := by
-    simpa using (leavittCylinder_split [1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1]).symm
   change
     leavittCylinder [1, 0, 0] +
         leavittCylinder [1, 0, 1] +
@@ -2140,9 +2146,9 @@ theorem ninePrefixCode_complete :
   have h₁ :
       leavittCylinder [1, 0] + leavittCylinder [1, 1] =
         leavittCylinder [1] := by
-    simpa using (leavittCylinder_split [1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1]).symm
   have hroot : leavittCylinder [0] + leavittCylinder [1] = 1 := by
-    simpa [leavittCylinder, leavittWordS, leavittWordT] using
+    simpa only [leavittCylinder, leavittWordS, Fin.isValue, mul_one, leavittWordT, one_mul] using
       leavitt_partition
   calc
     (∑ i : Fin 9, leavittCylinder (nineWord i)) =
@@ -2155,7 +2161,8 @@ theorem ninePrefixCode_complete :
         (leavittCylinder (nuWord 0) +
           leavittCylinder (nuWord 1) +
           leavittCylinder (nuWord 2)) := by
-          simp [Fin.sum_univ_succ, nineWord]
+          simp only [nineWord, Fin.isValue, Fin.sum_univ_succ, Fin.succ_ne_zero, imp_self, Fin.succ_zero_eq_one,
+            Fin.succ_one_eq_two, Fin.reduceSucc, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton]
           ac_rfl
     _ = leavittCylinder [0] +
           leavittCylinder [1, 0] + leavittCylinder [1, 1] := by
@@ -2185,7 +2192,7 @@ theorem uPrefixCode_complete :
         leavittCylinder (alphaWord 2) :=
     (leavittCylinder_split (alphaWord 2)).symm
   have hroot : leavittCylinder [0] + leavittCylinder [1] = 1 := by
-    simpa [leavittCylinder, leavittWordS, leavittWordT] using
+    simpa only [leavittCylinder, leavittWordS, Fin.isValue, mul_one, leavittWordT, one_mul] using
       leavitt_partition
   calc
     (∑ i : Fin 9, leavittCylinder (uWord i)) =
@@ -2198,7 +2205,8 @@ theorem uPrefixCode_complete :
         (leavittCylinder (etaWord 0) +
           leavittCylinder (etaWord 1) +
           leavittCylinder (etaWord 2)) := by
-          simp [Fin.sum_univ_succ, uWord]
+          simp only [uWord, Fin.isValue, Fin.sum_univ_succ, Fin.succ_ne_zero, imp_self, Fin.succ_zero_eq_one,
+            Fin.succ_one_eq_two, Fin.reduceSucc, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton]
           ac_rfl
     _ = (leavittCylinder (alphaWord 0) +
           leavittCylinder (alphaWord 1) +
@@ -2216,7 +2224,9 @@ theorem vPrefixCode_complete :
   calc
     (∑ i : Fin 9, leavittCylinder (vWord i)) =
         ∑ i : Fin 9, leavittCylinder (uWord i) := by
-          simp [Fin.sum_univ_succ, vWord, uWord]
+          simp only [vWord, Fin.isValue, Fin.sum_univ_succ, Fin.succ_ne_zero, imp_self, Fin.succ_zero_eq_one,
+            Fin.succ_one_eq_two, Fin.reduceSucc, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton, uWord,
+            add_right_inj]
           ac_rfl
     _ = 1 := uPrefixCode_complete
 
@@ -2247,21 +2257,21 @@ theorem matrixUnitTransport_root
       (∑ k, sTarget k * tSource k) * sSource i =
           ∑ k, sTarget k * (tSource k * sSource i) := by
             simp only [Finset.sum_mul, mul_assoc]
-      _ = sTarget i := by simp [hsource]
+      _ = sTarget i := by simp only [hsource, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
   have hright :
       tSource j * (∑ k, sSource k * tTarget k) = tTarget j := by
     calc
       tSource j * (∑ k, sSource k * tTarget k) =
           ∑ k, (tSource j * sSource k) * tTarget k := by
             simp only [Finset.mul_sum, mul_assoc]
-      _ = tTarget j := by simp [hsource]
+      _ = tTarget j := by simp only [hsource, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
   calc
     (∑ k, sTarget k * tSource k) *
         (sSource i * a * tSource j) *
         (∑ k, sSource k * tTarget k) =
         ((∑ k, sTarget k * tSource k) * sSource i) * a *
           (tSource j * (∑ k, sSource k * tTarget k)) := by
-            simp [mul_assoc]
+            simp only [mul_assoc]
     _ = sTarget i * a * tTarget j := by rw [hleft, hright]
 
 theorem prefixTable_transport_root {ι : Type*}
@@ -2341,7 +2351,7 @@ def prefixElementaryUnit {ι : Type*} [DecidableEq ι]
     (a : BinaryLeavitt) : BinaryLeavittˣ := by
   let x := leavittWordS (E.word i) * a * leavittWordT (E.word j)
   have hzero : leavittWordT (E.word j) * leavittWordS (E.word i) = 0 := by
-    simpa [hij.symm] using binaryPrefixCode_orthogonal E j i
+    simpa only [hij.symm, ↓reduceIte] using binaryPrefixCode_orthogonal E j i
   have hx : x * x = 0 := by
     dsimp [x]
     calc
@@ -2350,8 +2360,8 @@ def prefixElementaryUnit {ι : Type*} [DecidableEq ι]
         leavittWordS (E.word i) * a *
           (leavittWordT (E.word j) * leavittWordS (E.word i)) *
           a * leavittWordT (E.word j) := by
-            simp [mul_assoc]
-      _ = 0 := by rw [hzero]; simp
+            simp only [mul_assoc]
+      _ = 0 := by rw [hzero]; simp only [mul_zero, zero_mul]
   exact
     { val := 1 + x
       inv := 1 - x
@@ -2386,7 +2396,7 @@ theorem compressionU_conjugate_alpha_elementaryUnit
         (leavittWordS (alphaWord i) * a *
           leavittWordT (alphaWord j)) *
         (↑(compressionU⁻¹) : BinaryLeavitt) := by
-          simp [mul_add, add_mul]
+          simp only [mul_add, mul_one, add_mul, Units.mul_inv]
     _ = 1 + leavittWordS (alphaWord i ++ [0]) * a *
           leavittWordT (alphaWord j ++ [0]) := by
       rw [compressionU_conjugate_alpha_root]
@@ -2413,7 +2423,7 @@ theorem compressionV_conjugate_alpha_elementaryUnit
         (leavittWordS (alphaWord i) * a *
           leavittWordT (alphaWord j)) *
         (↑(compressionV⁻¹) : BinaryLeavitt) := by
-          simp [mul_add, add_mul]
+          simp only [mul_add, mul_one, add_mul, Units.mul_inv]
     _ = 1 + leavittWordS (alphaWord i ++ [0]) * a *
           leavittWordT (alphaWord j ++ [0]) := by
       rw [compressionV_conjugate_alpha_root]
@@ -2462,8 +2472,8 @@ theorem alphaZero_prefixElementaryUnit_eq
       leavittWordT (alphaWord j ++ [0]) =
     1 + leavittWordS (alphaWord i) *
       (leavittS 0 * a * leavittT 0) * leavittWordT (alphaWord j)
-  simp [leavittWordS_append, leavittWordT_append,
-    leavittWordS, leavittWordT, mul_assoc]
+  simp only [Fin.isValue, leavittWordS_append, leavittWordS, mul_one, mul_assoc, leavittWordT_append,
+    leavittWordT, one_mul]
 
 theorem alphaZero_prefixElementaryGroup_le :
     prefixElementaryGroup alphaZeroPrefixCode ≤
@@ -2495,7 +2505,7 @@ def elementaryUnit (i j : ι) (h : i ≠ j) (a : R) : (Matrix ι ι R)ˣ where
 @[simp] theorem elementaryUnit_zero (i j : ι) (h : i ≠ j) :
     elementaryUnit (R := R) i j h 0 = 1 := by
   apply Units.ext
-  simp [elementaryUnit]
+  simp only [elementaryUnit, Matrix.single_zero, add_zero, sub_zero, Units.val_one]
 
 theorem elementaryUnit_mul (i j : ι) (h : i ≠ j) (a b : R) :
     elementaryUnit i j h a * elementaryUnit i j h b =
@@ -2513,7 +2523,8 @@ theorem elementaryUnit_injective (i j : ι) (h : i ≠ j) :
     Function.Injective (elementaryUnit (R := R) i j h) := by
   intro a b hab
   have he := congrArg (fun z : (Matrix ι ι R)ˣ => (z : Matrix ι ι R) i j) hab
-  simpa [elementaryUnit, Matrix.one_apply, h] using he
+  simpa only [elementaryUnit, Matrix.add_apply, ne_eq, h, not_false_eq_true, Matrix.one_apply_ne,
+    Matrix.single_apply_same, zero_add] using he
 
 def elementaryGroup (ι R : Type*) [Fintype ι] [DecidableEq ι] [Ring R] :
     Subgroup (Matrix ι ι R)ˣ :=
@@ -2587,7 +2598,7 @@ theorem elementaryUnit_mem_of_two_step
     exact H.mul_mem (H.mul_mem (H.mul_mem hleft hright) (H.inv_mem hleft))
       (H.inv_mem hright)
   rw [elementaryUnit_commutator i j k hij hjk hik a 1] at hc
-  simpa using hc
+  simpa only [mul_one] using hc
 
 end NoncommutativeElementaryGroup
 
@@ -2616,7 +2627,7 @@ theorem mem_finiteElementaryGenerators [DecidableEq R] (n : ℕ) (s : Finset R)
       obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hj
       exact ⟨i, j, h, a, ha, rfl⟩
     · rw [dif_neg h] at hj
-      simp at hj
+      simp only [Finset.notMem_empty] at hj
   · rintro ⟨i, j, h, a, ha, rfl⟩
     unfold finiteElementaryGenerators
     apply Finset.mem_biUnion.mpr
@@ -2703,7 +2714,7 @@ theorem elementaryGroup_finitelyGenerated
       exact elementaryUnit_mem i j hij a
     · rw [elementaryGroup, Subgroup.closure_le]
       rintro _ ⟨i, j, hij, a, rfl⟩
-      have ha : a ∈ C := by simp [hC]
+      have ha : a ∈ C := by simp only [hC, Algebra.mem_top]
       exact ha i j hij
   apply (Group.fg_iff_subgroup_fg (elementaryGroup (Fin n) R)).mpr
   exact ⟨t, heq⟩
@@ -2733,11 +2744,10 @@ def completePrefixMatrixEquiv {ι : Type*} [Fintype ι] [DecidableEq ι]
   left_inv := MatrixCorner.decode_encode _ _ (binaryPrefixCode_orthogonal E)
   right_inv x := by
     rw [MatrixCorner.encode_decode, hcomplete]
-    simp
+    simp only [one_mul, mul_one]
   map_mul' := MatrixCorner.encode_mul _ _ (binaryPrefixCode_orthogonal E)
   map_add' M N := by
-    simp [MatrixCorner.encode, Matrix.add_apply, mul_add, add_mul,
-      Finset.sum_add_distrib]
+    simp only [MatrixCorner.encode, Matrix.add_apply, mul_add, add_mul, Finset.sum_add_distrib]
 
 def completePrefixUnitEquiv {ι : Type*} [Fintype ι] [DecidableEq ι]
     (E : BinaryPrefixCode ι)
@@ -2782,11 +2792,11 @@ theorem completePrefixUnitEquiv_elementaryUnit
         (fun k => leavittWordS (E.word k))
         (fun k => leavittWordT (E.word k))
         (Matrix.single i j a) := by
-          simp [MatrixCorner.encode, Matrix.add_apply, mul_add, add_mul,
-            Finset.sum_add_distrib]
+          simp only [MatrixCorner.encode, Matrix.add_apply, mul_add, add_mul, Finset.sum_add_distrib]
     _ = 1 + leavittWordS (E.word i) * a * leavittWordT (E.word j) := by
       rw [h₁]
-      simp [MatrixCorner.encode, Matrix.single_apply, mul_ite, ite_mul, ite_and]
+      simp only [MatrixCorner.encode, Matrix.single_apply, ite_and, mul_ite, mul_zero, ite_mul, zero_mul,
+        Finset.sum_ite_irrel, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, Finset.sum_const_zero]
 
 theorem completePrefixElementaryGroup_map
     {ι : Type*} [Fintype ι] [DecidableEq ι]
@@ -2917,15 +2927,14 @@ theorem prefixCornerUnitHom_elementaryUnit
           (fun k => leavittWordS (E.word k))
           (fun k => leavittWordT (E.word k))
           (Matrix.single i j a) := by
-            simp [MatrixCorner.encode, Matrix.add_apply, mul_add, add_mul,
-              Finset.sum_add_distrib]
+            simp only [MatrixCorner.encode, Matrix.add_apply, mul_add, add_mul, Finset.sum_add_distrib]
       _ = MatrixCorner.codeIdempotent
           (fun k => leavittWordS (E.word k))
           (fun k => leavittWordT (E.word k)) +
           leavittWordS (E.word i) * a * leavittWordT (E.word j) := by
             rw [MatrixCorner.encode_one]
-            simp [MatrixCorner.encode, Matrix.single_apply,
-              mul_ite, ite_mul, ite_and]
+            simp only [MatrixCorner.encode, Matrix.single_apply, ite_and, mul_ite, mul_zero, ite_mul, zero_mul,
+              Finset.sum_ite_irrel, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, Finset.sum_const_zero]
   rw [henc]
   noncomm_ring
 
@@ -2974,13 +2983,13 @@ theorem compressionU_mem_sourceGenerated :
     compressionU ∈ sourceGeneratedGroup := by
   apply Subgroup.subset_closure
   apply Set.mem_union_right
-  simp
+  simp only [Set.mem_insert_iff, Set.mem_singleton_iff, true_or]
 
 theorem compressionV_mem_sourceGenerated :
     compressionV ∈ sourceGeneratedGroup := by
   apply Subgroup.subset_closure
   apply Set.mem_union_right
-  simp
+  simp only [Set.mem_insert_iff, Set.mem_singleton_iff, or_true]
 
 theorem prefixTable_mul_wordS {ι : Type*} [Fintype ι] [DecidableEq ι]
     (source target : BinaryPrefixCode ι) (i : ι) :
@@ -2990,9 +2999,10 @@ theorem prefixTable_mul_wordS {ι : Type*} [Fintype ι] [DecidableEq ι]
     prefixTable source target * leavittWordS (source.word i) =
         ∑ j, leavittWordS (target.word j) *
           (leavittWordT (source.word j) * leavittWordS (source.word i)) := by
-            simp [prefixTable, Finset.sum_mul, mul_assoc]
+            simp only [prefixTable, Finset.sum_mul, mul_assoc]
     _ = leavittWordS (target.word i) := by
-      simp [binaryPrefixCode_orthogonal]
+      simp only [binaryPrefixCode_orthogonal, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq', Finset.mem_univ,
+        ↓reduceIte]
 
 theorem wordT_mul_prefixTable {ι : Type*} [Fintype ι] [DecidableEq ι]
     (source target : BinaryPrefixCode ι) (i : ι) :
@@ -3002,9 +3012,10 @@ theorem wordT_mul_prefixTable {ι : Type*} [Fintype ι] [DecidableEq ι]
     leavittWordT (target.word i) * prefixTable source target =
         ∑ j, (leavittWordT (target.word i) *
           leavittWordS (target.word j)) * leavittWordT (source.word j) := by
-            simp [prefixTable, Finset.mul_sum, mul_assoc]
+            simp only [prefixTable, Finset.mul_sum, mul_assoc]
     _ = leavittWordT (source.word i) := by
-      simp [binaryPrefixCode_orthogonal]
+      simp only [binaryPrefixCode_orthogonal, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ,
+        ↓reduceIte]
 
 theorem leavittWordS_split (a : List (Fin 2)) :
     leavittWordS a =
@@ -3014,10 +3025,10 @@ theorem leavittWordS_split (a : List (Fin 2)) :
     leavittWordS a = leavittWordS a *
         (leavittS 0 * leavittT 0 + leavittS 1 * leavittT 1) := by
           rw [leavitt_partition]
-          simp
+          simp only [mul_one]
     _ = leavittWordS (a ++ [0]) * leavittT 0 +
         leavittWordS (a ++ [1]) * leavittT 1 := by
-          simp [leavittWordS_append, leavittWordS, mul_add, mul_assoc]
+          simp only [Fin.isValue, mul_add, leavittWordS_append, leavittWordS, mul_one, mul_assoc]
 
 theorem leavittWordT_split (a : List (Fin 2)) :
     leavittWordT a =
@@ -3028,10 +3039,10 @@ theorem leavittWordT_split (a : List (Fin 2)) :
         (leavittS 0 * leavittT 0 + leavittS 1 * leavittT 1) *
           leavittWordT a := by
             rw [leavitt_partition]
-            simp
+            simp only [one_mul]
     _ = leavittS 0 * leavittWordT (a ++ [0]) +
         leavittS 1 * leavittWordT (a ++ [1]) := by
-          simp [leavittWordT_append, leavittWordT, add_mul, mul_assoc]
+          simp only [Fin.isValue, add_mul, mul_assoc, leavittWordT_append, leavittWordT, one_mul]
 
 def betaNineIndex (i : Fin 3) : Fin 9 :=
   ⟨3 * i.val + 1, by omega⟩
@@ -3074,7 +3085,7 @@ theorem compressionU_inv_mul_alphaWordS (i : Fin 3) :
               prefixTable uPrefixCode ninePrefixCode *
                   (leavittWordS (alphaWord i ++ [0]) * leavittT 0 +
                     leavittWordS (alphaWord i ++ [1]) * leavittT 1) = _
-            simp [mul_add, mul_assoc]
+            simp only [Fin.isValue, mul_add, mul_assoc]
     _ = leavittWordS (alphaWord i) * leavittT 0 +
         leavittWordS (betaWord i) * leavittT 1 := by
           simpa only [ninePrefixCode, uPrefixCode, nineWord_alphaNineIndex,
@@ -3106,7 +3117,7 @@ theorem alphaWordT_mul_compressionU (i : Fin 3) :
               (leavittS 0 * leavittWordT (alphaWord i ++ [0]) +
                 leavittS 1 * leavittWordT (alphaWord i ++ [1])) *
                 prefixTable ninePrefixCode uPrefixCode = _
-            simp [add_mul, mul_assoc]
+            simp only [Fin.isValue, add_mul, mul_assoc]
     _ = leavittS 0 * leavittWordT (alphaWord i) +
         leavittS 1 * leavittWordT (betaWord i) := by
           simpa only [ninePrefixCode, uPrefixCode, nineWord_alphaNineIndex,
@@ -3191,7 +3202,7 @@ theorem alphaBetaRoot_mem_sourceGenerated
             leavittWordS (alphaWord i)) *
           (leavittS p * a * leavittT q) *
           (leavittWordT (alphaWord j) * (compressionU : BinaryLeavitt)) := by
-            simp [mul_add, add_mul, mul_assoc]
+            simp only [mul_assoc, mul_add, mul_one, add_mul, Units.inv_mul]
       _ = 1 +
           (leavittWordS (alphaWord i) * leavittT 0 +
             leavittWordS (betaWord i) * leavittT 1) *
@@ -3221,7 +3232,7 @@ theorem prefixElementaryEntry_mul {ι : Type*} [DecidableEq ι]
         leavittWordS (E.word i) * a *
           (leavittWordT (E.word j) * leavittWordS (E.word k)) *
           b * leavittWordT (E.word l) := by
-            simp [prefixElementaryEntry, mul_assoc]
+            simp only [prefixElementaryEntry, mul_assoc]
     _ = if j = k then prefixElementaryEntry E i l (a * b) else 0 := by
       rw [binaryPrefixCode_orthogonal E j k]
       split <;> simp [prefixElementaryEntry, mul_assoc]
@@ -3292,7 +3303,7 @@ theorem prefixElementaryUnit_mem_of_two_step
       (H.mul_mem (H.mul_mem hleft hright) (H.inv_mem hleft))
       (H.inv_mem hright)
   rw [prefixElementaryUnit_commutator E i j k hij hjk hik a 1] at hc
-  simpa using hc
+  simpa only [mul_one] using hc
 
 theorem prefixElementaryGroup_le_of_hub
     {ι : Type*} [DecidableEq ι] (E : BinaryPrefixCode ι)
@@ -3332,7 +3343,7 @@ theorem compressionV_inv_mul_alphaWordS (i : Fin 3) :
               prefixTable vPrefixCode ninePrefixCode *
                   (leavittWordS (alphaWord i ++ [0]) * leavittT 0 +
                     leavittWordS (alphaWord i ++ [1]) * leavittT 1) = _
-            simp [mul_add, mul_assoc]
+            simp only [Fin.isValue, mul_add, mul_assoc]
     _ = leavittWordS (alphaWord i) * leavittT 0 +
         leavittWordS (nuWord i) * leavittT 1 := by
           simpa only [ninePrefixCode, vPrefixCode, nineWord_alphaNineIndex,
@@ -3364,7 +3375,7 @@ theorem alphaWordT_mul_compressionV (i : Fin 3) :
               (leavittS 0 * leavittWordT (alphaWord i ++ [0]) +
                 leavittS 1 * leavittWordT (alphaWord i ++ [1])) *
                 prefixTable ninePrefixCode vPrefixCode = _
-            simp [add_mul, mul_assoc]
+            simp only [Fin.isValue, add_mul, mul_assoc]
     _ = leavittS 0 * leavittWordT (alphaWord i) +
         leavittS 1 * leavittWordT (nuWord i) := by
           simpa only [ninePrefixCode, vPrefixCode, nineWord_alphaNineIndex,
@@ -3435,7 +3446,7 @@ theorem alphaNuRoot_mem_sourceGenerated
             leavittWordS (alphaWord i)) *
           (leavittS p * a * leavittT q) *
           (leavittWordT (alphaWord j) * (compressionV : BinaryLeavitt)) := by
-            simp [mul_add, add_mul, mul_assoc]
+            simp only [mul_assoc, mul_add, mul_one, add_mul, Units.inv_mul]
       _ = 1 +
           (leavittWordS (alphaWord i) * leavittT 0 +
             leavittWordS (nuWord i) * leavittT 1) *
@@ -3460,52 +3471,42 @@ theorem nineRoot_to_alphaHub_mem_sourceGenerated
       ninePrefixCode sourceGeneratedGroup 1 3 0
       (by decide) (by decide) hi a
       (by
-        simpa [alphaBetaNineIndex] using
-          alphaBetaRoot_mem_sourceGenerated
-            (0 : Fin 3) (1 : Fin 3) (by decide)
-            (1 : Fin 2) (0 : Fin 2) a)
+        simpa only [Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod, Nat.zero_mod, mul_zero, Nat.mod_succ,
+          zero_add, Fin.mk_one, Nat.one_mod, mul_one, add_zero, Fin.reduceFinMk] using
+          alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (1 : Fin 2) (0 : Fin 2) a)
       (by
-        simpa [alphaBetaNineIndex] using
-          alphaBetaRoot_mem_sourceGenerated
-            (1 : Fin 3) (0 : Fin 3) (by decide)
-            (0 : Fin 2) (0 : Fin 2) (1 : BinaryLeavitt))
+        simpa only [Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod, Nat.one_mod, mul_one, Nat.zero_mod,
+          add_zero, Fin.reduceFinMk, mul_zero, Fin.zero_eta] using
+          alphaBetaRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) (1 : BinaryLeavitt))
   · exact prefixElementaryUnit_mem_of_two_step
       ninePrefixCode sourceGeneratedGroup 2 3 0
       (by decide) (by decide) hi a
       (by
-        simpa [alphaNuNineIndex] using
-          alphaNuRoot_mem_sourceGenerated
-            (0 : Fin 3) (1 : Fin 3) (by decide)
-            (1 : Fin 2) (0 : Fin 2) a)
+        simpa only [Fin.isValue, alphaNuNineIndex, Fin.coe_ofNat_eq_mod, Nat.zero_mod, mul_zero, Nat.mod_succ,
+          mul_one, zero_add, Fin.reduceFinMk, Nat.one_mod, add_zero] using
+          alphaNuRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (1 : Fin 2) (0 : Fin 2) a)
       (by
-        simpa [alphaBetaNineIndex] using
-          alphaBetaRoot_mem_sourceGenerated
-            (1 : Fin 3) (0 : Fin 3) (by decide)
-            (0 : Fin 2) (0 : Fin 2) (1 : BinaryLeavitt))
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (1 : Fin 3) (0 : Fin 3) (by decide)
-        (0 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (1 : Fin 3) (0 : Fin 3) (by decide)
-        (1 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaNuNineIndex] using
-      alphaNuRoot_mem_sourceGenerated
-        (1 : Fin 3) (0 : Fin 3) (by decide)
-        (1 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (2 : Fin 3) (0 : Fin 3) (by decide)
-        (0 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (2 : Fin 3) (0 : Fin 3) (by decide)
-        (1 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaNuNineIndex] using
-      alphaNuRoot_mem_sourceGenerated
-        (2 : Fin 3) (0 : Fin 3) (by decide)
-        (1 : Fin 2) (0 : Fin 2) a
+        simpa only [Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod, Nat.one_mod, mul_one, Nat.zero_mod,
+          add_zero, Fin.reduceFinMk, mul_zero, Fin.zero_eta] using
+          alphaBetaRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) (1 : BinaryLeavitt))
+  · simpa only [Nat.reduceAdd, Fin.reduceFinMk, Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.one_mod, mul_one, Nat.zero_mod, add_zero, mul_zero, Fin.zero_eta] using
+      alphaBetaRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) a
+  · simpa only [Nat.reduceAdd, Fin.reduceFinMk, Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.one_mod, mul_one, Nat.mod_succ, Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta] using
+      alphaBetaRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (1 : Fin 2) (0 : Fin 2) a
+  · simpa only [Nat.reduceAdd, Fin.reduceFinMk, Fin.isValue, alphaNuNineIndex, Fin.coe_ofNat_eq_mod, Nat.one_mod,
+      mul_one, Nat.mod_succ, Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta] using
+      alphaNuRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (1 : Fin 2) (0 : Fin 2) a
+  · simpa only [Nat.reduceAdd, Fin.reduceFinMk, Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.mod_succ, Nat.reduceMul, Nat.zero_mod, add_zero, mul_zero, Fin.zero_eta] using
+      alphaBetaRoot_mem_sourceGenerated (2 : Fin 3) (0 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) a
+  · simpa only [Nat.reduceAdd, Fin.reduceFinMk, Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.mod_succ, Nat.reduceMul, Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta] using
+      alphaBetaRoot_mem_sourceGenerated (2 : Fin 3) (0 : Fin 3) (by decide) (1 : Fin 2) (0 : Fin 2) a
+  · simpa only [Nat.reduceAdd, Fin.reduceFinMk, Fin.isValue, alphaNuNineIndex, Fin.coe_ofNat_eq_mod, Nat.mod_succ,
+      Nat.reduceMul, mul_one, Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta] using
+      alphaNuRoot_mem_sourceGenerated (2 : Fin 3) (0 : Fin 3) (by decide) (1 : Fin 2) (0 : Fin 2) a
 
 theorem nineRoot_from_alphaHub_mem_sourceGenerated
     (i : Fin 9) (hi : (0 : Fin 9) ≠ i) (a : BinaryLeavitt) :
@@ -3516,52 +3517,42 @@ theorem nineRoot_from_alphaHub_mem_sourceGenerated
       ninePrefixCode sourceGeneratedGroup 0 3 1
       (by decide) (by decide) hi a
       (by
-        simpa [alphaBetaNineIndex] using
-          alphaBetaRoot_mem_sourceGenerated
-            (0 : Fin 3) (1 : Fin 3) (by decide)
-            (0 : Fin 2) (0 : Fin 2) a)
+        simpa only [Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod, Nat.zero_mod, mul_zero, add_zero,
+          Fin.zero_eta, Nat.one_mod, mul_one, Fin.reduceFinMk] using
+          alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) a)
       (by
-        simpa [alphaBetaNineIndex] using
-          alphaBetaRoot_mem_sourceGenerated
-            (1 : Fin 3) (0 : Fin 3) (by decide)
-            (0 : Fin 2) (1 : Fin 2) (1 : BinaryLeavitt))
+        simpa only [Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod, Nat.one_mod, mul_one, Nat.zero_mod,
+          add_zero, Fin.reduceFinMk, mul_zero, Nat.mod_succ, zero_add, Fin.mk_one] using
+          alphaBetaRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (0 : Fin 2) (1 : Fin 2) (1 : BinaryLeavitt))
   · exact prefixElementaryUnit_mem_of_two_step
       ninePrefixCode sourceGeneratedGroup 0 3 2
       (by decide) (by decide) hi a
       (by
-        simpa [alphaBetaNineIndex] using
-          alphaBetaRoot_mem_sourceGenerated
-            (0 : Fin 3) (1 : Fin 3) (by decide)
-            (0 : Fin 2) (0 : Fin 2) a)
+        simpa only [Fin.isValue, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod, Nat.zero_mod, mul_zero, add_zero,
+          Fin.zero_eta, Nat.one_mod, mul_one, Fin.reduceFinMk] using
+          alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) a)
       (by
-        simpa [alphaNuNineIndex] using
-          alphaNuRoot_mem_sourceGenerated
-            (1 : Fin 3) (0 : Fin 3) (by decide)
-            (0 : Fin 2) (1 : Fin 2) (1 : BinaryLeavitt))
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (0 : Fin 3) (1 : Fin 3) (by decide)
-        (0 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (0 : Fin 3) (1 : Fin 3) (by decide)
-        (0 : Fin 2) (1 : Fin 2) a
-  · simpa [alphaNuNineIndex] using
-      alphaNuRoot_mem_sourceGenerated
-        (0 : Fin 3) (1 : Fin 3) (by decide)
-        (0 : Fin 2) (1 : Fin 2) a
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (0 : Fin 3) (2 : Fin 3) (by decide)
-        (0 : Fin 2) (0 : Fin 2) a
-  · simpa [alphaBetaNineIndex] using
-      alphaBetaRoot_mem_sourceGenerated
-        (0 : Fin 3) (2 : Fin 3) (by decide)
-        (0 : Fin 2) (1 : Fin 2) a
-  · simpa [alphaNuNineIndex] using
-      alphaNuRoot_mem_sourceGenerated
-        (0 : Fin 3) (2 : Fin 3) (by decide)
-        (0 : Fin 2) (1 : Fin 2) a
+        simpa only [Fin.isValue, alphaNuNineIndex, Fin.coe_ofNat_eq_mod, Nat.one_mod, mul_one, Nat.zero_mod, mul_zero,
+          add_zero, Fin.reduceFinMk, Nat.mod_succ, zero_add] using
+          alphaNuRoot_mem_sourceGenerated (1 : Fin 3) (0 : Fin 3) (by decide) (0 : Fin 2) (1 : Fin 2) (1 : BinaryLeavitt))
+  · simpa only [Fin.isValue, Nat.reduceAdd, Fin.reduceFinMk, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta, Nat.one_mod, mul_one] using
+      alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) a
+  · simpa only [Fin.isValue, Nat.reduceAdd, Fin.reduceFinMk, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta, Nat.one_mod, mul_one, Nat.mod_succ] using
+      alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (0 : Fin 2) (1 : Fin 2) a
+  · simpa only [Fin.isValue, Nat.reduceAdd, Fin.reduceFinMk, alphaNuNineIndex, Fin.coe_ofNat_eq_mod, Nat.zero_mod,
+      mul_zero, add_zero, Fin.zero_eta, Nat.one_mod, mul_one, Nat.mod_succ] using
+      alphaNuRoot_mem_sourceGenerated (0 : Fin 3) (1 : Fin 3) (by decide) (0 : Fin 2) (1 : Fin 2) a
+  · simpa only [Fin.isValue, Nat.reduceAdd, Fin.reduceFinMk, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta, Nat.mod_succ, Nat.reduceMul] using
+      alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (2 : Fin 3) (by decide) (0 : Fin 2) (0 : Fin 2) a
+  · simpa only [Fin.isValue, Nat.reduceAdd, Fin.reduceFinMk, alphaBetaNineIndex, Fin.coe_ofNat_eq_mod,
+      Nat.zero_mod, mul_zero, add_zero, Fin.zero_eta, Nat.mod_succ, Nat.reduceMul] using
+      alphaBetaRoot_mem_sourceGenerated (0 : Fin 3) (2 : Fin 3) (by decide) (0 : Fin 2) (1 : Fin 2) a
+  · simpa only [Fin.isValue, Nat.reduceAdd, Fin.reduceFinMk, alphaNuNineIndex, Fin.coe_ofNat_eq_mod, Nat.zero_mod,
+      mul_zero, add_zero, Fin.zero_eta, Nat.mod_succ, Nat.reduceMul, mul_one] using
+      alphaNuRoot_mem_sourceGenerated (0 : Fin 3) (2 : Fin 3) (by decide) (0 : Fin 2) (1 : Fin 2) a
 
 theorem ninePrefixElementaryGroup_le_sourceGenerated :
     prefixElementaryGroup ninePrefixCode ≤ sourceGeneratedGroup :=
@@ -3672,7 +3663,7 @@ noncomputable def midrankSecondMoment (a : ℝ) : List ℝ → ℝ
 theorem midrankFirstMoment_eq (a : ℝ) (ps : List ℝ) :
     midrankFirstMoment a ps = ((a + ps.sum) ^ 2 - a ^ 2) / 2 := by
   induction ps generalizing a with
-  | nil => simp [midrankFirstMoment]
+  | nil => simp only [midrankFirstMoment, List.sum_nil, add_zero, sub_self, zero_div]
   | cons p ps ih =>
       simp only [midrankFirstMoment, List.sum_cons]
       rw [ih (a + p)]
@@ -3683,7 +3674,7 @@ theorem midrankSecondMoment_eq (a : ℝ) (ps : List ℝ) :
       ((a + ps.sum) ^ 3 - a ^ 3) / 3 -
         (ps.map fun p => p ^ 3).sum / 12 := by
   induction ps generalizing a with
-  | nil => simp [midrankSecondMoment]
+  | nil => simp only [midrankSecondMoment, List.sum_nil, add_zero, sub_self, zero_div, List.map_nil]
   | cons p ps ih =>
       simp only [midrankSecondMoment, List.sum_cons, List.map_cons]
       rw [ih (a + p)]
@@ -3704,11 +3695,11 @@ theorem cubeSum_le_dominant_mul_sum (ps : List ℝ) (m : ℝ)
     (hdom : ∀ p ∈ ps, p ≤ m) :
     (ps.map fun p => p ^ 3).sum ≤ m * ps.sum := by
   induction ps with
-  | nil => simp
+  | nil => simp only [List.map_nil, List.sum_nil, mul_zero, Std.le_refl]
   | cons p ps ih =>
-      have hp : 0 ≤ p := hpos p (by simp)
-      have hpone : p ≤ 1 := hone p (by simp)
-      have hpm : p ≤ m := hdom p (by simp)
+      have hp : 0 ≤ p := hpos p (by simp only [List.mem_cons, true_or])
+      have hpone : p ≤ 1 := hone p (by simp only [List.mem_cons, true_or])
+      have hpm : p ≤ m := hdom p (by simp only [List.mem_cons, true_or])
       have hsq : p * p ≤ m := calc
         p * p ≤ p * 1 := mul_le_mul_of_nonneg_left hpone hp
         _ = p := by ring
@@ -3718,15 +3709,15 @@ theorem cubeSum_le_dominant_mul_sum (ps : List ℝ) (m : ℝ)
         _ ≤ m * p := mul_le_mul_of_nonneg_right hsq hp
       have htailpos : ∀ q ∈ ps, 0 ≤ q := by
         intro q hq
-        exact hpos q (by simp [hq])
+        exact hpos q (by simp only [List.mem_cons, hq, or_true])
       have htailone : ∀ q ∈ ps, q ≤ 1 := by
         intro q hq
-        exact hone q (by simp [hq])
+        exact hone q (by simp only [List.mem_cons, hq, or_true])
       have htaildom : ∀ q ∈ ps, q ≤ m := by
         intro q hq
-        exact hdom q (by simp [hq])
+        exact hdom q (by simp only [List.mem_cons, hq, or_true])
       have htail := ih htailpos htailone htaildom
-      simpa [mul_add] using add_le_add hcube htail
+      simpa only [List.map_cons, List.sum_cons, mul_add, ge_iff_le] using add_le_add hcube htail
 
 theorem cube_sum_le_dominant_mass (ps : List ℝ) (m : ℝ)
     (hsum : ps.sum = 1)
@@ -3738,9 +3729,9 @@ theorem cube_sum_le_dominant_mass (ps : List ℝ) (m : ℝ)
     have hsub : List.Sublist [p] ps := List.singleton_sublist.mpr hp
     have hle : ([p] : List ℝ).sum ≤ ps.sum :=
       hsub.sum_le_sum hpos
-    simpa [hsum] using hle
+    simpa only [ge_iff_le, List.sum_cons, List.sum_nil, add_zero, hsum] using hle
   have h := cubeSum_le_dominant_mul_sum ps m hpos hone hdom
-  simpa [hsum] using h
+  simpa only [ge_iff_le, hsum, mul_one] using h
 
 theorem midrankVariance_controls_dominant_mass
     (ps : List ℝ) (m : ℝ)
@@ -3865,7 +3856,8 @@ theorem componentVertexMidrank_le_one {V : Type*}
     componentVertexMidrank C b x ≤ 1 := by
   classical
   rcases C.eq_empty_or_nonempty with rfl | hC
-  · simp [componentVertexMidrank]
+  · simp only [componentVertexMidrank, Finset.filter_empty, Finset.card_empty, CharP.cast_eq_zero, zero_div,
+      add_zero, div_zero, zero_le_one]
   · have hc : 0 < (C.card : ℝ) := by
       exact_mod_cast Finset.card_pos.mpr hC
     have hdisj := component_lower_equal_disjoint C b x
@@ -3895,12 +3887,13 @@ theorem componentVertexMidrank_mono {V : Type*}
     componentVertexMidrank C b x ≤ componentVertexMidrank C b y := by
   classical
   rcases C.eq_empty_or_nonempty with rfl | hC
-  · simp [componentVertexMidrank]
+  · simp only [componentVertexMidrank, Finset.filter_empty, Finset.card_empty, CharP.cast_eq_zero, zero_div,
+      add_zero, div_zero, Std.le_refl]
   · have hc : 0 < (C.card : ℝ) := by
       exact_mod_cast Finset.card_pos.mpr hC
     rcases hxy.eq_or_lt with heq | hlt
     · unfold componentVertexMidrank
-      simp [heq]
+      simp only [heq, Std.le_refl]
     · have hdisj := component_lower_equal_disjoint C b x
       have hsub :
           (C.filter fun z => b z < b x) ∪
@@ -4047,7 +4040,7 @@ theorem sum_card_component_inter_partition
     (Q : Finpartition U) (C : Finset V) (hCU : C ⊆ U) :
     ∑ D ∈ Q.parts, (C ∩ D).card = C.card := by
   have h := sum_card_inter_partition Q C
-  simpa [Finset.inter_comm, Finset.inter_eq_right.mpr hCU] using h
+  simpa only [Finset.inter_comm, Finset.inter_eq_right.mpr hCU] using h
 
 noncomputable def maximumOverlapPart
     {V : Type u} [DecidableEq V] {U : Finset V}
@@ -4123,8 +4116,7 @@ theorem sourceRefinementOrthogonal (i j : Fin 9) (h : i ≠ j)
     leavittWordT (nineWord i ++ a) *
       leavittWordS (nineWord j ++ b) = 0 := by
   have hz : leavittWordT (nineWord i) * leavittWordS (nineWord j) = 0 := by
-    simpa [ninePrefixCode, h] using
-      binaryPrefixCode_orthogonal ninePrefixCode i j
+    simpa only [ninePrefixCode, h, ↓reduceIte] using binaryPrefixCode_orthogonal ninePrefixCode i j
   rw [leavittWordT_append, leavittWordS_append]
   calc
     (leavittWordT a * leavittWordT (nineWord i)) *
@@ -4132,7 +4124,7 @@ theorem sourceRefinementOrthogonal (i j : Fin 9) (h : i ≠ j)
       leavittWordT a *
         (leavittWordT (nineWord i) * leavittWordS (nineWord j)) *
         leavittWordS b := by noncomm_ring
-    _ = 0 := by rw [hz]; simp
+    _ = 0 := by rw [hz]; simp only [mul_zero, zero_mul]
 
 theorem sourceCrossSwap_val (i j : Fin 9) (h : i ≠ j)
     (a b : List (Fin 2)) :
@@ -4161,7 +4153,7 @@ theorem sourceCrossSwap_val (i j : Fin 9) (h : i ≠ j)
         leavittWordS A *
           (leavittWordT B * leavittWordS A) * leavittWordT B := by
             noncomm_ring
-      _ = 0 := by rw [hba]; simp
+      _ = 0 := by rw [hba]; simp only [mul_zero, zero_mul]
   have hPQ : P * Q = leavittWordS A * leavittWordT A := by
     change
       (leavittWordS A * leavittWordT B) *
@@ -4175,7 +4167,7 @@ theorem sourceCrossSwap_val (i j : Fin 9) (h : i ≠ j)
             noncomm_ring
       _ = leavittWordS A * leavittWordT A := by
         rw [leavittWordT_mul_wordS_self]
-        simp
+        simp only [mul_one]
   have hQP : Q * P = leavittWordS B * leavittWordT B := by
     change
       (leavittWordS B * leavittWordT A) *
@@ -4189,7 +4181,7 @@ theorem sourceCrossSwap_val (i j : Fin 9) (h : i ≠ j)
             noncomm_ring
       _ = leavittWordS B * leavittWordT B := by
         rw [leavittWordT_mul_wordS_self]
-        simp
+        simp only [mul_one]
   have hPQP : P * Q * P = P := by
     rw [hPQ]
     change
@@ -4204,7 +4196,7 @@ theorem sourceCrossSwap_val (i j : Fin 9) (h : i ≠ j)
             noncomm_ring
       _ = leavittWordS A * leavittWordT B := by
         rw [leavittWordT_mul_wordS_self]
-        simp
+        simp only [mul_one]
   change
     (↑(sourceCrossSwap i j h a b) : BinaryLeavitt) =
       1 - leavittWordS A * leavittWordT A -
@@ -4252,52 +4244,52 @@ theorem refinedSourcePrefixCode_complete :
       leavittCylinder [0, 0, 0, 0] +
           leavittCylinder [0, 0, 0, 1] =
         leavittCylinder [0, 0, 0] := by
-    simpa using (leavittCylinder_split [0, 0, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [0, 0, 0]).symm
   have h1000 :
       leavittCylinder [1, 0, 0, 0, 0] +
           leavittCylinder [1, 0, 0, 0, 1] =
         leavittCylinder [1, 0, 0, 0] := by
-    simpa using (leavittCylinder_split [1, 0, 0, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0, 0, 0]).symm
   have h1100 :
       leavittCylinder [1, 1, 0, 0, 0] +
           leavittCylinder [1, 1, 0, 0, 1] =
         leavittCylinder [1, 1, 0, 0] := by
-    simpa using (leavittCylinder_split [1, 1, 0, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 1, 0, 0]).symm
   have h1001 :
       leavittCylinder [1, 0, 0, 1, 0] +
           leavittCylinder [1, 0, 0, 1, 1] =
         leavittCylinder [1, 0, 0, 1] := by
-    simpa using (leavittCylinder_split [1, 0, 0, 1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0, 0, 1]).symm
   have h010 :
       leavittCylinder [0, 1, 0, 0] +
           leavittCylinder [0, 1, 0, 1] =
         leavittCylinder [0, 1, 0] := by
-    simpa using (leavittCylinder_split [0, 1, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [0, 1, 0]).symm
   have h01 :
       leavittCylinder [0, 1, 0] +
           leavittCylinder [0, 1, 1] =
         leavittCylinder [0, 1] := by
-    simpa using (leavittCylinder_split [0, 1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [0, 1]).symm
   have h1010 :
       leavittCylinder [1, 0, 1, 0, 0] +
           leavittCylinder [1, 0, 1, 0, 1] =
         leavittCylinder [1, 0, 1, 0] := by
-    simpa using (leavittCylinder_split [1, 0, 1, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0, 1, 0]).symm
   have h101 :
       leavittCylinder [1, 0, 1, 0] +
           leavittCylinder [1, 0, 1, 1] =
         leavittCylinder [1, 0, 1] := by
-    simpa using (leavittCylinder_split [1, 0, 1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 0, 1]).symm
   have h1110 :
       leavittCylinder [1, 1, 1, 0, 0] +
           leavittCylinder [1, 1, 1, 0, 1] =
         leavittCylinder [1, 1, 1, 0] := by
-    simpa using (leavittCylinder_split [1, 1, 1, 0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 1, 1, 0]).symm
   have h111 :
       leavittCylinder [1, 1, 1, 0] +
           leavittCylinder [1, 1, 1, 1] =
         leavittCylinder [1, 1, 1] := by
-    simpa using (leavittCylinder_split [1, 1, 1]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [1, 1, 1]).symm
   change (∑ i : Fin 19, leavittCylinder (refinedSourceWord i)) = 1
   calc
     (∑ i : Fin 19, leavittCylinder (refinedSourceWord i)) =
@@ -4387,8 +4379,8 @@ theorem prefixTable_mul_sourceWord {ι : Type*}
     prefixTable source target * leavittWordS (source.word i) =
       leavittWordS (target.word i) := by
   classical
-  simp [prefixTable, Finset.sum_mul, mul_assoc,
-    binaryPrefixCode_orthogonal]
+  simp only [prefixTable, Finset.sum_mul, mul_assoc, binaryPrefixCode_orthogonal, mul_ite, mul_one, mul_zero,
+    Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
 
 theorem compressionU_mul_nine_refinement
     (i : Fin 9) (r : List (Fin 2)) :
@@ -4471,10 +4463,10 @@ theorem leavittWordT_mul_wordS_cancel (a b : List (Fin 2)) :
     leavittWordT a * leavittWordS b =
       binaryWordCancellation a b := by
   induction a generalizing b with
-  | nil => simp [binaryWordCancellation, leavittWordT]
+  | nil => simp only [leavittWordT, one_mul, binaryWordCancellation]
   | cons i a ih =>
       cases b with
-      | nil => simp [binaryWordCancellation, leavittWordS]
+      | nil => simp only [leavittWordS, mul_one, binaryWordCancellation]
       | cons j b =>
           by_cases hij : i = j
           · subst j
@@ -4491,7 +4483,7 @@ theorem leavittWordT_mul_wordS_cancel (a b : List (Fin 2)) :
                     noncomm_ring
               _ = binaryWordCancellation a b := by
                 rw [leavittT_mul_S]
-                simpa using ih b
+                simpa only [↓reduceIte, one_mul] using ih b
           · change
               (leavittWordT a * leavittT i) *
                   (leavittS j * leavittWordS b) =
@@ -4503,7 +4495,7 @@ theorem leavittWordT_mul_wordS_cancel (a b : List (Fin 2)) :
                 leavittWordT a *
                   ((leavittT i * leavittS j) * leavittWordS b) := by
                     noncomm_ring
-              _ = 0 := by rw [leavittT_mul_S]; simp [hij]
+              _ = 0 := by rw [leavittT_mul_S]; simp only [hij, ↓reduceIte, zero_mul, mul_zero]
 
 theorem leavittWordS_mul_wordS (a b : List (Fin 2)) :
     leavittWordS a * leavittWordS b = leavittWordS (a ++ b) :=
@@ -4631,10 +4623,11 @@ theorem prefixTable_compose {ι : Type*} [Fintype ι] [DecidableEq ι]
             rw [Finset.mul_sum]
             apply Finset.sum_congr rfl
             intro j _
-            simp [mul_assoc]
+            simp only [mul_assoc]
     _ = ∑ i, leavittWordS (target.word i) *
           leavittWordT (source.word i) := by
-      simp [binaryPrefixCode_orthogonal]
+      simp only [binaryPrefixCode_orthogonal, mul_ite, mul_one, mul_zero, ite_mul, zero_mul, Finset.sum_ite_eq,
+        Finset.mem_univ, ↓reduceIte]
 
 def compressionTransition : BinaryLeavittˣ :=
   prefixTableUnit uPrefixCode vPrefixCode
@@ -4748,8 +4741,7 @@ theorem nineRefinement_orthogonal
       leavittWordS (nineWord j ++ b) = 0 := by
   have hzero :
       leavittWordT (nineWord i) * leavittWordS (nineWord j) = 0 := by
-    simpa [ninePrefixCode, hij] using
-      binaryPrefixCode_orthogonal ninePrefixCode i j
+    simpa only [ninePrefixCode, hij, ↓reduceIte] using binaryPrefixCode_orthogonal ninePrefixCode i j
   rw [leavittWordT_append, leavittWordS_append]
   calc
     (leavittWordT a * leavittWordT (nineWord i)) *
@@ -4757,7 +4749,7 @@ theorem nineRefinement_orthogonal
       leavittWordT a *
         (leavittWordT (nineWord i) * leavittWordS (nineWord j)) *
         leavittWordS b := by noncomm_ring
-    _ = 0 := by rw [hzero]; simp
+    _ = 0 := by rw [hzero]; simp only [mul_zero, zero_mul]
 
 theorem nineCrossSwap_val (i j : Fin 9) (hij : i ≠ j)
     (a b : List (Fin 2)) :
@@ -4783,7 +4775,7 @@ theorem nineCrossSwap_val (i j : Fin 9) (hij : i ≠ j)
         leavittWordS A *
           (leavittWordT B * leavittWordS A) *
           leavittWordT B := by noncomm_ring
-      _ = 0 := by rw [hBA]; simp
+      _ = 0 := by rw [hBA]; simp only [mul_zero, zero_mul]
   have hPQP : P * Q * P = P := by
     change
       (leavittWordS A * leavittWordT B) *
@@ -4801,7 +4793,7 @@ theorem nineCrossSwap_val (i j : Fin 9) (hij : i ≠ j)
       _ = leavittWordS A * leavittWordT B := by
         rw [leavittWordT_mul_wordS_self,
           leavittWordT_mul_wordS_self]
-        simp
+        simp only [mul_one]
   have hPQ : P * Q = leavittWordS A * leavittWordT A := by
     dsimp [P, Q]
     calc
@@ -4810,7 +4802,7 @@ theorem nineCrossSwap_val (i j : Fin 9) (hij : i ≠ j)
         leavittWordS A *
           (leavittWordT B * leavittWordS B) *
           leavittWordT A := by noncomm_ring
-      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp
+      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp only [mul_one]
   have hQP : Q * P = leavittWordS B * leavittWordT B := by
     dsimp [P, Q]
     calc
@@ -4819,7 +4811,7 @@ theorem nineCrossSwap_val (i j : Fin 9) (hij : i ≠ j)
         leavittWordS B *
           (leavittWordT A * leavittWordS A) *
           leavittWordT B := by noncomm_ring
-      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp
+      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp only [mul_one]
   change
     (1 + leavittWordS (nineWord i) *
       (leavittWordS a * leavittWordT b) * leavittWordT (nineWord j)) *
@@ -4867,10 +4859,10 @@ theorem wordSwapValue_refine (a b : List (Fin 2))
       (leavittWordT_mul_wordS_self a)
       (leavittWordT_mul_wordS_self b)
       hab hba
-      (by simpa using leavittT_mul_S 0 0)
-      (by simpa using leavittT_mul_S 1 1)
-      (by simpa using leavittT_mul_S 0 1)
-      (by simpa using leavittT_mul_S 1 0)
+      (by simpa only [Fin.isValue, ↓reduceIte] using leavittT_mul_S 0 0)
+      (by simpa only [Fin.isValue, ↓reduceIte] using leavittT_mul_S 1 1)
+      (by simpa only [Fin.isValue, zero_ne_one, ↓reduceIte] using leavittT_mul_S 0 1)
+      (by simpa only [Fin.isValue, one_ne_zero, ↓reduceIte] using leavittT_mul_S 1 0)
       leavitt_partition
 
 theorem compressionTransitionCrossSwaps_prod_val :
@@ -4882,26 +4874,23 @@ theorem compressionTransitionCrossSwaps_prod_val :
       wordSwapValue [0, 0, 0, 1, 0] [1, 0, 0, 0] *
         wordSwapValue [0, 0, 0, 1, 1] [1, 0, 0, 1] =
         wordSwapValue [0, 0, 0, 1] [1, 0, 0] := by
-    simpa using wordSwapValue_refine
-      [0, 0, 0, 1] [1, 0, 0]
-      (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
-      (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      wordSwapValue_refine [0, 0, 0, 1] [1, 0, 0] (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
+        (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
   have h₂₀ :
       wordSwapValue [0, 1, 1, 0, 0] [1, 1, 0, 0] *
         wordSwapValue [0, 1, 1, 0, 1] [1, 1, 0, 1] =
         wordSwapValue [0, 1, 1, 0] [1, 1, 0] := by
-    simpa using wordSwapValue_refine
-      [0, 1, 1, 0] [1, 1, 0]
-      (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
-      (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      wordSwapValue_refine [0, 1, 1, 0] [1, 1, 0] (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
+        (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
   have h₂ :
       wordSwapValue [0, 1, 1, 0] [1, 1, 0] *
         wordSwapValue [0, 1, 1, 1] [1, 1, 1] =
         wordSwapValue [0, 1, 1] [1, 1] := by
-    simpa using wordSwapValue_refine
-      [0, 1, 1] [1, 1]
-      (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
-      (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      wordSwapValue_refine [0, 1, 1] [1, 1] (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
+        (leavittWordT_mul_wordS_of_incomparable _ _ (by decide) (by decide))
   simp only [compressionTransitionCrossSwaps, List.prod_cons, List.prod_nil,
     Units.val_mul, nineCrossSwap_val, mul_one]
   change
@@ -4936,15 +4925,14 @@ theorem transpositionValue_mul_codeWord {ι : Type*} [DecidableEq ι]
       else leavittWordS (E.word k) := by
   by_cases hki : k = i
   · subst k
-    simp [transpositionValue, sub_mul, add_mul, mul_assoc,
-      binaryPrefixCode_orthogonal, hij.symm]
+    simp only [transpositionValue, add_mul, sub_mul, one_mul, mul_assoc, binaryPrefixCode_orthogonal, ↓reduceIte,
+      mul_one, sub_self, hij.symm, mul_zero, add_zero, zero_add]
   · by_cases hkj : k = j
     · subst k
-      simp [transpositionValue, sub_mul, add_mul, mul_assoc,
-        binaryPrefixCode_orthogonal, hij, hij.symm]
-    · simp [transpositionValue, sub_mul, add_mul, mul_assoc,
-        binaryPrefixCode_orthogonal,
-        hki, Ne.symm hki, hkj, Ne.symm hkj]
+      simp only [transpositionValue, add_mul, sub_mul, one_mul, mul_assoc, binaryPrefixCode_orthogonal, hij,
+        ↓reduceIte, mul_zero, sub_zero, mul_one, sub_self, zero_add, add_zero, hij.symm]
+    · simp only [transpositionValue, add_mul, sub_mul, one_mul, mul_assoc, binaryPrefixCode_orthogonal, Ne.symm hki,
+        ↓reduceIte, mul_zero, sub_zero, Ne.symm hkj, add_zero, hki, hkj]
 
 theorem uSwap12_mul (k : Fin 9) :
     wordSwapValue (uWord 1) (uWord 2) * leavittWordS (uWord k) =
@@ -4994,8 +4982,7 @@ theorem compressionTransitionParentSwaps_eq_table :
             rw [uPrefixCode_complete]
     _ = ∑ i : Fin 9,
           (x * leavittWordS (uWord i)) * leavittWordT (uWord i) := by
-            simp [MatrixCorner.codeIdempotent, Finset.mul_sum, mul_assoc,
-              uPrefixCode]
+            simp only [MatrixCorner.codeIdempotent, uPrefixCode, Finset.mul_sum, mul_assoc]
     _ = ∑ i : Fin 9,
           leavittWordS (vWord i) * leavittWordT (uWord i) := by
             apply Finset.sum_congr rfl
@@ -5134,7 +5121,7 @@ theorem rankDropCount_nonneg_and_le {ι : Type*} [Fintype ι]
           apply Finset.sum_le_sum
           intro i hi
           split_ifs <;> norm_num
-      _ = (Fintype.card ι : ℝ) := by simp
+      _ = (Fintype.card ι : ℝ) := by simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one]
 
 theorem integrableOn_rankDropCount {ι : Type*} [Fintype ι]
     (u v : ι → ℝ) (H : ℝ) :
@@ -5201,7 +5188,7 @@ theorem rankDropCount_integral_eq {ι : Type*} [Fintype ι]
         {r : ℝ | ⌊(v i + r) / H⌋ < ⌊(u i + r) / H⌋}.indicator
           (fun _ : ℝ => (1 : ℝ)) := by
     funext r
-    simp [Set.indicator]
+    simp only [Set.indicator, Set.mem_setOf_eq]
   rw [hindicator]
   exact MeasureTheory.integral_indicator_one
     (measurableSet_shifted_floor_drop (u i) (v i) H)
@@ -5242,7 +5229,7 @@ theorem rankDropCount_clamp_eq {ι : Type*} [Fintype ι]
       apply Int.floor_mono
       apply (div_le_div_iff_of_pos_right hH).2
       linarith
-    simp [min_eq_right hreverse, hfloor]
+    simp only [hfloor, ↓reduceIte, min_eq_right hreverse, lt_self_iff_false]
 
 theorem shifted_floor_drop_volume_bound_sharp
     (u v H : ℝ) (hH : 0 < H) (hvu : v ≤ u) :
@@ -5342,7 +5329,7 @@ theorem rankDrop_measureReal_bound_sharp
         {r : ℝ | r ∈ Set.Ico 0 H ∧
           ⌊(v + r) / H⌋ < ⌊(u + r) / H⌋} := by
     ext r
-    simp [and_comm]
+    simp only [Set.mem_inter_iff, Set.mem_setOf_eq, Set.mem_Ico, and_comm]
   rw [heq, MeasureTheory.measureReal_def]
   have hbound := shifted_floor_drop_volume_bound_sharp u v H hH hvu
   have hreal := ENNReal.toReal_mono ENNReal.ofReal_ne_top hbound
@@ -5441,7 +5428,7 @@ theorem exists_common_log_rank_offset {ι : Type*} [Fintype ι]
       (fun i => log_one_sided_of_multiplicative
         (x i) (y i) eta (hx i) heta0 heta1 (hcomparison i))
   refine ⟨r, hr, hbound.trans_eq ?_⟩
-  simp
+  simp only [one_div, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
   ring
 
 theorem abs_log_one_sub_le_two_mul
@@ -5486,7 +5473,7 @@ theorem abs_log_one_sub_div_tendsto_zero
       _ = 2 * (eta n / H n) := by ring
   have hlimit : Filter.Tendsto
       (fun n => 2 * (eta n / H n)) Filter.atTop (nhds 0) := by
-    simpa using Filter.Tendsto.const_mul (2 : ℝ) hratio
+    simpa only [mul_zero] using Filter.Tendsto.const_mul (2 : ℝ) hratio
   exact squeeze_zero'
     (Filter.Eventually.of_forall fun n =>
       div_nonneg (abs_nonneg _) (hH n).le)
@@ -5505,7 +5492,7 @@ noncomputable def positiveSupport {V : Type*} [Fintype V]
     (f : V → ℝ) (x : V) :
     x ∈ positiveSupport f ↔ 0 < f x := by
   classical
-  simp [positiveSupport]
+  simp only [positiveSupport, Finset.mem_filter, Finset.mem_univ, true_and]
 
 noncomputable def finiteMean {V : Type*} [Fintype V] (f : V → ℝ) : ℝ :=
   (∑ x : V, f x) / (Fintype.card V : ℝ)
@@ -5569,13 +5556,13 @@ noncomputable def upperLevel {V : Type*} [Fintype V]
     (f : V → ℝ) (a : ℝ) (x : V) :
     x ∈ lowerLevel f a ↔ f x < a := by
   classical
-  simp [lowerLevel]
+  simp only [lowerLevel, Finset.mem_filter, Finset.mem_univ, true_and]
 
 @[simp] theorem mem_upperLevel {V : Type*} [Fintype V]
     (f : V → ℝ) (a : ℝ) (x : V) :
     x ∈ upperLevel f a ↔ a < f x := by
   classical
-  simp [upperLevel]
+  simp only [upperLevel, Finset.mem_filter, Finset.mem_univ, true_and]
 
 theorem exists_finite_real_median {V : Type*} [Fintype V] [Nonempty V]
     (f : V → ℝ) :
@@ -5603,7 +5590,7 @@ theorem exists_finite_real_median {V : Type*} [Fintype V] [Nonempty V]
     refine ⟨a, ?_⟩
     apply Finset.mem_filter.mpr
     refine ⟨ha_values, ?_⟩
-    simp [ha_lower]
+    simp only [ha_lower, Finset.card_empty, mul_zero, zero_le]
   let m : ℝ := candidates.max' hcandidates
   have hm_candidates : m ∈ candidates :=
     Finset.max'_mem candidates hcandidates
@@ -5659,7 +5646,7 @@ theorem positive_max_iff (a : ℝ) : 0 < max a 0 ↔ 0 < a := by
   by_cases ha : 0 < a
   · rw [max_eq_left ha.le]
   · rw [max_eq_right (le_of_not_gt ha)]
-    simp [ha]
+    simp only [lt_self_iff_false, ha]
 
 theorem positiveSupport_max_sub {V : Type*} [Fintype V]
     (f : V → ℝ) (m : ℝ) :
@@ -5718,33 +5705,33 @@ theorem idempotentCornerUnitExtensions_commute
       u.val.val * v.val.val =
           (u.val.val * e) * (f * v.val.val) := by rw [hu.2, hv.1]
       _ = u.val.val * (e * f) * v.val.val := by noncomm_ring
-      _ = 0 := by rw [hef]; simp
+      _ = 0 := by rw [hef]; simp only [mul_zero, zero_mul]
   have hvu : v.val.val * u.val.val = 0 := by
     calc
       v.val.val * u.val.val =
           (v.val.val * f) * (e * u.val.val) := by rw [hv.2, hu.1]
       _ = v.val.val * (f * e) * u.val.val := by noncomm_ring
-      _ = 0 := by rw [hfe]; simp
+      _ = 0 := by rw [hfe]; simp only [mul_zero, zero_mul]
   have hev : e * v.val.val = 0 := by
     calc
       e * v.val.val = e * (f * v.val.val) := by rw [hv.1]
       _ = (e * f) * v.val.val := by rw [mul_assoc]
-      _ = 0 := by rw [hef]; simp
+      _ = 0 := by rw [hef]; simp only [zero_mul]
   have hve : v.val.val * e = 0 := by
     calc
       v.val.val * e = (v.val.val * f) * e := by rw [hv.2]
       _ = v.val.val * (f * e) := by rw [mul_assoc]
-      _ = 0 := by rw [hfe]; simp
+      _ = 0 := by rw [hfe]; simp only [mul_zero]
   have huf : u.val.val * f = 0 := by
     calc
       u.val.val * f = (u.val.val * e) * f := by rw [hu.2]
       _ = u.val.val * (e * f) := by rw [mul_assoc]
-      _ = 0 := by rw [hef]; simp
+      _ = 0 := by rw [hef]; simp only [mul_zero]
   have hfu : f * u.val.val = 0 := by
     calc
       f * u.val.val = f * (e * u.val.val) := by rw [hu.1]
       _ = (f * e) * u.val.val := by rw [mul_assoc]
-      _ = 0 := by rw [hfe]; simp
+      _ = 0 := by rw [hfe]; simp only [zero_mul]
   change
     (u.val.val + (1 - e)) * (v.val.val + (1 - f)) =
       (v.val.val + (1 - f)) * (u.val.val + (1 - e))
@@ -5770,7 +5757,8 @@ theorem idempotentCornerUnitExtensions_eq_one
   change u.val.val + (1 - e) = v.val.val + (1 - f) at hval
   have hleft := congrArg (fun z : A => e * z) hval
   have hue : u.val.val = e := by
-    simpa [mul_add, mul_sub, hu.1, he.eq, hev, hef] using hleft
+    simpa only [mul_add, hu.1, mul_sub, mul_one, he.eq, sub_self, add_zero, hev, hef, sub_zero, zero_add] using
+      hleft
   apply Units.ext
   change u.val.val + (1 - e) = 1
   rw [hue]
@@ -5805,7 +5793,7 @@ theorem idempotentCornerGroup_inf_eq_bot
         idempotentCornerUnitExtension hf v := hu.trans hv.symm
     have hone := idempotentCornerUnitExtensions_eq_one he hf hef u v huv
     have hz : z = 1 := hu.symm.trans hone
-    simp [hz]
+    simp only [hz, one_mem]
   · exact bot_le
 
 theorem leavittCylinder_isIdempotent (a : List (Fin 2)) :
@@ -5822,7 +5810,7 @@ theorem leavittCylinder_isIdempotent (a : List (Fin 2)) :
           noncomm_ring
     _ = leavittWordS a * leavittWordT a := by
       rw [leavittWordT_mul_wordS_self]
-      simp
+      simp only [mul_one]
 
 theorem leavittCylinder_mul_eq_zero_of_incomparable
     (a b : List (Fin 2)) (hab : ¬ a <+: b) (hba : ¬ b <+: a) :
@@ -5838,7 +5826,7 @@ theorem leavittCylinder_mul_eq_zero_of_incomparable
           noncomm_ring
     _ = 0 := by
       rw [leavittWordT_mul_wordS_of_incomparable a b hab hba]
-      simp
+      simp only [mul_zero, zero_mul]
 
 def cylinderCornerGroup (a : List (Fin 2)) : Subgroup BinaryLeavittˣ :=
   idempotentCornerGroup (leavittCylinder_isIdempotent a)
@@ -5974,7 +5962,7 @@ theorem matchedRetainedSupport_nonempty
   obtain ⟨C, hC⟩ := hRne
   obtain ⟨x, hx⟩ := P.nonempty_of_mem_parts (hR hC)
   refine ⟨x, ?_⟩
-  exact Finset.mem_biUnion.mpr ⟨C, hC, by simpa using hx⟩
+  exact Finset.mem_biUnion.mpr ⟨C, hC, by simpa only [id_eq] using hx⟩
 
 theorem partitionWordCrossing_indexed_sum_card_le_target_add_unmatched
     {V ι : Type*} [DecidableEq V] {U : Finset V}
@@ -5996,7 +5984,7 @@ theorem partitionWordCrossing_indexed_sum_card_le_target_add_unmatched
           P Q R hR D hD hinj (w i)
     _ = (∑ i ∈ I, (partitionWordCrossing Q (w i)).card) +
           2 * I.card * (U \ matchedCore R D).card := by
-      simp [Finset.sum_add_distrib, mul_comm, mul_assoc]
+      simp only [Finset.sum_add_distrib, Finset.sum_const, smul_eq_mul, mul_comm, mul_assoc]
 
 theorem matchedRetainedSupport_cover_density_tendsto_one
     {V : ℕ → Type*} [∀ n, DecidableEq (V n)]
@@ -6216,7 +6204,7 @@ theorem matched_sum_card_inter_partition
       Finset.inter_subset_left Finset.inter_subset_left
   have hunion : P.parts.biUnion (fun C => C ∩ B) = U ∩ B := by
     ext x
-    simp [← P.biUnion_parts]
+    simp only [Finset.mem_biUnion, Finset.mem_inter, ← P.biUnion_parts, id_eq]
     aesop
   calc
     ∑ C ∈ P.parts, (C ∩ B).card =
@@ -6286,9 +6274,8 @@ theorem matchedRetained_bad_density_tendsto_zero
     _ ≤ 2 * (((U n ∩ B n).card : ℝ) / (U n).card) := by
       rw [← mul_div_assoc]
       apply (div_le_div_iff₀ hrcard hucard).2
-      simpa [mul_assoc, mul_comm, mul_left_comm] using
-        (mul_le_mul_of_nonneg_left hmass
-          (Nat.cast_nonneg (α := ℝ) (U n ∩ B n).card))
+      simpa only [mul_comm, mul_assoc] using
+        (mul_le_mul_of_nonneg_left hmass (Nat.cast_nonneg (α := ℝ) (U n ∩ B n).card))
 
 theorem matched_eventually_exists_good_vertex
     {V : ℕ → Type*} [∀ n, DecidableEq (V n)]
@@ -6319,7 +6306,8 @@ theorem sum_weighted_ordered_midpoints_sq (s : Finset ℤ) (w : ℤ → ℝ) :
         (∑ j ∈ s, w j ^ 3) / 12 := by
   classical
   induction s using Finset.induction_on_max with
-  | empty => simp [lowerRankWeight]
+  | empty => simp only [lowerRankWeight, Finset.filter_empty, Finset.sum_empty, zero_add, ne_eq, OfNat.ofNat_ne_zero,
+               not_false_eq_true, zero_pow, zero_div, sub_self]
   | @insert a s hmax ih =>
       have ha : a ∉ s := by
         intro ha
@@ -6404,7 +6392,7 @@ theorem twice_lower_rank_pairs_add_equal_rank_pairs
       intro z _
       exact htri x z
     _ = (C.card : ℝ) ^ 2 := by
-      simp [pow_two]
+      simp only [Finset.sum_const, nsmul_eq_mul, mul_one, pow_two]
 
 theorem sum_componentVertexMidrank
     {V : Type*}
@@ -6473,7 +6461,7 @@ theorem sum_componentVertexMidrank_sq_eq
             _ = ((C.filter fun x => b x = j).card : ℝ) *
                 (lowerRankWeight (C.image b) (SoficGroups.componentRankMass C b) j +
                   SoficGroups.componentRankMass C b j / 2) ^ 2 := by
-                    simp
+                    simp only [Finset.sum_const, nsmul_eq_mul]
     _ = (C.card : ℝ) *
           (∑ j ∈ C.image b,
             SoficGroups.componentRankMass C b j *
@@ -6535,7 +6523,7 @@ theorem componentVertexMidrank_variance_eq
           (∑ x ∈ C, SoficGroups.componentVertexMidrank C b x) +
           (C.card : ℝ) / 4 := by
             rw [Finset.sum_add_distrib, Finset.sum_sub_distrib]
-            simp [div_eq_mul_inv]
+            simp only [div_eq_mul_inv, one_mul, Finset.sum_const, nsmul_eq_mul]
   calc
     (∑ x ∈ C,
       (SoficGroups.componentVertexMidrank C b x - (1 / 2 : ℝ)) ^ 2) =
@@ -6752,7 +6740,7 @@ theorem partitionComponentSize_transport_lower_of_retained
       (1 - eta) * (C.card : ℝ) ≤
         (((C.map T.toEmbedding) ∩
           maximumOverlapPart Q (C.map T.toEmbedding)).card : ℝ) := by
-    simpa using hsize
+    simpa only [Finset.card_map] using hsize
   have htarget := maximumOverlapPart_mem Q
     (C.map T.toEmbedding)
     ((Finset.map_nonempty).2 (Q.nonempty_of_mem_parts hC))
@@ -6776,7 +6764,8 @@ theorem singletonPrefixCode_codeIdempotent (a : List (Fin 2)) :
         (fun i => leavittWordS ((singletonPrefixCode a).word i))
         (fun i => leavittWordT ((singletonPrefixCode a).word i)) =
       leavittCylinder a := by
-  simp [MatrixCorner.codeIdempotent, singletonPrefixCode, leavittCylinder]
+  simp only [MatrixCorner.codeIdempotent, Finset.univ_unique, Fin.default_eq_zero, Fin.isValue,
+    singletonPrefixCode, Finset.sum_const, Finset.card_singleton, one_smul, leavittCylinder]
 
 def prefixInsertionHom (a : List (Fin 2)) :
     BinaryLeavittˣ →* BinaryLeavittˣ :=
@@ -6806,7 +6795,7 @@ theorem leavittCylinder_isIdempotent (a : List (Fin 2)) :
           noncomm_ring
     _ = leavittWordS a * leavittWordT a := by
       rw [leavittWordT_mul_wordS_self]
-      simp
+      simp only [mul_one]
 
 def cylinderCornerGroup (a : List (Fin 2)) : Subgroup BinaryLeavittˣ :=
   (idempotentCornerUnitExtension (leavittCylinder_isIdempotent a)).range
@@ -6855,8 +6844,9 @@ theorem prefixInsertionHom_val (a : List (Fin 2)) (u : BinaryLeavittˣ) :
       (1 - MatrixCorner.codeIdempotent
         (fun i => leavittWordS ((singletonPrefixCode a).word i))
         (fun i => leavittWordT ((singletonPrefixCode a).word i))) = _
-  simp [MatrixCorner.encode, MatrixCorner.codeIdempotent,
-    singletonPrefixCode, leavittCylinder]
+  simp only [MatrixCorner.encode, Finset.univ_unique, Fin.default_eq_zero, Fin.isValue, singletonPrefixCode,
+    Matrix.uniqueRingEquiv_symm_apply, Matrix.of_apply, Finset.sum_const, Finset.card_singleton, one_smul,
+    MatrixCorner.codeIdempotent, leavittCylinder]
 
 theorem transpositionValue_mul_self {A : Type*} [Ring A]
     (sa ta sb tb : A)
@@ -6905,14 +6895,14 @@ theorem append_not_prefix_append (a b x y : List (Fin 2))
     rw [List.prefix_iff_eq_take]
     have hea := List.prefix_iff_eq_take.mp ha
     rw [hea, List.take_take, Nat.min_eq_left (Nat.le_of_not_ge hle)]
-    simp
+    simp only [List.take_left']
 
 theorem prepend_not_prefix_prepend (l a b : List (Fin 2))
     (hab : ¬ a <+: b) :
     ¬ l ++ a <+: l ++ b := by
   intro h
   apply hab
-  simpa using h
+  simpa only [List.prefix_append_right_inj] using h
 
 theorem prefixInsertionHom_cylinderSwap
     (l a b : List (Fin 2))
@@ -6938,7 +6928,7 @@ theorem prefixInsertionHom_cylinderSwap
     leavittWordS_append, leavittWordT_append]
   simp only [CharTwo.sub_eq_add]
   noncomm_ring
-  simp [CharTwo.two_eq_zero]
+  simp only [zsmul_eq_mul, Int.cast_ofNat, CharTwo.two_eq_zero, zero_mul, zero_add]
 
 theorem transpositionValue_braid {A : Type*} [Ring A]
     (sa ta sb tb sc tc : A)
@@ -7028,7 +7018,7 @@ theorem prefixCrossSwap_val {ι : Type*} [DecidableEq ι]
         leavittWordS A *
           (leavittWordT B * leavittWordS A) *
           leavittWordT B := by noncomm_ring
-      _ = 0 := by rw [hBA]; simp
+      _ = 0 := by rw [hBA]; simp only [mul_zero, zero_mul]
   have hPQP : P * Q * P = P := by
     change
       (leavittWordS A * leavittWordT B) *
@@ -7046,7 +7036,7 @@ theorem prefixCrossSwap_val {ι : Type*} [DecidableEq ι]
       _ = leavittWordS A * leavittWordT B := by
         rw [leavittWordT_mul_wordS_self,
           leavittWordT_mul_wordS_self]
-        simp
+        simp only [mul_one]
   have hPQ : P * Q = leavittWordS A * leavittWordT A := by
     dsimp [P, Q]
     calc
@@ -7055,7 +7045,7 @@ theorem prefixCrossSwap_val {ι : Type*} [DecidableEq ι]
         leavittWordS A *
           (leavittWordT B * leavittWordS B) *
           leavittWordT A := by noncomm_ring
-      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp
+      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp only [mul_one]
   have hQP : Q * P = leavittWordS B * leavittWordT B := by
     dsimp [P, Q]
     calc
@@ -7064,7 +7054,7 @@ theorem prefixCrossSwap_val {ι : Type*} [DecidableEq ι]
         leavittWordS B *
           (leavittWordT A * leavittWordS A) *
           leavittWordT B := by noncomm_ring
-      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp
+      _ = _ := by rw [leavittWordT_mul_wordS_self]; simp only [mul_one]
   change
     (1 + leavittWordS (E.word i) *
       (leavittWordS a * leavittWordT b) * leavittWordT (E.word j)) *
@@ -7174,7 +7164,7 @@ theorem sourceLocal_cylinderSwap_mem_alpha
     ([1] ++ a) ([1] ++ b) []
     (prepend_not_prefix_prepend [1] a b hab)
     (prepend_not_prefix_prepend [1] b a hba)
-  simpa [alphaPrefixCode, alphaWord, List.append_assoc] using h
+  simpa only [alphaPrefixCode, Fin.isValue, List.cons_append, List.nil_append, alphaWord] using h
 
 def binaryPrefixTranspositionGroup : Subgroup BinaryLeavittˣ :=
   Subgroup.closure
@@ -7247,7 +7237,7 @@ def sourceCompressedLocalProductHom :
       localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord) →*
         BinaryLeavittˣ where
   toFun x := (x.1 : BinaryLeavittˣ) * (x.2 : BinaryLeavittˣ)
-  map_one' := by simp
+  map_one' := by simp only [Prod.fst_one, OneMemClass.coe_one, Prod.snd_one, mul_one]
   map_mul' p q := by
     have hcomm :
         (q.1 : BinaryLeavittˣ) * (p.2 : BinaryLeavittˣ) =
@@ -7266,13 +7256,13 @@ def sourceCompressedLocalProductHom :
           ((p.2 : BinaryLeavittˣ) * (q.2 : BinaryLeavittˣ)) =
         (p.1 : BinaryLeavittˣ) *
           (((q.1 : BinaryLeavittˣ) * (p.2 : BinaryLeavittˣ)) *
-            (q.2 : BinaryLeavittˣ)) := by simp [mul_assoc]
+            (q.2 : BinaryLeavittˣ)) := by simp only [mul_assoc]
       _ = (p.1 : BinaryLeavittˣ) *
           (((p.2 : BinaryLeavittˣ) * (q.1 : BinaryLeavittˣ)) *
             (q.2 : BinaryLeavittˣ)) := by rw [hcomm]
       _ = ((p.1 : BinaryLeavittˣ) * (p.2 : BinaryLeavittˣ)) *
           ((q.1 : BinaryLeavittˣ) * (q.2 : BinaryLeavittˣ)) := by
-            simp [mul_assoc]
+            simp only [mul_assoc]
 
 theorem sourceCompressedLocalProductHom_injective :
     Function.Injective sourceCompressedLocalProductHom := by
@@ -7295,9 +7285,9 @@ theorem sourceCompressedLocalProductHom_injective :
     ⟨k.property, hkJ⟩
   rw [alphaZero_inf_sourceLocalPrefixTranspositionGroup_eq_bot] at hkbot
   have hkone : (k : BinaryLeavittˣ) = 1 := by
-    simpa using hkbot
+    simpa only [OneMemClass.coe_eq_one, Subgroup.mem_bot] using hkbot
   have hjone : (j : BinaryLeavittˣ) = 1 := by
-    simpa [hkone] using hone
+    simpa only [OneMemClass.coe_eq_one, hkone, one_mul] using hone
   apply Prod.ext
   · exact Subtype.ext hkone
   · exact Subtype.ext hjone
@@ -7524,9 +7514,8 @@ theorem partitionVertexMidrank_permutation_energy_tendsto_zero
           ((rankDecreasingVertices Finset.univ (b n) (p n i)).card : ℝ)) /
             N n))
       atTop (nhds 0) := by
-    simpa using
-      (Filter.Tendsto.const_mul (2 : ℝ) hcross).add
-        (Filter.Tendsto.const_mul (2 : ℝ) hrank)
+    simpa only [mul_zero, add_zero] using
+      (Filter.Tendsto.const_mul (2 : ℝ) hcross).add (Filter.Tendsto.const_mul (2 : ℝ) hrank)
   exact squeeze_zero'
     (Filter.Eventually.of_forall hnonnegative)
     (Filter.Eventually.of_forall hupper)
@@ -7593,7 +7582,7 @@ theorem selectedRankSupport_rank_eq
   obtain ⟨C, hC, hxC⟩ := Finset.mem_biUnion.mp hx
   obtain ⟨hxmem, hxrank⟩ := Finset.mem_filter.mp hxC
   have hpart : P.part x = C := P.part_eq_of_mem hC hxmem
-  simpa [hpart] using hxrank
+  simpa only [hpart] using hxrank
 
 theorem rankSupportPreimageBad_card_le
     {V : Type*} [DecidableEq V]
@@ -7705,7 +7694,7 @@ theorem rankChangingArc_density_tendsto_zero
           2 * (((U n \ selectedRankSupport (P n) (b n) (j n)).card : ℝ) /
             N n))
       Filter.atTop (nhds 0) := by
-    simpa using hcross.add (Filter.Tendsto.const_mul (2 : ℝ) homit)
+    simpa only [mul_zero, add_zero] using hcross.add (Filter.Tendsto.const_mul (2 : ℝ) homit)
   exact squeeze_zero'
     (Filter.Eventually.of_forall hnonnegative)
     (Filter.Eventually.of_forall hupper)
@@ -7720,7 +7709,7 @@ def permutationDistance {V : Type*} [Fintype V] [DecidableEq V]
 @[simp]
 theorem permutationDistance_self {V : Type*} [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) : permutationDistance p p = 0 := by
-  simp [permutationDistance]
+  simp only [permutationDistance, hammingDist_self]
 
 theorem permutationDistance_comm {V : Type*} [Fintype V] [DecidableEq V]
     (p q : Equiv.Perm V) : permutationDistance p q = permutationDistance q p := by
@@ -7736,7 +7725,7 @@ theorem permutationDistance_mul_left {V : Type*}
     permutationDistance (s * p) (s * q) = permutationDistance p q := by
   have h := hammingDist_comp (fun (_ : V) (x : V) => s x)
     (x := fun x => p x) (y := fun x => q x) (fun _ => s.injective)
-  simpa [permutationDistance, Equiv.Perm.mul_apply] using h
+  simpa only [permutationDistance, Equiv.Perm.mul_apply] using h
 
 theorem permutationDistance_mul_right {V : Type*}
     [Fintype V] [DecidableEq V] (s p q : Equiv.Perm V) :
@@ -7750,7 +7739,7 @@ theorem permutationDistance_mul_right {V : Type*}
   · intro x hx y hy h
     exact s.injective h
   · intro y hy
-    refine ⟨s.symm y, ?_, by simp⟩
+    refine ⟨s.symm y, ?_, by simp only [Equiv.apply_symm_apply]⟩
     apply Finset.mem_filter.mpr
     refine ⟨Finset.mem_univ _, ?_⟩
     simpa only [Equiv.Perm.mul_apply, Equiv.apply_symm_apply] using
@@ -7775,10 +7764,10 @@ theorem permutationDistance_inv {V : Type*}
     permutationDistance p⁻¹ q⁻¹ =
         permutationDistance (q * p⁻¹) (q * q⁻¹) :=
       (permutationDistance_mul_left q p⁻¹ q⁻¹).symm
-    _ = permutationDistance (q * p⁻¹) 1 := by simp
+    _ = permutationDistance (q * p⁻¹) 1 := by simp only [mul_inv_cancel]
     _ = permutationDistance ((q * p⁻¹) * p) (1 * p) :=
       (permutationDistance_mul_right p (q * p⁻¹) 1).symm
-    _ = permutationDistance q p := by simp
+    _ = permutationDistance q p := by simp only [inv_mul_cancel_right, one_mul]
     _ = permutationDistance p q := permutationDistance_comm q p
 
 @[simp]
@@ -7786,7 +7775,8 @@ theorem permutationCommutationDefect_one {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
     (σ : ι → Equiv.Perm V) :
     permutationCommutationDefect σ 1 = 0 := by
-  simp [permutationCommutationDefect]
+  simp only [permutationCommutationDefect, Equiv.Perm.coe_one, id_eq, ne_eq, not_true_eq_false,
+    Finset.filter_false, Finset.card_empty, Finset.sum_const_zero]
 
 theorem permutationCommutationDefect_inv {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -7804,18 +7794,18 @@ theorem permutationCommutationDefect_inv {V ι : Type*}
     intro heq
     apply hbad
     apply c.injective
-    simpa using heq.symm
+    simpa only [Equiv.Perm.coe_inv, Equiv.apply_symm_apply] using heq.symm
   · intro x hx y hy heq
     exact (c⁻¹).injective heq
   · intro y hy
     have hbad := (Finset.mem_filter.mp hy).2
-    refine ⟨c y, ?_, by simp⟩
+    refine ⟨c y, ?_, by simp only [Equiv.Perm.coe_inv, Equiv.symm_apply_apply]⟩
     apply Finset.mem_filter.mpr
     refine ⟨Finset.mem_univ _, ?_⟩
     intro heq
     apply hbad
     have heq' := congrArg c heq
-    simpa using heq'.symm
+    simpa only [Equiv.Perm.coe_inv, Equiv.symm_apply_apply, Equiv.apply_symm_apply] using heq'.symm
 
 theorem permutationCommutationDefect_mul_le {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -7840,9 +7830,9 @@ theorem permutationCommutationDefect_mul_le {V ι : Type*}
     · intro x hx y hy hxy
       exact q.injective hxy
     · intro y hy
-      refine ⟨q.symm y, ?_, by simp⟩
+      refine ⟨q.symm y, ?_, by simp only [Equiv.apply_symm_apply]⟩
       exact Finset.mem_filter.mpr
-        ⟨Finset.mem_univ _, by simpa using hy⟩
+        ⟨Finset.mem_univ _, by simpa only [Equiv.apply_symm_apply] using hy⟩
   have hsub :
       (Finset.univ.filter fun x =>
         (p * q) (σ i x) ≠ σ i ((p * q) x)) ⊆ Bq ∪ C := by
@@ -7856,7 +7846,7 @@ theorem permutationCommutationDefect_mul_le {V ι : Type*}
       refine ⟨Finset.mem_univ _, ?_⟩
       intro hp
       apply hbad
-      simpa [Equiv.Perm.mul_apply, hq] using hp
+      simpa only [Equiv.Perm.mul_apply, hq] using hp
     · apply Finset.mem_union_left
       exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hq⟩
   calc
@@ -7964,9 +7954,9 @@ def almostCentralizerSetoid {V ι : Type*}
   iseqv := by
     refine ⟨?_, ?_, ?_⟩
     · intro p
-      simp
+      simp only [permutationDistance_self, mul_zero, zero_le]
     · intro p q hpq
-      simpa [permutationDistance_comm q.permutation p.permutation] using hpq
+      simpa only [permutationDistance_comm q.permutation p.permutation] using hpq
     · intro p q r hpq hqr
       rcases hgap.dichotomy p r with hclose | hfar
       · exact hclose
@@ -8121,7 +8111,7 @@ def almostCentralizerOne {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
     (σ : ι → Equiv.Perm V) (tolerance : ℕ) :
     AlmostCentralizerElement σ tolerance :=
-  ⟨1, by simp⟩
+  ⟨1, by simp only [permutationCommutationDefect_one, zero_le]⟩
 
 def almostCentralizerInverse {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -8227,15 +8217,14 @@ def almostCentralizerClusterGroup {V ι : Type*}
       apply Quotient.sound
       change 5 * permutationDistance
         (R.correct (1 * p.permutation)) p.permutation ≤ Fintype.card V
-      simpa [almostCentralizerOne] using
-        R.corrected_distance (almostCentralizerOne σ tolerance) p
+      simpa only [one_mul, almostCentralizerOne] using R.corrected_distance (almostCentralizerOne σ tolerance) p
   · intro x
     induction x using Quotient.inductionOn with
     | _ p =>
       apply Quotient.sound
       change 5 * permutationDistance
         (R.correct (p.permutation⁻¹ * p.permutation)) 1 ≤ Fintype.card V
-      simpa [almostCentralizerInverse] using
+      simpa only [inv_mul_cancel, almostCentralizerInverse] using
         R.corrected_distance (almostCentralizerInverse p) p
 
 structure ExpandingCentralizerFiniteModel (G : Type*) [Group G]
@@ -8347,7 +8336,7 @@ theorem exists_finite_group_embedding_of_expanding_centralizer
     apply Quotient.sound
     change 5 * permutationDistance (M.approximation 1).permutation 1 ≤
       Fintype.card M.vertices
-    simp [M.map_one]
+    simp only [M.map_one, permutationDistance_self, mul_zero, zero_le]
   · intro x hx y hy
     change almostCentralizerCluster hgap (M.approximation (x * y)) =
       almostCentralizerCluster hgap
@@ -8405,7 +8394,7 @@ theorem exists_permutation_embedding_of_expanding_centralizer
   refine ⟨Fintype.card H, fun x => ρ (f x), ?_, ?_, ?_⟩
   · intro x hx y hy hxy
     exact hinj hx hy (hρ hxy)
-  · simp [hone]
+  · simp only [hone, map_one]
   · intro x hx y hy
     change ρ (f (x * y)) = ρ (f x) * ρ (f y)
     rw [hmul x hx y hy, map_mul]
@@ -8488,7 +8477,7 @@ theorem exists_positive_antitone_slow_vanishing_threshold
     dsimp [eta]
     exact Real.sqrt_le_sqrt (add_le_add (hd_antitone hab) (hq_antitone hab))
   have hsum_zero : Tendsto (fun n => d n + q n) atTop (nhds 0) := by
-    simpa using hd_zero.add hq_zero
+    simpa only [add_zero] using hd_zero.add hq_zero
   have heta_zero : Tendsto eta atTop (nhds 0) := by
     simpa only [eta, Function.comp_def, Real.sqrt_zero] using
       (Real.continuous_sqrt.tendsto (0 : ℝ)).comp hsum_zero
@@ -8594,7 +8583,7 @@ theorem rankDropCount_le_goodSubtype_add_exceptions
           intro i hi
           dsimp [d]
           split_ifs <;> norm_num
-      _ = (((Finset.univ : Finset ι) \ G).card : ℝ) := by simp
+      _ = (((Finset.univ : Finset ι) \ G).card : ℝ) := by simp only [Finset.sum_const, nsmul_eq_mul, mul_one]
   rw [hfull, hgood]
   linarith
 
@@ -8683,7 +8672,7 @@ theorem exists_common_log_rank_offsets_tendsto_zero_except
   have hscaled : Tendsto
       (fun n => C * (|Real.log (1 - eta n)| / H n))
       atTop (nhds 0) := by
-    simpa using Filter.Tendsto.const_mul C hlog
+    simpa only [mul_zero] using Filter.Tendsto.const_mul C hlog
   have hlimit : Tendsto
       (fun n =>
         C * (|Real.log (1 - eta n)| / H n) +
@@ -8744,9 +8733,9 @@ theorem cylinderSwap_mul_wordS_right
         (leavittWordS a) (leavittWordT a)
         (leavittWordS b) (leavittWordT b) *
       leavittWordS b = leavittWordS a
-  simp [PrefixCompression.transpositionValue, sub_mul, add_mul, mul_assoc,
-    leavittWordT_mul_wordS_self,
-    leavittWordT_mul_wordS_of_incomparable a b hab hba]
+  simp only [PrefixCompression.transpositionValue, add_mul, sub_mul, one_mul, mul_assoc,
+    leavittWordT_mul_wordS_of_incomparable a b hab hba, mul_zero, sub_zero, leavittWordT_mul_wordS_self, mul_one,
+    sub_self, zero_add, add_zero]
 
 end ThompsonPrefixInsertion
 
@@ -8824,7 +8813,7 @@ theorem normalizedHamming_distinct_tendsto
     intro he
     apply hne
     have := congrArg (fun x : G => x * h) he
-    simpa using this
+    simpa only [inv_mul_cancel_right, one_mul] using this
   have hseparation := A.separated (g * h⁻¹) hdifference
   have hmultiplication := A.multiplicative (g * h⁻¹) h
   have hlower (n : ℕ) :
@@ -8845,7 +8834,7 @@ theorem normalizedHamming_distinct_tendsto
     have hsym := SoficGroups.normalizedHamming_comm
       ((A.model n).action g)
       ((A.model n).action (g * h⁻¹) * (A.model n).action h)
-    have hword : (g * h⁻¹) * h = g := by simp
+    have hword : (g * h⁻¹) * h = g := by simp only [inv_mul_cancel_right]
     rw [hword] at *
     simp only [one_mul] at hright
     linarith
@@ -8857,7 +8846,7 @@ theorem normalizedHamming_distinct_tendsto
             ((A.model n).action ((g * h⁻¹) * h))
             ((A.model n).action (g * h⁻¹) * (A.model n).action h))
       atTop (𝓝 1) by
-        simpa using hseparation.sub hmultiplication)
+        simpa only [inv_mul_cancel_right, sub_zero] using hseparation.sub hmultiplication)
     tendsto_const_nhds
   · exact hlower
   · intro n
@@ -8898,7 +8887,8 @@ theorem mem_permutationGraph {V : Type*}
     [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) (x y : V) :
     (x, y) ∈ permutationGraph p ↔ y = p x := by
-  simp [permutationGraph, eq_comm]
+  simp only [permutationGraph, Finset.mem_image, Finset.mem_univ, eq_comm, Prod.mk.injEq, true_and,
+    exists_eq_left']
 
 theorem boundary_permutationGraph_eq_commutationDefect
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -8919,14 +8909,14 @@ theorem boundary_permutationGraph_eq_commutationDefect
     intro hcommute
     apply hzbad
     apply (mem_permutationGraph p (σ i z.1) (σ i z.2)).mpr
-    simpa [hzsecond] using hcommute.symm
+    simpa only [hzsecond] using hcommute.symm
   · intro z hz w hw hfirst
     obtain ⟨hzgraph, _⟩ := Finset.mem_filter.mp hz
     obtain ⟨hwgraph, _⟩ := Finset.mem_filter.mp hw
     have hzsecond := (mem_permutationGraph p z.1 z.2).mp hzgraph
     have hwsecond := (mem_permutationGraph p w.1 w.2).mp hwgraph
     apply Prod.ext hfirst
-    simpa [hzsecond, hwsecond] using congrArg p hfirst
+    simpa only [hzsecond, hwsecond, EmbeddingLike.apply_eq_iff_eq] using congrArg p hfirst
   · intro x hx
     obtain ⟨_, hbad⟩ := Finset.mem_filter.mp hx
     refine ⟨(x, p x), ?_, rfl⟩
@@ -9019,10 +9009,9 @@ theorem cylinderSwap_prefixWordAction_left
           (leavittWordS a) (leavittWordT a)
           (leavittWordS b) (leavittWordT b) *
         leavittWordS a = leavittWordS b
-    simp [PrefixCompression.transpositionValue,
-      sub_mul, add_mul, mul_assoc,
-      leavittWordT_mul_wordS_self,
-      leavittWordT_mul_wordS_of_incomparable b a hba hab]
+    simp only [PrefixCompression.transpositionValue, add_mul, sub_mul, one_mul, mul_assoc,
+      leavittWordT_mul_wordS_self, mul_one, sub_self, leavittWordT_mul_wordS_of_incomparable b a hba hab, mul_zero,
+      add_zero, zero_add]
   · change
       leavittWordT a *
         PrefixCompression.transpositionValue
@@ -9077,10 +9066,9 @@ theorem cylinderSwap_prefixWordAction_fixed
           (leavittWordS a) (leavittWordT a)
           (leavittWordS b) (leavittWordT b) *
         leavittWordS w = leavittWordS w
-    simp [PrefixCompression.transpositionValue,
-      sub_mul, add_mul, mul_assoc,
-      leavittWordT_mul_wordS_of_incomparable a w haw hwa,
-      leavittWordT_mul_wordS_of_incomparable b w hbw hwb]
+    simp only [PrefixCompression.transpositionValue, add_mul, sub_mul, one_mul, mul_assoc,
+      leavittWordT_mul_wordS_of_incomparable a w haw hwa, mul_zero, sub_zero,
+      leavittWordT_mul_wordS_of_incomparable b w hbw hwb, add_zero]
   · change
       leavittWordT w *
         PrefixCompression.transpositionValue
@@ -9200,7 +9188,7 @@ theorem elementaryBlockUnitEquiv_elementaryUnit_mem
       elementaryGroup (ι × κ) R := by
   induction A using Matrix.induction_on' with
   | h_zero =>
-      simp [elementaryUnit_zero]
+      simp only [elementaryUnit_zero, map_one, one_mem]
   | h_add A B hA hB =>
       rw [← elementaryUnit_mul, map_mul]
       exact (elementaryGroup (ι × κ) R).mul_mem hA hB
@@ -9311,8 +9299,8 @@ theorem elementaryReindexGroup_map (e : ι ≃ κ) :
     have hij : e.symm k ≠ e.symm l := e.symm.injective.ne hkl
     refine ⟨elementaryUnit (e.symm k) (e.symm l) hij a,
       elementaryUnit_mem (e.symm k) (e.symm l) hij a, ?_⟩
-    simpa using elementaryReindexUnitEquiv_elementaryUnit
-      e (e.symm k) (e.symm l) hij a
+    simpa only [MulEquiv.toMonoidHom_eq_coe, MonoidHom.coe_coe, Equiv.apply_symm_apply] using
+      elementaryReindexUnitEquiv_elementaryUnit e (e.symm k) (e.symm l) hij a
 
 def elementaryReindexGroupEquiv (e : ι ≃ κ) :
     elementaryGroup ι R ≃* elementaryGroup κ R :=
@@ -9358,19 +9346,19 @@ theorem ternaryLeavittPrefixCode_complete :
   have hzero :
       leavittCylinder [0, 0] + leavittCylinder [0, 1] =
         leavittCylinder [0] := by
-    simpa using (leavittCylinder_split [0]).symm
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using (leavittCylinder_split [0]).symm
   have hroot :
       leavittCylinder [0] + leavittCylinder [1] = 1 := by
-    simpa [leavittCylinder, leavittWordS, leavittWordT] using
+    simpa only [leavittCylinder, leavittWordS, Fin.isValue, mul_one, leavittWordT, one_mul, List.nil_append] using
       (leavittCylinder_split ([] : List (Fin 2))).symm
   have hsum :
       leavittCylinder [0, 0] + leavittCylinder [0, 1] +
           leavittCylinder [1] = 1 := by
     rw [hzero]
     exact hroot
-  simpa [MatrixCorner.codeIdempotent, ternaryLeavittPrefixCode,
-    ternaryLeavittWord, leavittCylinder, Fin.sum_univ_succ,
-    add_assoc] using hsum
+  simpa only [MatrixCorner.codeIdempotent, ternaryLeavittPrefixCode, ternaryLeavittWord, Fin.isValue,
+    Fin.sum_univ_succ, Fin.succ_ne_zero, imp_self, Fin.succ_zero_eq_one, Finset.univ_unique, Fin.default_eq_zero,
+    Finset.sum_singleton, Fin.succ_one_eq_two, leavittCylinder, add_assoc] using hsum
 
 def binaryLeavittMatrixThreeEquiv :
     BinaryLeavitt ≃+* Matrix (Fin 3) (Fin 3) BinaryLeavitt :=
@@ -9522,7 +9510,7 @@ theorem inner_sq_le_of_orthogonal_two_sector
   have hinner :
       inner ℂ (a₀ + a₁) (b₀ + b₁) =
         inner ℂ a₀ b₀ + inner ℂ a₁ b₁ := by
-    simp [hcross₀, hcross₁]
+    simp only [CStarModule.inner_add_right, CStarModule.inner_add_left, hcross₁, add_zero, hcross₀, zero_add]
   have hnorm :
       ‖inner ℂ (a₀ + a₁) (b₀ + b₁)‖ ≤
         ‖inner ℂ a₀ b₀‖ + ‖inner ℂ a₁ b₁‖ := by
@@ -9534,10 +9522,10 @@ theorem inner_sq_le_of_orthogonal_two_sector
     (sq_le_sq₀ (norm_nonneg _) (by positivity)).mpr hnorm
   have ha' : ‖a₀ + a₁‖ ^ 2 = ‖a₀‖ ^ 2 + ‖a₁‖ ^ 2 := by
     rw [norm_add_sq (𝕜 := ℂ), ha]
-    simp
+    simp only [RCLike.re_to_complex, Complex.zero_re, mul_zero, add_zero]
   have hb' : ‖b₀ + b₁‖ ^ 2 = ‖b₀‖ ^ 2 + ‖b₁‖ ^ 2 := by
     rw [norm_add_sq (𝕜 := ℂ), hb]
-    simp
+    simp only [RCLike.re_to_complex, Complex.zero_re, mul_zero, add_zero]
   rw [ha', hb']
   nlinarith
 
@@ -9571,10 +9559,10 @@ theorem inner_sq_le_of_finite_orthogonal_sector_splitting
         intro x y hx hy hxF hyF
         have hzero : inner ℂ x y = 0 :=
           hterminal x y hx hy
-            (fun j => hxF j (by simp))
-            (fun j => hyF j (by simp))
-        simpa [hzero] using
-          mul_nonneg (sq_nonneg ‖x‖) (sq_nonneg ‖y‖)
+            (fun j => hxF j (by simp only [Finset.notMem_empty, not_false_eq_true]))
+            (fun j => hyF j (by simp only [Finset.notMem_empty, not_false_eq_true]))
+        simpa only [hzero, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero,
+          ge_iff_le] using mul_nonneg (sq_nonneg ‖x‖) (sq_nonneg ‖y‖)
     | @insert i s hi ih =>
         intro x y hx hy hxF hyF
         let x₀ : H := (F i).starProjection x
@@ -9606,7 +9594,7 @@ theorem inner_sq_le_of_finite_orthogonal_sector_splitting
             exact hx₀i
           · apply hF i j
             apply hxF j
-            simp [hji, hj]
+            simp only [Finset.mem_insert, hji, hj, or_self, not_false_eq_true]
         have hy₀F : ∀ j, j ∉ s → y₀ ∈ F j := by
           intro j hj
           by_cases hji : j = i
@@ -9614,7 +9602,7 @@ theorem inner_sq_le_of_finite_orthogonal_sector_splitting
             exact hy₀i
           · apply hF i j
             apply hyF j
-            simp [hji, hj]
+            simp only [Finset.mem_insert, hji, hj, or_self, not_false_eq_true]
         have h₀ :
             8 * ‖inner ℂ x₀ y₀‖ ^ 2 ≤
               ‖x₀‖ ^ 2 * ‖y₀‖ ^ 2 :=
@@ -9765,10 +9753,8 @@ theorem ejThreeResidualEnergy_eq_re_inner (x : H) :
 theorem ejThreeResidualMap_norm_sq_le (x : H) :
     ‖ejThreeResidualMap V x‖ ^ 2 ≤
       3 * ejThreeResidualEnergy V x := by
-  simpa [ejThreeResidualMap_apply, ejThreeResidualEnergy] using
-    norm_add_three_sq_le_three_mul
-      (ejResidualProjection (V 0) x)
-      (ejResidualProjection (V 1) x)
+  simpa only [ejThreeResidualMap_apply, Fin.isValue, ejResidualProjection_apply, ejThreeResidualEnergy] using
+    norm_add_three_sq_le_three_mul (ejResidualProjection (V 0) x) (ejResidualProjection (V 1) x)
       (ejResidualProjection (V 2) x)
 
 theorem ejResidualProjection_norm_le (i : Fin 3) (x : H) :
@@ -9931,8 +9917,8 @@ theorem ejTwoProjection_norm_sq_sum_le_of_angle
     ejStarProjection_mem_inf_orthogonal U V w hw
   have hvorth : v ∈ (U ⊓ V)ᗮ := by
     have h := ejStarProjection_mem_inf_orthogonal V U w (by
-      simpa [inf_comm] using hw)
-    simpa [inf_comm] using h
+      simpa only [inf_comm] using hw)
+    simpa only [inf_comm] using h
   have hre : RCLike.re (inner ℂ u v) ≤ c * ‖u‖ * ‖v‖ :=
     (RCLike.re_le_norm (inner ℂ u v)).trans
       (hangle u v hu huorth hv hvorth)
@@ -10143,7 +10129,7 @@ theorem ejThreeResidualEnergy_iterate_le
       (1 - δ / 3) ^ n * ejThreeResidualEnergy V x := by
   have hnonneg : 0 ≤ 1 - δ / 3 := by linarith
   induction n with
-  | zero => simp
+  | zero => simp only [Function.iterate_zero, id_eq, pow_zero, one_mul, Std.le_refl]
   | succ n ih =>
       rw [Function.iterate_succ_apply']
       calc
@@ -10288,7 +10274,7 @@ theorem ejThreeProjectionAverage_fixed_iff_residualMap_eq_zero (x : H) :
       sub_eq_self.mp h
     exact (smul_eq_zero.mp hz).resolve_left (by norm_num)
   · intro h
-    simp [ejThreeProjectionAverage_apply, h]
+    simp only [ejThreeProjectionAverage_apply, h, smul_zero, sub_zero]
 
 theorem ejThreeResidualEnergy_eq_zero_iff (x : H) :
     ejThreeResidualEnergy V x = 0 ↔
@@ -10314,7 +10300,8 @@ theorem ejThreeResidualEnergy_eq_zero_iff (x : H) :
       nlinarith [norm_nonneg (ejResidualProjection (V 2) x)]
   · intro h
     unfold ejThreeResidualEnergy
-    simp [h 0, h 1, h 2]
+    simp only [Fin.isValue, h 0, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, h 1,
+      add_zero, h 2]
 
 theorem ejThreeProjectionAverage_fixed_mem
     (x : H) (hx : ejThreeProjectionAverage V x = x)
@@ -10323,7 +10310,7 @@ theorem ejThreeProjectionAverage_fixed_mem
     (ejThreeProjectionAverage_fixed_iff_residualMap_eq_zero V x).mp hx
   have hE : ejThreeResidualEnergy V x = 0 := by
     rw [ejThreeResidualEnergy_eq_re_inner V x, hD]
-    simp
+    simp only [inner_zero_left, RCLike.re_to_complex, Complex.zero_re]
   have hres : ejResidualProjection (V i) x = 0 :=
     (ejThreeResidualEnergy_eq_zero_iff V x).mp hE i
   rw [ejResidualProjection_apply, sub_eq_zero] at hres
@@ -10341,11 +10328,11 @@ def ejUnitaryFixedSubmodule
     (π : UnitaryRepresentation G H) (K : Subgroup G) :
     Submodule ℂ H where
   carrier := {x : H | ∀ k : K, π (k : G) x = x}
-  zero_mem' k := by simp
+  zero_mem' k := by simp only [map_zero]
   add_mem' hx hy k := by
-    simp [map_add, hx k, hy k]
+    simp only [map_add, hx k, hy k]
   smul_mem' c x hx k := by
-    simp [map_smul, hx k]
+    simp only [map_smul, hx k]
 
 @[simp]
 theorem mem_ejUnitaryFixedSubmodule
@@ -10365,7 +10352,7 @@ theorem ejUnitaryFixedSubmodule_isClosed
       (ejUnitaryFixedSubmodule π K : Set H) =
         ⋂ k : K, {x : H | π (k : G) x = x} := by
     ext x
-    simp
+    simp only [SetLike.mem_coe, mem_ejUnitaryFixedSubmodule, Subtype.forall, Set.mem_iInter, Set.mem_setOf_eq]
   rw [hset]
   exact isClosed_iInter fun k =>
     isClosed_eq (π (k : G)).continuous continuous_id
@@ -10433,7 +10420,7 @@ theorem finiteUnitarySubgroupAverage_fixed
         ∑ k : K, π ((g * k : K) : G) x := by
           apply Finset.sum_congr rfl
           intro k _
-          simp [map_mul]
+          simp only [Subgroup.coe_mul, map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply]
     _ = ∑ k : K, π (k : G) x :=
       Function.Bijective.sum_comp (Group.mulLeft_bijective g)
         (fun k : K => π (k : G) x)
@@ -10451,7 +10438,8 @@ theorem finiteUnitarySubgroupAverage_sub
   rw [Finset.sum_sub_distrib, smul_sub]
   have hconst :
       (Fintype.card K : ℂ)⁻¹ • (∑ _k : K, x) = x := by
-    simp [← Nat.cast_smul_eq_nsmul ℂ, smul_smul, hcard]
+    simp only [Finset.sum_const, Finset.card_univ, ← Nat.cast_smul_eq_nsmul ℂ, smul_smul, ne_eq, hcard,
+      not_false_eq_true, inv_mul_cancel₀, one_smul]
   rw [hconst]
 
 theorem norm_finiteUnitarySubgroupAverage_sub_le
@@ -10533,7 +10521,7 @@ theorem hasPropertyT_of_geometric_finite_averaging
     calc
       (∑ g ∈ S, ‖π g ξ - ξ‖) ≤ ∑ _g ∈ S, δ := by
         exact Finset.sum_le_sum fun g hg => (hsmall g hg).le
-      _ = S.card * δ := by simp
+      _ = S.card * δ := by simp only [Finset.sum_const, nsmul_eq_mul]
   have hhalf : C < (1 - q) / 2 := by
     calc
       C ≤ S.card * δ := hsum
@@ -10558,7 +10546,7 @@ theorem hasPropertyT_of_geometric_finite_averaging
   have hηne : η ≠ 0 := by
     intro hzero
     subst η
-    have hone : dist ξ (0 : H) = 1 := by simpa using hξ
+    have hone : dist ξ (0 : H) = 1 := by simpa only [dist_zero_right] using hξ
     rw [hone] at hdist
     have hden : 0 < 1 - q := sub_pos.mpr hq1
     have hlt : C / (1 - q) < 1 / 2 :=
@@ -10578,7 +10566,8 @@ theorem mem_threeFiniteSubgroupGenerators
     [∀ i, Fintype (K i)] (g : G) :
     g ∈ threeFiniteSubgroupGenerators K ↔ ∃ i : Fin 3, g ∈ K i := by
   classical
-  simp [threeFiniteSubgroupGenerators]
+  simp only [threeFiniteSubgroupGenerators, Finset.mem_biUnion, Finset.mem_univ, Finset.mem_image, true_and,
+    Subtype.exists, exists_prop, exists_eq_right]
 
 def unitaryVectorStabilizer
     {G : Type u} {H : Type v} [Group G]
@@ -10586,19 +10575,19 @@ def unitaryVectorStabilizer
     (π : SoficGroups.UnitaryRepresentation G H)
     (x : H) : Subgroup G where
   carrier := {g : G | π g x = x}
-  one_mem' := by simp
+  one_mem' := by simp only [Set.mem_setOf_eq, map_one, LinearIsometryEquiv.coe_one, id_eq]
   mul_mem' := by
     intro g h hg hh
     change π g x = x at hg
     change π h x = x at hh
     change π (g * h) x = x
-    simpa [map_mul, hh] using hg
+    simpa only [map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply, hh] using hg
   inv_mem' := by
     intro g hg
     change π g x = x at hg
     change π g⁻¹ x = x
     have h := congrArg (fun z : H => π g⁻¹ z) hg
-    simpa [← map_mul] using h.symm
+    simpa only [map_inv, LinearIsometryEquiv.coe_inv, LinearIsometryEquiv.symm_apply_apply] using h.symm
 
 theorem hasPropertyT_of_three_finite_subgroups_geometric
     {G : Type u} [Group G]
@@ -10641,8 +10630,7 @@ theorem inv_sqrt_eight_lt_one_half :
     have hsq := Real.sq_sqrt (show (0 : ℝ) ≤ 8 by norm_num)
     have hnonneg := Real.sqrt_nonneg (8 : ℝ)
     nlinarith
-  simpa [one_div] using
-    (one_div_lt_one_div_of_lt (show (0 : ℝ) < 2 by norm_num) hsqrt)
+  simpa only [one_div, gt_iff_lt] using (one_div_lt_one_div_of_lt (show (0 : ℝ) < 2 by norm_num) hsqrt)
 
 theorem norm_inner_le_inv_sqrt_eight_of_sq
     {H : Type v} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
@@ -10735,7 +10723,8 @@ theorem hasPropertyT_of_three_finite_subgroups_friedrichs_angle
         _ = T := by
           have hcard : (Fintype.card (K i) : ℝ) ≠ 0 := by
             exact_mod_cast Fintype.card_ne_zero
-          simp [hcard]
+          simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ne_eq, hcard, not_false_eq_true,
+            inv_mul_cancel_left₀]
     have hres (i : Fin 3) :
         ‖SoficGroups.ejResidualProjection (V i) x‖ ≤ T := by
       rw [SoficGroups.ejResidualProjection_apply]
@@ -10754,7 +10743,7 @@ theorem hasPropertyT_of_three_finite_subgroups_friedrichs_angle
       · subst j
         have hazero : a = 0 :=
           inner_self_eq_zero.mp (haorth a ⟨ha, ha⟩)
-        simp [hazero]
+        simp only [hazero, inner_zero_left, norm_zero, mul_zero, zero_mul, Std.le_refl]
       · exact hangle H π i j hij a b ha haorth hb hborth
     calc
       dist (((SoficGroups.ejThreeProjectionAverage V : H → H)^[n]) x)
@@ -10799,7 +10788,7 @@ def finiteBlockGaloisMatrix :
 
 theorem finiteBlockGaloisField_natCard :
     Nat.card finiteBlockGaloisField = 8 := by
-  simpa using (GaloisField.card 2 3 (by decide))
+  simpa only [Nat.reducePow] using (GaloisField.card 2 3 (by decide))
 
 def finiteBlockGaloisMatrixOver (R : Type*) [Ring R]
     [Algebra (ZMod 2) R] :
@@ -10981,8 +10970,8 @@ def finiteBlockCoefficientMatrixRightMul
   toFun A :=
     finiteBlockCoefficientMatrixHom W A *
       finiteBlockCoefficientMatrixHom W B
-  map_zero' := by simp
-  map_add' A C := by simp [add_mul]
+  map_zero' := by simp only [map_zero, zero_mul]
+  map_add' A C := by simp only [map_add, add_mul]
 
 def finiteOuterBlockProductCentralRootHom
     (W : Submodule (ZMod 2) R)
@@ -11357,10 +11346,12 @@ def UnitaryRepresentation.toRepresentation
   toFun g := (π g).toLinearEquiv.toLinearMap
   map_one' := by
     ext x
-    simp
+    simp only [map_one, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, LinearIsometryEquiv.coe_one,
+      id_eq, Module.End.one_apply]
   map_mul' g h := by
     ext x
-    simp [map_mul, Module.End.mul_apply]
+    simp only [map_mul, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, LinearIsometryEquiv.coe_mul,
+      Function.comp_apply, Module.End.mul_apply]
 
 def unitaryFixedSubmodule
     {G : Type u₁} {H : Type v₁} [Group G]
@@ -11380,19 +11371,19 @@ def unitaryVectorStabilizer
     [NormedAddCommGroup H] [InnerProductSpace ℂ H]
     (π : UnitaryRepresentation G H) (x : H) : Subgroup G where
   carrier := {g : G | π g x = x}
-  one_mem' := by simp
+  one_mem' := by simp only [Set.mem_setOf_eq, map_one, LinearIsometryEquiv.coe_one, id_eq]
   mul_mem' := by
     intro g h hg hh
     change π g x = x at hg
     change π h x = x at hh
     change π (g * h) x = x
-    simpa [map_mul, hh] using hg
+    simpa only [map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply, hh] using hg
   inv_mem' := by
     intro g hg
     change π g x = x at hg
     change π g⁻¹ x = x
     have heq := congrArg (fun y : H => π g⁻¹ y) hg
-    simpa [← map_mul] using heq.symm
+    simpa only [map_inv, LinearIsometryEquiv.coe_inv, LinearIsometryEquiv.symm_apply_apply] using heq.symm
 
 theorem unitaryFixedSubmodule_sup
     {G : Type u₁} {H : Type v₁} [Group G]
@@ -11434,7 +11425,7 @@ theorem unitaryFixedSubmodule_isClosed
       (unitaryFixedSubmodule π K : Set H) =
         ⋂ g : K, {x : H | π (g : G) x = x} := by
     ext x
-    simp
+    simp only [SetLike.mem_coe, mem_unitaryFixedSubmodule, Subtype.forall, Set.mem_iInter, Set.mem_setOf_eq]
   rw [hset]
   exact isClosed_iInter fun g =>
     isClosed_eq (π (g : G)).continuous continuous_id
@@ -11460,9 +11451,9 @@ theorem unitaryFixedSubmodule_map_of_centralizes
     intro k
     have hk := (mem_unitaryFixedSubmodule π K x).mp hx k
     calc
-      π (k : G) (π g x) = π ((k : G) * g) x := by simp [map_mul]
+      π (k : G) (π g x) = π ((k : G) * g) x := by simp only [map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply]
       _ = π (g * (k : G)) x := by rw [(hg k).eq]
-      _ = π g (π (k : G) x) := by simp [map_mul]
+      _ = π g (π (k : G) x) := by simp only [map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply]
       _ = π g x := by rw [hk]
   · intro hz
     refine ⟨π g⁻¹ z, ?_, ?_⟩
@@ -11471,11 +11462,12 @@ theorem unitaryFixedSubmodule_map_of_centralizes
       intro k
       have hk := (mem_unitaryFixedSubmodule π K z).mp hz k
       calc
-        π (k : G) (π g⁻¹ z) = π ((k : G) * g⁻¹) z := by simp [map_mul]
+        π (k : G) (π g⁻¹ z) = π ((k : G) * g⁻¹) z := by simp only [map_inv, LinearIsometryEquiv.coe_inv, map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply]
         _ = π (g⁻¹ * (k : G)) z := by rw [(hg k).inv_left.eq]
-        _ = π g⁻¹ (π (k : G) z) := by simp [map_mul]
+        _ = π g⁻¹ (π (k : G) z) := by simp only [map_mul, map_inv, LinearIsometryEquiv.coe_mul, LinearIsometryEquiv.coe_inv, Function.comp_apply]
         _ = π g⁻¹ z := by rw [hk]
-    · simp
+    · simp only [map_inv, LinearIsometryEquiv.coe_inv, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv,
+        LinearIsometryEquiv.apply_symm_apply]
 
 theorem unitaryFixedSubmodule_starProjection_commute
     {G : Type u₁} {H : Type v₁} [Group G]
@@ -11487,9 +11479,8 @@ theorem unitaryFixedSubmodule_starProjection_commute
   letI : CompleteSpace (unitaryFixedSubmodule π K) :=
     unitaryFixedSubmodule_completeSpace π K
   have hmap := unitaryFixedSubmodule_map_of_centralizes π K g hg
-  simpa [hmap] using
-    Submodule.starProjection_map_apply (π g)
-      (unitaryFixedSubmodule π K) (π g x)
+  simpa only [hmap, LinearIsometryEquiv.symm_apply_apply] using
+    Submodule.starProjection_map_apply (π g) (unitaryFixedSubmodule π K) (π g x)
 
 theorem unitaryFixedSubmodule_starProjection_mem_of_commute
     {G : Type u₁} {H : Type v₁} [Group G]
@@ -11506,7 +11497,7 @@ theorem unitaryFixedSubmodule_starProjection_mem_of_commute
   have hj := (mem_unitaryFixedSubmodule π J x).mp hx j
   have he := unitaryFixedSubmodule_starProjection_commute π K (j : G)
     (fun k => (hcomm k j).symm) x
-  simpa [hj] using he.symm
+  simpa only [hj] using he.symm
 
 theorem norm_finset_sum_sq_eq_of_pairwise_inner_zero
     {ι H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
@@ -11515,7 +11506,7 @@ theorem norm_finset_sum_sq_eq_of_pairwise_inner_zero
     ‖∑ i ∈ s, f i‖ ^ 2 = ∑ i ∈ s, ‖f i‖ ^ 2 := by
   classical
   induction s using Finset.induction_on with
-  | empty => simp
+  | empty => simp only [Finset.sum_empty, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
   | @insert i s hi ih =>
       simp only [Finset.sum_insert hi]
       rw [norm_add_sq (𝕜 := ℂ)]
@@ -11527,7 +11518,7 @@ theorem norm_finset_sum_sq_eq_of_pairwise_inner_zero
           intro h
           subst j
           exact hi hj)
-      simp [hzero, ih]
+      simp only [hzero, RCLike.re_to_complex, Complex.zero_re, mul_zero, add_zero, ih]
 
 theorem unitaryImages_inner_sq_mul_card_le
     {ι H : Type*} [Fintype ι]
@@ -11545,10 +11536,9 @@ theorem unitaryImages_inner_sq_mul_card_le
     calc
       ‖∑ i : ι, U i a‖ ^ 2 =
           ∑ i : ι, ‖U i a‖ ^ 2 := by
-            simpa using
-              norm_finset_sum_sq_eq_of_pairwise_inner_zero
-                (fun i : ι => U i a) Finset.univ horth
-      _ = (Fintype.card ι : ℝ) * ‖a‖ ^ 2 := by simp
+            simpa only [norm_map, Finset.sum_const, Finset.card_univ, nsmul_eq_mul] using
+              norm_finset_sum_sq_eq_of_pairwise_inner_zero (fun i : ι => U i a) Finset.univ horth
+      _ = (Fintype.card ι : ℝ) * ‖a‖ ^ 2 := by simp only [norm_map, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
   have hterm (i : ι) : inner ℂ (U i a) b = inner ℂ a b := by
     calc
       inner ℂ (U i a) b = inner ℂ (U i a) (U i b) := by rw [hb i]
@@ -11558,7 +11548,7 @@ theorem unitaryImages_inner_sq_mul_card_le
         (Fintype.card ι : ℂ) * inner ℂ a b := by
     rw [sum_inner]
     simp_rw [hterm]
-    simp [nsmul_eq_mul]
+    simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
   have hcs :
       (Fintype.card ι : ℝ) * ‖inner ℂ a b‖ ≤
         ‖∑ i : ι, U i a‖ * ‖b‖ := by
@@ -11622,7 +11612,7 @@ theorem unitaryFixedSubmodule_orthogonal_map_of_centralizes
     exact ⟨z, hz, rfl⟩
   calc
     inner ℂ z (π g x) =
-        inner ℂ (π g (π g⁻¹ z)) (π g x) := by simp
+        inner ℂ (π g (π g⁻¹ z)) (π g x) := by simp only [map_inv, LinearIsometryEquiv.coe_inv, LinearIsometryEquiv.apply_symm_apply]
     _ = inner ℂ (π g⁻¹ z) x := (π g).inner_map_map (π g⁻¹ z) x
     _ = 0 :=
       (Submodule.mem_orthogonal (unitaryFixedSubmodule π Z) x).mp
@@ -11700,7 +11690,9 @@ theorem heisenbergFiniteFamily_centerComplement_inner_sq_le
     rw [mem_unitaryFixedSubmodule]
     rintro ⟨_, ⟨g, hg, rfl⟩⟩
     have hga := (mem_unitaryFixedSubmodule π X a).mp ha ⟨g, hg⟩
-    simp [MulAut.conj_apply, map_mul, hga]
+    simp only [MulEquiv.toMonoidHom_eq_coe, MonoidHom.coe_coe, MulAut.conj_apply, map_mul, map_inv,
+      LinearIsometryEquiv.coe_mul, LinearIsometryEquiv.coe_inv, Function.comp_apply, LinearIsometryEquiv.symm_apply_apply,
+      hga]
   have horthZ (i : ι) :
       π (y i) a ∈ (unitaryFixedSubmodule π Z)ᗮ :=
     unitaryFixedSubmodule_orthogonal_map_of_centralizes
@@ -11780,7 +11772,7 @@ theorem finiteOuterBlockProductCentral_centerComplement_inner_sq_le
             W j k hjk B t,
             finiteOuterBlockGaloisConjugatorWithCoefficient_mem
               W j k hjk B t⟩)
-  simpa [hcard] using hbound
+  simpa only [ge_iff_le, hcard, Nat.cast_ofNat] using hbound
 
 section FiniteSubgroupAveraging
 
@@ -11806,7 +11798,7 @@ theorem finiteUnitarySubgroupAverage_fixed
         ∑ k : K, π ((g * k : K) : G) x := by
           apply Finset.sum_congr rfl
           intro k _
-          simp [map_mul]
+          simp only [Subgroup.coe_mul, map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply]
     _ = ∑ k : K, π (k : G) x :=
       Function.Bijective.sum_comp (Group.mulLeft_bijective g)
         (fun k : K => π (k : G) x)
@@ -11829,7 +11821,8 @@ theorem inner_finiteUnitarySubgroupAverage_of_fixed_left
   unfold finiteUnitarySubgroupAverage
   rw [inner_smul_right, inner_sum]
   simp_rw [hterm]
-  simp [hcard]
+  simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ne_eq, hcard, not_false_eq_true,
+    inv_mul_cancel_left₀]
 
 theorem finiteUnitarySubgroupAverage_fixed_of_orbit_fixed
     (π : UnitaryRepresentation G H)
@@ -12022,7 +12015,7 @@ theorem finiteOuterBlockRootSubgroups_pair_inner_sq_le
               (Matrix (Fin 3) (Fin 3) R)) y) =
           π ((t : elementaryGroup (Fin 3)
             (Matrix (Fin 3) (Fin 3) R)) * s) y := by
-              simp [map_mul]
+              simp only [map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply]
         _ = π ((s : elementaryGroup (Fin 3)
               (Matrix (Fin 3) (Fin 3) R)) * c⁻¹ * t) y := by
               rw [hgroup]
@@ -12030,7 +12023,7 @@ theorem finiteOuterBlockRootSubgroups_pair_inner_sq_le
               (Matrix (Fin 3) (Fin 3) R))
             (π c⁻¹ (π (t : elementaryGroup (Fin 3)
               (Matrix (Fin 3) (Fin 3) R)) y)) := by
-              simp [map_mul]
+              simp only [map_mul, map_inv, LinearIsometryEquiv.coe_mul, LinearIsometryEquiv.coe_inv, Function.comp_apply]
         _ = π (s : elementaryGroup (Fin 3)
               (Matrix (Fin 3) (Fin 3) R)) y := by
               rw [htb, hcb]
@@ -12195,9 +12188,14 @@ theorem finiteBlockRootHom_single
     · subst k
       by_cases hq : q = l
       · subst l
-        simp [finiteBlockCoefficientMatrixHom]
-      · simp [finiteBlockCoefficientMatrixHom, hq]
-    · simp [finiteBlockCoefficientMatrixHom, hp]
+        simp only [finiteBlockCoefficientMatrixHom, AddMonoidHom.mapMatrix_apply, LinearMap.toAddMonoidHom_coe,
+          Submodule.coe_subtype, Matrix.map_apply, Matrix.single_apply_same]
+      · simp only [finiteBlockCoefficientMatrixHom, AddMonoidHom.mapMatrix_apply, LinearMap.toAddMonoidHom_coe,
+          Submodule.coe_subtype, Matrix.map_apply, hq, and_false, not_false_eq_true, Matrix.single_apply_of_ne,
+          ZeroMemClass.coe_zero]
+    · simp only [finiteBlockCoefficientMatrixHom, AddMonoidHom.mapMatrix_apply, LinearMap.toAddMonoidHom_coe,
+        Submodule.coe_subtype, Matrix.map_apply, hp, false_and, not_false_eq_true, Matrix.single_apply_of_ne,
+        ZeroMemClass.coe_zero]
   rw [hsingle]
   rw [map_add, map_one]
   congr 1
@@ -12208,8 +12206,8 @@ theorem finiteBlockRootHom_single
       Matrix.single (finiteBlockIndex i p) (finiteBlockIndex j q) (a : R)
   rw [Matrix.comp_single_single]
   ext x y
-  simp [finiteBlockIndex, Matrix.reindex, Matrix.single_apply,
-    Equiv.eq_symm_apply]
+  simp only [Nat.reduceMul, Matrix.reindex, Equiv.coe_fn_mk, Matrix.submatrix_apply, Matrix.single_apply,
+    Equiv.eq_symm_apply, finiteBlockIndex]
 
 theorem elementaryUnit_mem_finiteBlockRootSubgroup
     (W : Submodule (ZMod 2) R)
@@ -12420,7 +12418,7 @@ theorem cyclicFiniteBlockRootSubgroup_eq_elementaryGroup
   · exact cyclicFiniteBlockRootSubgroup_le_elementaryGroup W
   · rw [elementaryGroup, Subgroup.closure_le]
     rintro _ ⟨i, j, hij, a, rfl⟩
-    have ha : a ∈ C := by simp [hC]
+    have ha : a ∈ C := by simp only [hC, Algebra.mem_top]
     exact ha i j hij
 
 end FiniteBlockRoots
@@ -12546,7 +12544,7 @@ theorem finiteOuterBlockCyclicRootFamily_iSup_eq_top
     rw [← hmap] at hx
     obtain ⟨z, hz, hzx⟩ := hx
     have heq : z = x := hinj hzx
-    simpa [heq] using hz
+    simpa only [heq, SetLike.mem_coe] using hz
   apply top_unique
   rw [← hLtop]
   dsimp [L, W]
@@ -12619,19 +12617,15 @@ theorem sum_firstFiber_card {V : Type*} [Fintype V] [DecidableEq V]
     (U : Finset (V × V)) :
     (∑ x : V, (firstFiber U x).card) = U.card := by
   classical
-  simpa [firstFiber] using
-    (Finset.card_eq_sum_card_fiberwise
-      (f := Prod.fst) (s := U) (t := Finset.univ)
-      (fun _ _ => Finset.mem_univ _)).symm
+  simpa only [firstFiber] using
+    (Finset.card_eq_sum_card_fiberwise (f := Prod.fst) (s := U) (t := Finset.univ) (fun _ _ => Finset.mem_univ _)).symm
 
 theorem sum_secondFiber_card {V : Type*} [Fintype V] [DecidableEq V]
     (U : Finset (V × V)) :
     (∑ x : V, (secondFiber U x).card) = U.card := by
   classical
-  simpa [secondFiber] using
-    (Finset.card_eq_sum_card_fiberwise
-      (f := Prod.snd) (s := U) (t := Finset.univ)
-      (fun _ _ => Finset.mem_univ _)).symm
+  simpa only [secondFiber] using
+    (Finset.card_eq_sum_card_fiberwise (f := Prod.snd) (s := U) (t := Finset.univ) (fun _ _ => Finset.mem_univ _)).symm
 
 theorem natDist_card_le_sdiff {α : Type*} [DecidableEq α]
     (A B : Finset α) :
@@ -12733,10 +12727,11 @@ theorem firstFiber_diagonalImage {V : Type*} [DecidableEq V]
   · rintro ⟨⟨w, hw, hzw⟩, hzfirst⟩
     refine ⟨w, ⟨hw, ?_⟩, hzw⟩
     apply p.injective
-    simpa [← hzw] using hzfirst
+    simpa only [EmbeddingLike.apply_eq_iff_eq, ← hzw, Equiv.prodCongr_apply, Prod.map_fst] using hzfirst
   · rintro ⟨w, ⟨hw, hwfirst⟩, hzw⟩
     refine ⟨⟨w, hw, hzw⟩, ?_⟩
-    simpa [← hzw] using congrArg p hwfirst
+    simpa only [← hzw, Equiv.prodCongr_apply, Prod.map_fst, EmbeddingLike.apply_eq_iff_eq] using
+      congrArg p hwfirst
 
 theorem secondFiber_diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) (x : V) :
@@ -12750,10 +12745,11 @@ theorem secondFiber_diagonalImage {V : Type*} [DecidableEq V]
   · rintro ⟨⟨w, hw, hzw⟩, hzsecond⟩
     refine ⟨w, ⟨hw, ?_⟩, hzw⟩
     apply p.injective
-    simpa [← hzw] using hzsecond
+    simpa only [EmbeddingLike.apply_eq_iff_eq, ← hzw, Equiv.prodCongr_apply, Prod.map_snd] using hzsecond
   · rintro ⟨w, ⟨hw, hwsecond⟩, hzw⟩
     refine ⟨⟨w, hw, hzw⟩, ?_⟩
-    simpa [← hzw] using congrArg p hwsecond
+    simpa only [← hzw, Equiv.prodCongr_apply, Prod.map_snd, EmbeddingLike.apply_eq_iff_eq] using
+      congrArg p hwsecond
 
 theorem firstMultiplicity_diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) (x : V) :
@@ -12782,9 +12778,9 @@ theorem diagonalImage_sdiff_eq_image_exit {V : Type*} [DecidableEq V]
     Finset.mem_filter]
   constructor
   · rintro ⟨⟨w, hw, hzw⟩, hzout⟩
-    exact ⟨w, ⟨hw, by simpa [hzw] using hzout⟩, hzw⟩
+    exact ⟨w, ⟨hw, by simpa only [hzw] using hzout⟩, hzw⟩
   · rintro ⟨w, ⟨hw, hwout⟩, hzw⟩
-    exact ⟨⟨w, hw, hzw⟩, by simpa [← hzw] using hwout⟩
+    exact ⟨⟨w, hw, hzw⟩, by simpa only [← hzw, Equiv.prodCongr_apply] using hwout⟩
 
 theorem diagonalImage_sdiff_cards {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) :
@@ -12877,7 +12873,7 @@ theorem firstMultiplicity_totalVariation_le_twice_diagonalBoundary
             (σ i) U
     _ = 2 * SoficGroups.boundary
           (fun i => (σ i).prodCongr (σ i)) U := by
-          simp [diagonalExit, SoficGroups.boundary, Finset.mul_sum]
+          simp only [diagonalExit, Equiv.prodCongr_apply, boundary, Finset.mul_sum]
 
 theorem secondMultiplicity_totalVariation_le_twice_diagonalBoundary
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -12899,7 +12895,7 @@ theorem secondMultiplicity_totalVariation_le_twice_diagonalBoundary
             (σ i) U
     _ = 2 * SoficGroups.boundary
           (fun i => (σ i).prodCongr (σ i)) U := by
-          simp [diagonalExit, SoficGroups.boundary, Finset.mul_sum]
+          simp only [diagonalExit, Equiv.prodCongr_apply, boundary, Finset.mul_sum]
 
 def permutationVariation {V ι : Type*} [Fintype V] [Fintype ι]
     (σ : ι → Equiv.Perm V) (f : V → ℕ) : ℕ :=
@@ -12913,7 +12909,7 @@ def positiveNatSupport {V : Type*} [Fintype V]
 theorem mem_positiveNatSupport {V : Type*} [Fintype V]
     (f : V → ℕ) (x : V) :
     x ∈ positiveNatSupport f ↔ 0 < f x := by
-  simp [positiveNatSupport]
+  simp only [positiveNatSupport, Finset.mem_filter, Finset.mem_univ, true_and]
 
 theorem card_entering_eq_card_exiting
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -12929,9 +12925,9 @@ theorem card_entering_eq_card_exiting
     · intro x _ y _ hxy
       exact p.injective hxy
     · intro y hy
-      refine ⟨p.symm y, ?_, by simp⟩
+      refine ⟨p.symm y, ?_, by simp only [Equiv.apply_symm_apply]⟩
       exact Finset.mem_filter.mpr
-        ⟨Finset.mem_univ _, by simpa using hy⟩
+        ⟨Finset.mem_univ _, by simpa only [Equiv.apply_symm_apply] using hy⟩
   have hsplitA :=
     Finset.card_filter_add_card_filter_not (s := A)
       (fun x => p x ∈ A)
@@ -12943,13 +12939,13 @@ theorem card_entering_eq_card_exiting
         (A.filter fun x => p x ∈ A).card := by
     congr 1
     ext x
-    simp [P, and_comm]
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, and_comm, P]
   have henter :
       (P.filter fun x => x ∉ A).card =
         (Finset.univ.filter fun x => x ∉ A ∧ p x ∈ A).card := by
     congr 1
     ext x
-    simp [P, and_comm]
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, and_comm, P]
   omega
 
 theorem sum_indicator_nat_eq_mul_card
@@ -12989,19 +12985,21 @@ theorem permutationVariation_subtract_layer
     · by_cases hy : σ i x ∈ A
       · have hxlow := hinside x hx
         have hylow := hinside (σ i x) hy
-        simp [g, hx, hy, Nat.dist]
+        simp only [Nat.dist, hy, ↓reduceIte, hx, not_true_eq_false, and_false, add_zero, and_true, g]
         omega
       · have hyzero := houtside (σ i x) hy
         have hxlow := hinside x hx
-        simp [g, hx, hy, hyzero, Nat.dist]
+        simp only [Nat.dist, hyzero, zero_tsub, tsub_zero, zero_add, hy, ↓reduceIte, hx, not_false_eq_true, and_self,
+          not_true_eq_false, add_zero, g]
         omega
     · by_cases hy : σ i x ∈ A
       · have hxzero := houtside x hx
         have hylow := hinside (σ i x) hy
-        simp [g, hx, hy, hxzero, Nat.dist]
+        simp only [Nat.dist, hxzero, tsub_zero, zero_tsub, add_zero, hy, ↓reduceIte, hx, not_true_eq_false, and_self,
+          not_false_eq_true, g]
         omega
-      · simp [g, hx, hy, houtside x hx,
-          houtside (σ i x) hy]
+      · simp only [houtside (σ i x) hy, houtside x hx, Nat.dist_self, hy, ↓reduceIte, hx, not_false_eq_true, and_true,
+          add_zero, and_false, g]
   have hone (i : ι) :
       (∑ x : V, Nat.dist (f (σ i x)) (f x)) =
         (∑ x : V, Nat.dist (g (σ i x)) (g x)) +
@@ -13014,7 +13012,7 @@ theorem permutationVariation_subtract_layer
               (fun x : V => x ∈ A ∧ σ i x ∉ A) =
             A.filter fun x => σ i x ∉ A := by
         ext x
-        simp
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
       simpa only [hset] using
         sum_indicator_nat_eq_mul_card Finset.univ
           (fun x : V => x ∈ A ∧ σ i x ∉ A) m
@@ -13059,7 +13057,7 @@ theorem permutationVariation_subtract_layer
           Nat.dist (g (σ i x)) (g x)) +
           2 * m *
             ∑ i : ι, (A.filter fun x => σ i x ∉ A).card := by
-          simp [Finset.sum_add_distrib, Finset.mul_sum]
+          simp only [Finset.sum_add_distrib, Finset.mul_sum]
 
 theorem permutation_small_support_coarea
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -13095,13 +13093,13 @@ theorem permutation_small_support_coarea
         intro x hx
         have hxpos := (mem_positiveNatSupport g x).mp hx
         by_contra hxA
-        simp [g, hxA] at hxpos
+        simp only [hxA, ↓reduceIte, lt_self_iff_false, g] at hxpos
       have hz_not : z ∉ positiveNatSupport g := by
         intro hz
         have hzpos := (mem_positiveNatSupport g z).mp hz
         have hzero : g z = 0 := by
-          simp [g, hzA, hzm]
-        simp [hzero] at hzpos
+          simp only [hzA, ↓reduceIte, hzm, tsub_self, g]
+        simp only [hzero, lt_self_iff_false] at hzpos
       have hstrict : positiveNatSupport g ⊂ A := by
         apply Finset.ssubset_iff_subset_ne.mpr
         refine ⟨hg_sub, ?_⟩
@@ -13130,7 +13128,7 @@ theorem permutation_small_support_coarea
       have hcut :
           h * (A.card : ℝ) ≤
             (SoficGroups.boundary σ A : ℝ) := by
-        simpa [min_eq_left hmin] using hexp A
+        simpa only [min_eq_left hmin] using hexp A
       have houtside : ∀ x, x ∉ A → f x = 0 := by
         intro x hx
         have hxnot : ¬ 0 < f x := by
@@ -13147,15 +13145,15 @@ theorem permutation_small_support_coarea
                 intro x _
                 by_cases hx : x ∈ A
                 · have hxlow := hm_le x hx
-                  simp [g, hx]
+                  simp only [hx, ↓reduceIte, g]
                   omega
-                · simp [g, hx, houtside x hx]
+                · simp only [houtside x hx, hx, ↓reduceIte, add_zero, g]
           _ = (∑ x : V, g x) +
                 (∑ x : V, if x ∈ A then m else 0) := by
                 rw [Finset.sum_add_distrib]
           _ = (∑ x : V, g x) + m * A.card := by
                 rw [sum_indicator_nat_eq_mul_card]
-                simp
+                simp only [Finset.subset_univ, Finset.filter_mem_eq_of_subset]
       have hvar :
           permutationVariation σ f =
             permutationVariation σ g +
@@ -13185,7 +13183,8 @@ theorem permutation_small_support_coarea
         apply hnonempty
         refine ⟨x, (mem_positiveNatSupport f x).mpr ?_⟩
         exact Nat.pos_of_ne_zero hx
-      simp [permutationVariation, hzero]
+      simp only [hzero, Finset.sum_const_zero, CharP.cast_eq_zero, mul_zero, permutationVariation, Nat.dist_self,
+        Std.le_refl]
 
 theorem natDist_sub_one_le (a b : ℕ) :
     Nat.dist (a - 1) (b - 1) ≤ Nat.dist a b := by
@@ -13197,13 +13196,13 @@ theorem natDist_zero_indicator_le (a b : ℕ) :
       (if b = 0 then 1 else 0) ≤ Nat.dist a b := by
   by_cases ha : a = 0
   · by_cases hb : b = 0
-    · simp [ha, hb]
-    · simp [ha, hb, Nat.dist]
+    · simp only [ha, ↓reduceIte, hb, Nat.dist_self, Std.le_refl]
+    · simp only [Nat.dist, ha, ↓reduceIte, hb, tsub_zero, zero_tsub, add_zero, zero_add]
       omega
   · by_cases hb : b = 0
-    · simp [ha, hb, Nat.dist]
+    · simp only [Nat.dist, ha, ↓reduceIte, hb, zero_tsub, tsub_zero, zero_add, add_zero]
       omega
-    · simp [ha, hb]
+    · simp only [ha, ↓reduceIte, hb, Nat.dist_self, zero_le]
 
 theorem permutationVariation_sub_one_le
     {V ι : Type*} [Fintype V] [Fintype ι]
@@ -13237,7 +13236,7 @@ def singletonSupport {V : Type*} [Fintype V]
 theorem mem_singletonSupport {V : Type*} [Fintype V]
     (f : V → ℕ) (x : V) :
     x ∈ singletonSupport f ↔ f x = 1 := by
-  simp [singletonSupport]
+  simp only [singletonSupport, Finset.mem_filter, Finset.mem_univ, true_and]
 
 theorem excess_support_card_le_half_of_singletons
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -13256,14 +13255,14 @@ theorem excess_support_card_le_half_of_singletons
     refine ⟨Finset.mem_univ _, ?_⟩
     intro hxone
     have hone := (mem_singletonSupport f x).mp hxone
-    simp [hone] at hxpos
+    simp only [hone, tsub_self, lt_self_iff_false] at hxpos
   have hcard := Finset.card_le_card hsub
   have hpartition := Finset.card_sdiff_add_card_inter
     (Finset.univ : Finset V) (singletonSupport f)
   have hinter :
       ((Finset.univ : Finset V) ∩ singletonSupport f).card =
         (singletonSupport f).card := by
-    simp
+    simp only [Finset.univ_inter]
   have huniv : (Finset.univ : Finset V).card = Fintype.card V := by
     rfl
   omega
@@ -13287,14 +13286,14 @@ theorem zero_support_card_le_half_of_singletons
     refine ⟨Finset.mem_univ _, ?_⟩
     intro hxone
     have hone := (mem_singletonSupport f x).mp hxone
-    simp [hone] at hxpos
+    simp only [hone, one_ne_zero, ↓reduceIte, lt_self_iff_false] at hxpos
   have hcard := Finset.card_le_card hsub
   have hpartition := Finset.card_sdiff_add_card_inter
     (Finset.univ : Finset V) (singletonSupport f)
   have hinter :
       ((Finset.univ : Finset V) ∩ singletonSupport f).card =
         (singletonSupport f).card := by
-    simp
+    simp only [Finset.univ_inter]
   have huniv : (Finset.univ : Finset V).card = Fintype.card V := by
     rfl
   omega
@@ -13350,7 +13349,7 @@ theorem zero_mass_le_of_diagonal_variation
   have hsum :
       (∑ x : V, if f x = 0 then 1 else 0) =
         (Finset.univ.filter fun x : V => f x = 0).card := by
-    simp
+    simp only [Finset.sum_boole, Nat.cast_id]
   rw [hsum] at hcoarea
   linarith
 
@@ -13434,11 +13433,15 @@ theorem firstFiber_nonSingletonFirstEdges
   ext z
   by_cases hz : z.1 = x
   · by_cases hx : firstMultiplicity U x = 1
-    · simp [firstFiber, nonSingletonFirstEdges, hz, hx]
-    · simp [firstFiber, nonSingletonFirstEdges, hz, hx]
+    · simp only [firstFiber, nonSingletonFirstEdges, ne_eq, Finset.mem_filter, hz, hx, not_true_eq_false, and_false,
+        and_true, ↓reduceIte, Finset.notMem_empty]
+    · simp only [firstFiber, nonSingletonFirstEdges, ne_eq, Finset.mem_filter, hz, hx, not_false_eq_true, and_true,
+        ↓reduceIte]
   · by_cases hx : firstMultiplicity U x = 1
-    · simp [firstFiber, nonSingletonFirstEdges, hz, hx]
-    · simp [firstFiber, nonSingletonFirstEdges, hz, hx]
+    · simp only [firstFiber, nonSingletonFirstEdges, ne_eq, Finset.mem_filter, hz, and_false, hx, not_true_eq_false,
+        ↓reduceIte, Finset.notMem_empty]
+    · simp only [firstFiber, nonSingletonFirstEdges, ne_eq, Finset.mem_filter, hz, and_false, hx, not_false_eq_true,
+        ↓reduceIte]
 
 theorem secondFiber_nonSingletonSecondEdges
     {V : Type*} [DecidableEq V]
@@ -13449,11 +13452,15 @@ theorem secondFiber_nonSingletonSecondEdges
   ext z
   by_cases hz : z.2 = x
   · by_cases hx : secondMultiplicity U x = 1
-    · simp [secondFiber, nonSingletonSecondEdges, hz, hx]
-    · simp [secondFiber, nonSingletonSecondEdges, hz, hx]
+    · simp only [secondFiber, nonSingletonSecondEdges, ne_eq, Finset.mem_filter, hz, hx, not_true_eq_false,
+        and_false, and_true, ↓reduceIte, Finset.notMem_empty]
+    · simp only [secondFiber, nonSingletonSecondEdges, ne_eq, Finset.mem_filter, hz, hx, not_false_eq_true,
+        and_true, ↓reduceIte]
   · by_cases hx : secondMultiplicity U x = 1
-    · simp [secondFiber, nonSingletonSecondEdges, hz, hx]
-    · simp [secondFiber, nonSingletonSecondEdges, hz, hx]
+    · simp only [secondFiber, nonSingletonSecondEdges, ne_eq, Finset.mem_filter, hz, and_false, hx,
+        not_true_eq_false, ↓reduceIte, Finset.notMem_empty]
+    · simp only [secondFiber, nonSingletonSecondEdges, ne_eq, Finset.mem_filter, hz, and_false, hx,
+        not_false_eq_true, ↓reduceIte]
 
 theorem card_nonSingletonFirstEdges_le_twice_excess
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -13559,11 +13566,13 @@ theorem firstFiber_singletonFirstEdges
   ext z
   by_cases hz : z.1 = x
   · by_cases hx : firstMultiplicity U x = 1
-    · simp [firstFiber, singletonFirstEdges, hz, hx]
-    · simp [firstFiber, singletonFirstEdges, hz, hx]
+    · simp only [firstFiber, singletonFirstEdges, Finset.mem_filter, hz, hx, and_true, ↓reduceIte]
+    · simp only [firstFiber, singletonFirstEdges, Finset.mem_filter, hz, hx, and_false, and_true, ↓reduceIte,
+        Finset.notMem_empty]
   · by_cases hx : firstMultiplicity U x = 1
-    · simp [firstFiber, singletonFirstEdges, hz, hx]
-    · simp [firstFiber, singletonFirstEdges, hz, hx]
+    · simp only [firstFiber, singletonFirstEdges, Finset.mem_filter, hz, and_false, hx, ↓reduceIte]
+    · simp only [firstFiber, singletonFirstEdges, Finset.mem_filter, hz, and_false, hx, ↓reduceIte,
+        Finset.notMem_empty]
 
 theorem card_singletonFirstEdges
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -13580,10 +13589,10 @@ theorem card_singletonFirstEdges
           intro x _
           rw [firstFiber_singletonFirstEdges]
           split <;> rename_i hx
-          · simpa [firstMultiplicity] using hx
-          · simp
+          · simpa only [firstMultiplicity] using hx
+          · simp only [Finset.card_empty]
     _ = (singletonSupport (firstMultiplicity U)).card := by
-          simp [singletonSupport]
+          simp only [Finset.sum_boole, Nat.cast_id, singletonSupport]
 
 theorem singletonFirstEdges_subset_matching_union
     {V : Type*} [DecidableEq V]
@@ -13628,22 +13637,22 @@ theorem card_le_zero_singleton_excess
   classical
   calc
     Fintype.card V = ∑ _ : V, (1 : ℕ) := by
-      simp
+      simp only [Finset.sum_const, Finset.card_univ, smul_eq_mul, mul_one]
     _ ≤ ∑ x : V,
           ((if f x = 0 then 1 else 0) +
             (if f x = 1 then 1 else 0) + (f x - 1)) := by
           apply Finset.sum_le_sum
           intro x _
           by_cases hzero : f x = 0
-          · simp [hzero]
+          · simp only [hzero, ↓reduceIte, zero_ne_one, add_zero, zero_tsub, Std.le_refl]
           · by_cases hone : f x = 1
-            · simp [hone]
-            · simp [hzero, hone]
+            · simp only [hone, one_ne_zero, ↓reduceIte, zero_add, tsub_self, add_zero, Std.le_refl]
+            · simp only [hzero, ↓reduceIte, hone, add_zero, zero_add]
               omega
     _ = (Finset.univ.filter fun x : V => f x = 0).card +
           (singletonSupport f).card +
           ∑ x : V, (f x - 1 : ℕ) := by
-          simp [Finset.sum_add_distrib, singletonSupport]
+          simp only [Finset.sum_add_distrib, Finset.sum_boole, Nat.cast_id, singletonSupport]
 
 theorem unmatched_vertices_le_zero_and_excess
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -13779,7 +13788,7 @@ theorem exists_permutation_extending_matchedFiberEdges
     have hcard :
         (U.filter fun t => t.1 = z.1.1).card ≤ 1 := by
       have heq : firstMultiplicity U z.1.1 = 1 := hz.2.1
-      simpa [firstMultiplicity, firstFiber] using Nat.le_of_eq heq
+      simpa only [ge_iff_le, firstMultiplicity, firstFiber] using Nat.le_of_eq heq
     have hzmem : z.1 ∈ U.filter fun t => t.1 = z.1.1 :=
       Finset.mem_filter.mpr ⟨hz.1, rfl⟩
     have hwmem : w.1 ∈ U.filter fun t => t.1 = z.1.1 := by
@@ -13795,7 +13804,7 @@ theorem exists_permutation_extending_matchedFiberEdges
     have hcard :
         (U.filter fun t => t.2 = z.1.2).card ≤ 1 := by
       have heq : secondMultiplicity U z.1.2 = 1 := hz.2.2
-      simpa [secondMultiplicity, secondFiber] using Nat.le_of_eq heq
+      simpa only [ge_iff_le, secondMultiplicity, secondFiber] using Nat.le_of_eq heq
     have hzmem : z.1 ∈ U.filter fun t => t.2 = z.1.2 :=
       Finset.mem_filter.mpr ⟨hz.1, rfl⟩
     have hwmem : w.1 ∈ U.filter fun t => t.2 = z.1.2 := by
@@ -13829,8 +13838,7 @@ theorem permutationGraph_card
   have hinj : Function.Injective (fun x : V => (x, p x)) := by
     intro x y h
     exact congrArg Prod.fst h
-  simpa [SoficGroups.permutationGraph] using
-    (Finset.card_image_of_injective Finset.univ hinj)
+  simpa only [permutationGraph, Finset.card_univ] using (Finset.card_image_of_injective Finset.univ hinj)
 
 theorem permutationGraph_sdiff_bounds_of_matchedFiberEdges
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -13897,7 +13905,7 @@ theorem boundary_le_boundary_add_sdiff
         · apply Finset.mem_union_right
           apply Finset.mem_image.mpr
           refine ⟨σ i x, Finset.mem_sdiff.mpr ⟨himage, hxout⟩, ?_⟩
-          simp
+          simp only [Equiv.symm_apply_apply]
         · apply Finset.mem_union_left
           apply Finset.mem_union_left
           exact Finset.mem_filter.mpr ⟨hxW, himage⟩
@@ -13923,7 +13931,8 @@ theorem boundary_le_boundary_add_sdiff
           exact hpoint i
     _ = (∑ i : ι, (W.filter fun x => σ i x ∉ W).card) +
           Fintype.card ι * ((U \ W).card + (W \ U).card) := by
-          simp [Finset.sum_add_distrib, mul_add, add_assoc]
+          simp only [add_assoc, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, smul_eq_mul,
+            mul_add]
 
 theorem exists_boundary_controlled_permutation_repair
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -14177,7 +14186,7 @@ theorem firstMultiplicity_permutationGraph
         rfl⟩
   unfold firstMultiplicity
   rw [hset]
-  simp
+  simp only [Finset.card_singleton]
 
 theorem secondMultiplicity_permutationGraph
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -14196,7 +14205,7 @@ theorem secondMultiplicity_permutationGraph
       apply Finset.mem_singleton.mpr
       apply Prod.ext
       · apply p.injective
-        simpa using hgraph.symm.trans hzsecond
+        simpa only [Equiv.apply_symm_apply] using hgraph.symm.trans hzsecond
       · exact hzsecond
     · intro hz
       have heq := Finset.mem_singleton.mp hz
@@ -14207,7 +14216,7 @@ theorem secondMultiplicity_permutationGraph
         (p.apply_symm_apply x).symm
   unfold secondMultiplicity
   rw [hset]
-  simp
+  simp only [Finset.card_singleton]
 
 theorem card_nonSingletonMultiplicity_le_total_distance
     {V : Type*} [Fintype V]
@@ -14225,8 +14234,8 @@ theorem card_nonSingletonMultiplicity_le_total_distance
           apply Finset.sum_le_sum
           intro x _
           by_cases hx : f x = 1
-          · simp [hx]
-          · simp [hx, Nat.dist]
+          · simp only [hx, ne_eq, not_true_eq_false, ↓reduceIte, Nat.dist_self, Std.le_refl]
+          · simp only [ne_eq, hx, not_false_eq_true, ↓reduceIte, Nat.dist]
             omega
 
 theorem card_nonSingletonFirstMultiplicity_le_reference_difference
@@ -14272,10 +14281,8 @@ theorem first_singleton_half_of_reference_difference
       (singletonSupport (firstMultiplicity U)).card +
           (Finset.univ.filter fun x : V =>
             firstMultiplicity U x ≠ 1).card = Fintype.card V := by
-    simpa [singletonSupport] using
-      (Finset.card_filter_add_card_filter_not
-        (s := (Finset.univ : Finset V))
-        (fun x => firstMultiplicity U x = 1))
+    simpa only [singletonSupport, ne_eq, Finset.card_univ] using
+      (Finset.card_filter_add_card_filter_not (s := (Finset.univ : Finset V)) (fun x => firstMultiplicity U x = 1))
   omega
 
 theorem second_singleton_half_of_reference_difference
@@ -14293,10 +14300,8 @@ theorem second_singleton_half_of_reference_difference
       (singletonSupport (secondMultiplicity U)).card +
           (Finset.univ.filter fun x : V =>
             secondMultiplicity U x ≠ 1).card = Fintype.card V := by
-    simpa [singletonSupport] using
-      (Finset.card_filter_add_card_filter_not
-        (s := (Finset.univ : Finset V))
-        (fun x => secondMultiplicity U x = 1))
+    simpa only [singletonSupport, ne_eq, Finset.card_univ] using
+      (Finset.card_filter_add_card_filter_not (s := (Finset.univ : Finset V)) (fun x => secondMultiplicity U x = 1))
   omega
 
 theorem hasAlmostCentralizerImprovement_of_rooted_reference_cuts
@@ -14350,7 +14355,7 @@ theorem sum_sq_le_sq_sum_of_same_sign
   · have hn := Finset.sum_sq_le_sq_sum_of_nonneg
       (s := Finset.univ) (f := fun i : ι => -a i)
       (fun i _ => neg_nonneg.mpr (h i))
-    simpa [sq] using hn
+    simpa only [sq, ge_iff_le, mul_neg, neg_mul, neg_neg, Finset.sum_neg_distrib] using hn
 
 theorem indicator_displacements_same_sign
     {ι V : Type*} (p : ι → V → V) (f : V → ℝ)
@@ -14399,7 +14404,7 @@ theorem sum_sum_indicator_displacement_sq_le_card_sq_mul_markov_defect
     rw [← mul_pow]
     congr 1
     rw [mul_sub, mul_div_cancel₀ _ hd, Finset.sum_sub_distrib]
-    simp [mul_comm]
+    simp only [mul_comm, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
   calc
     (∑ i, ∑ x, (f (p i x) - f x) ^ 2) ≤
         ∑ x, (∑ i, (f (p i x) - f x)) ^ 2 :=
@@ -14442,14 +14447,14 @@ theorem permutationUnitary_eq_of_agree_on_support
       by_contra hq
       have hsame : q.symm y = p.symm y := by
         apply p.injective
-        simpa using h (q.symm y) hq
+        simpa only [Equiv.apply_symm_apply] using h (q.symm y) hq
       apply hq
       rw [hsame]
       exact hp
     exact hzero.symm
   · have hsame : p.symm y = q.symm y := by
       apply q.injective
-      simpa using (h (p.symm y) hp).symm
+      simpa only [Equiv.apply_symm_apply] using (h (p.symm y) hp).symm
     rw [hsame]
 
 theorem permutationUnitary_model_mul_of_agree_on_support
@@ -14477,7 +14482,9 @@ theorem permutationMarkov_apply {ι V : Type*} [Fintype ι] [Fintype V]
     (p : ι → Equiv.Perm V) (ξ : EuclideanSpace ℂ V) (x : V) :
     permutationMarkov p ξ x =
       (∑ i, ξ ((p i).symm x)) / (Fintype.card ι : ℂ) := by
-  simp [permutationMarkov, permutationUnitary, div_eq_mul_inv, mul_comm]
+  simp only [permutationMarkov, permutationUnitary, PiLp.smul_apply, WithLp.ofLp_sum,
+    LinearIsometryEquiv.piLpCongrLeft_apply, Finset.sum_apply, Equiv.piCongrLeft'_apply, smul_eq_mul, div_eq_mul_inv,
+    mul_comm]
 
 theorem permutation_indicator_displacement_norm_sq
     {V : Type*} [Fintype V] (p : Equiv.Perm V) (f : V → ℝ) :
@@ -14579,9 +14586,7 @@ theorem norm_normalizedIndicatorDisplacement_generator_le
   rw [normalizedIndicatorDisplacement, norm_smul, norm_inv,
     Complex.norm_real, Real.norm_of_nonneg (norm_nonneg _)]
   apply (inv_mul_le_iff₀ hpos).mpr
-  simpa [mul_comm] using
-    permutation_indicator_displacement_norm_le_card_mul_markov_defect
-      p f hf i
+  simpa only [mul_comm] using permutation_indicator_displacement_norm_le_card_mul_markov_defect p f hf i
 
 theorem normalizedIndicatorDisplacement_mul
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -14605,7 +14610,8 @@ theorem norm_normalizedIndicatorDisplacement_list_prod_le
       (Fintype.card ι : ℝ) * w.length := by
   induction w with
   | nil =>
-      simp [normalizedIndicatorDisplacement]
+      simp only [normalizedIndicatorDisplacement, List.map_nil, List.prod_nil, permutationUnitary_one, sub_self,
+        smul_zero, norm_zero, List.length_nil, CharP.cast_eq_zero, mul_zero, Std.le_refl]
   | cons i w ih =>
       rw [List.map_cons, List.prod_cons,
         normalizedIndicatorDisplacement_mul]
@@ -14646,8 +14652,8 @@ theorem norm_normalizedIndicatorDefect
   have hne : ‖permutationMarkov p (indicatorVector f) -
       indicatorVector f‖ ≠ 0 :=
     norm_ne_zero_iff.mpr (sub_ne_zero.mpr hdefect)
-  simp [normalizedIndicatorDefect, norm_smul, norm_inv,
-    Complex.norm_real, hne]
+  simp only [normalizedIndicatorDefect, norm_smul, norm_inv, Complex.norm_real, norm_norm, ne_eq, hne,
+    not_false_eq_true, inv_mul_cancel₀]
 
 theorem average_permutation_indicator_displacement
     {ι V : Type*} [Fintype ι] [Nonempty ι] [Fintype V]
@@ -14660,7 +14666,7 @@ theorem average_permutation_indicator_displacement
     exact_mod_cast Fintype.card_ne_zero
   rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ,
     ← Nat.cast_smul_eq_nsmul ℂ]
-  simp [permutationMarkov, smul_sub, smul_smul, hd]
+  simp only [smul_sub, smul_smul, ne_eq, hd, not_false_eq_true, inv_mul_cancel₀, one_smul, permutationMarkov]
 
 theorem average_normalizedIndicatorDisplacement
     {ι V : Type*} [Fintype ι] [Nonempty ι] [Fintype V]
@@ -14798,8 +14804,7 @@ theorem exists_hyperfilter_gram_limit_of_pointwise_bound
       Metric.closedBall (0 : ℂ) (B q.1 * B q.2) :=
     fun n q =>
       ⟨⟪v n q.1, v n q.2⟫_ℂ,
-        by simpa [Metric.mem_closedBall, dist_zero_right]
-          using hinnerbound n q.1 q.2⟩
+        by simpa only [Metric.mem_closedBall, dist_zero_right] using hinnerbound n q.1 q.2⟩
   let u := Ultrafilter.map b (Filter.hyperfilter ℕ)
   let L : (q : I × I) →
       Metric.closedBall (0 : ℂ) (B q.1 * B q.2) := u.lim
@@ -15031,7 +15036,7 @@ theorem preKernel_inner_single {I : Type u}
       (Finsupp.single j w).sum (fun xv d =>
         star c * d *
           ⟪scalarOperatorKernel K xv.1 yu.1 yu.2, xv.2⟫_ℂ)) = _
-  simp
+  simp only [RCLike.star_def, RCLike.inner_apply, mul_zero, zero_mul, Finsupp.sum_single_index, map_zero]
 
 def actionPreKernelTranslation {G I : Type u} [Group G]
     (K : Matrix I I ℂ) (ρ : G →* Equiv.Perm I) (a : G) :
@@ -15048,14 +15053,14 @@ theorem actionPreKernelTranslation_inner {G I : Type u} [Group G]
     ⟪actionPreKernelTranslation K ρ a f,
       actionPreKernelTranslation K ρ a g⟫_ℂ = ⟪f, g⟫_ℂ := by
   induction f using Finsupp.induction_linear generalizing g with
-  | zero => simp
+  | zero => simp only [map_zero, inner_zero_left]
   | add f₁ f₂ ih₁ ih₂ =>
-    simp [map_add, inner_add_left, ih₁ g, ih₂ g]
+    simp only [map_add, inner_add_left, ih₁ g, ih₂ g]
   | single i z =>
     induction g using Finsupp.induction_linear with
-    | zero => simp
+    | zero => simp only [map_zero, inner_zero_right]
     | add g₁ g₂ ih₁ ih₂ =>
-      simp [map_add, inner_add_right, ih₁, ih₂]
+      simp only [map_add, inner_add_right, ih₁, ih₂]
     | single j w =>
       simp only [actionPreKernelTranslation,
         Finsupp.domLCongr_single, preKernel_inner_single,
@@ -15119,8 +15124,8 @@ theorem actionPreKernelTranslation_mul_apply {G I : Type u} [Group G]
       actionPreKernelTranslation K ρ a
         (actionPreKernelTranslation K ρ b f) := by
   induction f using Finsupp.induction_linear with
-  | zero => simp
-  | add f g hf hg => simp [map_add, hf, hg]
+  | zero => simp only [map_zero]
+  | add f g hf hg => simp only [map_add, hf, hg]
   | single i z =>
     simp only [actionPreKernelTranslation,
       Finsupp.domLCongr_single]
@@ -15135,14 +15140,14 @@ theorem actionPreKernelTranslation_one_apply {G I : Type u} [Group G]
     (f : RKHS.H₀ (scalarOperatorKernel K)) :
     actionPreKernelTranslation K ρ 1 f = f := by
   induction f using Finsupp.induction_linear with
-  | zero => simp
-  | add f g hf hg => simp [map_add, hf, hg]
+  | zero => simp only [map_zero]
+  | add f g hf hg => simp only [map_add, hf, hg]
   | single i z =>
     simp only [actionPreKernelTranslation,
       Finsupp.domLCongr_single]
     change Finsupp.single (ρ 1 i.1, i.2) z =
       Finsupp.single (i.1, i.2) z
-    simp
+    simp only [map_one, Equiv.Perm.coe_one, id_eq, Prod.mk.eta]
 
 theorem actionKernelTranslationMap_mul_apply {G I : Type u} [Group G]
     (K : Matrix I I ℂ)
@@ -15197,7 +15202,7 @@ def actionKernelTranslationLinearEquiv {G I : Type u} [Group G]
           actionKernelTranslationMap K ρ hinv (a⁻¹ * a) x :=
             (actionKernelTranslationMap_mul_apply
               K ρ hinv a⁻¹ a x).symm
-      _ = x := by simp
+      _ = x := by simp only [inv_mul_cancel, actionKernelTranslationMap_one_apply]
   right_inv x := by
     calc
       actionKernelTranslationMap K ρ hinv a
@@ -15205,7 +15210,7 @@ def actionKernelTranslationLinearEquiv {G I : Type u} [Group G]
           actionKernelTranslationMap K ρ hinv (a * a⁻¹) x :=
             (actionKernelTranslationMap_mul_apply
               K ρ hinv a a⁻¹ x).symm
-      _ = x := by simp
+      _ = x := by simp only [mul_inv_cancel, actionKernelTranslationMap_one_apply]
 
 def actionKernelTranslationUnitary {G I : Type u} [Group G]
     (K : Matrix I I ℂ)
@@ -15271,7 +15276,8 @@ theorem ofKernel_kerFun_one_eq_coe_single
     RKHS.kerFun (RKHS.OfKernel L) i (1 : ℂ) =
       ((Finsupp.single (i, (1 : ℂ)) (1 : ℂ) : RKHS.H₀ L) :
         RKHS.OfKernel L) := by
-  simp [RKHS.kerFun, RKHS.coeCLM]
+  simp only [RKHS.kerFun, RKHS.coeCLM, ContinuousLinearMap.proj_pi, ContinuousLinearMap.adjoint_adjoint,
+    LinearMap.mkContinuous_apply, LinearMap.coe_mk, AddHom.coe_mk]
 
 theorem actionKernelUnitaryRepresentation_kerFun_one
     {G I : Type u} [Group G]
@@ -15295,7 +15301,8 @@ theorem actionKernelUnitaryRepresentation_kerFun_one
         RKHS.H₀ (scalarOperatorKernel K)) :
           RKHS.OfKernel (scalarOperatorKernel K)) = _
   rw [actionKernelTranslationMap_coe]
-  simp [actionPreKernelTranslation]
+  simp only [actionPreKernelTranslation, Finsupp.domLCongr_apply, Finsupp.domCongr_apply,
+    Finsupp.equivMapDomain_single, Equiv.prodCongr_apply, Equiv.coe_refl, Prod.map_apply, id_eq]
 
 theorem diagonalPairKernelUnitaryRepresentation_kerFun_one
     {G : Type u} [Group G]
@@ -15354,7 +15361,7 @@ theorem hilbertKernelRealization_pair_vector_add
   apply (inner_self_eq_zero (𝕜 := ℂ)).mp
   rw [inner_sub_right, inner_add_right,
     horth (g, h), horth (h, j), horth (g, j)]
-  simp
+  simp only [add_zero, sub_self]
 
 structure EquivariantHilbertKernelRealization
     {G : Type u} [Group G]
@@ -15383,8 +15390,8 @@ theorem exists_equivariantHilbertKernelRealization
       intro q r
       rw [RKHS.kerFun_inner, RKHS.kerFun_apply,
         RKHS.OfKernel.kernel_ofKernel]
-      simp [scalarOperatorKernel,
-        ContinuousLinearMap.toSpanSingleton_apply]
+      simp only [scalarOperatorKernel, ContinuousLinearMap.toSpanSingleton_apply, smul_eq_mul, one_mul,
+        RCLike.inner_apply, map_one, mul_one]
   }
   refine ⟨{
     realization := R
@@ -15425,8 +15432,8 @@ theorem normalizedPairDisplacement_generator_of_model
     (i : ι) :
     normalizedPairDisplacement p f σ (s i, 1) =
       normalizedIndicatorDisplacement p f (p i) := by
-  simp [normalizedPairDisplacement, normalizedIndicatorDisplacement,
-    hone, hgenerator]
+  simp only [normalizedPairDisplacement, normalizedIndicatorDisplacement, hgenerator, hone,
+    permutationUnitary_one, sub_self, smul_zero, sub_zero]
 
 theorem norm_average_normalizedPairDisplacement_of_model
     {G ι V : Type*} [Group G] [Fintype ι] [Nonempty ι] [Fintype V]
@@ -15576,8 +15583,8 @@ theorem exists_equivariant_hilbert_normalized_rooted_pair_realization
       simpa only [equivariantPairCocycle, R.realization.gram] using
         hconv (s i, 1) (s j, 1)
     · intro n
-      simpa using norm_average_normalizedPairDisplacement_of_model
-        (p n) (f n) (σ n) s (hone n) (hgenerator n) (hdefect n)
+      simpa only using
+        norm_average_normalizedPairDisplacement_of_model (p n) (f n) (σ n) s (hone n) (hgenerator n) (hdefect n)
   · intro q r
     simpa only [R.realization.gram] using hconv q r
 
@@ -15616,11 +15623,11 @@ theorem map_mem_invariantSubmodule_orthogonal
   intro y hy
   have hysymm : (π g).symm y = y := by
     have hyinv : π g⁻¹ y = y := hy g⁻¹
-    simpa [map_inv, LinearIsometryEquiv.inv_def] using hyinv
+    simpa only [map_inv, LinearIsometryEquiv.inv_def] using hyinv
   calc
     @inner ℂ H _ y (π g x) =
         @inner ℂ H _ ((π g).symm y) x := by
-          simpa using ((π g).symm.inner_map_map y (π g x)).symm
+          simpa only [LinearIsometryEquiv.symm_apply_apply] using ((π g).symm.inner_map_map y (π g x)).symm
     _ = @inner ℂ H _ y x := by rw [hysymm]
     _ = 0 := (Submodule.mem_orthogonal _ _).mp hx y hy
 
@@ -15633,11 +15640,11 @@ def orthogonalLinearIsometryEquiv
   left_inv x := by
     apply Subtype.ext
     change π g⁻¹ (π g (x : H)) = x
-    simp [map_inv, LinearIsometryEquiv.inv_def]
+    simp only [map_inv, LinearIsometryEquiv.inv_def, LinearIsometryEquiv.symm_apply_apply]
   right_inv x := by
     apply Subtype.ext
     change π g (π g⁻¹ (x : H)) = x
-    simp [map_inv, LinearIsometryEquiv.inv_def]
+    simp only [map_inv, LinearIsometryEquiv.inv_def, LinearIsometryEquiv.apply_symm_apply]
   map_add' x y := by
     apply Subtype.ext
     exact map_add (π g) (x : H) (y : H)
@@ -15652,7 +15659,7 @@ def orthogonalRepresentation (π : SoficGroups.UnitaryRepresentation G H) :
   map_one' := by
     ext x
     change π 1 (x : H) = x
-    simp
+    simp only [map_one, LinearIsometryEquiv.coe_one, id_eq]
   map_mul' g h := by
     ext x
     change π (g * h) (x : H) = π g (π h (x : H))
@@ -15678,7 +15685,7 @@ theorem cocycle_one
     (hb : ∀ g h : G, b (g * h) = b g + π g (b h)) :
     b 1 = 0 := by
   have hcancel : b 1 + b 1 = b 1 + 0 := by
-    simpa using (hb 1 1).symm
+    simpa only [add_zero, add_eq_left, map_one, LinearIsometryEquiv.coe_one, id_eq, mul_one] using (hb 1 1).symm
   exact add_left_cancel hcancel
 
 theorem inner_cocycle_inv_of_invariant
@@ -15688,14 +15695,13 @@ theorem inner_cocycle_inv_of_invariant
     @inner ℂ H _ y (b g⁻¹) = -@inner ℂ H _ y (b g) := by
   have hysymm : (π g).symm y = y := by
     have hyinv := hy g⁻¹
-    simpa [map_inv, LinearIsometryEquiv.inv_def] using hyinv
+    simpa only [map_inv, LinearIsometryEquiv.inv_def] using hyinv
   have htransport :
       @inner ℂ H _ y (π g (b g⁻¹)) = @inner ℂ H _ y (b g⁻¹) := by
     calc
       @inner ℂ H _ y (π g (b g⁻¹)) =
           @inner ℂ H _ ((π g).symm y) (b g⁻¹) := by
-            simpa using
-              ((π g).symm.inner_map_map y (π g (b g⁻¹))).symm
+            simpa only [LinearIsometryEquiv.symm_apply_apply] using ((π g).symm.inner_map_map y (π g (b g⁻¹))).symm
       _ = @inner ℂ H _ y (b g⁻¹) := by rw [hysymm]
   have hsum : b g + π g (b g⁻¹) = 0 := by
     calc
@@ -15705,9 +15711,9 @@ theorem inner_cocycle_inv_of_invariant
   have hinner :
       @inner ℂ H _ y (b g) + @inner ℂ H _ y (b g⁻¹) = 0 := by
     have h := congrArg (fun x : H => @inner ℂ H _ y x) hsum
-    simpa [inner_add_right, htransport] using h
+    simpa only [CStarModule.inner_add_right, htransport, inner_zero_right] using h
   apply (add_eq_zero_iff_eq_neg).mp
-  simpa [add_comm] using hinner
+  simpa only [add_comm] using hinner
 
 theorem inner_cocycle_sum_eq_zero_of_invariant
     (π : SoficGroups.UnitaryRepresentation G H) (b : G → H)
@@ -15814,7 +15820,7 @@ theorem norm_finset_sum_le_pair_add
         intro s hs
         exact hnorm s
           (Finset.mem_of_mem_erase (Finset.mem_of_mem_erase hs))
-      _ = (T.card : ℝ) * r := by simp
+      _ = (T.card : ℝ) * r := by simp only [Finset.sum_const, nsmul_eq_mul]
   calc
     ‖∑ s ∈ S, f s‖ = ‖(f a + f b) + ∑ s ∈ T, f s‖ := by
       rw [hsum]
@@ -15858,7 +15864,9 @@ theorem kazhdan_generator_displacement_of_orthogonal_invariants
       (orthogonalRepresentation π)
       (orthogonalRepresentation_no_fixed π) z hz
   refine ⟨g, hg, ?_⟩
-  simpa [z, orthogonalRepresentation, orthogonalLinearIsometryEquiv] using hgap
+  simpa only [Submodule.coe_norm, orthogonalRepresentation, MonoidHom.coe_mk, OneHom.coe_mk,
+    orthogonalLinearIsometryEquiv, map_inv, LinearIsometryEquiv.coe_inv, LinearIsometryEquiv.coe_mk, LinearEquiv.coe_mk,
+    LinearMap.coe_mk, AddHom.coe_mk, AddSubgroupClass.coe_sub] using hgap
 
 theorem kazhdan_generator_sum_contraction
     [CompleteSpace H] (P : SoficGroups.KazhdanPair.{u, v} G)
@@ -15872,7 +15880,7 @@ theorem kazhdan_generator_sum_contraction
   classical
   by_cases hx : x = 0
   · subst x
-    simp
+    simp only [map_zero, Finset.sum_const_zero, norm_zero, mul_zero, Std.le_refl]
   obtain ⟨g, hg, hgap⟩ :=
     kazhdan_generator_displacement_of_orthogonal_invariants
       P π x hx horth
@@ -15889,7 +15897,7 @@ theorem kazhdan_generator_sum_contraction
     have hpos : 0 < P.kazhdanConstant * ‖x‖ :=
       mul_pos P.positive hnormpos
     have hbad : P.kazhdanConstant * ‖x‖ ≤ 0 := by
-      simpa using hgap
+      simpa only [map_one, LinearIsometryEquiv.coe_one, id_eq, sub_self, norm_zero] using hgap
     exact not_le_of_gt hpos hbad
   have hpair :
       ‖x + π g x‖ ≤
@@ -15906,7 +15914,7 @@ theorem kazhdan_generator_sum_contraction
     ‖∑ a ∈ S, π a x‖ ≤
         ‖π 1 x + π g x‖ + ((S.card : ℝ) - 2) * ‖x‖ := hsum
     _ = ‖x + π g x‖ + ((S.card : ℝ) - 2) * ‖x‖ := by
-      simp
+      simp only [map_one, LinearIsometryEquiv.coe_one, id_eq]
     _ ≤ (2 - P.kazhdanConstant ^ 2 / 4) * ‖x‖ +
         ((S.card : ℝ) - 2) * ‖x‖ :=
       add_le_add hpair (le_refl _)
@@ -15956,7 +15964,7 @@ theorem unitaryFinsetMarkov_norm_le
   calc
     ‖unitaryFinsetMarkov π S x‖ =
         (S.card : ℝ)⁻¹ * ‖∑ g ∈ S, π g x‖ := by
-      simp [unitaryFinsetMarkov, norm_smul, norm_inv]
+      simp only [unitaryFinsetMarkov, norm_smul, norm_inv, RCLike.norm_natCast]
     _ ≤ (S.card : ℝ)⁻¹ *
         (((S.card : ℝ) - P.kazhdanConstant ^ 2 / 4) * ‖x‖) :=
       mul_le_mul_of_nonneg_left hsum (inv_nonneg.mpr hcard.le)
@@ -16000,13 +16008,13 @@ theorem unitaryFinsetMarkov_iterate_norm_le
       ∀ y : H, (∀ g : G, π g y = y) →
         @inner ℂ H _ y (((unitaryFinsetMarkov π S)^[k]) x) = 0 := by
     induction k with
-    | zero => simpa using horth
+    | zero => simpa only [Function.iterate_zero, id_eq] using horth
     | succ k ih =>
       rw [Function.iterate_succ_apply']
       exact unitaryFinsetMarkov_orthogonal_invariants
         π S (((unitaryFinsetMarkov π S)^[k]) x) ih
   induction n with
-  | zero => simp
+  | zero => simp only [Function.iterate_zero, id_eq, pow_zero, one_mul, Std.le_refl]
   | succ n ih =>
     rw [Function.iterate_succ_apply']
     calc
@@ -16085,7 +16093,7 @@ theorem tendsto_inner_pairedWordAverage_of_gram
         pairedWordAverage s v k r⟫_ℂ) := by
   induction k generalizing q r with
   | zero =>
-      simpa [pairedWordAverage] using hgram q r
+      simpa only [pairedWordAverage] using hgram q r
   | succ k ih =>
       have hsum :
           Tendsto
@@ -16162,7 +16170,8 @@ theorem permutationMarkovLinear_apply
     {ι V : Type*} [Fintype ι] [Fintype V]
     (p : ι → Equiv.Perm V) (x : EuclideanSpace ℂ V) :
     permutationMarkovLinear p x = permutationMarkov p x := by
-  simp [permutationMarkovLinear, permutationMarkov]
+  simp only [permutationMarkovLinear, LinearMap.smul_apply, LinearMap.coe_sum, LinearEquiv.coe_coe,
+    LinearIsometryEquiv.coe_toLinearEquiv, Finset.sum_apply, permutationMarkov]
 
 theorem permutationMarkovLinear_pow_apply
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -16171,7 +16180,7 @@ theorem permutationMarkovLinear_pow_apply
     ((permutationMarkovLinear p) ^ k) x =
       ((permutationMarkov p)^[k]) x := by
   induction k with
-  | zero => simp
+  | zero => simp only [pow_zero, Module.End.one_apply, Function.iterate_zero, id_eq]
   | succ k ih =>
       rw [pow_succ', Module.End.mul_apply,
         Function.iterate_succ_apply']
@@ -16245,7 +16254,7 @@ theorem eventually_linear_pairedWordAverage_pow
   induction k generalizing q with
   | zero =>
       exact Filter.Eventually.of_forall fun n => by
-        simp [pairedWordAverage]
+        simp only [pow_zero, Module.End.one_apply, pairedWordAverage]
   | succ k ih =>
       have hnodes :
           ∀ᶠ n in l, ∀ i : ι,
@@ -16381,8 +16390,9 @@ theorem representationFamilyMarkovLinear_subtype_apply
     (S : Finset G) (x : H) :
     representationFamilyMarkovLinear π (fun i : ↥S => (i : G)) x =
       unitaryFinsetMarkov π S x := by
-  simp [representationFamilyMarkovLinear, unitaryFinsetMarkov,
-    ← Finset.sum_coe_sort S]
+  simp only [representationFamilyMarkovLinear, Fintype.card_coe, Finset.univ_eq_attach, LinearMap.smul_apply,
+    LinearMap.coe_sum, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, Finset.sum_apply,
+    unitaryFinsetMarkov, ← Finset.sum_coe_sort S]
 
 theorem representationFamilyMarkovLinear_subtype_pow_apply
     {G H : Type*} [Group G]
@@ -16393,7 +16403,7 @@ theorem representationFamilyMarkovLinear_subtype_pow_apply
         (fun i : ↥S => (i : G)) ^ k) x =
       ((unitaryFinsetMarkov π S)^[k]) x := by
   induction k with
-  | zero => simp
+  | zero => simp only [pow_zero, Module.End.one_apply, Function.iterate_zero, id_eq]
   | succ k ih =>
       rw [pow_succ', Module.End.mul_apply,
         Function.iterate_succ_apply', ih,
@@ -16410,8 +16420,8 @@ theorem representationFamilyMarkovLinear_pair_of_equivariant
     representationFamilyMarkovLinear π s (v q) =
       pairedWordAverage s v 1 q := by
   rcases q with ⟨g, h⟩
-  simp [representationFamilyMarkovLinear, pairedWordAverage,
-    hequivariant]
+  simp only [representationFamilyMarkovLinear, LinearMap.smul_apply, LinearMap.coe_sum, LinearEquiv.coe_coe,
+    LinearIsometryEquiv.coe_toLinearEquiv, Finset.sum_apply, hequivariant, pairedWordAverage]
 
 theorem linear_pairedWordAverage_pow
     {G ι E : Type*} [Group G] [Fintype ι]
@@ -16422,7 +16432,7 @@ theorem linear_pairedWordAverage_pow
     (k : ℕ) (q : G × G) :
     (L ^ k) (z q) = pairedWordAverage s z k q := by
   induction k generalizing q with
-  | zero => simp [pairedWordAverage]
+  | zero => simp only [pow_zero, Module.End.one_apply, pairedWordAverage]
   | succ k ih =>
       rw [pow_succ, Module.End.mul_apply, hbase q,
         pairedWordAverage, pairedWordAverage,
@@ -16662,9 +16672,8 @@ theorem norm_normalizedIndicatorDefect_markov_pow
         ‖permutationMarkov p (indicatorVector f) -
           indicatorVector f‖ := by
   rw [← permutationMarkovLinear_pow_apply]
-  simp [normalizedIndicatorDefect, map_smul,
-    norm_smul, norm_inv, div_eq_mul_inv,
-    Complex.norm_real, mul_comm]
+  simp only [normalizedIndicatorDefect, map_smul, map_sub, norm_smul, norm_inv, Complex.norm_real, norm_norm,
+    div_eq_mul_inv, mul_comm]
 
 theorem exists_rooted_word_radius_markov_iterate_contraction
     {G : Type u} [Group G]
@@ -16696,7 +16705,7 @@ theorem exists_rooted_word_radius_markov_iterate_contraction
           indicatorVector X.indicator
   · rw [Function.iterate_fixed hfixed (k + 1),
       Function.iterate_fixed hfixed k, hfixed]
-    simp
+    simp only [sub_self, norm_zero, mul_zero, Std.le_refl]
   · have hpositive :
         0 < ‖permutationMarkov X.generator
           (indicatorVector X.indicator) -
@@ -16740,8 +16749,8 @@ theorem modelMultiplicationBad_density_tendsto_zero
         ((modelMultiplicationBad (A.model n) g h).card : ℝ) /
           (A.model n).size)
       atTop (𝓝 0) := by
-  simpa [modelMultiplicationBad, SoficGroups.normalizedHamming,
-    hammingDist] using A.multiplicative g h
+  simpa only [modelMultiplicationBad, Equiv.Perm.coe_mul, Function.comp_apply, ne_eq, normalizedHamming,
+    hammingDist, Fintype.card_fin] using A.multiplicative g h
 
 def modelSeparationBad {G : Type*} [Group G]
     (M : SoficGroups.PermutationModel G) (g h : G) :
@@ -16753,7 +16762,7 @@ theorem mem_modelSeparationBad {G : Type*} [Group G]
     (M : SoficGroups.PermutationModel G) (g h : G)
     (x : Fin M.size) :
     x ∈ modelSeparationBad M g h ↔ M.action g x = M.action h x := by
-  simp [modelSeparationBad, SoficGroups.agreementSet]
+  simp only [modelSeparationBad, agreementSet, Finset.mem_filter, Finset.mem_univ, true_and]
 
 theorem modelSeparationBad_density_tendsto_zero
     {G : Type*} [Group G]
@@ -16776,7 +16785,7 @@ theorem modelSeparationBad_density_tendsto_zero
     have hone :
         Tendsto (fun _ : ℕ => (1 : ℝ)) atTop (𝓝 1) :=
       tendsto_const_nhds
-    simpa using hone.sub hdist
+    simpa only [sub_self] using hone.sub hdist
   convert hlimit using 1
   funext n
   have hcard :
@@ -16786,8 +16795,8 @@ theorem modelSeparationBad_density_tendsto_zero
           (fun x => (A.model n).action g x)
           (fun x => (A.model n).action h x) =
         (A.model n).size := by
-    simpa using SoficGroups.agreementSet_card_add_hammingDist
-      ((A.model n).action g) ((A.model n).action h)
+    simpa only [Fintype.card_fin] using
+      SoficGroups.agreementSet_card_add_hammingDist ((A.model n).action g) ((A.model n).action h)
   have hreal :
       ((SoficGroups.agreementSet
           ((A.model n).action g) ((A.model n).action h)).card : ℝ) +
@@ -16881,9 +16890,8 @@ theorem finiteRootBad_density_tendsto_zero
             ((finiteSeparationBad (A.model n) F).card : ℝ) /
               (A.model n).size)
         atTop (𝓝 0) := by
-    simpa using
-      (finiteMultiplicationBad_density_tendsto_zero A F).add
-        (finiteSeparationBad_density_tendsto_zero A F)
+    simpa only [add_zero] using
+      (finiteMultiplicationBad_density_tendsto_zero A F).add (finiteSeparationBad_density_tendsto_zero A F)
   refine squeeze_zero (fun n => by positivity) ?_ hsum
   intro n
   have hcard :
@@ -16919,7 +16927,8 @@ theorem finiteRootBad_multiplicative
     apply Finset.mem_union_left
     exact Finset.mem_biUnion.mpr
       ⟨(g, h), Finset.mem_product.mpr ⟨hg, hh⟩, hbad⟩
-  simpa using hnot
+  simpa only [Equiv.Perm.coe_mul, Function.comp_apply, mem_modelMultiplicationBad, ne_eq,
+    Decidable.not_not] using hnot
 
 theorem finiteRootBad_separated
     {G : Type*} [Group G]
@@ -16972,8 +16981,8 @@ theorem action_list_prod_tendsto
       atTop (𝓝 0) := by
   induction l with
   | nil =>
-      simp [SoficGroups.PermutationModel.map_one,
-        SoficGroups.normalizedHamming_self]
+      simp only [List.prod_nil, PermutationModel.map_one, List.map_nil, normalizedHamming_self,
+        tendsto_const_nhds_iff]
   | cons g l ih =>
       simp only [List.map_cons, List.prod_cons]
       have hmul := A.multiplicative g l.prod
@@ -16987,7 +16996,7 @@ theorem action_list_prod_tendsto
                   ((A.model n).action l.prod)
                   ((l.map (A.model n).action).prod))
             atTop (𝓝 0) := by
-        simpa using hmul.add ih
+        simpa only [add_zero] using hmul.add ih
       refine squeeze_zero
         (fun n => SoficGroups.normalizedHamming_nonneg _ _) ?_ hupper
       intro n
@@ -17018,8 +17027,7 @@ theorem chosenWordEvaluation_tendsto_action
           (chosenWordEvaluation A s w n g))
       atTop (𝓝 0) := by
   have h := action_list_prod_tendsto A ((w g).map s)
-  simpa [chosenWordEvaluation, List.map_map,
-    Function.comp_def, hw g] using h
+  simpa only [chosenWordEvaluation, hw g, List.map_map, Function.comp_def] using h
 
 theorem chosenWordEvaluation_multiplicative_tendsto
     {G ι : Type*} [Group G]
@@ -17063,7 +17071,7 @@ theorem chosenWordEvaluation_multiplicative_tendsto
                 ((A.model n).action h)
                 (chosenWordEvaluation A s w n h)))
         atTop (𝓝 0) := by
-    simpa using (hgh'.add hmul).add (hg.add hh)
+    simpa only [add_zero] using (hgh'.add hmul).add (hg.add hh)
   refine squeeze_zero
     (fun n => SoficGroups.normalizedHamming_nonneg _ _) ?_ hupper
   intro n
@@ -17115,9 +17123,8 @@ theorem chosenWordMultiplicationBad_density_tendsto_zero
         ((chosenWordMultiplicationBad A s w n g h).card : ℝ) /
           (A.model n).size)
       atTop (𝓝 0) := by
-  simpa [chosenWordMultiplicationBad,
-    SoficGroups.normalizedHamming, hammingDist] using
-      chosenWordEvaluation_multiplicative_tendsto A s w hw g h
+  simpa only [chosenWordMultiplicationBad, Equiv.Perm.coe_mul, Function.comp_apply, ne_eq, normalizedHamming,
+    hammingDist, Fintype.card_fin] using chosenWordEvaluation_multiplicative_tendsto A s w hw g h
 
 def chosenFiniteMultiplicationBad
     {G ι : Type*} [Group G]
@@ -17169,7 +17176,8 @@ theorem chosenFiniteMultiplicationBad_rooted
     apply hx
     exact Finset.mem_biUnion.mpr
       ⟨(g, h), Finset.mem_product.mpr ⟨hg, hh⟩, hbad⟩
-  simpa using hnot
+  simpa only [Equiv.Perm.coe_mul, Function.comp_apply, mem_chosenWordMultiplicationBad, ne_eq,
+    Decidable.not_not] using hnot
 
 def chosenFiniteRootBad
     {G ι : Type*} [Group G]
@@ -17197,10 +17205,8 @@ theorem chosenFiniteRootBad_density_tendsto_zero
             ((chosenFiniteMultiplicationBad A s w F n).card : ℝ) /
               (A.model n).size)
         atTop (𝓝 0) := by
-    simpa using
-      (finiteRootBad_density_tendsto_zero A F).add
-        (chosenFiniteMultiplicationBad_density_tendsto_zero
-          A s w hw F)
+    simpa only [add_zero] using
+      (finiteRootBad_density_tendsto_zero A F).add (chosenFiniteMultiplicationBad_density_tendsto_zero A s w hw F)
   refine squeeze_zero (fun n => by positivity) ?_ hsum
   intro n
   have hcard :
@@ -17248,12 +17254,12 @@ theorem exists_generator_word_of_symmetric_generates
   classical
   have hg : g ∈ Subgroup.closure (S : Set G) := by
     rw [hgenerates]
-    simp
+    simp only [Subgroup.mem_top]
   induction hg using Subgroup.closure_induction with
   | mem x hx =>
-      exact ⟨[⟨x, hx⟩], by simp⟩
+      exact ⟨[⟨x, hx⟩], by simp only [List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]⟩
   | one =>
-      exact ⟨[], by simp⟩
+      exact ⟨[], by simp only [List.map_nil, List.prod_nil]⟩
   | mul x y _ _ ihx ihy =>
       obtain ⟨lx, hlx⟩ := ihx
       obtain ⟨ly, hly⟩ := ihy
@@ -17299,9 +17305,9 @@ theorem symmetricGeneratorWord_prod
   classical
   unfold symmetricGeneratorWord
   split <;> rename_i hone
-  · simp [hone]
+  · simp only [List.map_nil, List.prod_nil, hone]
   · split <;> rename_i hg
-    · simp
+    · simp only [List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]
     · exact (exists_generator_word_of_symmetric_generates
         S hsymmetric hgenerates g).choose_spec
 
@@ -17312,7 +17318,7 @@ theorem symmetricGeneratorWord_one
     (hsymmetric : ∀ g ∈ S, g⁻¹ ∈ S)
     (hgenerates : Subgroup.closure (S : Set G) = ⊤) :
     symmetricGeneratorWord S hsymmetric hgenerates (1 : G) = [] := by
-  simp [symmetricGeneratorWord]
+  simp only [symmetricGeneratorWord, ↓reduceDIte]
 
 theorem symmetricGeneratorWord_generator
     {G : Type*} [Group G] [DecidableEq G]
@@ -17322,7 +17328,7 @@ theorem symmetricGeneratorWord_generator
     (i : ↥S) (hi : (i : G) ≠ 1) :
     symmetricGeneratorWord S hsymmetric hgenerates (i : G) = [i] := by
   classical
-  simp [symmetricGeneratorWord, hi, i.property]
+  simp only [symmetricGeneratorWord, hi, ↓reduceDIte, i.property, Subtype.coe_eta]
 
 theorem chosen_symmetric_wordEvaluation_one
     {G : Type*} [Group G] [DecidableEq G]
@@ -17333,7 +17339,7 @@ theorem chosen_symmetric_wordEvaluation_one
     (n : ℕ) :
     chosenWordEvaluation A (fun i : ↥S => (i : G))
       (symmetricGeneratorWord S hsymmetric hgenerates) n 1 = 1 := by
-  simp [chosenWordEvaluation]
+  simp only [chosenWordEvaluation, symmetricGeneratorWord_one, List.map_nil, List.prod_nil]
 
 theorem chosen_symmetric_wordEvaluation_generator
     {G : Type*} [Group G] [DecidableEq G]
@@ -17348,21 +17354,21 @@ theorem chosen_symmetric_wordEvaluation_generator
         (A.model n).action (i : G) := by
   classical
   by_cases hi : (i : G) = 1
-  · simp [chosenWordEvaluation, hi,
-      SoficGroups.PermutationModel.map_one]
+  · simp only [chosenWordEvaluation, hi, symmetricGeneratorWord_one, List.map_nil, List.prod_nil,
+      PermutationModel.map_one]
   · rw [chosenWordEvaluation,
       symmetricGeneratorWord_generator S hsymmetric hgenerates i hi]
-    simp
+    simp only [List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]
 
 theorem generator_word_prod_mem_pow
     {G : Type*} [Group G] [DecidableEq G]
     (S : Finset G) (l : List ↥S) :
     ((l.map fun i : ↥S => (i : G)).prod) ∈ S ^ l.length := by
   induction l with
-  | nil => simp
+  | nil => simp only [List.length_nil, pow_zero, List.map_nil, List.prod_nil, Finset.mem_one]
   | cons a l ih =>
-      simpa [pow_succ', List.prod_cons] using
-        (Finset.mul_mem_mul a.property ih)
+      simpa only [List.length_cons, pow_succ', List.map_cons, List.map_subtype, List.map_id_fun', id_eq,
+        List.prod_cons] using (Finset.mul_mem_mul a.property ih)
 
 theorem mem_generator_pow_of_chosen_word_length
     {G : Type*} [Group G] [DecidableEq G]
@@ -17470,16 +17476,16 @@ theorem sum_sq_realIndicator_displacement
         if x ∈ T ∧ p x ∉ T then (1 : ℝ) else 0) =
         ((T.filter fun x => p x ∉ T).card : ℝ) := by
     rw [← Finset.sum_filter]
-    simp
+    simp only [Finset.sum_const, nsmul_eq_mul, mul_one, Nat.cast_inj]
     congr 1
     ext x
-    simp
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
   have henter :
       (∑ x : V,
         if x ∉ T ∧ p x ∈ T then (1 : ℝ) else 0) =
         ((Finset.univ.filter fun x => x ∉ T ∧ p x ∈ T).card : ℝ) := by
     rw [← Finset.sum_filter]
-    simp
+    simp only [Finset.sum_const, nsmul_eq_mul, mul_one]
   rw [hleave, henter,
     SoficGroups.KunThomFiberCoarea.card_entering_eq_card_exiting]
   ring
@@ -17631,7 +17637,8 @@ theorem realPermutationMarkov_le_one {V ι : Type*}
       mul_le_mul_of_nonneg_left hsum
         (inv_nonneg.mpr (Nat.cast_nonneg _))
     _ = 1 := by
-      simp [hcard]
+      simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one, ne_eq, hcard, not_false_eq_true,
+        inv_mul_cancel₀]
 
 theorem sum_realPermutationMarkov {V ι : Type*}
     [Fintype V] [Fintype ι] [Nonempty ι]
@@ -17653,7 +17660,8 @@ theorem sum_realPermutationMarkov {V ι : Type*}
       intro i _
       exact Equiv.sum_comp (σ i).symm f
     _ = ∑ x : V, f x := by
-      simp [hcard]
+      simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ne_eq, hcard, not_false_eq_true,
+        inv_mul_cancel_left₀]
 
 theorem realPermutationMarkov_iterate_nonneg {V ι : Type*}
     [Fintype ι]
@@ -17661,7 +17669,7 @@ theorem realPermutationMarkov_iterate_nonneg {V ι : Type*}
     (hf : ∀ x, 0 ≤ f x) (k : ℕ) :
     ∀ x, 0 ≤ ((realPermutationMarkov σ)^[k]) f x := by
   induction k with
-  | zero => simpa using hf
+  | zero => simpa only [Function.iterate_zero, id_eq] using hf
   | succ k ih =>
     intro x
     rw [Function.iterate_succ_apply']
@@ -17673,7 +17681,7 @@ theorem realPermutationMarkov_iterate_le_one {V ι : Type*}
     (hf : ∀ x, f x ≤ 1) (k : ℕ) :
     ∀ x, ((realPermutationMarkov σ)^[k]) f x ≤ 1 := by
   induction k with
-  | zero => simpa using hf
+  | zero => simpa only [Function.iterate_zero, id_eq] using hf
   | succ k ih =>
     intro x
     rw [Function.iterate_succ_apply']
@@ -17685,7 +17693,7 @@ theorem sum_realPermutationMarkov_iterate {V ι : Type*}
     (∑ x : V, ((realPermutationMarkov σ)^[k]) f x) =
       ∑ x : V, f x := by
   induction k with
-  | zero => simp
+  | zero => simp only [Function.iterate_zero, id_eq]
   | succ k ih =>
     rw [Function.iterate_succ_apply']
     exact (sum_realPermutationMarkov σ
@@ -17695,7 +17703,7 @@ theorem sum_realIndicator {V : Type*}
     [Fintype V] [DecidableEq V] (T : Finset V) :
     (∑ x : V, realIndicator T x) = (T.card : ℝ) := by
   classical
-  simp [realIndicator]
+  simp only [realIndicator, Finset.sum_ite_mem, Finset.univ_inter, Finset.sum_const, nsmul_eq_mul, mul_one]
 
 theorem sum_realPermutationMarkov_iterate_indicator {V ι : Type*}
     [Fintype V] [DecidableEq V] [Fintype ι] [Nonempty ι]
@@ -17716,13 +17724,13 @@ theorem realPermutationMarkov_iterate_indicator_mem_unitInterval
   · apply realPermutationMarkov_iterate_nonneg
     intro y
     by_cases hy : y ∈ T
-    · simp [realIndicator, hy]
-    · simp [realIndicator, hy]
+    · simp only [realIndicator, hy, ↓reduceIte, zero_le_one]
+    · simp only [realIndicator, hy, ↓reduceIte, Std.le_refl]
   · apply realPermutationMarkov_iterate_le_one
     intro y
     by_cases hy : y ∈ T
-    · simp [realIndicator, hy]
-    · simp [realIndicator, hy]
+    · simp only [realIndicator, hy, ↓reduceIte, Std.le_refl]
+    · simp only [realIndicator, hy, ↓reduceIte, zero_le_one]
 
 end KunFinitePermutationMarkovMass
 
@@ -17745,7 +17753,7 @@ theorem boundary_eq_sum_indicator {V ι : Type*}
       (A.filter fun x => σ i x ∉ A) =
         Finset.univ.filter fun x : V => x ∈ A ∧ σ i x ∉ A := by
     ext x
-    simp
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
   rw [hfilter, Finset.card_eq_sum_ones, Finset.sum_filter]
 
 theorem boundary_eq_sum_entering_indicator {V ι : Type*}
@@ -17772,7 +17780,7 @@ theorem boundary_complement {V ι : Type*}
   intro i _
   apply Finset.sum_congr rfl
   intro x _
-  simp
+  simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Decidable.not_not]
 
 theorem boundary_le_degree_mul_card {V ι : Type*}
     [Fintype ι] [DecidableEq V]
@@ -17786,7 +17794,7 @@ theorem boundary_le_degree_mul_card {V ι : Type*}
       intro i _
       exact Finset.card_filter_le _ _
     _ = Fintype.card ι * A.card := by
-      simp
+      simp only [Finset.sum_const, Finset.card_univ, smul_eq_mul]
 
 theorem boundary_inter_add_boundary_sdiff_le {V ι : Type*}
     [Fintype V] [Fintype ι] [DecidableEq V]
@@ -17849,14 +17857,14 @@ theorem exists_minimum_sparse_residual_cut {V ι : Type*}
   have hcandidates : candidates.Nonempty := by
     obtain ⟨T, hTR, hT⟩ := hsparse
     refine ⟨T, ?_⟩
-    simp [candidates, hTR, hT]
+    simp only [Finset.mem_filter, Finset.mem_powerset, hTR, hT, and_self, candidates]
   obtain ⟨T, hT, hminimum⟩ :=
     Finset.exists_min_image candidates Finset.card hcandidates
   have hT' := (Finset.mem_filter.mp hT)
   refine ⟨T, Finset.mem_powerset.mp hT'.1, hT'.2, ?_⟩
   intro E hER hE
   apply hminimum E
-  simp [candidates, hER, hE]
+  simp only [Finset.mem_filter, Finset.mem_powerset, hER, hE, and_self, candidates]
 
 theorem close_residual_inter_properties {V : Type*} [DecidableEq V]
     (R T U : Finset V) (hTR : T ⊆ R)
@@ -18001,7 +18009,7 @@ theorem exists_expanding_residual_finpartition
             have h := boundary_inter_add_boundary_sdiff_le σ R U
             have hres : R \ C = R \ U := by
               ext x
-              simp [C]
+              simp only [Finset.sdiff_inter_self_left, Finset.mem_sdiff, C]
             simpa only [C, hres, Nat.cast_add, Nat.cast_mul,
               Nat.cast_ofNat] using
               (show
@@ -18019,7 +18027,7 @@ theorem exists_expanding_residual_finpartition
                 (SoficGroups.boundary σ C : ℝ) +
                   ∑ D ∈ Q.parts,
                     (SoficGroups.boundary σ D : ℝ) := by
-                  simp [P, Finpartition.extend, hCnot]
+                  simp only [Finpartition.extend, hCnot, not_false_eq_true, Finset.sum_insert, P]
             _ ≤ (SoficGroups.boundary σ C : ℝ) +
                   ((SoficGroups.boundary σ (R \ C) : ℝ) +
                     4 * α * ((R \ C).card : ℝ)) :=
@@ -18038,7 +18046,7 @@ theorem exists_expanding_residual_finpartition
       · refine ⟨Finpartition.indiscrete hR.ne_empty, ?_, ?_⟩
         · intro C hC E hEC _
           have hCR : C = R := by
-            simpa [Finpartition.indiscrete] using hC
+            simpa only [Finpartition.indiscrete, Finset.mem_singleton] using hC
           subst C
           by_contra h
           apply hsparse
@@ -18051,8 +18059,10 @@ theorem exists_expanding_residual_finpartition
         Finset.not_nonempty_iff_eq_empty.mp hR
       subst R
       refine ⟨Finpartition.empty (Finset V), ?_, ?_⟩
-      · simp
-      · simp [SoficGroups.boundary]
+      · simp only [Finpartition.empty_parts, Finset.notMem_empty, IsEmpty.forall_iff, implies_true]
+      · simp only [Finpartition.empty_parts, boundary, Nat.cast_sum, Finset.sum_empty, Finset.notMem_empty,
+          not_false_eq_true, Finset.filter_empty, Finset.card_empty, Finset.sum_const_zero, CharP.cast_eq_zero, mul_zero,
+          add_zero, Std.le_refl]
   exact hmain R hRB
 
 theorem exists_expanding_clean_finpartition
@@ -18102,7 +18112,7 @@ noncomputable def completeCleanFinpartition
     exact Finset.subset_univ C
   · intro x _
     by_cases hx : x ∈ B
-    · refine ⟨{x}, ⟨?_, by simp⟩, ?_⟩
+    · refine ⟨{x}, ⟨?_, by simp only [Finset.mem_singleton]⟩, ?_⟩
       · exact Finset.mem_union_right _
           (Finpartition.mem_bot_iff.mpr ⟨x, hx, rfl⟩)
       · intro C hC
@@ -18116,7 +18126,7 @@ noncomputable def completeCleanFinpartition
           subst y
           rfl
     · have hxclean : x ∈ (Finset.univ \ B : Finset V) := by
-        simp [hx]
+        simp only [Finset.mem_sdiff, Finset.mem_univ, hx, not_false_eq_true, and_self]
       obtain ⟨C, ⟨hCP, hxC⟩, hunique⟩ :=
         P.existsUnique_mem hxclean
       refine ⟨C, ⟨Finset.mem_union_left _ hCP, hxC⟩, ?_⟩
@@ -18132,7 +18142,7 @@ noncomputable def completeCleanFinpartition
     rcases Finset.mem_union.mp hempty with hclean | hbad
     · exact P.empty_notMem_parts hclean
     · obtain ⟨x, _, hx⟩ := Finpartition.mem_bot_iff.mp hbad
-      simp at hx
+      simp only [Finset.singleton_ne_empty] at hx
 
 @[simp]
 theorem completeCleanFinpartition_parts
@@ -18164,7 +18174,7 @@ theorem sum_singleton_bad_boundary_le
     (∑ C ∈ (⊥ : Finpartition B).parts,
       (SoficGroups.boundary σ C : ℝ)) =
         ∑ x ∈ B, (SoficGroups.boundary σ {x} : ℝ) := by
-          simp [Finpartition.parts_bot]
+          simp only [Finpartition.parts_bot, Finset.sum_map, Function.Embedding.coeFn_mk]
     _ ≤ ∑ _x ∈ B, (Fintype.card ι : ℝ) := by
           apply Finset.sum_le_sum
           intro x _
@@ -18175,7 +18185,7 @@ theorem sum_singleton_bad_boundary_le
             simpa only [Finset.card_singleton, mul_one] using h
           exact_mod_cast h'
     _ = (Fintype.card ι : ℝ) * (B.card : ℝ) := by
-          simp [mul_comm]
+          simp only [Finset.sum_const, nsmul_eq_mul, mul_comm]
 
 theorem completeCleanFinpartition_half_expansion
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -18200,7 +18210,8 @@ theorem completeCleanFinpartition_half_expansion
       simp only [Finset.card_singleton] at hhalf
       omega
     subst E
-    simp [SoficGroups.boundary]
+    simp only [Finset.card_empty, CharP.cast_eq_zero, mul_zero, boundary, Finset.notMem_empty, not_false_eq_true,
+      Finset.filter_empty, Finset.sum_const_zero, Std.le_refl]
 
 theorem exists_expanding_full_finpartition
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -18336,9 +18347,7 @@ theorem exists_expanding_full_finpartition_sequence
           (((B n).card : ℝ) / Fintype.card (V n)) +
             4 * α n)
       atTop (nhds 0) := by
-    simpa using
-      (hbad.const_mul (2 * (Fintype.card ι : ℝ))).add
-        (hαzero.const_mul 4)
+    simpa only [mul_zero, add_zero] using (hbad.const_mul (2 * (Fintype.card ι : ℝ))).add (hαzero.const_mul 4)
   refine ⟨P, hγ, hexpand, ?_⟩
   exact squeeze_zero
     (fun n => div_nonneg
@@ -18400,7 +18409,7 @@ theorem original_boundary_le_completed_add_component_boundary
                 Finset.card_union_le F D
           _ = (A.filter fun x => τ i x ∉ A).card +
                 (C.filter fun x => σ i x ∉ C).card := by
-                  simp [F, D]
+                  simp only [Finset.card_map, F, D]
     _ = (∑ i : ι, (A.filter fun x => τ i x ∉ A).card) +
           ∑ i : ι, (C.filter fun x => σ i x ∉ C).card := by
             rw [Finset.sum_add_distrib]
@@ -18462,7 +18471,7 @@ theorem completed_component_additive_expansion
       have h :=
         Finset.card_sdiff_add_card_eq_card
           (Finset.subset_univ A)
-      simpa using h
+      simpa only [Finset.univ_eq_attach, Finset.card_attach] using h
     have hDhalf : 2 * D.card ≤ C.card := by
       omega
     have hD := hhalf D hDhalf
@@ -18518,7 +18527,7 @@ theorem card_filter_permutationGraph_fst_mem {V : Type*}
     have hwsecond :=
       (SoficGroups.mem_permutationGraph p w.1 w.2).mp hwgraph
     apply Prod.ext hfirst
-    simpa [hzsecond, hwsecond] using congrArg p hfirst
+    simpa only [hzsecond, hwsecond, EmbeddingLike.apply_eq_iff_eq] using congrArg p hfirst
   · intro x hx
     refine ⟨(x, p x), ?_, rfl⟩
     exact Finset.mem_filter.mpr
@@ -18542,14 +18551,14 @@ theorem card_filter_permutationGraph_snd_mem {V : Type*}
       (SoficGroups.mem_permutationGraph p w.1 w.2).mp hwgraph
     apply Prod.ext
     · apply p.injective
-      simpa [hzsecond, hwsecond] using hsecond
+      simpa only [EmbeddingLike.apply_eq_iff_eq, hzsecond, hwsecond] using hsecond
     · exact hsecond
   · intro y hy
     refine ⟨(p.symm y, y), ?_, rfl⟩
     apply Finset.mem_filter.mpr
     refine ⟨?_, hy⟩
     apply (SoficGroups.mem_permutationGraph p (p.symm y) y).mpr
-    simp
+    simp only [Equiv.apply_symm_apply]
 
 theorem permutationGraph_sdiff_goodPermutationGraph_subset {V : Type*}
     [Fintype V] [DecidableEq V]
@@ -18663,8 +18672,8 @@ theorem hasAlmostCentralizerImprovement_zero
     (σ : ι → Equiv.Perm V) :
     SoficGroups.HasAlmostCentralizerImprovement σ 0 := by
   refine ⟨fun p hp => ⟨p, ?_, ?_⟩⟩
-  · simpa using hp
-  · simp
+  · simpa only [nonpos_iff_eq_zero, mul_zero] using hp
+  · simp only [permutationDistance_self, mul_zero, zero_le]
 
 theorem boundary_complement
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -18710,8 +18719,7 @@ theorem boundary_expansion_of_half
   · let C : Finset V := Finset.univ \ A
     have hcard : C.card + A.card = Fintype.card V := by
       dsimp [C]
-      simpa using
-        (Finset.card_sdiff_add_card_eq_card (Finset.subset_univ A))
+      simpa only [Finset.card_univ] using (Finset.card_sdiff_add_card_eq_card (Finset.subset_univ A))
     have hChalf : 2 * C.card ≤ Fintype.card V := by
       omega
     have hC := hhalf C hChalf
@@ -18744,7 +18752,7 @@ theorem inducedBoundary_le_completed_boundary
     A.map (Function.Embedding.subtype (fun x : V => x ∈ Z))
   have hmemZ (x : V) : x ∈ Z ↔ x ∉ B := by
     rw [hZ]
-    simp
+    simp only [Finset.mem_sdiff, Finset.mem_univ, true_and]
   change
     (∑ i : ι,
       (E.filter fun x => σ i x ∉ B ∧ σ i x ∉ E).card) ≤
@@ -18875,8 +18883,8 @@ theorem completedRestriction_apply_of_mem
     {V : Type*} [Fintype V] (Z : Finset V) :
     completedRestriction (1 : Equiv.Perm V) Z = 1 := by
   ext x
-  simpa using completedRestriction_apply_of_mem
-    (1 : Equiv.Perm V) Z x x.property x.property
+  simpa only [Equiv.Perm.coe_one, id_eq, SetLike.coe_eq_coe, Subtype.coe_eta] using
+    completedRestriction_apply_of_mem (1 : Equiv.Perm V) Z x x.property x.property
 
 def subtypeBad {V : Type*} [DecidableEq V]
     (Z E : Finset V) : Finset (↥Z) :=
@@ -18886,7 +18894,7 @@ def subtypeBad {V : Type*} [DecidableEq V]
     {V : Type*} [DecidableEq V]
     (Z E : Finset V) (x : {x : V // x ∈ Z}) :
     x ∈ subtypeBad Z E ↔ (x : V) ∈ E := by
-  simp [subtypeBad]
+  simp only [subtypeBad, Finset.univ_eq_attach, Finset.mem_filter, Finset.mem_attach, true_and]
 
 theorem card_subtypeBad
     {V : Type*} [DecidableEq V]
@@ -18897,8 +18905,10 @@ theorem card_subtypeBad
       (subtypeBad Z E).map
         (Function.Embedding.subtype (fun x : V => x ∈ Z)) = Z ∩ E := by
     ext x
-    simp [subtypeBad, and_comm]
-  simpa using congrArg Finset.card hmap
+    simp only [subtypeBad, Finset.univ_eq_attach, Finset.mem_map, Finset.mem_filter, Finset.mem_attach, true_and,
+      Function.Embedding.subtype_apply, and_comm, Subtype.exists, exists_and_left, exists_prop, exists_eq_left,
+      Finset.mem_inter]
+  simpa only [Finset.card_map] using congrArg Finset.card hmap
 
 theorem permutationDistance_le_subtypeBad
     {V : Type*} [DecidableEq V]
@@ -18974,7 +18984,8 @@ theorem sourceCompletionBad_subset
     sourceCompletionBad σ p F Z ⊆ Z := by
   classical
   intro x hx
-  simp [sourceCompletionBad] at hx
+  simp only [sourceCompletionBad, ne_eq, Finset.union_assoc, Finset.mem_union, Finset.mem_biUnion,
+    Finset.mem_univ, Finset.mem_filter, true_and, exists_and_left] at hx
   aesop
 
 theorem card_subtype_sourceCompletionBad
@@ -19208,7 +19219,7 @@ theorem completedRestriction_commutationDefect_le_sourceCompletionBad
             (completedRestriction_commute_of_not_mem_sourceCompletionBad
               σ p F Z σZ hσZ hj i x hnot)
     _ = Fintype.card ι * (sourceCompletionBad σ p F Z).card := by
-      simp [card_subtype_sourceCompletionBad]
+      simp only [card_subtype_sourceCompletionBad, Finset.sum_const, Finset.card_univ, smul_eq_mul]
 
 end MatchedComponentCompletion
 
@@ -19237,7 +19248,7 @@ theorem card_composite_exit_le_deleted
   · intro x hx
     apply Finset.mem_sdiff.mpr
     refine ⟨Finset.mem_univ _, ?_⟩
-    simpa [Equiv.Perm.mul_apply] using (Finset.mem_filter.mp hx).2
+    simpa only [Equiv.Perm.mul_apply] using (Finset.mem_filter.mp hx).2
   · exact (p * q).injective.injOn
 
 theorem card_biUnion_permutation_exit_le
@@ -19254,7 +19265,7 @@ theorem card_biUnion_permutation_exit_le
       apply Finset.sum_le_sum
       intro i _
       exact card_permutation_exit_le_deleted (p i) Z
-    _ = I.card * (Finset.univ \ Z).card := by simp
+    _ = I.card * (Finset.univ \ Z).card := by simp only [Finset.sum_const, smul_eq_mul]
 
 theorem card_biUnion_composite_exit_le
     {V ι κ : Type*} [Fintype V] [DecidableEq V]
@@ -19283,9 +19294,9 @@ theorem card_biUnion_composite_exit_le
           apply Finset.sum_le_sum
           intro k _
           exact card_composite_exit_le_deleted (q k) (p i) Z
-        _ = K.card * (Finset.univ \ Z).card := by simp
+        _ = K.card * (Finset.univ \ Z).card := by simp only [Finset.sum_const, smul_eq_mul]
     _ = I.card * K.card * (Finset.univ \ Z).card := by
-      simp [Nat.mul_assoc]
+      simp only [Finset.sum_const, smul_eq_mul, Nat.mul_assoc]
 
 noncomputable def sourceWordTestBad
     {V ι J : Type*} [Fintype V] [DecidableEq V]
@@ -19321,8 +19332,8 @@ theorem sourceCompletionBad_subset_exit_union_wordBad
       sourceWordTestBad σ p F := by
   classical
   intro x hx
-  simp [SoficGroups.MatchedComponentCompletion.sourceCompletionBad,
-    sourceWordTestBad] at hx ⊢
+  simp only [MatchedComponentCompletion.sourceCompletionBad, ne_eq, Finset.union_assoc, Finset.mem_union,
+    Finset.mem_biUnion, Finset.mem_univ, Finset.mem_filter, true_and, exists_and_left, sourceWordTestBad] at hx ⊢
   rcases hx with hgen | hfactor | hcomm | hcomposite | hmul | hsep
   · obtain ⟨hxZ, i, hi⟩ := hgen
     exact Or.inl ⟨hxZ, i, hi⟩
@@ -19366,21 +19377,15 @@ theorem card_sourceCompletionBad_le_deleted_add_wordBad
   let W : Finset V := sourceWordTestBad σ p F
   let deleted : Finset V := Finset.univ \ Z
   have hA : A.card ≤ Fintype.card ι * deleted.card := by
-    simpa [A, I, deleted] using
-      card_biUnion_permutation_exit_le
-        (Finset.univ : Finset ι) σ Z
+    simpa only [Finset.card_univ] using card_biUnion_permutation_exit_le (Finset.univ : Finset ι) σ Z
   have hD : D.card ≤ T.card * deleted.card := by
-    simpa [D, deleted] using
-      card_biUnion_permutation_exit_le T p Z
+    simpa only using card_biUnion_permutation_exit_le T p Z
   have hC : C.card ≤ Fintype.card ι * T.card * deleted.card := by
-    simpa [C, I, deleted] using
-      card_biUnion_composite_exit_le
-        (Finset.univ : Finset ι) T σ p Z
+    simpa only [Finset.card_univ] using card_biUnion_composite_exit_le (Finset.univ : Finset ι) T σ p Z
   have hsubset :
       SoficGroups.MatchedComponentCompletion.sourceCompletionBad
           σ p F Z ⊆ A ∪ D ∪ C ∪ W := by
-    simpa [A, D, C, I, T, W] using
-      sourceCompletionBad_subset_exit_union_wordBad σ p F Z
+    simpa only [Finset.union_assoc] using sourceCompletionBad_subset_exit_union_wordBad σ p F Z
   have hunion :
       (A ∪ D ∪ C ∪ W).card ≤ A.card + D.card + C.card + W.card := by
     have hAD := Finset.card_union_le A D
@@ -19414,7 +19419,8 @@ theorem sourceCompletionBad_subset_survivors
       σ p F Z ⊆ Z := by
   classical
   intro x hx
-  simp [SoficGroups.MatchedComponentCompletion.sourceCompletionBad] at hx
+  simp only [MatchedComponentCompletion.sourceCompletionBad, ne_eq, Finset.union_assoc, Finset.mem_union,
+    Finset.mem_biUnion, Finset.mem_univ, Finset.mem_filter, true_and, exists_and_left] at hx
   aesop
 
 theorem sourceCompletionBad_original_density_tendsto_zero
@@ -19456,7 +19462,7 @@ theorem sourceCompletionBad_original_density_tendsto_zero
     have hdeleted_eq :
         (Finset.univ \ (Finset.univ \ B n) : Finset (V n)) = B n := by
       ext x
-      simp
+      simp only [sdiff_sdiff_right_self, Finset.subset_univ, inf_of_le_right]
     rw [hdeleted_eq] at hfinite
     have hreal :
         ((SoficGroups.MatchedComponentCompletion.sourceCompletionBad
@@ -19483,7 +19489,7 @@ theorem sourceCompletionBad_original_density_tendsto_zero
           ((sourceWordTestBad (σ n) (p n) F).card : ℝ) /
             Fintype.card (V n))
       atTop (nhds 0) := by
-    simpa using (hdeleted.const_mul c).add hword
+    simpa only [mul_zero, add_zero] using (hdeleted.const_mul c).add hword
   exact squeeze_zero'
     (Filter.Eventually.of_forall fun n => by positivity)
     (Filter.Eventually.of_forall hupper)
@@ -19527,7 +19533,7 @@ theorem sourceCompletionBad_surviving_density_tendsto_zero
         (fun n => (1 : ℝ) -
           ((B n).card : ℝ) / Fintype.card (V n))
         atTop (nhds 1) := by
-      simpa using tendsto_const_nhds.sub hdeleted
+      simpa only [sub_zero] using tendsto_const_nhds.sub hdeleted
     convert hbase using 1
     funext n
     have hcard : Fintype.card (V n) ≠ 0 := by
@@ -19618,7 +19624,9 @@ theorem permutationMarkov_apply {ι V : Type*} [Fintype ι] [Fintype V]
     (p : ι → Equiv.Perm V) (ξ : EuclideanSpace ℂ V) (x : V) :
     permutationMarkov p ξ x =
       (∑ i, ξ ((p i).symm x)) / (Fintype.card ι : ℂ) := by
-  simp [permutationMarkov, permutationUnitary, div_eq_mul_inv, mul_comm]
+  simp only [permutationMarkov, permutationUnitary, PiLp.smul_apply, WithLp.ofLp_sum,
+    LinearIsometryEquiv.piLpCongrLeft_apply, Finset.sum_apply, Equiv.piCongrLeft'_apply, smul_eq_mul, div_eq_mul_inv,
+    mul_comm]
 
 theorem indicatorVector_realMarkov
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -19639,7 +19647,7 @@ theorem indicatorVector_iterate_realMarkov
     indicatorVector (((realMarkov p)^[k]) f) =
       ((permutationMarkov p)^[k]) (indicatorVector f) := by
   induction k with
-  | zero => simp
+  | zero => simp only [Function.iterate_zero, id_eq]
   | succ k ih =>
       rw [Function.iterate_succ_apply', Function.iterate_succ_apply',
         indicatorVector_realMarkov, ih]
@@ -19755,7 +19763,8 @@ theorem norm_iterate_sub_le_sum_successive
       ∑ j ∈ Finset.range k,
         ‖(F^[j + 1]) x - (F^[j]) x‖ := by
   induction k with
-  | zero => simp
+  | zero => simp only [Function.iterate_zero, id_eq, sub_self, norm_zero, Finset.range_zero, Function.iterate_succ,
+              Function.comp_apply, Finset.sum_empty, Std.le_refl]
   | succ k ih =>
       rw [Finset.sum_range_succ]
       calc
@@ -19782,9 +19791,8 @@ theorem sum_geometric_budget_le
   have hkpos : 0 < ((k + 1 : ℕ) : ℝ) := by positivity
   have hgeom :
       (∑ j ∈ Finset.range k, q ^ j) ≤ (1 - q)⁻¹ := by
-    simpa using
-      (geom_sum_Ico_le_of_lt_one (m := 0) (n := k)
-        hqzero hqone)
+    simpa only [Nat.Ico_zero_eq_range, pow_zero, one_div] using
+      (geom_sum_Ico_le_of_lt_one (m := 0) (n := k) hqzero hqone)
   have hratio :
       (k : ℝ) / ((k + 1 : ℕ) : ℝ) ≤ 1 := by
     apply (div_le_iff₀ hkpos).2
@@ -19811,7 +19819,7 @@ theorem sum_geometric_budget_le
           (k : ℝ) *
             (((k + 1 : ℕ) : ℝ) * (1 - q))⁻¹ := by
               rw [Finset.sum_add_distrib]
-              simp
+              simp only [Nat.cast_add, Nat.cast_one, mul_inv_rev, Finset.sum_const, Finset.card_range, nsmul_eq_mul]
     _ ≤ (1 - q)⁻¹ + (1 - q)⁻¹ :=
       add_le_add hgeom hnoise
     _ = 2 / (1 - q) := by ring
@@ -19903,9 +19911,8 @@ theorem rooted_realMarkov_eq_mass_realPermutationMarkov
     SoficGroups.KunRealComplexMarkovBridge.realMarkov p =
       SoficGroups.KunFinitePermutationMarkovMass.realPermutationMarkov p := by
   funext f x
-  simp [SoficGroups.KunRealComplexMarkovBridge.realMarkov,
-    SoficGroups.KunFinitePermutationMarkovMass.realPermutationMarkov,
-    div_eq_mul_inv, mul_comm]
+  simp only [KunRealComplexMarkovBridge.realMarkov, div_eq_mul_inv, mul_comm,
+    KunFinitePermutationMarkovMass.realPermutationMarkov]
 
 theorem rooted_markov_real_iterate_sq_error
     {ι V : Type*} [Fintype ι] [Fintype V] [DecidableEq V]
@@ -19932,7 +19939,7 @@ theorem rooted_markov_real_iterate_sq_error
           (SoficGroups.KunFinitePermutationMarkovMass.realIndicator T) := rfl
   rw [rooted_realMarkov_eq_mass_realPermutationMarkov] at h
   rw [hcomplex, hvector] at h
-  simpa [SoficGroups.KunFinitePermutationMarkovMass.realIndicator] using h
+  simpa only [KunFinitePermutationMarkovMass.realIndicator] using h
 
 theorem rooted_indicator_defect_sq_le_boundary
     {ι V : Type*} [Fintype ι] [Nonempty ι]
@@ -19966,8 +19973,7 @@ theorem rooted_indicator_defect_sq_le_boundary
       SoficGroups.KunFinitePermutationMarkovMass.realIndicator T =
         SoficGroups.KunDirectedIndicatorJensen.realIndicator T := by
     funext x
-    simp [SoficGroups.KunFinitePermutationMarkovMass.realIndicator,
-      SoficGroups.KunDirectedIndicatorJensen.realIndicator]
+    simp only [KunFinitePermutationMarkovMass.realIndicator, KunDirectedIndicatorJensen.realIndicator]
   rw [hindicator]
   calc
     ‖permutationMarkov p
@@ -20133,7 +20139,7 @@ theorem integrableOn_crossingIndicator
       (Ioo c d) := by
   exact (integrableOn_const (μ := volume)
     (C := (1 : ℝ)) (s := Ioo c d)
-    (by simp [Real.volume_Ioo])).indicator measurableSet_Ico
+    (by simp only [Real.volume_Ioo, ne_eq, ENNReal.ofReal_ne_top, not_false_eq_true])).indicator measurableSet_Ico
 
 theorem integrableOn_highCrossingProfile {V ι : Type*}
     [Fintype V] [Fintype ι]
@@ -20158,7 +20164,7 @@ theorem setIntegral_crossingIndicator_le_abs
       measureReal_restrict_apply measurableSet_Ico
     _ ≤ volume.real (Ico a b) :=
       measureReal_mono inter_subset_left
-        (by simp [Real.volume_Ico])
+        (by simp only [Real.volume_Ico, ne_eq, ENNReal.ofReal_ne_top, not_false_eq_true])
     _ = max (b - a) 0 := Real.volume_real_Ico
     _ ≤ |b - a| := max_le (le_abs_self _) (abs_nonneg _)
 
@@ -20230,7 +20236,7 @@ theorem card_symmDiff_upperLevel_le_nine_sq_error {V : Type*}
       nlinarith [sq_nonneg (3 * f x - 2)]
   have hcard :
       (D.card : ℝ) = ∑ x : V, if x ∈ D then (1 : ℝ) else 0 := by
-    simp
+    simp only [Finset.sum_ite_mem, Finset.univ_inter, Finset.sum_const, nsmul_eq_mul, mul_one]
   change (D.card : ℝ) ≤ _
   rw [hcard]
   calc
@@ -20262,7 +20268,7 @@ theorem exists_upperLevel_boundary_and_symmDiff_le {V ι : Type*}
   have hpos : volume (Ioo (1 / 3 : ℝ) (2 / 3 : ℝ)) ≠ 0 := by
     norm_num [Real.volume_Ioo]
   have hfin : volume (Ioo (1 / 3 : ℝ) (2 / 3 : ℝ)) ≠ ∞ := by
-    simp [Real.volume_Ioo]
+    simp only [one_div, Real.volume_Ioo, ne_eq, ENNReal.ofReal_ne_top, not_false_eq_true]
   obtain ⟨t, ht, hmean⟩ :=
     exists_le_setAverage (μ := volume)
       (s := Ioo (1 / 3 : ℝ) (2 / 3 : ℝ))
@@ -20453,7 +20459,7 @@ theorem card_highSupport_le_three_card
     linarith
   have hhigh : (H.card : ℝ) ≤ 3 * ∑ x ∈ H, f x := by
     calc
-      (H.card : ℝ) = ∑ _x ∈ H, (1 : ℝ) := by simp
+      (H.card : ℝ) = ∑ _x ∈ H, (1 : ℝ) := by simp only [Finset.sum_const, nsmul_eq_mul, mul_one]
       _ ≤ ∑ x ∈ H, 3 * f x :=
         Finset.sum_le_sum fun x hx => hpoint x hx
       _ = 3 * ∑ x ∈ H, f x := by rw [Finset.mul_sum]
@@ -20480,7 +20486,8 @@ theorem filtered_variation_sq_le_card_mul_filtered_energy
     (Finset.univ.product H)
     (fun _ : ι × V => (1 : ℝ))
     (fun z : ι × V => |f (σ z.1 z.2) - f z.2|)
-  simpa [Finset.sum_product, sq_abs, mul_assoc] using hcs
+  simpa only [mul_assoc, ge_iff_le, Finset.product_eq_sprod, one_mul, Finset.sum_product, one_pow,
+    Finset.sum_const, Finset.card_product, Finset.card_univ, nsmul_eq_mul, Nat.cast_mul, mul_one, sq_abs] using hcs
 
 theorem filtered_variation_sq_le_card_mul_energy
     {V ι : Type*} [Fintype V] [Fintype ι]
@@ -20683,8 +20690,9 @@ theorem card_completed_sourceWordTestBad_le_sourceCompletionBad
     obtain ⟨z, hz, rfl⟩ := Finset.mem_map.mp hx
     by_contra hnot
     have hwords : z ∈ W := hz
-    simp [W, SoficGroups.MatchedComponentExitBudget.sourceWordTestBad,
-      σP, pP] at hwords
+    simp only [MatchedComponentExitBudget.sourceWordTestBad, ne_eq, Finset.univ_eq_attach, Finset.union_assoc,
+      Finset.mem_union, Finset.mem_biUnion, Finset.mem_univ, Finset.mem_filter, Finset.mem_attach, true_and, W, pP,
+      σP] at hwords
     rcases hwords with hcomm | hmul | hsep
     · obtain ⟨i, j, hj, hfailure⟩ := hcomm
       exact hfailure
@@ -20692,9 +20700,8 @@ theorem card_completed_sourceWordTestBad_le_sourceCompletionBad
           σ p F P σP hσP hj i z hnot)
     · obtain ⟨j, hj, k, hk, hfailure⟩ := hmul
       apply hfailure
-      simpa [Equiv.Perm.mul_apply] using
-        SoficGroups.MatchedComponentCompletion.completedRestriction_mul_of_not_mem_sourceCompletionBad
-          σ p F P hj hk z hnot
+      simpa only [Equiv.Perm.mul_apply] using
+        SoficGroups.MatchedComponentCompletion.completedRestriction_mul_of_not_mem_sourceCompletionBad σ p F P hj hk z hnot
     · obtain ⟨j, hj, k, hk, hne, heq⟩ := hsep
       exact
         (SoficGroups.MatchedComponentCompletion.completedRestriction_ne_of_not_mem_sourceCompletionBad
@@ -20867,7 +20874,7 @@ theorem lt_exp_mul_of_equal_log_floor
   have hratio :
       (Real.log y + r) / H < (Real.log x + r) / H + 1 :=
     hyfloor.trans_le (by
-      simpa [add_comm] using (add_le_add_right hxloor 1))
+      simpa only [add_comm, add_le_add_iff_left] using (add_le_add_right hxloor 1))
   have hscaled := mul_lt_mul_of_pos_right hratio hH
   have hcancel :
       ((Real.log x + r) / H + 1) * H =
@@ -20878,7 +20885,7 @@ theorem lt_exp_mul_of_equal_log_floor
     linarith
   have hexp := (Real.exp_lt_exp).2 hlog
   rw [Real.exp_log hy, Real.exp_add, Real.exp_log hx] at hexp
-  simpa [mul_comm] using hexp
+  simpa only [mul_comm, gt_iff_lt] using hexp
 
 theorem transported_maximumOverlapPart_card_lt_exp_mul
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -20912,8 +20919,7 @@ theorem transported_maximumOverlapPart_card_lt_exp_mul
   have hfloor :
       ⌊(Real.log (C.card : ℝ) + r) / H⌋ =
         ⌊(Real.log (D.card : ℝ) + r) / H⌋ := by
-    simpa [SoficGroups.MidrankPermutationEnergy.offsetFloorRank,
-      hsource, htarget] using hrank.symm
+    simpa only [MidrankPermutationEnergy.offsetFloorRank, hsource, htarget] using hrank.symm
   have hxpos : (0 : ℝ) < C.card := by
     exact_mod_cast hCne.card_pos
   have hypos : (0 : ℝ) < D.card := by
@@ -20997,21 +21003,20 @@ theorem symmDiff_density_tendsto_zero_of_log_rank_bounds
       (fun n => Real.exp (H n) - 1 + 2 * eta n)
       atTop (nhds 0) := by
     have hexp : Tendsto (fun n => Real.exp (H n)) atTop (nhds 1) := by
-      simpa [Function.comp_def] using
-        (Real.continuous_exp.tendsto (0 : ℝ)).comp hHzero
+      simpa only [Function.comp_def, Real.exp_zero] using (Real.continuous_exp.tendsto (0 : ℝ)).comp hHzero
     have hfirst : Tendsto
         (fun n => Real.exp (H n) - 1) atTop (nhds 0) := by
-      simpa using hexp.sub_const 1
+      simpa only [sub_self] using hexp.sub_const 1
     have hsecond : Tendsto
         (fun n => (2 : ℝ) * eta n) atTop (nhds 0) := by
-      simpa using hetazero.const_mul 2
+      simpa only [mul_zero] using hetazero.const_mul 2
     simpa only [zero_add] using hfirst.add hsecond
   refine squeeze_zero (fun n => by positivity) ?_ hcoeff
   intro n
   have hpos : (0 : ℝ) < (U n).card := by
     exact_mod_cast (hU n).card_pos
   have hexp : 1 ≤ Real.exp (H n) := by
-    simpa using (Real.exp_le_exp.mpr (hH n))
+    simpa only [Real.one_le_exp_iff, Real.exp_zero] using (Real.exp_le_exp.mpr (hH n))
   have hnonneg : 0 ≤ Real.exp (H n) - 1 + 2 * eta n := by
     nlinarith [heta n]
   have hmassnat :
@@ -21035,7 +21040,7 @@ theorem symmDiff_density_tendsto_zero_of_log_rank_bounds
     calc
       ((∑ C ∈ R n, (C ∆ D n C).card : ℕ) : ℝ) =
           ∑ C ∈ R n, ((C ∆ D n C).card : ℝ) := by
-            simp
+            simp only [Nat.cast_sum]
       _ ≤ ∑ C ∈ R n,
           (Real.exp (H n) - 1 + 2 * eta n) * (C.card : ℝ) := by
             exact Finset.sum_le_sum fun C hC => hbound n C hC
@@ -21071,7 +21076,7 @@ theorem mem_partitionWordCrossing_univ
     Finset.mem_univ, true_and]
   rw [Q.mem_part_iff_part_eq_part (Finset.mem_univ _)
     (Finset.mem_univ _)]
-  simp [eq_comm]
+  simp only [eq_comm, ne_eq]
 
 theorem card_partitionWordCrossing_le_add_distance
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -21090,7 +21095,7 @@ theorem card_partitionWordCrossing_le_add_distance
     · apply Finset.mem_union_left
       apply (mem_partitionWordCrossing_univ Q q x).2
       have hp := (mem_partitionWordCrossing_univ Q p x).1 hx
-      simpa [heq] using hp
+      simpa only [ne_eq, heq] using hp
     · apply Finset.mem_union_right
       exact Finset.mem_filter.2 ⟨Finset.mem_univ x, heq⟩
   calc
@@ -21103,7 +21108,7 @@ theorem card_partitionWordCrossing_le_add_distance
       Finset.card_union_le _ _
     _ = (SoficGroups.partitionWordCrossing Q q).card +
         SoficGroups.permutationDistance p q := by
-      simp [SoficGroups.permutationDistance, hammingDist]
+      simp only [ne_eq, permutationDistance, hammingDist]
 
 theorem tendsto_action_inverse
     {G : Type*} [Group G] (A : SoficGroups.SoficApproximation G)
@@ -21135,7 +21140,7 @@ theorem tendsto_action_inverse
       _ = SoficGroups.normalizedHamming
           ((A.model n).action (u * u⁻¹))
           ((A.model n).action u * (A.model n).action (u⁻¹)) := by
-        simp [(A.model n).map_one]
+        simp only [mul_inv_cancel, (A.model n).map_one]
   rw [heq]
   exact A.multiplicative u (u⁻¹)
 
@@ -21259,7 +21264,7 @@ theorem conjugated_word_crossing_density_tendsto_zero
             ((A.model n).action u)⁻¹)
           ((A.model n).action (u * g * u⁻¹)))
       atTop (nhds 0) := by
-    simpa using hword.add hdist
+    simpa only [add_zero] using hword.add hdist
   refine squeeze_zero (fun n => by positivity) ?_ hupper
   intro n
   have hnat := card_partitionWordCrossing_le_add_distance (Q n)
@@ -21297,8 +21302,8 @@ theorem conjugated_word_crossing_density_tendsto_zero
         ((A.model n).action u * (A.model n).action g *
           ((A.model n).action u)⁻¹)
         ((A.model n).action (u * g * u⁻¹)) := by
-      simp [add_div, SoficGroups.normalizedHamming,
-        SoficGroups.permutationDistance]
+      simp only [permutationDistance, Equiv.Perm.coe_mul, Equiv.Perm.coe_inv, Function.comp_apply, add_div,
+        normalizedHamming, Fintype.card_fin]
 
 end SourceCompressionTransportCrossing
 
@@ -21431,10 +21436,8 @@ theorem matchedRetained_boundary_density_tendsto_zero
         (U n).card) := by
       rw [← mul_div_assoc]
       apply (div_le_div_iff₀ hrcard hucard).2
-      simpa [mul_assoc, mul_comm, mul_left_comm] using
-        (mul_le_mul_of_nonneg_left hmass
-          (Finset.sum_nonneg fun C _ =>
-            Nat.cast_nonneg (SoficGroups.boundary (σ n) C)))
+      simpa only [mul_comm, mul_left_comm, mul_assoc] using
+        (mul_le_mul_of_nonneg_left hmass (Finset.sum_nonneg fun C _ => Nat.cast_nonneg (SoficGroups.boundary (σ n) C)))
 
 theorem exists_matchedRetained_parts_with_vanishing_boundary_and_bad_density
     {V : ℕ → Type*} [∀ n, DecidableEq (V n)]
@@ -21600,7 +21603,7 @@ theorem exists_matched_slow_diagonal_large_components_with_vanishing_boundary
     (Nat.tendsto_div_const_atTop (by norm_num : (2 : ℕ) ≠ 0)).comp hr
   have hclosure :
       (Subgroup.closure (S : Set K) : Set K).Infinite := by
-    simpa [hgen] using (Set.infinite_univ (α := K))
+    simpa only [hgen, Subgroup.coe_top] using (Set.infinite_univ (α := K))
   have hlarge : Tendsto (fun n => (C n).card) atTop atTop := by
     refine tendsto_atTop_mono' atTop ?_ hhalf
     filter_upwards [hgood] with n hn
@@ -21627,7 +21630,7 @@ theorem matchedRetained_parts_eventually_nonempty_of_discard
   have hucard : ((U n).card : ℝ) ≠ 0 := by
     exact_mod_cast (hU n).card_pos.ne'
   have hsupport : SoficGroups.matchedRetainedSupport (R n) = ∅ := by
-    simp [SoficGroups.matchedRetainedSupport, hrempty]
+    simp only [matchedRetainedSupport, hrempty, Finset.biUnion_empty]
   simp only [hsupport, Finset.sdiff_empty] at hn
   rw [div_self hucard] at hn
   exact (lt_irrefl (1 : ℝ)) hn
@@ -22226,8 +22229,7 @@ theorem exists_rooted_word_radius_real_markov_sq_error_le_boundary
         indicatorVector χ‖ ^ 2 ≤
         2 * (SoficGroups.boundary X.generator T : ℝ) /
           (S.card : ℝ) := by
-    simpa [χ, Fintype.card_coe] using
-      rooted_indicator_defect_sq_le_boundary X.generator T
+    simpa only [Fintype.card_coe] using rooted_indicator_defect_sq_le_boundary X.generator T
   have hcoef : 0 ≤ 2 / (1 - q) :=
     div_nonneg (by norm_num) hgap.le
   have hsquare :
@@ -22275,9 +22277,8 @@ theorem rooted_final_realMarkov_eq_mass_realPermutationMarkov
     SoficGroups.KunActualFinalRestrictedVariation.realMarkov p =
       SoficGroups.KunFinitePermutationMarkovMass.realPermutationMarkov p := by
   funext f x
-  simp [SoficGroups.KunActualFinalRestrictedVariation.realMarkov,
-    SoficGroups.KunFinitePermutationMarkovMass.realPermutationMarkov,
-    div_eq_mul_inv, mul_comm]
+  simp only [KunActualFinalRestrictedVariation.realMarkov, div_eq_mul_inv, mul_comm,
+    KunFinitePermutationMarkovMass.realPermutationMarkov]
 
 theorem rooted_real_markov_iterate_residual_sqrt_eq
     {ι V : Type*} [Fintype ι] [Fintype V] [DecidableEq V]
@@ -22408,8 +22409,7 @@ theorem exists_rooted_word_radius_sparse_cut_of_boundary
         (f x - if x ∈ T then (1 : ℝ) else 0) ^ 2) ≤
         8 * (SoficGroups.boundary X.generator T : ℝ) /
           ((S.card : ℝ) * (1 - q) ^ 2) := by
-    simpa [f, χ, q] using
-      hnear X hgenerated hrootnear T hindicator
+    simpa only using hnear X hgenerated hrootnear T hindicator
   have hstep := hfinal X hgenerated hrootfinal
   rw [hχ] at hstep
   have hresidual :
@@ -22426,9 +22426,8 @@ theorem exists_rooted_word_radius_sparse_cut_of_boundary
               (indicatorVector χ) -
             ((permutationMarkov X.generator)^[k])
               (indicatorVector χ)‖ := by
-            simpa [f, χ] using
-              rooted_real_markov_iterate_residual_sqrt_eq
-                X.generator T k
+            simpa only [Function.iterate_succ, Function.comp_apply, f, χ] using
+              rooted_real_markov_iterate_residual_sqrt_eq X.generator T k
       _ ≤ (q ^ k + ε) * b := hstep
       _ ≤ η * b := by
         apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
@@ -22449,8 +22448,7 @@ theorem exists_rooted_word_radius_sparse_cut_of_boundary
       b ^ 2 ≤
         2 * (SoficGroups.boundary X.generator T : ℝ) /
           (S.card : ℝ) := by
-    simpa [b, χ, Fintype.card_coe] using
-      rooted_indicator_defect_sq_le_boundary X.generator T
+    simpa only [Fintype.card_coe] using rooted_indicator_defect_sq_le_boundary X.generator T
   have hgaple : 1 - q ≤ 1 := by linarith
   have hgapzero : 0 ≤ 1 - q := hgap.le
   have hgap_sq_le_one : (1 - q) ^ 2 ≤ 1 :=
@@ -22558,8 +22556,8 @@ theorem exists_rooted_word_radius_sparse_cut_of_boundary
       (SoficGroups.boundary X.generator
         (SoficGroups.KunSharpThresholdCut.upperLevel f t) : ℝ) ≤ _
     nlinarith only [hcut, hvariation, hscaledlarge]
-  exact ⟨U, by simpa [f, χ] using hdistance,
-    by simpa [q] using hquant, hclose, hboundaryU⟩
+  exact ⟨U, by simpa only [f, χ] using hdistance,
+    by simpa only [q] using hquant, hclose, hboundaryU⟩
 
 end KunRootedWordPower
 
@@ -22697,7 +22695,7 @@ theorem witnesslessComponents_mass_le_twice_rankChanging
       (fun _ _ _ => Nat.zero_le _)
   have hpartition :
       (∑ C ∈ P.parts, (C ∩ B).card) = B.card := by
-    simpa using SoficGroups.matched_sum_card_inter_partition P B
+    simpa only [Finset.univ_inter] using SoficGroups.matched_sum_card_inter_partition P B
   calc
     (∑ C ∈ witnesslessComponents P Q T b eta, C.card) ≤
         ∑ C ∈ witnesslessComponents P Q T b eta,
@@ -22707,7 +22705,7 @@ theorem witnesslessComponents_mass_le_twice_rankChanging
           P Q T b eta heta C hC
     _ = 2 * (∑ C ∈ witnesslessComponents P Q T b eta,
           (C ∩ B).card) := by
-      simp [Finset.mul_sum]
+      simp only [Finset.mul_sum]
     _ ≤ 2 * (∑ C ∈ P.parts, (C ∩ B).card) :=
       Nat.mul_le_mul_left 2 hsum
     _ = 2 * B.card := by rw [hpartition]
@@ -22805,7 +22803,7 @@ theorem retained_missing_density_tendsto_zero
           (Finset.univ : Finset (V n)) (b n) (T n).symm).card : ℝ) /
             Fintype.card (V n)))
       atTop (nhds 0) := by
-    simpa using hrank.const_mul 2
+    simpa only [mul_zero] using hrank.const_mul 2
   have hupper : Tendsto
       (fun n =>
         ((∑ C ∈ SoficGroups.insufficientOverlapComponents
@@ -22869,7 +22867,7 @@ theorem mem_partitionWordCrossing_univ
     Finset.mem_univ, true_and]
   rw [Q.mem_part_iff_part_eq_part (Finset.mem_univ _)
     (Finset.mem_univ _)]
-  simp [eq_comm]
+  simp only [eq_comm, ne_eq]
 
 theorem card_partitionWordCrossing_le_add_distance
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -22888,7 +22886,7 @@ theorem card_partitionWordCrossing_le_add_distance
     · apply Finset.mem_union_left
       apply (mem_partitionWordCrossing_univ Q q x).2
       have hp := (mem_partitionWordCrossing_univ Q p x).1 hx
-      simpa [heq] using hp
+      simpa only [ne_eq, heq] using hp
     · apply Finset.mem_union_right
       exact Finset.mem_filter.2 ⟨Finset.mem_univ x, heq⟩
   calc
@@ -22901,7 +22899,7 @@ theorem card_partitionWordCrossing_le_add_distance
       Finset.card_union_le _ _
     _ = (SoficGroups.partitionWordCrossing Q q).card +
         SoficGroups.permutationDistance p q := by
-      simp [SoficGroups.permutationDistance, hammingDist]
+      simp only [ne_eq, permutationDistance, hammingDist]
 
 theorem card_partitionWordCrossing_mul_le
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -22924,17 +22922,17 @@ theorem card_partitionWordCrossing_mul_le
     · apply Finset.mem_union_right
       apply Finset.mem_map.2
       refine ⟨q x, (mem_partitionWordCrossing_univ Q p (q x)).2 ?_,
-        by simp⟩
+        by simp only [Function.Embedding.coeFn_mk, Equiv.symm_apply_apply]⟩
       intro heq
       apply hpq
       have hpart : Q.part x = Q.part (q x) := not_ne_iff.mp hq
-      simpa [Equiv.Perm.mul_apply] using hpart.trans heq
+      simpa only [Equiv.Perm.mul_apply] using hpart.trans heq
   have hcard := (Finset.card_le_card hsub).trans
     (Finset.card_union_le
       (SoficGroups.partitionWordCrossing Q q)
       ((SoficGroups.partitionWordCrossing Q p).map
         q.symm.toEmbedding))
-  simpa [Nat.add_comm] using hcard
+  simpa only [ge_iff_le, Finset.card_map, Nat.add_comm] using hcard
 
 theorem sum_generator_crossing_eq_sum_partition_boundary
     {V ι : Type*} [Fintype V] [DecidableEq V]
@@ -22953,10 +22951,10 @@ theorem sum_generator_crossing_eq_sum_partition_boundary
     constructor
     · rintro ⟨hx, hcross⟩
       refine ⟨hx, ?_⟩
-      simpa [Q.part_eq_of_mem hC hx] using hcross
+      simpa only [Q.part_eq_of_mem hC hx] using hcross
     · rintro ⟨hx, hcross⟩
       refine ⟨hx, ?_⟩
-      simpa [Q.part_eq_of_mem hC hx] using hcross
+      simpa only [Q.part_eq_of_mem hC hx] using hcross
   calc
     (∑ i : ι, (SoficGroups.partitionWordCrossing Q (σ i)).card) =
       ∑ i : ι, ∑ C ∈ Q.parts,
@@ -22980,7 +22978,7 @@ theorem sum_generator_crossing_eq_sum_partition_boundary
         ∑ i : ι, (C.filter (fun x => σ i x ∉ C)).card := by
       rw [Finset.sum_comm]
     _ = ∑ C ∈ Q.parts, SoficGroups.boundary σ C := by
-      simp [SoficGroups.boundary]
+      simp only [boundary]
 
 theorem generator_crossing_density_tendsto_zero
     {V : ℕ → Type*}
@@ -23039,7 +23037,9 @@ theorem list_generator_crossing_density_tendsto_zero
       atTop (nhds 0) := by
   induction l with
   | nil =>
-      simp [SoficGroups.partitionWordCrossing]
+      simp only [partitionWordCrossing, List.map_nil, List.prod_nil, Equiv.Perm.coe_one, id_eq,
+        Finpartition.mem_part_self, Finset.mem_univ, not_true_eq_false, Finset.filter_false, Finset.card_empty,
+        CharP.cast_eq_zero, zero_div, tendsto_const_nhds_iff]
   | cons i l ih =>
       have hupper : Tendsto
           (fun n =>
@@ -23049,7 +23049,7 @@ theorem list_generator_crossing_density_tendsto_zero
               ((l.map (σ n)).prod)).card : ℝ) /
                 Fintype.card (V n))
           atTop (nhds 0) := by
-        simpa using (hgenerator i).add ih
+        simpa only [add_zero] using (hgenerator i).add ih
       refine squeeze_zero (fun n => by positivity) ?_ hupper
       intro n
       have hnat := card_partitionWordCrossing_mul_le (Q n)
@@ -23062,9 +23062,8 @@ theorem list_generator_crossing_density_tendsto_zero
           ((SoficGroups.partitionWordCrossing (Q n)
             ((l.map (σ n)).prod)).card : ℝ) := by
         exact_mod_cast hnat
-      simpa [add_div] using
-        (div_le_div_of_nonneg_right hreal
-          (by positivity : (0 : ℝ) ≤ Fintype.card (V n)))
+      simpa only [List.map_cons, List.prod_cons, ge_iff_le, add_div] using
+        (div_le_div_of_nonneg_right hreal (by positivity : (0 : ℝ) ≤ Fintype.card (V n)))
 
 theorem action_list_prod_tendsto
     {G : Type*} [Group G]
@@ -23077,8 +23076,8 @@ theorem action_list_prod_tendsto
       atTop (nhds 0) := by
   induction l with
   | nil =>
-      simp [SoficGroups.PermutationModel.map_one,
-        SoficGroups.normalizedHamming_self]
+      simp only [List.prod_nil, PermutationModel.map_one, List.map_nil, normalizedHamming_self,
+        tendsto_const_nhds_iff]
   | cons g l ih =>
       simp only [List.map_cons, List.prod_cons]
       have hupper : Tendsto
@@ -23090,7 +23089,7 @@ theorem action_list_prod_tendsto
                 ((A.model n).action l.prod)
                 ((l.map (A.model n).action).prod))
           atTop (nhds 0) := by
-        simpa using (A.multiplicative g l.prod).add ih
+        simpa only [add_zero] using (A.multiplicative g l.prod).add ih
       refine squeeze_zero
         (fun n => SoficGroups.normalizedHamming_nonneg _ _) ?_ hupper
       intro n
@@ -23113,12 +23112,12 @@ theorem exists_word_of_symmetric_generators
   classical
   have hg : g ∈ Subgroup.closure (S : Set H) := by
     rw [hgenerates]
-    simp
+    simp only [Subgroup.mem_top]
   induction hg using Subgroup.closure_induction with
   | mem x hx =>
-      exact ⟨[⟨x, hx⟩], by simp⟩
+      exact ⟨[⟨x, hx⟩], by simp only [List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]⟩
   | one =>
-      exact ⟨[], by simp⟩
+      exact ⟨[], by simp only [List.map_nil, List.prod_nil]⟩
   | mul x y _ _ ihx ihy =>
       obtain ⟨lx, hlx⟩ := ihx
       obtain ⟨ly, hly⟩ := ihy
@@ -23163,7 +23162,7 @@ theorem crossing_density_tendsto_zero_of_normalizedHamming
             Fintype.card (V n) +
           SoficGroups.normalizedHamming (p n) (q n))
       atTop (nhds 0) := by
-    simpa using hq.add hdist
+    simpa only [add_zero] using hq.add hdist
   refine squeeze_zero (fun n => by positivity) ?_ hupper
   intro n
   have hnat := card_partitionWordCrossing_le_add_distance
@@ -23183,8 +23182,7 @@ theorem crossing_density_tendsto_zero_of_normalizedHamming
     _ = ((SoficGroups.partitionWordCrossing (Q n) (q n)).card : ℝ) /
           Fintype.card (V n) +
         SoficGroups.normalizedHamming (p n) (q n) := by
-      simp [add_div, SoficGroups.normalizedHamming,
-        SoficGroups.permutationDistance]
+      simp only [permutationDistance, add_div, normalizedHamming]
 
 theorem fixed_generated_word_crossing_density_tendsto_zero
     {G H : Type*} [Group G] [Group H]
@@ -23241,7 +23239,7 @@ theorem fixed_generated_word_crossing_density_tendsto_zero
     calc
       ((l.map fun i : ↥S => φ (i : H)).prod) =
           φ ((l.map fun i : ↥S => (i : H)).prod) := by
-        simpa [List.map_map, Function.comp_def] using
+        simpa only [List.map_subtype, List.map_id_fun', id_eq] using
           (map_list_prod φ (l.map fun i : ↥S => (i : H))).symm
       _ = φ g := by rw [hl]
   have hdist : Tendsto
@@ -23253,7 +23251,7 @@ theorem fixed_generated_word_crossing_density_tendsto_zero
     have h := action_list_prod_tendsto A
       (l.map fun i : ↥S => φ (i : H))
     rw [hprod] at h
-    simpa [List.map_map, Function.comp_def] using h
+    simpa only [List.map_subtype, List.map_map, Function.comp_def] using h
   simpa only [Fintype.card_fin] using
     crossing_density_tendsto_zero_of_normalizedHamming
       (V := fun n => Fin (A.model n).size)
@@ -23404,7 +23402,7 @@ def sourceConjugatedAlphaUElement
   apply SoficGroups.alphaZero_prefixElementaryGroup_le
   rw [← SoficGroups.compressionU_map_alphaPrefixElementaryGroup]
   refine ⟨g.val, g.property, ?_⟩
-  simp [MulAut.conj_apply]
+  simp only [MulEquiv.toMonoidHom_eq_coe, MonoidHom.coe_coe, MulAut.conj_apply]
 
 def sourceConjugatedAlphaVElement
     (g : SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode) :
@@ -23414,7 +23412,7 @@ def sourceConjugatedAlphaVElement
   apply SoficGroups.alphaZero_prefixElementaryGroup_le
   rw [← SoficGroups.compressionV_map_alphaPrefixElementaryGroup]
   refine ⟨g.val, g.property, ?_⟩
-  simp [MulAut.conj_apply]
+  simp only [MulEquiv.toMonoidHom_eq_coe, MonoidHom.coe_coe, MulAut.conj_apply]
 
 theorem sourceCompressionUElement_conjugates_alpha
     (g : SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode) :
@@ -23706,8 +23704,7 @@ theorem sum_intersection_generator_exit_card_le
     have hsub :
         (C.filter fun x => p x ∉ C) ⊆ U :=
       (Finset.filter_subset _ _).trans (P.subset hC)
-    simpa [Finset.inter_comm,
-      Finset.inter_eq_right.mpr hsub] using h
+    simpa only [Finset.inter_comm, Finset.inter_eq_right.mpr hsub] using h
   have hsecond (D : Finset V) (hD : D ∈ Q.parts) :
       (∑ C ∈ P.parts,
         ((D.filter fun x => p x ∉ D) ∩ C).card) =
@@ -23717,8 +23714,7 @@ theorem sum_intersection_generator_exit_card_le
     have hsub :
         (D.filter fun x => p x ∉ D) ⊆ U :=
       (Finset.filter_subset _ _).trans (Q.subset hD)
-    simpa [Finset.inter_comm,
-      Finset.inter_eq_right.mpr hsub] using h
+    simpa only [Finset.inter_comm, Finset.inter_eq_right.mpr hsub] using h
   calc
     (∑ C ∈ P.parts, ∑ D ∈ Q.parts,
       ((C ∩ D).filter fun x => p x ∉ C ∩ D).card) ≤
@@ -23961,7 +23957,7 @@ theorem dominant_component_loss_density_tendsto_zero
             (∑ D ∈ (Q n).parts,
               (SoficGroups.boundary (σ n) D : ℝ))) / gamma := by
       apply (le_div_iff₀ hgamma).2
-      simpa [mul_comm] using hbound
+      simpa only [Finset.sum_sub_distrib, mul_comm] using hbound
     calc
       (∑ C ∈ (P n).parts,
         ((C.card : ℝ) -
@@ -23999,7 +23995,8 @@ theorem boundary_conjugate_map
         (T * σ i * T⁻¹) y ∉ C.map T.toEmbedding) =
       (C.filter fun x => σ i x ∉ C).map T.toEmbedding := by
     ext y
-    simp [Equiv.Perm.mul_apply]
+    simp only [Equiv.Perm.mul_apply, Equiv.Perm.coe_inv, Finset.mem_map_mk, Finset.mem_filter,
+      Finset.mem_map_equiv]
   rw [hfilter, Finset.card_map]
 
 theorem transportedUnivFinpartition_half_expansion
@@ -24024,7 +24021,8 @@ theorem transportedUnivFinpartition_half_expansion
   intro E hE hhalf
   let E₀ : Finset V := E.map T.symm.toEmbedding
   have hrecovery : E₀.map T.toEmbedding = E := by
-    simp [E₀, Finset.map_map]
+    simp only [Finset.map_map, Function.Embedding.mk_trans_mk, Equiv.self_comp_symm, Function.Embedding.mk_id,
+      Finset.map_refl, E₀]
   have hsub : E₀ ⊆ C₀ := by
     apply (Finset.map_subset_map (f := T.toEmbedding)).mp
     simpa only [hrecovery] using hE
@@ -24035,7 +24033,7 @@ theorem transportedUnivFinpartition_half_expansion
     boundary_conjugate_map σ T E₀
   calc
     gamma * (E.card : ℝ) = gamma * (E₀.card : ℝ) := by
-      simp [E₀]
+      simp only [Finset.card_map, E₀]
     _ ≤ (SoficGroups.boundary σ E₀ : ℝ) := hsource
     _ = (SoficGroups.boundary
       (fun i => T * σ i * T⁻¹)
@@ -24174,9 +24172,7 @@ theorem exists_common_slow_overlap_scales_for_transported_partitions
     exact Finset.sum_nonneg fun j _ => hLnonneg j n
   have helimit : Tendsto e atTop (nhds 0) := by
     dsimp [e]
-    simpa using
-      tendsto_finsetSum Finset.univ
-        (fun j _ => hLlimit j)
+    simpa only [Finset.sum_const_zero] using tendsto_finsetSum Finset.univ (fun j _ => hLlimit j)
   obtain ⟨eta, H, heta, hetaanti, hetalimit,
     hH, hHanti, hHlimit, hslow, hratio⟩ :=
     SoficGroups.exists_positive_antitone_slow_overlap_scales
@@ -24201,7 +24197,7 @@ theorem exists_common_slow_overlap_scales_for_transported_partitions
               ((C ∩ SoficGroups.maximumOverlapPart (Q n) C).card :
                 ℝ))) / eta n := by
     apply (le_div_iff₀ (heta n)).2
-    simpa [mul_comm] using hmass
+    simpa only [mul_comm, Finset.sum_sub_distrib] using hmass
   have hcard : (0 : ℝ) < Fintype.card (V n) := by
     exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
   have hsingle : L j n ≤ e n := by
@@ -24427,7 +24423,7 @@ theorem list_permutation_hamming_tendsto
       atTop (nhds 0) := by
   induction l with
   | nil =>
-      simp [SoficGroups.normalizedHamming_self]
+      simp only [List.map_nil, List.prod_nil, normalizedHamming_self, tendsto_const_nhds_iff]
   | cons i l ih =>
       simp only [List.map_cons, List.prod_cons]
       have hupper : Tendsto
@@ -24436,7 +24432,7 @@ theorem list_permutation_hamming_tendsto
               SoficGroups.normalizedHamming
                 ((l.map (σ n)).prod) ((l.map (τ n)).prod))
           atTop (nhds 0) := by
-        simpa using (hletter i).add ih
+        simpa only [add_zero] using (hletter i).add ih
       refine squeeze_zero
         (fun n => SoficGroups.normalizedHamming_nonneg _ _) ?_ hupper
       intro n
@@ -24462,7 +24458,7 @@ theorem approximate_action_list_prod_tendsto
       atTop (nhds 0) := by
   induction l with
   | nil =>
-      simp [hone, SoficGroups.normalizedHamming_self]
+      simp only [List.prod_nil, hone, List.map_nil, normalizedHamming_self, tendsto_const_nhds_iff]
   | cons a l ih =>
       simp only [List.map_cons, List.prod_cons]
       have hupper : Tendsto
@@ -24472,7 +24468,7 @@ theorem approximate_action_list_prod_tendsto
               SoficGroups.normalizedHamming
                 (p n l.prod) ((l.map (p n)).prod))
           atTop (nhds 0) := by
-        simpa using (hmul a l.prod).add ih
+        simpa only [add_zero] using (hmul a l.prod).add ih
       refine squeeze_zero
         (fun n => SoficGroups.normalizedHamming_nonneg _ _) ?_ hupper
       intro n
@@ -24526,7 +24522,7 @@ theorem chosenWordEvaluation_tendsto_action
       atTop (nhds 0) := by
     have h := approximate_action_list_prod_tendsto
       V p hone hmul ((w g).map s)
-    simpa [List.map_map, Function.comp_def, hw g] using h
+    simpa only [hw g, List.map_map, Function.comp_def] using h
   have hp' : Tendsto
       (fun n => SoficGroups.normalizedHamming
         (((w g).map fun i => p n (s i)).prod) (p n g))
@@ -24548,7 +24544,7 @@ theorem chosenWordEvaluation_tendsto_action
         SoficGroups.normalizedHamming
           (((w g).map fun i => p n (s i)).prod) (p n g))
       atTop (nhds 0) := by
-    simpa using hσ.add hp'
+    simpa only [add_zero] using hσ.add hp'
   exact squeeze_zero
     (fun n => SoficGroups.normalizedHamming_nonneg _ _)
     (fun n => SoficGroups.normalizedHamming_triangle _ _ _)
@@ -24616,8 +24612,7 @@ theorem chosenWordEvaluation_multiplicative_tendsto
         (SoficGroups.normalizedHamming (p n a) (φ n a) +
           SoficGroups.normalizedHamming (p n g) (φ n g))))
       atTop (nhds 0) := by
-    simpa using (hφ (a * g)).add
-      ((hmul a g).add (hpa.add hpg))
+    simpa only [add_zero] using (hφ (a * g)).add ((hmul a g).add (hpa.add hpg))
   change Tendsto
     (fun n => SoficGroups.normalizedHamming
       (φ n (a * g)) (φ n a * φ n g)) atTop (nhds 0)
@@ -24774,7 +24769,7 @@ theorem surviving_card_ratio_tendsto_one
       (fun n => (1 : ℝ) -
         ((D n).card : ℝ) / Fintype.card (V n))
       atTop (nhds 1) := by
-    simpa using tendsto_const_nhds.sub hdeleted
+    simpa only [sub_zero] using tendsto_const_nhds.sub hdeleted
   convert hbase using 1
   funext n
   have hU : (Finset.univ : Finset (V n)).Nonempty := by
@@ -24895,7 +24890,8 @@ theorem twiceCompleted_sourceGenerator_normalizedHamming_tendsto_zero
           (Finset.univ \ D n :
             Finset {x : V n // x ∈ P n})) = D n := by
       ext x
-      simp
+      simp only [Finset.univ_eq_attach, sdiff_sdiff_right_self, Finset.inf_eq_inter', Finset.mem_inter,
+        Finset.mem_attach, true_and]
     rw [hset]
   have hletter :=
     completedGenerator_normalizedHamming_tendsto_zero
@@ -24929,10 +24925,10 @@ theorem mem_generator_pow_of_chosen_word_length
       ((l.map fun i : ↥S => (i : G)).prod) ∈ S ^ l.length := by
     intro l
     induction l with
-    | nil => simp
+    | nil => simp only [List.length_nil, pow_zero, List.map_nil, List.prod_nil, Finset.mem_one]
     | cons i l ih =>
-        simpa [pow_succ', List.prod_cons] using
-          (Finset.mul_mem_mul i.property ih)
+        simpa only [List.length_cons, pow_succ', List.map_cons, List.map_subtype, List.map_id_fun', id_eq,
+          List.prod_cons] using (Finset.mul_mem_mul i.property ih)
   apply Finset.pow_subset_pow_right hone ha
   simpa only [hw a] using hprod (w a)
 
@@ -24999,14 +24995,15 @@ theorem fixedRadiusRootBad_density_tendsto_zero
               (Finset.univ : Finset (V n)).card)
         atTop (𝓝 0) := by
     intro ag _
-    simpa [multiplicationBad, SoficGroups.normalizedHamming,
-      hammingDist] using hmul ag.1 ag.2
+    simpa only [multiplicationBad, Equiv.Perm.coe_mul, Function.comp_apply, ne_eq, Finset.univ_inter,
+      Finset.card_univ, normalizedHamming, hammingDist] using hmul ag.1 ag.2
   have h := SoficGroups.finite_union_bad_density_tendsto_zero
     ((S ^ r).product (S ^ r))
     (fun n => (Finset.univ : Finset (V n)))
     (fun n ag => multiplicationBad (φ n) ag.1 ag.2)
     hpair
-  simpa [fixedRadiusRootBad] using h
+  simpa only [fixedRadiusRootBad, Finset.product_eq_sprod, Finset.product_biUnion, Finset.univ_inter,
+    Finset.card_univ] using h
 
 end CompletedPrescribedSpectralRadiusSchedule
 
@@ -25068,7 +25065,8 @@ theorem exists_source_sparse_cut_at_radius
     have hempty : T = ∅ :=
       Finset.not_nonempty_iff_eq_empty.mp hnot
     subst T
-    simp [SoficGroups.boundary] at hboundary
+    simp only [boundary, Finset.univ_eq_attach, Finset.notMem_empty, not_false_eq_true, Finset.filter_empty,
+      Finset.card_empty, Finset.sum_const_zero, CharP.cast_eq_zero, mul_zero, lt_self_iff_false] at hboundary
   let X :=
     sourceRootedIndicatorMarkovModel
       A S hsymmetric hgenerates n T
@@ -25355,27 +25353,29 @@ theorem unitary_word_displacement_le
     ‖π l.prod ξ - ξ‖ ≤ (l.length : ℝ) * δ := by
   induction l with
   | nil =>
-      simp
+      simp only [List.prod_nil, map_one, LinearIsometryEquiv.coe_one, id_eq, sub_self, norm_zero, List.length_nil,
+        CharP.cast_eq_zero, zero_mul, Std.le_refl]
   | cons g l ih =>
       have hg : ‖π g ξ - ξ‖ ≤ δ :=
-        hletters g (by simp)
+        hletters g (by simp only [List.mem_cons, true_or])
       have htail :
           ∀ a ∈ l, ‖π a ξ - ξ‖ ≤ δ := by
         intro a ha
-        exact hletters a (by simp [ha])
+        exact hletters a (by simp only [List.mem_cons, ha, or_true])
       have hword := ih htail
       calc
         ‖π (g :: l).prod ξ - ξ‖ =
             ‖π g (π l.prod ξ - ξ) + (π g ξ - ξ)‖ := by
               congr 1
-              simp [map_mul, map_sub]
+              simp only [List.prod_cons, map_mul, LinearIsometryEquiv.coe_mul, Function.comp_apply, map_sub,
+                sub_add_sub_cancel]
         _ ≤ ‖π g (π l.prod ξ - ξ)‖ +
               ‖π g ξ - ξ‖ := norm_add_le _ _
         _ = ‖π l.prod ξ - ξ‖ + ‖π g ξ - ξ‖ := by
               rw [LinearIsometryEquiv.norm_map]
         _ ≤ (l.length : ℝ) * δ + δ := by linarith
         _ = ((g :: l).length : ℝ) * δ := by
-              simp
+              simp only [List.length_cons, Nat.cast_add, Nat.cast_one]
               ring
 
 theorem exists_word_of_symmetric_generating_finset
@@ -25386,12 +25386,12 @@ theorem exists_word_of_symmetric_generating_finset
   classical
   have hg : g ∈ Subgroup.closure (S : Set G) := by
     rw [hgenerates]
-    simp
+    simp only [Subgroup.mem_top]
   induction hg using Subgroup.closure_induction with
   | mem x hx =>
-      exact ⟨[⟨x, hx⟩], by simp⟩
+      exact ⟨[⟨x, hx⟩], by simp only [List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]⟩
   | one =>
-      exact ⟨[], by simp⟩
+      exact ⟨[], by simp only [List.map_nil, List.prod_nil]⟩
   | mul x y _ _ ihx ihy =>
       obtain ⟨lx, hlx⟩ := ihx
       obtain ⟨ly, hly⟩ := ihy
@@ -25580,7 +25580,8 @@ theorem one_mem_sourceAmbientSymmetricGenerators
       (SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode)) :
     1 ∈ sourceAmbientSymmetricGenerators SΓ := by
   classical
-  simp [sourceAmbientSymmetricGenerators]
+  simp only [sourceAmbientSymmetricGenerators, Finset.mem_insert, Finset.mem_union, Finset.mem_image,
+    inv_eq_one, exists_eq_right, or_self, true_or]
 
 theorem sourceAmbientSymmetricGenerators_inv_mem
     (SΓ : Finset
@@ -25593,15 +25594,18 @@ theorem sourceAmbientSymmetricGenerators_inv_mem
       g = 1 ∨
         g ∈ sourcePositiveGenerators SΓ ∨
         ∃ y ∈ sourcePositiveGenerators SΓ, y⁻¹ = g := by
-    simpa [sourceAmbientSymmetricGenerators, Finset.mem_image] using hg
+    simpa only [Subtype.exists, sourceAmbientSymmetricGenerators, Finset.mem_insert, Finset.mem_union,
+      Finset.mem_image] using hg
   rcases hcases with rfl | hgpos | ⟨y, hy, rfl⟩
-  · simp [sourceAmbientSymmetricGenerators]
+  · simp only [sourceAmbientSymmetricGenerators, inv_one, Finset.mem_insert, Finset.mem_union, Finset.mem_image,
+      inv_eq_one, exists_eq_right, or_self, true_or]
   · have hinv :
         g⁻¹ ∈ (sourcePositiveGenerators SΓ).image
           (fun x => x⁻¹) :=
       Finset.mem_image.mpr ⟨g, hgpos, rfl⟩
-    simp [sourceAmbientSymmetricGenerators, hinv]
-  · simp [sourceAmbientSymmetricGenerators, hy]
+    simp only [sourceAmbientSymmetricGenerators, Finset.mem_insert, inv_eq_one, Finset.mem_union, hinv, or_true]
+  · simp only [sourceAmbientSymmetricGenerators, inv_inv, Finset.mem_insert, Finset.mem_union, hy,
+      Finset.mem_image, Subtype.exists, true_or, or_true]
 
 theorem sourceAmbientSymmetricGenerators_generate
     (SΓ : Finset
@@ -25627,7 +25631,8 @@ theorem sourceAmbientSymmetricGenerators_generate
     intro x hx
     apply Subgroup.subset_closure
     change x ∈ sourceAmbientSymmetricGenerators SΓ
-    simp [sourceAmbientSymmetricGenerators, hx]
+    simp only [sourceAmbientSymmetricGenerators, Finset.mem_insert, Finset.mem_union, hx, Finset.mem_image,
+      Subtype.exists, true_or, or_true]
   have hcorner :
       ∀ g :
         SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode,
@@ -25650,7 +25655,7 @@ theorem sourceAmbientSymmetricGenerators_generate
         (Finset.mem_image.mpr ⟨x, hx, rfl⟩)
     apply hsub
     rw [hgeneratesΓ]
-    simp
+    simp only [Subgroup.mem_top]
   let U : Subgroup SoficGroups.BinaryLeavittˣ :=
     K.map
       (SoficGroups.prefixElementaryGroup
@@ -25669,10 +25674,12 @@ theorem sourceAmbientSymmetricGenerators_generate
       rcases htables with rfl | rfl
       · exact ⟨sourceCompressionU,
           hpositive sourceCompressionU
-            (by simp [sourcePositiveGenerators]), rfl⟩
+            (by simp only [sourcePositiveGenerators, Finset.union_insert, Finset.union_singleton, Finset.mem_insert,
+                  Finset.mem_image, Subtype.exists, true_or]), rfl⟩
       · exact ⟨sourceCompressionV,
           hpositive sourceCompressionV
-            (by simp [sourcePositiveGenerators]), rfl⟩
+            (by simp only [sourcePositiveGenerators, Finset.union_insert, Finset.union_singleton, Finset.mem_insert,
+                  Finset.mem_image, Subtype.exists, true_or, or_true]), rfl⟩
   have htop :
       (⊤ : Subgroup
         (SoficGroups.prefixElementaryGroup
@@ -25687,7 +25694,7 @@ theorem sourceAmbientSymmetricGenerators_generate
     have heq : y = x := by
       apply Subtype.ext
       exact hval
-    simpa [← heq] using hy
+    simpa only [← heq, SetLike.mem_coe] using hy
   exact top_unique htop
 
 theorem exists_kazhdanPair_on_exact_sourceAmbientSymmetricGenerators
@@ -25764,13 +25771,13 @@ theorem range_sourcePositiveGeneratorMap
         change sourceCompressionU ∈
           SΓ.image sourceAlphaInclusion ∪
             {sourceCompressionU, sourceCompressionV}
-        exact Finset.mem_union_right _ (by simp)
+        exact Finset.mem_union_right _ (by simp only [Finset.mem_insert, Finset.mem_singleton, true_or])
       · change sourceCompressionV ∈
           sourcePositiveGenerators SΓ
         change sourceCompressionV ∈
           SΓ.image sourceAlphaInclusion ∪
             {sourceCompressionU, sourceCompressionV}
-        exact Finset.mem_union_right _ (by simp)
+        exact Finset.mem_union_right _ (by simp only [Finset.mem_insert, Finset.mem_singleton, or_true])
   · intro hx
     change
       x ∈ SΓ.image sourceAlphaInclusion ∪
@@ -25817,13 +25824,12 @@ theorem sourcePositiveGenerators_generate
         x = 1 ∨
           x ∈ sourcePositiveGenerators SΓ ∨
           x⁻¹ ∈ sourcePositiveGenerators SΓ := by
-      simpa [sourceAmbientSymmetricGenerators,
-        Finset.mem_image] using hx
+      simpa only [sourceAmbientSymmetricGenerators, Finset.coe_insert, Finset.coe_union, Finset.coe_image,
+        Set.image_inv_eq_inv, Set.mem_insert_iff, Set.mem_union, SetLike.mem_coe, Set.mem_inv] using hx
     rcases hcases with rfl | hxpositive | hxinverse
     · exact K.one_mem
     · exact Subgroup.subset_closure hxpositive
-    · simpa using
-        K.inv_mem (Subgroup.subset_closure hxinverse)
+    · simpa only [SetLike.mem_coe, inv_inv] using K.inv_mem (Subgroup.subset_closure hxinverse)
   have hle :
       Subgroup.closure
         (sourceAmbientSymmetricGenerators SΓ : Set
@@ -25871,24 +25877,26 @@ theorem exists_symmetric_generating_finset_of_finitelyGenerated
   classical
   obtain ⟨_, T, _, hT⟩ := (Group.fg_iff').1 hfg
   let S : Finset G := insert 1 (T ∪ T.image fun g => g⁻¹)
-  refine ⟨S, by simp [S], ?_, ?_⟩
+  refine ⟨S, by simp only [Finset.mem_insert, Finset.mem_union, Finset.mem_image, inv_eq_one, exists_eq_right, or_self,
+                  true_or, S], ?_, ?_⟩
   · intro g hg
     have hcases :
         g = 1 ∨ g ∈ T ∨
           ∃ y ∈ T, y⁻¹ = g := by
       simpa [S, Finset.mem_image] using hg
     rcases hcases with rfl | hgT | ⟨y, hy, rfl⟩
-    · simp [S]
+    · simp only [inv_one, Finset.mem_insert, Finset.mem_union, Finset.mem_image, inv_eq_one, exists_eq_right,
+        or_self, true_or, S]
     · have hmem :
           g⁻¹ ∈ T.image fun z => z⁻¹ :=
         Finset.mem_image.mpr ⟨g, hgT, rfl⟩
-      simp [S, hmem]
-    · simp [S, hy]
+      simp only [Finset.mem_insert, inv_eq_one, Finset.mem_union, hmem, or_true, S]
+    · simp only [inv_inv, Finset.mem_insert, Finset.mem_union, hy, Finset.mem_image, true_or, or_true, S]
   · have hsubset : (T : Set G) ⊆ (S : Set G) := by
       intro g hg
       change g ∈ T at hg
       change g ∈ S
-      simp [S, hg]
+      simp only [Finset.mem_insert, Finset.mem_union, hg, Finset.mem_image, true_or, or_true, S]
     apply top_unique
     rw [← hT]
     exact Subgroup.closure_mono hsubset
@@ -26331,7 +26339,7 @@ theorem combined_positive_comparisonBad_density_tendsto_zero
           (Sum.elim (σ n) (T n) i) (eta n)).card : ℝ) /
             Fintype.card (V n))
       atTop (nhds 0) := by
-    simpa using
+    simpa only [Fintype.sum_sum_type, Sum.elim_inl, Sum.elim_inr, Finset.sum_const_zero] using
       tendsto_finsetSum Finset.univ (fun i _ => hsingle i)
   have hrewrite (n : ℕ) :
       ((familyComparisonBad (Q n)
@@ -26678,9 +26686,8 @@ theorem squaredPermutationEnergy_inv
   calc
     (∑ x : V, (f (p⁻¹ x) - f x) ^ 2) =
         ∑ x : V, (f x - f (p x)) ^ 2 := by
-          simpa using
-            (Equiv.sum_comp p
-              (fun x : V => (f (p⁻¹ x) - f x) ^ 2)).symm
+          simpa only [Equiv.Perm.coe_inv, Equiv.symm_apply_apply] using
+            (Equiv.sum_comp p (fun x : V => (f (p⁻¹ x) - f x) ^ 2)).symm
     _ = ∑ x : V, (f (p x) - f x) ^ 2 := by
       apply Finset.sum_congr rfl
       intro x _
@@ -26738,9 +26745,8 @@ theorem squaredPermutationEnergy_le_add_hammingDist
           if p x ≠ q x then 1 else 0 := by
       split_ifs <;> simp_all
     simp_rw [hswitch]
-    simpa [hammingDist] using
-      (Finset.sum_boole
-        (fun x : V => p x ≠ q x) (Finset.univ : Finset V))
+    simpa only [ne_eq, ite_not, hammingDist] using
+      (Finset.sum_boole (fun x : V => p x ≠ q x) (Finset.univ : Finset V))
   unfold squaredPermutationEnergy
   calc
     (∑ x : V, (f (p x) - f x) ^ 2) ≤
@@ -26812,9 +26818,8 @@ theorem squaredPermutationEnergy_mul_tendsto_zero
           Fintype.card (V n)) +
         2 * (squaredPermutationEnergy (f n) (q n) /
           Fintype.card (V n))) atTop (𝓝 0) := by
-    simpa using
-      (Filter.Tendsto.const_mul (2 : ℝ) hp).add
-        (Filter.Tendsto.const_mul (2 : ℝ) hq)
+    simpa only [mul_zero, add_zero] using
+      (Filter.Tendsto.const_mul (2 : ℝ) hp).add (Filter.Tendsto.const_mul (2 : ℝ) hq)
   refine squeeze_zero (fun n =>
     div_nonneg (squaredPermutationEnergy_nonneg (f n) (p n * q n))
       (Nat.cast_nonneg _)) ?_ hupper
@@ -26870,7 +26875,7 @@ theorem sofic_action_inverse_normalizedHamming_tendsto_zero
           ((A.model n).action (g * g⁻¹))
           ((A.model n).action g *
             (A.model n).action (g⁻¹)) := by
-        simp [(A.model n).map_one]
+        simp only [mul_inv_cancel, (A.model n).map_one]
   rw [heq]
   exact A.multiplicative g (g⁻¹)
 
@@ -27009,7 +27014,8 @@ theorem action_energy_tendsto_zero_of_positive_generator_sum
               (A.model n).size) =
             (fun _ : ℕ => (0 : ℝ)) := by
         funext n
-        simp [squaredPermutationEnergy, (A.model n).map_one]
+        simp only [squaredPermutationEnergy, (A.model n).map_one, Equiv.Perm.coe_one, id_eq, sub_self, ne_eq,
+          OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, Finset.sum_const_zero, zero_div]
       rw [heq]
       exact tendsto_const_nhds
   | mul x y _ _ hx hy =>
@@ -27044,7 +27050,7 @@ theorem sum_action_energy_tendsto_zero_of_positive_generator_sum
         ∑ g ∈ S,
           squaredPermutationEnergy (f n) ((A.model n).action g) /
             (A.model n).size) atTop (𝓝 0) := by
-    simpa using tendsto_finsetSum S (fun g _ => hall g)
+    simpa only [Finset.sum_const_zero] using tendsto_finsetSum S (fun g _ => hall g)
   simpa only [Finset.sum_div] using hsum
 
 end KunPositiveWordMidrankEnergy
@@ -27095,22 +27101,22 @@ theorem permutationRealVariation_subtract_layer
           (if x ∉ A ∧ σ i x ∈ A then m else 0) := by
     by_cases hx : x ∈ A
     · by_cases hy : σ i x ∈ A
-      · simp [g, hx, hy, sub_sub_sub_cancel_right]
+      · simp only [hy, ↓reduceIte, hx, sub_sub_sub_cancel_right, not_true_eq_false, and_false, add_zero, and_true, g]
       · have hyzero := houtside (σ i x) hy
         have hxnonnegative : 0 ≤ f x := hm.trans (hinside x hx)
-        simp [g, hx, hy, hyzero,
-          abs_of_nonneg hxnonnegative,
-          abs_of_nonpos (sub_nonpos.mpr (hinside x hx))]
+        simp only [hyzero, zero_sub, abs_neg, abs_of_nonneg hxnonnegative, hy, ↓reduceIte, hx, neg_sub,
+          abs_of_nonpos (sub_nonpos.mpr (hinside x hx)), not_false_eq_true, and_self, sub_add_cancel, not_true_eq_false,
+          add_zero, g]
     · by_cases hy : σ i x ∈ A
       · have hxzero := houtside x hx
         have hynonnegative : 0 ≤ f (σ i x) :=
           hm.trans (hinside (σ i x) hy)
         have hysub : 0 ≤ f (σ i x) - m :=
           sub_nonneg.mpr (hinside (σ i x) hy)
-        simp [g, hx, hy, hxzero,
-          abs_of_nonneg hynonnegative, abs_of_nonneg hysub]
-      · simp [g, hx, hy, houtside x hx,
-          houtside (σ i x) hy]
+        simp only [hxzero, sub_zero, abs_of_nonneg hynonnegative, hy, ↓reduceIte, hx, abs_of_nonneg hysub,
+          not_true_eq_false, and_self, add_zero, not_false_eq_true, sub_add_cancel, g]
+      · simp only [houtside (σ i x) hy, houtside x hx, sub_self, abs_zero, hy, ↓reduceIte, hx, not_false_eq_true,
+          and_true, add_zero, and_false, g]
   have hone (i : ι) :
       (∑ x : V, |f (σ i x) - f x|) =
         (∑ x : V, |g (σ i x) - g x|) +
@@ -27123,7 +27129,7 @@ theorem permutationRealVariation_subtract_layer
             (fun x : V => x ∈ A ∧ σ i x ∉ A) =
               A.filter fun x => σ i x ∉ A := by
         ext x
-        simp
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
       simpa only [hset] using
         sum_indicator_real_eq_mul_card Finset.univ
           (fun x : V => x ∈ A ∧ σ i x ∉ A) m
@@ -27176,7 +27182,7 @@ theorem permutationRealVariation_subtract_layer
           2 * m *
             (∑ i : ι, (A.filter fun x => σ i x ∉ A).card) := by
           push_cast
-          simp [Finset.sum_add_distrib, Finset.mul_sum]
+          simp only [Finset.sum_add_distrib, Finset.mul_sum]
 
 theorem additive_permutation_small_support_coarea
     {V ι : Type*} [Fintype V]
@@ -27227,7 +27233,7 @@ theorem additive_permutation_small_support_coarea
         intro x
         by_cases hx : x ∈ A
         · simpa [g, hx] using sub_nonneg.mpr (hmle x hx)
-        · simp [g, hx]
+        · simp only [hx, ↓reduceIte, Std.le_refl, g]
       have hgupper : ∀ x, g x ≤ M - m := by
         intro x
         by_cases hx : x ∈ A
@@ -27241,15 +27247,15 @@ theorem additive_permutation_small_support_coarea
         have hpositive :=
           (SoficGroups.CheegerPoincare.mem_positiveSupport g x).mp hx
         by_contra hxA
-        simp [g, hxA] at hpositive
+        simp only [hxA, ↓reduceIte, lt_self_iff_false, g] at hpositive
       have hznot :
           z ∉ SoficGroups.CheegerPoincare.positiveSupport g := by
         intro hz
         have hpositive :=
           (SoficGroups.CheegerPoincare.mem_positiveSupport g z).mp hz
         have hzero : g z = 0 := by
-          simp [g, hzA, hzm]
-        simp [hzero] at hpositive
+          simp only [hzA, ↓reduceIte, hzm, sub_self, g]
+        simp only [hzero, lt_self_iff_false] at hpositive
       have hstrict :
           SoficGroups.CheegerPoincare.positiveSupport g ⊂ A := by
         apply Finset.ssubset_iff_subset_ne.mpr
@@ -27278,7 +27284,7 @@ theorem additive_permutation_small_support_coarea
       have hcut :
           γ * (A.card : ℝ) ≤
             (SoficGroups.boundary σ A : ℝ) + ε := by
-        simpa [min_eq_left hmin] using hexp A
+        simpa only [min_eq_left hmin] using hexp A
       have houtside : ∀ x, x ∉ A → f x = 0 := by
         intro x hx
         have hnot : ¬ 0 < f x := by
@@ -27290,9 +27296,8 @@ theorem additive_permutation_small_support_coarea
       have hsumindicator :
           (∑ x : V, if x ∈ A then m else 0) =
             m * (A.card : ℝ) := by
-        simpa using
-          sum_indicator_real_eq_mul_card Finset.univ
-            (fun x : V => x ∈ A) m
+        simpa only [Finset.sum_ite_mem, Finset.univ_inter, Finset.sum_const, nsmul_eq_mul, Finset.subset_univ,
+          Finset.filter_mem_eq_of_subset] using sum_indicator_real_eq_mul_card Finset.univ (fun x : V => x ∈ A) m
       have hsum :
           (∑ x : V, f x) =
             (∑ x : V, g x) + m * (A.card : ℝ) := by
@@ -27303,8 +27308,8 @@ theorem additive_permutation_small_support_coarea
               apply Finset.sum_congr rfl
               intro x _
               by_cases hx : x ∈ A
-              · simp [g, hx]
-              · simp [g, hx, houtside x hx]
+              · simp only [hx, ↓reduceIte, sub_add_cancel, g]
+              · simp only [houtside x hx, hx, ↓reduceIte, add_zero, g]
           _ = (∑ x : V, g x) +
               (∑ x : V, if x ∈ A then m else 0) := by
               rw [Finset.sum_add_distrib]
@@ -27330,7 +27335,8 @@ theorem additive_permutation_small_support_coarea
             (SoficGroups.CheegerPoincare.mem_positiveSupport f x).mpr
               hpositive⟩
         exact le_antisymm (le_of_not_gt hx) (hf x)
-      simp [permutationRealVariation, hzero]
+      simp only [hzero, Finset.sum_const_zero, mul_zero, permutationRealVariation, sub_self, abs_zero, zero_add,
+        ge_iff_le]
       positivity
 
 theorem positive_negative_abs_eq (a b : ℝ) :
@@ -27651,7 +27657,7 @@ theorem normalized_permutationRealVariation_tendsto_zero_of_energy
               (f n (σ n i x) - f n x) ^ 2) /
                 (Fintype.card (V n) : ℝ)))
         atTop (nhds 0) := by
-      simpa using henergy.const_mul (Fintype.card ι : ℝ)
+      simpa only [mul_zero] using henergy.const_mul (Fintype.card ι : ℝ)
     simpa only [Function.comp_def, Real.sqrt_zero] using
       (Real.continuous_sqrt.tendsto (0 : ℝ)).comp hscaled
   apply squeeze_zero'
@@ -27744,7 +27750,7 @@ theorem completed_component_real_variation_le
           rw [horiginal, hmiss]
     _ = (∑ i : ι, ∑ x ∈ C, |f (σ i x) - f x|) +
           (SoficGroups.boundary σ C : ℝ) := by
-          simp [SoficGroups.boundary, Finset.sum_add_distrib]
+          simp only [Finset.sum_add_distrib, boundary, Nat.cast_sum]
 
 theorem sum_completed_component_real_variation_le
     {V ι : Type*} [Fintype V] [DecidableEq V] [Fintype ι]
@@ -28337,7 +28343,7 @@ theorem sofic_action_inverse_normalizedHamming_tendsto_zero
           ((A.model n).action (g * g⁻¹))
           ((A.model n).action g *
             (A.model n).action (g⁻¹)) := by
-        simp [(A.model n).map_one]
+        simp only [mul_inv_cancel, (A.model n).map_one]
   rw [heq]
   exact A.multiplicative g (g⁻¹)
 
@@ -28514,7 +28520,7 @@ theorem canonicalProductRadiusBad_density_tendsto_zero
           (sourceProductRadiusLabels S F k)).card : ℝ) /
             (A.model n).size)
       atTop (nhds 0) := by
-    simpa using hfactor.add hproduct
+    simpa only [add_zero] using hfactor.add hproduct
   refine squeeze_zero (fun n => by positivity) ?_ hsum
   intro n
   have hcard :
@@ -28587,12 +28593,12 @@ theorem sourceWordTestBad_subset_finiteProductRootBad
       (A.model n).action (1, j)
           ((A.model n).action ((i : K), 1) x) =
         (A.model n).action ((1, j) * ((i : K), 1)) x := by
-          simpa [Equiv.Perm.mul_apply] using hfirst.symm
+          simpa only [Prod.mk_mul_mk, one_mul, mul_one, Equiv.Perm.mul_apply] using hfirst.symm
       _ = (A.model n).action
-          (((i : K), 1) * (1, j)) x := by simp
+          (((i : K), 1) * (1, j)) x := by simp only [Prod.mk_mul_mk, one_mul, mul_one]
       _ = (A.model n).action ((i : K), 1)
           ((A.model n).action (1, j) x) := by
-          simpa [Equiv.Perm.mul_apply] using hsecond
+          simpa only [Prod.mk_mul_mk, mul_one, one_mul, Equiv.Perm.mul_apply] using hsecond
   · obtain ⟨j, hj, l, hl, hfailure⟩ := hmul
     have hjT :=
       SoficGroups.CompressionCriterion.mem_productTrackedTable hj
@@ -28607,7 +28613,7 @@ theorem sourceWordTestBad_subset_finiteProductRootBad
           S F k hlT)
         hxroot
     apply hfailure
-    simpa [Equiv.Perm.mul_apply] using hproduct
+    simpa only [Prod.mk_mul_mk, mul_one, Equiv.Perm.mul_apply] using hproduct
   · obtain ⟨j, hj, l, hl, hne, heq⟩ := hsep
     have hjT :=
       SoficGroups.CompressionCriterion.mem_productTrackedTable hj
@@ -28717,7 +28723,7 @@ theorem sourceCompletionBad_subset_canonical_matchedRadiusBad
         (A.model n).action ((i : K), j) x =
           (A.model n).action (1, j)
             ((A.model n).action ((i : K), 1) x) := by
-      simpa [Equiv.Perm.mul_apply] using hpair
+      simpa only [Prod.mk_mul_mk, one_mul, mul_one, Equiv.Perm.mul_apply] using hpair
     apply hnotcross
       ((i : K), j)
       (composite_mem_sourceProductRadiusLabels
@@ -28925,7 +28931,7 @@ noncomputable def trackedCompletedAlmostCentralizer
   intro j
   by_cases hj : j ∈ SoficGroups.CompressionCriterion.productTrackedTable F
   · exact ⟨p j, hdefect j hj⟩
-  · exact ⟨1, by simp⟩
+  · exact ⟨1, by simp only [permutationCommutationDefect_one, zero_le]⟩
 
 theorem trackedCompletedAlmostCentralizer_permutation_of_mem
     {V ι J : Type} [Fintype V] [DecidableEq V]
@@ -28940,7 +28946,7 @@ theorem trackedCompletedAlmostCentralizer_permutation_of_mem
     (trackedCompletedAlmostCentralizer σ p F t hdefect j).permutation =
       p j := by
   classical
-  simp [trackedCompletedAlmostCentralizer, hj]
+  simp only [trackedCompletedAlmostCentralizer, hj, ↓reduceDIte]
 
 theorem trackedCompletedAlmostCentralizer_map_one
     {V ι J : Type} [Fintype V] [DecidableEq V]
@@ -29150,7 +29156,7 @@ theorem conjugacy_relation_step (a b : G) (n : ℕ)
     b⁻¹ * conjugateTerm a b (n + 2) * b =
       conjugateTerm a b (n + 3) := by
   have hone : conjugateTerm a b 1 = a⁻¹ * b * a := by
-    simp [conjugateTerm]
+    simp only [conjugateTerm, pow_one]
   have hshift :
       (conjugateTerm a b 1)⁻¹ *
           conjugateTerm a b (n + 1) *
@@ -29190,9 +29196,7 @@ theorem conjugacy_relation_all (a b : G)
   | zero => exact hfirst
   | one => exact hsecond
   | more n hprevious hcurrent =>
-      simpa [Nat.add_assoc] using
-        conjugacy_relation_step a b (n + 1)
-          hfirst hprevious hcurrent
+      simpa only [Nat.add_assoc, Nat.reduceAdd] using conjugacy_relation_step a b (n + 1) hfirst hprevious hcurrent
 
 theorem finite_group_commute_of_thompsonF_two_relations
     {G : Type*} [Group G] [Finite G] (a b : G)
@@ -29202,18 +29206,18 @@ theorem finite_group_commute_of_thompsonF_two_relations
   have hfirst' : b⁻¹ * conjugateTerm a b 1 * b =
       conjugateTerm a b 2 := by
     apply conjugacy_relation_of_commute a b 1
-    simpa [conjugateTerm] using hfirst
+    simpa only [conjugateTerm, pow_one] using hfirst
   have hsecond' : b⁻¹ * conjugateTerm a b 2 * b =
       conjugateTerm a b 3 := by
     apply conjugacy_relation_of_commute a b 2
-    simpa [conjugateTerm] using hsecond
+    simpa only [conjugateTerm] using hsecond
   have hpositive : 0 < orderOf a := orderOf_pos a
   have hindex : orderOf a - 1 + 1 = orderOf a :=
     Nat.sub_add_cancel hpositive
   have hnext : orderOf a - 1 + 2 = orderOf a + 1 := by
     omega
   have hperiod : conjugateTerm a b (orderOf a) = b := by
-    simp [conjugateTerm, pow_orderOf_eq_one]
+    simp only [conjugateTerm, pow_orderOf_eq_one, inv_one, one_mul, mul_one]
   have hconjugate :
       conjugateTerm a b (orderOf a + 1) = a⁻¹ * b * a := by
     rw [conjugateTerm_succ, hperiod]
@@ -29221,7 +29225,7 @@ theorem finite_group_commute_of_thompsonF_two_relations
     (orderOf a - 1)
   rw [hindex, hnext, hperiod, hconjugate] at hrelation
   have heq : b = a⁻¹ * b * a := by
-    simpa using hrelation
+    simpa only [inv_mul_cancel, one_mul] using hrelation
   change a * b = b * a
   calc
     a * b = a * (a⁻¹ * b * a) := congrArg (fun z : G => a * z) heq
@@ -29283,11 +29287,11 @@ theorem not_lef_of_thompsonF_two_relations
     simpa [φ, r₂, thompsonFRelator] using h₂.commutator_eq
   have hψ₁ : ψ r₁ = 1 := by
     calc
-      ψ r₁ = f (φ r₁) := hword r₁ (by simp [tracked])
+      ψ r₁ = f (φ r₁) := hword r₁ (by simp only [Finset.mem_insert, Finset.mem_singleton, true_or, tracked])
       _ = 1 := by rw [hφ₁, hf_local.map_one]
   have hψ₂ : ψ r₂ = 1 := by
     calc
-      ψ r₂ = f (φ r₂) := hword r₂ (by simp [tracked])
+      ψ r₂ = f (φ r₂) := hword r₂ (by simp only [Finset.mem_insert, Finset.mem_singleton, true_or, or_true, tracked])
       _ = 1 := by rw [hφ₂, hf_local.map_one]
   have hf₁ :
       Commute (f a * (f b)⁻¹) ((f a)⁻¹ * f b * f a) := by
@@ -29308,10 +29312,12 @@ theorem not_lef_of_thompsonF_two_relations
     simpa [φ, w, thompsonFGeneratorCommutator] using hz
   apply hφw
   apply hf_inj
-  · simp [support]
-  · simp [support]
+  · simp only [Finset.coe_insert, Finset.coe_biUnion, SetLike.mem_coe, Set.mem_insert_iff, Set.mem_iUnion,
+      exists_prop, true_or, or_true, support]
+  · simp only [Finset.coe_insert, Finset.coe_biUnion, SetLike.mem_coe, Set.mem_insert_iff, Set.mem_iUnion,
+      exists_prop, true_or, support]
   calc
-    f (φ w) = ψ w := (hword w (by simp [tracked])).symm
+    f (φ w) = ψ w := (hword w (by simp only [Finset.mem_insert, Finset.mem_singleton, or_true, tracked])).symm
     _ = 1 := hψw
     _ = f 1 := hf_local.map_one.symm
 
@@ -29325,7 +29331,7 @@ theorem prefixWordAction_inv {g : BinaryLeavittˣ}
     {a b : List (Fin 2)} (h : PrefixWordAction g a b) :
     PrefixWordAction g⁻¹ b a := by
   have hunit : (↑g⁻¹ : BinaryLeavitt) * (g : BinaryLeavitt) = 1 := by
-    simp
+    simp only [Units.inv_mul]
   constructor
   · calc
       (↑g⁻¹ : BinaryLeavitt) * leavittWordS b =
@@ -29433,7 +29439,7 @@ theorem generator_two_eq_prefixInsertion :
         rootRotation * prefixInsertionHom [1] generatorA *
           rootRotation⁻¹ := by
             rw [generatorB_eq_prefixInsertion]
-            simp [generatorA]
+            simp only [generatorA, inv_inv, Fin.isValue, map_inv]
     _ = prefixInsertionHom [1, 1] generatorA :=
       prefixInsertionHom_conjugate_of_prefixWordAction
         rootRotation [1] [1, 1] rootRotation_action_one generatorA
@@ -29443,13 +29449,14 @@ theorem generator_three_eq_prefixInsertion :
       prefixInsertionHom [1, 1, 1] generatorA := by
   have hrotation :
       PrefixWordAction rootRotation [1, 1] [1, 1, 1] := by
-    simpa using prefixWordAction_append rootRotation_action_one [1]
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      prefixWordAction_append rootRotation_action_one [1]
   calc
     (generatorA ^ 2)⁻¹ * generatorB * generatorA ^ 2 =
         rootRotation *
           (generatorA⁻¹ * generatorB * generatorA) *
           rootRotation⁻¹ := by
-            simp [generatorA, pow_two, mul_assoc]
+            simp only [generatorA, pow_two, mul_inv_rev, inv_inv, mul_assoc]
     _ = rootRotation * prefixInsertionHom [1, 1] generatorA *
           rootRotation⁻¹ := by rw [generator_two_eq_prefixInsertion]
     _ = prefixInsertionHom [1, 1, 1] generatorA :=
@@ -29460,11 +29467,12 @@ theorem generator_difference_action_one_one :
     PrefixWordAction (generatorA * generatorB⁻¹) [1, 1] [1, 1] := by
   have hrotation :
       PrefixWordAction rootRotation [1, 1] [1, 1, 1] := by
-    simpa using prefixWordAction_append rootRotation_action_one [1]
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      prefixWordAction_append rootRotation_action_one [1]
   have hright :
       PrefixWordAction rightRotation [1, 1] [1, 1, 1] := by
     unfold rightRotation
-    simpa using
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
       prefixWordAction_prefixInsertion [1] rootRotation_action_one
   change
     PrefixWordAction
@@ -29498,7 +29506,7 @@ theorem relator_two :
   rw [generator_three_eq_prefixInsertion]
   apply commute_prefixInsertion_of_prefixWordAction_fixed
     (generatorA * generatorB⁻¹) [1, 1, 1] _ generatorA
-  simpa using
+  simpa only [Fin.isValue, List.cons_append, List.nil_append] using
     prefixWordAction_append generator_difference_action_one_one [1]
 
 theorem cylinderSwap_mem_binaryPrefixTranspositionGroup
@@ -29543,28 +29551,26 @@ theorem generators_not_commute : ¬ Commute generatorA generatorB := by
       PrefixWordAction rightRotation⁻¹ [1, 1, 0] [1, 0, 1]
     apply prefixWordAction_inv
     unfold rightRotation
-    simpa using
-      prefixWordAction_prefixInsertion [1]
-        rootRotation_action_zero_one
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      prefixWordAction_prefixInsertion [1] rootRotation_action_zero_one
   have hb_one_zero :
       PrefixWordAction generatorB [1, 0] [1, 0, 0] := by
     change PrefixWordAction rightRotation⁻¹ [1, 0] [1, 0, 0]
     apply prefixWordAction_inv
     unfold rightRotation
-    simpa using
-      prefixWordAction_prefixInsertion [1]
-        rootRotation_action_zero_zero
+    simpa only [Fin.isValue, List.cons_append, List.nil_append] using
+      prefixWordAction_prefixInsertion [1] rootRotation_action_zero_zero
   have hab :
       PrefixWordAction (generatorA * generatorB)
         [1, 1, 0] [0, 1, 1] :=
     prefixWordAction_mul
-      (by simpa using prefixWordAction_append ha_zero_one [1])
+      (by simpa only [Fin.isValue, List.cons_append, List.nil_append] using prefixWordAction_append ha_zero_one [1])
       hb_one_one_zero
   have hba :
       PrefixWordAction (generatorB * generatorA)
         [1, 1, 0] [1, 0, 0] :=
     prefixWordAction_mul hb_one_zero
-      (by simpa using prefixWordAction_append ha_one [0])
+      (by simpa only [Fin.isValue, List.cons_append, List.nil_append] using prefixWordAction_append ha_one [0])
   intro hcommute
   have hwords :
       leavittWordS [0, 1, 1] = leavittWordS [1, 0, 0] := by
@@ -29887,7 +29893,7 @@ theorem exists_prescribed_radius_union_source_completed_tolerance
       (hδpositive j).le
   have hevanishes (j : ℕ) :
       Tendsto (fun n => e n j) atTop (𝓝 0) := by
-    simpa [e] using (hunion j).div_const (δ j)
+    simpa only [zero_div] using (hunion j).div_const (δ j)
   obtain ⟨m, hm, herror⟩ :=
     SoficGroups.exists_diverging_radius_with_vanishing_diagonal_error
       e hepositive hevanishes
@@ -29943,7 +29949,7 @@ theorem exists_prescribed_radius_union_source_completed_tolerance
     have hupper : Tendsto
         (fun n => δ (m n) + 1 / (N n : ℝ))
         atTop (𝓝 0) := by
-      simpa using hδm.add honeover
+      simpa only [one_div, add_zero] using hδm.add honeover
     exact squeeze_zero (fun n => by positivity) hrootupper hupper
   let t : ℕ → ℕ :=
     fun n => 2 * d * (B n (m n)).card + rootError n + 1
@@ -29986,7 +29992,7 @@ theorem exists_prescribed_radius_union_source_completed_tolerance
           ((2 * d : ℕ) : ℝ) *
             (((B n (m n)).card : ℝ) / (N n : ℝ)))
         atTop (𝓝 0) := by
-      simpa using hbadselected.const_mul ((2 * d : ℕ) : ℝ)
+      simpa only [Nat.cast_mul, Nat.cast_ofNat, mul_zero] using hbadselected.const_mul ((2 * d : ℕ) : ℝ)
     have hsum := (hscaled.add hrootlimit).add honeover
     convert hsum using 1
     · funext n
@@ -30083,10 +30089,9 @@ theorem sourceConjugacyDisagreementBad_density_tendsto_zero
           (A.model n).size)
       atTop (nhds 0) := by
   classical
-  simpa [sourceConjugacyDisagreementBad,
-    SoficGroups.normalizedHamming, hammingDist] using
-    SoficGroups.SourceCompressionTransportCrossing.tendsto_action_conjugate
-      A u g
+  simpa only [sourceConjugacyDisagreementBad, Equiv.Perm.coe_mul, Equiv.Perm.coe_inv, Function.comp_apply,
+    ne_eq, normalizedHamming, hammingDist, Fintype.card_fin] using
+    SoficGroups.SourceCompressionTransportCrossing.tendsto_action_conjugate A u g
 
 end KunLiteralSourceSelectedComponents
 
@@ -30203,8 +30208,8 @@ theorem source_both_transported_generator_boundary_density_tendsto_zero
                 (SoficGroups.SourceBothCompressionNormalization.sourceCompressionTable j))⁻¹)).card : ℝ) /
                 (A.model n).size)
       atTop (nhds 0) := by
-    simpa using tendsto_finsetSum Finset.univ
-      (fun i _ => hcross i)
+    simpa only [Finset.univ_eq_attach, Finset.sum_const_zero] using
+      tendsto_finsetSum Finset.univ (fun i _ => hcross i)
   have hidentity (n : ℕ) :
       (∑ C ∈ (Q n).parts,
         (SoficGroups.boundary
@@ -30695,10 +30700,10 @@ theorem source_compressed_local_product_ball_crossing_density_tendsto_zero
                   z))).card : ℝ) /
                 (A.model n).size)
         atTop (𝓝 0) := by
-    simpa using
-      tendsto_finsetSum (I k) (fun z _ =>
-        source_compressed_local_product_word_crossing_density_tendsto_zero
-          A SΓ hsymmetric hgenerates Q hboundary z)
+    simpa only [Finset.sum_const_zero] using
+      tendsto_finsetSum (I k)
+        (fun z _ =>
+          source_compressed_local_product_word_crossing_density_tendsto_zero A SΓ hsymmetric hgenerates Q hboundary z)
   simpa only [Nat.cast_sum, Finset.sum_div] using hsum
 
 def sourceCompressedLocalProductApproximation
@@ -31229,9 +31234,9 @@ theorem sourceAmbientFiniteFamily_crossing_density_tendsto_zero
             ((A.model n).action (g i))).card : ℝ) /
               (A.model n).size)
       atTop (𝓝 0) := by
-    simpa using tendsto_finsetSum (Finset.univ : Finset ι)
-      (fun i _ => sourceAmbientGeneratedWord_crossing_density_tendsto_zero
-        A S hsymmetric hgenerates Q hboundary (g i))
+    simpa only [Finset.sum_const_zero] using
+      tendsto_finsetSum (Finset.univ : Finset ι)
+        (fun i _ => sourceAmbientGeneratedWord_crossing_density_tendsto_zero A S hsymmetric hgenerates Q hboundary (g i))
   simpa only [Finset.sum_div] using hsum
 
 theorem sourceAmbientActualInverse_crossing_density_tendsto_zero
@@ -31671,7 +31676,7 @@ theorem completed_actual_component_additive_expansion_of_reference
       dsimp [D]
       have h :=
         Finset.card_sdiff_add_card_eq_card (Finset.subset_univ E)
-      simpa using h
+      simpa only [Finset.univ_eq_attach, Finset.card_attach] using h
     have hhalfD : 2 * D.card ≤ C.card := by
       omega
     have hsmall := hhalf D hhalfD
@@ -31821,7 +31826,7 @@ theorem componentGeneratorDisagreement_le_card_mul_component_bad
           exact Finset.mem_inter.mpr
             ⟨hxC, hbad i x hxC hdisagree⟩
     _ = Fintype.card ι * (C ∩ B).card := by
-          simp
+          simp only [Finset.sum_const, Finset.card_univ, smul_eq_mul]
 
 theorem componentGeneratorDisagreement_density_tendsto_zero_of_component_bad
     (V : ℕ → Type*) [∀ n, DecidableEq (V n)]
@@ -31843,7 +31848,7 @@ theorem componentGeneratorDisagreement_density_tendsto_zero_of_component_bad
         (Fintype.card ι : ℝ) *
           (((C n ∩ B n).card : ℝ) / (C n).card))
       atTop (nhds 0) := by
-    simpa using hdensity.const_mul (Fintype.card ι : ℝ)
+    simpa only [mul_zero] using hdensity.const_mul (Fintype.card ι : ℝ)
   apply squeeze_zero'
     (Eventually.of_forall fun n =>
       div_nonneg (Nat.cast_nonneg _)
@@ -32096,10 +32101,11 @@ theorem sourceGeneratorFamilyConjugacyBad_density_tendsto_zero
       SoficGroups.SourceBothCompressionNormalization.sourceCompressionUElement
       (SoficGroups.SourceGeneratedWordCrossing.sourceAlphaInclusion g) n)
     (fun g _ => by
-      simpa using sourceConjugacyDisagreementBad_density_tendsto_zero A
-        SoficGroups.SourceBothCompressionNormalization.sourceCompressionUElement
-        (SoficGroups.SourceGeneratedWordCrossing.sourceAlphaInclusion g))
-  simpa [sourceGeneratorFamilyConjugacyBad] using h
+      simpa only [Finset.univ_inter, Finset.card_univ, Fintype.card_fin] using
+        sourceConjugacyDisagreementBad_density_tendsto_zero A
+          SoficGroups.SourceBothCompressionNormalization.sourceCompressionUElement
+          (SoficGroups.SourceGeneratedWordCrossing.sourceAlphaInclusion g))
+  simpa only [sourceGeneratorFamilyConjugacyBad, Finset.univ_inter, Finset.card_univ, Fintype.card_fin] using h
 
 noncomputable def sourceSelectedRadiusBad
     (A : SoficGroups.SoficApproximation
@@ -32321,7 +32327,7 @@ theorem exists_source_guarded_canonical_selected_components_of_retained_matching
               (A.model n).size +
             ((E n k).card : ℝ) / (A.model n).size)
         atTop (nhds 0) := by
-      simpa using hcanon'.add (hE k)
+      simpa only [add_zero] using hcanon'.add (hE k)
     refine squeeze_zero (fun n => by positivity) ?_ hlimit
     intro n
     have hnat := Finset.card_union_le
@@ -33479,7 +33485,7 @@ theorem firstFactor_completed_mul_distance_le_canonical_matched
           (firstFactor_mem_sourceProductRadiusLabels S F k hg)
           hnotroot
         apply hmul
-        simpa [Equiv.Perm.mul_apply] using hroot
+        simpa only [Prod.mk_mul_mk, mul_one, Equiv.Perm.mul_apply] using hroot
     _ = (C ∩ SoficGroups.matchedRadiusBad
         Q (sourceProductRadiusLabels S F k)
         ((A.model n).action)
@@ -33656,7 +33662,7 @@ theorem twiceCompleted_firstFactor_mul_normalizedHamming_tendsto_zero_of_canonic
   have hcomplement :
       (Finset.univ \ Z n : Finset (W n)) = D n := by
     ext x
-    simp [Z]
+    simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Decidable.not_not, Z]
   have hnat :
       SoficGroups.permutationDistance
         (completedRestriction s (Z n))
@@ -33681,9 +33687,8 @@ theorem twiceCompleted_firstFactor_mul_normalizedHamming_tendsto_zero_of_canonic
           completedRestriction q (Z n)) ≤
       (B n : ℝ) / (Z n).card +
         2 * ((D n).card : ℝ) / (Z n).card
-  simpa [SoficGroups.normalizedHamming,
-    SoficGroups.permutationDistance, Fintype.card_coe, add_div,
-    mul_div_assoc] using hnormalized
+  simpa only [normalizedHamming, Equiv.Perm.coe_mul, Function.comp_apply, Fintype.card_coe, mul_div_assoc,
+    permutationDistance, add_div] using hnormalized
 
 end KunActualTwicePrunedFirstFactorRootBad
 
@@ -33709,7 +33714,8 @@ theorem completed_generator_one_of_internal_agreement
   have hinside : σ i (x : W) ∈ Z := by
     rw [hσ]
     exact x.property
-  simpa [hσ] using hagrees i (x : W) x.property hinside
+  simpa only [Equiv.Perm.coe_one, id_eq, SetLike.coe_eq_coe, Subtype.coe_eta, hσ] using
+    hagrees i (x : W) x.property hinside
 
 theorem nonempty_expandingCentralizerFiniteModel_of_actual_selected_pruned_source
     {G J : Type} [Group G] [Group J]
@@ -33773,29 +33779,24 @@ theorem nonempty_expandingCentralizerFiniteModel_of_actual_selected_pruned_sourc
   let φ : (n : ℕ) → G → Equiv.Perm (V n) :=
     fun n g => ((w g).map (τ n)).prod
   have hφone (n : ℕ) : φ n 1 = 1 := by
-    simp [φ, w,
-      SoficGroups.KunActualSoficRootRadius.symmetricGeneratorWord_one]
+    simp only [symmetricGeneratorWord_one, List.map_nil, List.prod_nil, φ, w]
   have hφgenerator (n : ℕ) (i : ↥S) :
       φ n (i : G) = τ n i := by
     by_cases hi : (i : G) = 1
     · have hτone : τ n i = 1 :=
         completed_generator_one_of_internal_agreement
           S (σ n) (Z n) (τ n) (hτ n) (hσone n) i hi
-      simp [φ, w, hi, hτone,
-        SoficGroups.KunActualSoficRootRadius.symmetricGeneratorWord_one]
-    · simp [φ, w,
-        SoficGroups.KunActualSoficRootRadius.symmetricGeneratorWord_generator
-          S hsymmetric hgenerates i hi]
+      simp only [hi, symmetricGeneratorWord_one, List.map_nil, List.prod_nil, hτone, φ, w]
+    · simp only [SoficGroups.KunActualSoficRootRadius.symmetricGeneratorWord_generator S hsymmetric hgenerates i hi,
+        List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one, φ, w]
   have hφmul (a g : G) :
       Tendsto
         (fun n => SoficGroups.normalizedHamming
           (φ n (a * g)) (φ n a * φ n g))
         atTop (𝓝 0) := by
-    simpa [φ,
-      SoficGroups.CompletedChosenWordLocalRoot.chosenWordEvaluation] using
-      SoficGroups.CompletedChosenWordLocalRoot.chosenWordEvaluation_multiplicative_tendsto
-          V ρ hρone hρmul
-          (fun i : ↥S => (i : G)) w hw τ hρgenerator a g
+    simpa only [CompletedChosenWordLocalRoot.chosenWordEvaluation] using
+      SoficGroups.CompletedChosenWordLocalRoot.chosenWordEvaluation_multiplicative_tendsto V ρ hρone hρmul
+        (fun i : ↥S => (i : G)) w hw τ hρgenerator a g
   let root : (n : ℕ) → ℕ → Finset (V n) :=
     fun n k =>
       SoficGroups.CompletedPrescribedSpectralRadiusSchedule.fixedRadiusRootBad
@@ -33888,7 +33889,7 @@ theorem nonempty_expandingCentralizerFiniteModel_of_actual_selected_pruned_sourc
         SoficGroups.permutationCommutationDefect
           (τ n) (pZ n j) ≤ t n := by
     filter_upwards [htable] with n hn
-    simpa [pZ] using hn.2.2
+    simpa only using hn.2.2
   have hmulJ : ∀ᶠ n in atTop,
       ∀ a ∈ F, ∀ b ∈ F,
         5 * SoficGroups.permutationDistance
@@ -33912,10 +33913,10 @@ theorem nonempty_expandingCentralizerFiniteModel_of_actual_selected_pruned_sourc
     · exact hφone n
     · exact hφgenerator n
     · exact hexp n
-    · simpa [d, q] using hn
+    · simpa only [one_div] using hn
     · right
       refine ⟨by exact_mod_cast htpositive n, ?_, ?_, ?_⟩
-      · simpa [α] using htarget n
+      · simpa only using htarget n
       · have hbudget :
             2 * d * (root n (R (m n)) ∪ source n).card ≤ t n := by
           rw [htdef n]

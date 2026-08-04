@@ -38,7 +38,7 @@ theorem marginalY_nonneg (G : Game X Y A B) (y : Y) :
 
 theorem marginalX_normalized (G : Game X Y A B) :
     (∑ x : X, G.marginalX x) = 1 := by
-  simpa [marginalX] using G.weight_normalized
+  simpa only [marginalX] using G.weight_normalized
 
 theorem marginalY_normalized (G : Game X Y A B) :
     (∑ y : Y, G.marginalY y) = 1 := by
@@ -67,7 +67,7 @@ def «repeat» (G : Game X Y A B) (n : ℕ) :
               exact (Fintype.prod_sum
                 (fun _i : Fin n => fun x : X => ∑ y : Y,
                   G.questionWeight x y)).symm
-      _ = 1 := by simp [G.weight_normalized]
+      _ = 1 := by simp only [G.weight_normalized, Finset.prod_const_one]
   predicate xs ys as bs :=
     decide (∀ i : Fin n, G.predicate (xs i) (ys i) (as i) (bs i) = true)
 
@@ -81,7 +81,7 @@ def «repeat» (G : Game X Y A B) (n : ℕ) :
     (as : Fin n → A) (bs : Fin n → B) :
     (G.repeat n).predicate xs ys as bs = true ↔
       ∀ i : Fin n, G.predicate (xs i) (ys i) (as i) (bs i) = true := by
-  simp [«repeat»]
+  simp only [«repeat», decide_eq_true_eq]
 
 end Game
 
@@ -115,7 +115,7 @@ theorem trace_mul_posSemidef_nonneg {d : Type*} [Fintype d] [DecidableEq d]
     0 ≤ (Matrix.trace (R * E)).re := by
   obtain ⟨K, rfl⟩ := CStarAlgebra.nonneg_iff_eq_star_mul_self.mp hR.nonneg
   have hpositive : (K * E * star K).PosSemidef := by
-    simpa [star_eq_conjTranspose] using hE.mul_mul_conjTranspose_same K
+    simpa only [star_eq_conjTranspose] using hE.mul_mul_conjTranspose_same K
   have htrace : 0 ≤ (Matrix.trace (K * E * star K)).re :=
     (Complex.nonneg_iff.mp hpositive.trace_nonneg).1
   rw [Matrix.trace_mul_cycle] at htrace
@@ -166,10 +166,10 @@ theorem outcomeProbability_normalized (S : Strategy G) (x : X) (y : Y) :
     (∑ a : A, ∑ b : B, S.outcomeProbability x y a b) =
         (Matrix.trace
           (S.state.matrix * (∑ a : A, ∑ b : B, S.jointEffect x y a b))).re := by
-            simp [outcomeProbability, Matrix.mul_sum, Matrix.trace_sum]
+            simp only [outcomeProbability, Matrix.mul_sum, trace_sum, Complex.re_sum]
     _ = (Matrix.trace S.state.matrix).re := by
       rw [S.jointEffect_complete x y]
-      simp
+      simp only [mul_one]
     _ = 1 := by rw [S.state.trace_one]; rfl
 
 def winProbability (S : Strategy G) : ℝ :=
@@ -212,7 +212,7 @@ theorem winProbability_le_one (S : Strategy G) : S.winProbability ≤ 1 := by
       apply Finset.sum_le_sum
       intro y _
       exact mul_le_mul_of_nonneg_left (hxy x y) (G.weight_nonneg x y)
-    _ = 1 := by simpa using G.weight_normalized
+    _ = 1 := by simpa only [mul_one] using G.weight_normalized
 
 end Strategy
 
@@ -275,7 +275,8 @@ theorem positive_complement_quadraticExpectation_le
   have h := h_complement.re_inner_nonneg_right z
   have hnorm : (⟪z, z⟫_ℂ).re = ‖z‖ ^ 2 := by
     rw [inner_self_eq_norm_sq_to_K]
-    simp [pow_two, Complex.mul_re]
+    simp only [Complex.coe_algebraMap, pow_two, Complex.mul_re, Complex.ofReal_re,
+      Complex.ofReal_im, mul_zero, sub_zero]
   change 0 ≤ (⟪z, z - W z⟫_ℂ).re at h
   rw [inner_sub_right, Complex.sub_re, hnorm] at h
   unfold quadraticExpectation
@@ -296,7 +297,8 @@ theorem quadraticExpectation_sub_le
   have h_expand :
       ⟪z, W z⟫_ℂ - ⟪w, W w⟫_ℂ =
         ⟪z - w, W z⟫_ℂ + ⟪w, W (z - w)⟫_ℂ := by
-    simp [map_sub]
+    simp only [CStarModule.inner_sub_left, map_sub, CStarModule.inner_sub_right,
+      sub_add_sub_cancel]
   have hz := norm_le_of_operator_contraction W hW z
   have hdiff := norm_le_of_operator_contraction W hW (z - w)
   unfold quadraticExpectation
@@ -352,7 +354,7 @@ theorem weighted_real_cauchy
     apply Finset.sum_congr rfl
     intro i _
     rw [mul_pow, hsq i]
-  simpa [h_left, h_f, h_g] using h
+  simpa only [ge_iff_le, h_left, h_f, h_g] using h
 
 end
 
@@ -371,7 +373,7 @@ theorem matrixEffectCLM_complement_isPositive
     {d : Type*} [Fintype d] [DecidableEq d]
     (E : Matrix d d ℂ) (hE : (1 - E).PosSemidef) :
     (1 - Matrix.toEuclideanCLM (n := d) (𝕜 := ℂ) E).IsPositive := by
-  simpa using matrixEffectCLM_isPositive (1 - E) hE
+  simpa only [map_sub, map_one] using matrixEffectCLM_isPositive (1 - E) hE
 
 theorem matrixEffectCLM_norm_le_one
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -404,8 +406,8 @@ theorem winningEffect_born
         if G.predicate x y a b = true then
           S.outcomeProbability x y a b else 0 := by
   classical
-  simp [winningEffect, outcomeProbability, Matrix.mul_sum,
-    Matrix.trace_sum]
+  simp only [winningEffect, Matrix.mul_sum, mul_ite, mul_zero, Matrix.trace_sum, Complex.re_sum,
+    outcomeProbability]
   apply Finset.sum_congr rfl
   intro a _
   apply Finset.sum_congr rfl
@@ -454,7 +456,7 @@ theorem posSemidef_blockDiagonal'
           funext j
           exact hK j
     _ = star (Matrix.blockDiagonal' K) * Matrix.blockDiagonal' K := by
-          simp [star_eq_conjTranspose, ← Matrix.blockDiagonal'_mul]
+          simp only [star_eq_conjTranspose, blockDiagonal'_conjTranspose, ← blockDiagonal'_mul]
 
 abbrev mixtureAlice (S : J → Strategy G) := Σ j : J, (S j).Alice
 
@@ -493,12 +495,14 @@ theorem mixtureEmbedding_isometry (S : J → Strategy G) :
   ext i j
   by_cases h : i = j
   · subst j
-    simp [mixtureEmbedding, Matrix.mul_apply,
-      Matrix.conjTranspose_apply]
+    simp only [Matrix.mul_apply, conjTranspose_apply, mixtureEmbedding, RCLike.star_def,
+      MonoidWithZeroHom.map_ite_one_zero, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq',
+      Finset.mem_univ, ↓reduceIte, one_apply_eq]
   · have hindex : mixtureMatchedIndex S i ≠ mixtureMatchedIndex S j :=
       fun hij => h (mixtureMatchedIndex_injective S hij)
-    simp [mixtureEmbedding, Matrix.mul_apply,
-      Matrix.conjTranspose_apply, h, hindex.symm]
+    simp only [Matrix.mul_apply, conjTranspose_apply, mixtureEmbedding, RCLike.star_def,
+      MonoidWithZeroHom.map_ite_one_zero, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq',
+      Finset.mem_univ, ↓reduceIte, hindex.symm, ne_eq, h, not_false_eq_true, one_apply_ne]
 
 theorem mixtureEmbedding_compress (S : J → Strategy G)
     (E : Matrix (mixtureAlice S × mixtureBob S)
@@ -507,8 +511,9 @@ theorem mixtureEmbedding_compress (S : J → Strategy G)
       E.submatrix (mixtureMatchedIndex S) (mixtureMatchedIndex S) := by
   classical
   ext i j
-  simp [mixtureEmbedding, Matrix.mul_apply,
-    Matrix.conjTranspose_apply, Matrix.submatrix_apply]
+  simp only [Matrix.mul_apply, conjTranspose_apply, mixtureEmbedding, RCLike.star_def,
+    MonoidWithZeroHom.map_ite_one_zero, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq',
+    Finset.mem_univ, ↓reduceIte, mul_ite, mul_one, mul_zero, submatrix_apply]
 
 def mixtureBlockMatrix (p : J → ℝ) (S : J → Strategy G) :
     Matrix (mixtureMatched S) (mixtureMatched S) ℂ :=
@@ -528,7 +533,7 @@ theorem mixtureBlockMatrix_trace
       (↑(∑ j : J, p j) : ℂ) := by
   unfold mixtureBlockMatrix
   rw [Matrix.trace_blockDiagonal']
-  simp [Matrix.trace_smul, DensityMatrix.trace_one]
+  simp only [trace_smul, DensityMatrix.trace_one, Complex.real_smul, mul_one, Complex.ofReal_sum]
 
 def mixtureDensityMatrix (p : J → ℝ)
     (hp : ∀ j, 0 ≤ p j) (h_normalized : (∑ j : J, p j) = 1)
@@ -560,10 +565,10 @@ def mixtureAlicePOVM (S : J → Strategy G) (x : X) :
       have h_complete := congrArg
         (fun M : Matrix (S i).Alice (S i).Alice ℂ => M u v)
         ((S i).aliceMeasurement x).complete
-      simpa [Matrix.sum_apply, Matrix.blockDiagonal'_apply,
-        Matrix.one_apply] using h_complete
-    · simp [Matrix.sum_apply, Matrix.blockDiagonal'_apply,
-        h]
+      simpa only [Matrix.sum_apply, blockDiagonal'_apply, ↓reduceDIte, cast_eq, Matrix.one_apply,
+        Sigma.mk.injEq, heq_eq_eq, true_and] using h_complete
+    · simp only [Matrix.sum_apply, blockDiagonal'_apply, h, ↓reduceDIte, Finset.sum_const_zero,
+        ne_eq, Sigma.mk.injEq, false_and, not_false_eq_true, one_apply_ne]
 
 def mixtureBobPOVM (S : J → Strategy G) (y : Y) :
     POVM B (mixtureBob S) where
@@ -581,10 +586,10 @@ def mixtureBobPOVM (S : J → Strategy G) (y : Y) :
       have h_complete := congrArg
         (fun M : Matrix (S i).Bob (S i).Bob ℂ => M u v)
         ((S i).bobMeasurement y).complete
-      simpa [Matrix.sum_apply, Matrix.blockDiagonal'_apply,
-        Matrix.one_apply] using h_complete
-    · simp [Matrix.sum_apply, Matrix.blockDiagonal'_apply,
-        h]
+      simpa only [Matrix.sum_apply, blockDiagonal'_apply, ↓reduceDIte, cast_eq, Matrix.one_apply,
+        Sigma.mk.injEq, heq_eq_eq, true_and] using h_complete
+    · simp only [Matrix.sum_apply, blockDiagonal'_apply, h, ↓reduceDIte, Finset.sum_const_zero,
+        ne_eq, Sigma.mk.injEq, false_and, not_false_eq_true, one_apply_ne]
 
 def convexMixtureStrategy (p : J → ℝ)
     (hp : ∀ j, 0 ≤ p j) (h_normalized : (∑ j : J, p j) = 1)
@@ -610,12 +615,10 @@ theorem mixtureJointEffect_compress (S : J → Strategy G)
   ext ⟨i, u, v⟩ ⟨j, u', v'⟩
   by_cases h : i = j
   · subst j
-    simp [Matrix.submatrix_apply, Matrix.kroneckerMap_apply,
-      mixtureMatchedIndex, mixtureAlicePOVM, mixtureBobPOVM,
-      Matrix.blockDiagonal'_apply, Strategy.jointEffect]
-  · simp [Matrix.submatrix_apply, Matrix.kroneckerMap_apply,
-      mixtureMatchedIndex, mixtureAlicePOVM, mixtureBobPOVM,
-      Matrix.blockDiagonal'_apply, Strategy.jointEffect, h]
+    simp only [mixtureAlicePOVM, mixtureBobPOVM, submatrix_apply, mixtureMatchedIndex,
+      kroneckerMap_apply, blockDiagonal'_apply, ↓reduceDIte, cast_eq, Strategy.jointEffect]
+  · simp only [mixtureAlicePOVM, mixtureBobPOVM, submatrix_apply, mixtureMatchedIndex,
+      kroneckerMap_apply, blockDiagonal'_apply, h, ↓reduceDIte, mul_zero, Strategy.jointEffect]
 
 theorem mixtureEmbedding_trace_mul (S : J → Strategy G)
     (R : Matrix (mixtureMatched S) (mixtureMatched S) ℂ)
@@ -632,14 +635,14 @@ theorem mixtureEmbedding_trace_mul (S : J → Strategy G)
         Matrix.trace
           ((mixtureEmbedding S * R) * ((mixtureEmbedding S)ᴴ * E)) := by
             congr 1
-            simp [Matrix.mul_assoc]
+            simp only [Matrix.mul_assoc]
     _ = Matrix.trace
           (((mixtureEmbedding S)ᴴ * E) * (mixtureEmbedding S * R)) :=
           Matrix.trace_mul_comm _ _
     _ = Matrix.trace
           (((mixtureEmbedding S)ᴴ * E * mixtureEmbedding S) * R) := by
             congr 1
-            simp [Matrix.mul_assoc]
+            simp only [Matrix.mul_assoc]
     _ = Matrix.trace
           (R * ((mixtureEmbedding S)ᴴ * E * mixtureEmbedding S)) :=
           Matrix.trace_mul_comm _ _
@@ -657,7 +660,7 @@ theorem mixtureBlockMatrix_trace_mul
       ∑ j : J, p j • Matrix.trace ((S j).state.matrix * E j) := by
   unfold mixtureBlockMatrix
   rw [← Matrix.blockDiagonal'_mul, Matrix.trace_blockDiagonal']
-  simp [Matrix.trace_smul]
+  simp only [Algebra.smul_mul_assoc, trace_smul, Complex.real_smul]
 
 theorem convexMixtureStrategy_outcomeProbability
     (p : J → ℝ) (hp : ∀ j, 0 ≤ p j)
@@ -674,7 +677,8 @@ theorem convexMixtureStrategy_outcomeProbability
           (mixtureBobPOVM S y).effect b))).re = _
   rw [mixtureEmbedding_trace_mul, mixtureJointEffect_compress,
     mixtureBlockMatrix_trace_mul]
-  simp [Strategy.outcomeProbability]
+  simp only [Complex.real_smul, Complex.re_sum, Complex.mul_re, Complex.ofReal_re,
+    Complex.ofReal_im, zero_mul, sub_zero, Strategy.outcomeProbability]
 
 theorem convexMixtureStrategy_winProbability
     (p : J → ℝ) (hp : ∀ j, 0 ≤ p j)
@@ -872,7 +876,7 @@ def eventMass (law : FiniteEventLaw Ω) (event : Finset Ω) : ℝ :=
 
 theorem eventMass_univ (law : FiniteEventLaw Ω) :
     law.eventMass Finset.univ = 1 := by
-  simpa [eventMass] using law.weight_sum
+  simpa only [eventMass] using law.weight_sum
 
 theorem eventMass_mono
     (law : FiniteEventLaw Ω) {s t : Finset Ω} (h : s ⊆ t) :
@@ -888,7 +892,7 @@ def winEvent [Fintype ι]
 theorem winEvent_empty [Fintype ι] (wins : ι → Ω → Bool) :
     winEvent wins ∅ = Finset.univ := by
   classical
-  simp [winEvent]
+  simp only [winEvent, Finset.notMem_empty, IsEmpty.forall_iff, implies_true, Finset.filter_true]
 
 theorem winEvent_antitone [Fintype ι]
     (wins : ι → Ω → Bool) {D E : Finset ι} (h : D ⊆ E) :
@@ -896,7 +900,7 @@ theorem winEvent_antitone [Fintype ι]
   classical
   intro ω hω
   have h_all : ∀ i ∈ E, wins i ω = true := by
-    simpa [winEvent] using hω
+    simpa only [winEvent, Finset.mem_filter, Finset.mem_univ, true_and] using hω
   simp only [winEvent, Finset.mem_filter, Finset.mem_univ, true_and]
   exact fun i hi => h_all i (h hi)
 
@@ -935,7 +939,8 @@ theorem exists_greedy_stopping [Fintype ι] [DecidableEq ι]
       (fun D => D.card ≤ T ∧ mass D ≤ (1 - η) ^ D.card)
   have h_candidates : candidates.Nonempty := by
     refine ⟨∅, ?_⟩
-    simp [candidates, hempty]
+    simp only [Finset.powerset_univ, Finset.mem_filter, Finset.mem_univ, Finset.card_empty,
+      zero_le, hempty, pow_zero, Std.le_refl, and_self, candidates]
   obtain ⟨D, hD, hmax⟩ :=
     Finset.exists_max_image candidates (fun E : Finset ι => E.card)
       h_candidates
@@ -945,7 +950,7 @@ theorem exists_greedy_stopping [Fintype ι] [DecidableEq ι]
     have hne : D.card ≠ T := by
       intro heq
       have hupper : mass D ≤ (1 - η) ^ T := by
-        simpa [heq] using hD_data.2
+        simpa only [heq] using hD_data.2
       linarith [hfloor D]
     exact lt_of_le_of_ne hD_data.1 hne
   refine ⟨D, hD_lt, hfloor D, ?_⟩
@@ -956,14 +961,15 @@ theorem exists_greedy_stopping [Fintype ι] [DecidableEq ι]
           (mass D - mass (insert i D)) :=
     le_of_not_gt h_not_stopped
   have h_card : D.card < (Finset.univ : Finset ι).card := by
-    simpa using hD_lt.trans_le hT
+    simpa only [Finset.card_univ] using hD_lt.trans_le hT
   have h_remaining : (Finset.univ \ D).Nonempty :=
     Finset.sdiff_nonempty_of_card_lt_card h_card
   have h_sum_constant :
       (∑ _i ∈ Finset.univ \ D, η * mass D)
         ≤ ∑ i ∈ Finset.univ \ D,
           (mass D - mass (insert i D)) := by
-    simpa using h_sum
+    simpa only [Finset.sum_const, nsmul_eq_mul, Finset.sum_sub_distrib, Finset.subset_univ,
+      Finset.sum_sdiff_eq_sub] using h_sum
   obtain ⟨i, hi, hfailure⟩ :=
     Finset.exists_le_of_sum_le h_remaining h_sum_constant
   have hi_not : i ∉ D := (Finset.mem_sdiff.mp hi).2
@@ -1019,7 +1025,8 @@ theorem exists_conditioned_win_set [Fintype ι] [DecidableEq ι]
     exists_greedy_stopping mass hθ hη hη_one hT hempty hfloor
       h_terminal
   refine ⟨D, hD, hp, ?_⟩
-  simpa [failureMass, mass] using hstop
+  simpa only [failureMass, Finset.sum_sub_distrib, Finset.sum_const, nsmul_eq_mul,
+    Finset.subset_univ, Finset.sum_sdiff_eq_sub] using hstop
 
 end FiniteEventLaw
 
@@ -1069,7 +1076,7 @@ def strategyEventLaw (G : Game X Y A B) (S : Strategy G) :
             intro y _
             rw [S.outcomeProbability_normalized x y]
       _ = 1 := by
-            simpa using G.weight_normalized
+            simpa only [mul_one] using G.weight_normalized
 
 def strategyWinEvent (G : Game X Y A B) :
     Finset (StrategyOutcome X Y A B) :=
@@ -1119,8 +1126,8 @@ theorem repeated_allWinEvent_eq
       strategyWinEvent (G.repeat n) := by
   classical
   ext ω
-  simp [FiniteEventLaw.winEvent, strategyWinEvent,
-    repeatedCoordinateWin, Game.repeat_predicate_eq_true]
+  simp only [FiniteEventLaw.winEvent, Finset.mem_univ, repeatedCoordinateWin, forall_const,
+    Finset.mem_filter, true_and, strategyWinEvent, Game.repeat_predicate_eq_true]
 
 theorem repeated_allWinMass_eq
     (G : Game X Y A B) (n : ℕ)
@@ -1157,7 +1164,7 @@ theorem repeatedStrategy_exists_greedy_conditioning
           (FiniteEventLaw.winEvent
             (repeatedCoordinateWin G n) D)) := by
   have h_card : T ≤ Fintype.card (Fin n) := by
-    simpa using hT
+    simpa only [Fintype.card_fin] using hT
   have h_full :
       θ ≤ (strategyEventLaw (G.repeat n) S).eventMass
         (FiniteEventLaw.winEvent
@@ -1272,7 +1279,7 @@ theorem noncommutative_resolvent_identity
   calc
     RF - RM = RF * ((M + S) * RM) - (RF * (F + S)) * RM := by
       rw [hM, hF]
-      simp
+      simp only [mul_one, one_mul]
     _ = RF * (M - F) * RM := by
       noncomm_ring
 
@@ -1285,11 +1292,11 @@ theorem noncommutative_filtered_resolvent_identity
     F * RF - M * RM = S * (RF * (F - M) * RM) := by
   have hFR : F * RF = 1 - S * RF := by
     have h : F * RF + S * RF = 1 := by
-      simpa [add_mul] using hF_left
+      simpa only [add_mul] using hF_left
     exact eq_sub_of_add_eq h
   have hMR : M * RM = 1 - S * RM := by
     have h : M * RM + S * RM = 1 := by
-      simpa [add_mul] using hM_left
+      simpa only [add_mul] using hM_left
     exact eq_sub_of_add_eq h
   have hdiff : RM - RF = RF * (F - M) * RM := by
     calc
@@ -1397,7 +1404,7 @@ theorem posSemidef_hermitian_sandwich
     {A D : Matrix d d ℂ}
     (hA : A.PosSemidef) (hD : D.IsHermitian) :
     (D * A * D).PosSemidef := by
-  simpa [hD.eq] using hA.mul_mul_conjTranspose_same D
+  simpa only [hD.eq] using hA.mul_mul_conjTranspose_same D
 
 theorem shifted_posSemidef_matrix_posDef
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -1424,7 +1431,7 @@ theorem matrix_weighted_centered
     (∑ i : ι, weight i • (F i - M)) = 0 := by
   simp_rw [smul_sub]
   rw [Finset.sum_sub_distrib, mean, ← Finset.sum_smul, normalized]
-  simp
+  simp only [one_smul, sub_self]
 
 theorem weighted_positive_matrix_mean
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -1462,20 +1469,23 @@ theorem scalar_resolvent_purification_integrable_of_pos
   rw [show (-2 : ℝ) = -(2 : ℝ) by norm_num,
     Real.rpow_neg hspos.le, Real.rpow_two]
   rw [div_pow]
-  simp [div_eq_mul_inv, add_comm]
+  simp only [add_comm, div_eq_mul_inv]
 
 theorem scalar_resolvent_purification_integrable
     {z : ℝ} (hz : 0 ≤ z) :
     IntegrableOn (fun s : ℝ => (z / (z + s)) ^ 2) (Ioi 0) := by
   rcases hz.eq_or_lt with rfl | hzpos
-  · simp
+  · simp only [zero_add, zero_div, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      enorm_zero, ENNReal.zero_ne_top, integrableOn_const_iff, Real.volume_Ioi, lt_self_iff_false,
+      or_false]
   · exact scalar_resolvent_purification_integrable_of_pos hzpos
 
 theorem scalar_resolvent_purification_integral
     {z : ℝ} (hz : 0 ≤ z) :
     (∫ s in Ioi (0 : ℝ), (z / (z + s)) ^ 2) = z := by
   rcases hz.eq_or_lt with rfl | hzpos
-  · simp
+  · simp only [zero_add, zero_div, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      integral_zero]
   · have hderiv :
         ∀ x ∈ Ici (0 : ℝ),
           HasDerivAt (fun t : ℝ => -(z ^ 2) / (z + t))
@@ -1493,7 +1503,8 @@ theorem scalar_resolvent_purification_integral
         funext t
         rfl
       rw [hfun]
-      simpa [div_pow] using hd
+      simpa only [div_pow, Pi.add_apply, id_eq, zero_mul, zero_add, mul_one,
+        sub_neg_eq_add] using hd
     have hlimit :
         Tendsto (fun t : ℝ => -(z ^ 2) / (z + t))
           atTop (𝓝 (0 : ℝ)) := by
@@ -1502,7 +1513,7 @@ theorem scalar_resolvent_purification_integral
       have hzero : Tendsto (fun t : ℝ => -(z ^ 2) / (t + z))
           atTop (𝓝 (0 : ℝ)) :=
         tendsto_const_nhds.div_atTop hden
-      simpa [add_comm] using hzero
+      simpa only [add_comm] using hzero
     have hftc := integral_Ioi_of_hasDerivAt_of_tendsto'
       hderiv (scalar_resolvent_purification_integrable_of_pos hzpos) hlimit
     calc
@@ -1550,7 +1561,9 @@ theorem diagonalPurificationGram_integrable
         (scalar_resolvent_purification_integrable (h_nonneg i))
     simpa only [diagonalPurificationGram, Matrix.diagonal_apply_eq] using
       hcomplex
-  · simp [diagonalPurificationGram, h]
+  · simp only [diagonalPurificationGram, Complex.ofReal_pow, Complex.ofReal_div,
+      Complex.ofReal_add, ne_eq, h, not_false_eq_true, Matrix.diagonal_apply_ne,
+      integrable_fun_zero]
 
 theorem integral_diagonalPurificationGram
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -1586,7 +1599,8 @@ theorem integral_diagonalPurificationGram
         integral_ofReal
       _ = (eigenvalue i : ℂ) := by
         rw [scalar_resolvent_purification_integral (h_nonneg i)]
-  · simp [diagonalPurificationGram, h]
+  · simp only [diagonalPurificationGram, Complex.ofReal_pow, Complex.ofReal_div,
+      Complex.ofReal_add, ne_eq, h, not_false_eq_true, Matrix.diagonal_apply_ne, integral_zero]
 
 def spectralConjugationCLM
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -1637,8 +1651,8 @@ theorem integral_spectralPurificationGram
             rw [integral_diagonalPurificationGram eigenvalue
               (fun i => hF.eigenvalues_nonneg i)]
     _ = F := by
-          simpa [U, eigenvalue, Function.comp_def,
-            Unitary.conjStarAlgAut_apply] using
+          simpa only [spectralConjugationCLM_apply, Complex.coe_algebraMap, Function.comp_def,
+            Unitary.conjStarAlgAut_apply, U, eigenvalue] using
             hF.isHermitian.spectral_theorem.symm
 
 end
@@ -1676,7 +1690,8 @@ theorem spectralPurificationFilter_gram
     apply Matrix.isHermitian_diagonal_iff.mpr
     intro i
     change star ((eigenvalue i / (eigenvalue i + s) : ℝ) : ℂ) = _
-    simp
+    simp only [Complex.ofReal_div, Complex.ofReal_add, star_div₀, RCLike.star_def,
+      Complex.conj_ofReal, star_add]
   have hDstar : star D = D := by
     simpa only [Matrix.star_eq_conjTranspose] using hDhermitian.eq
   have hDsquare : D * D = diagonalPurificationGram eigenvalue s := by
@@ -1685,8 +1700,10 @@ theorem spectralPurificationFilter_gram
     ext i j
     by_cases h : i = j
     · subst j
-      simp [diagonalPurificationGram, pow_two]
-    · simp [diagonalPurificationGram, h]
+      simp only [Complex.ofReal_div, Complex.ofReal_add, Matrix.diagonal_apply_eq,
+        diagonalPurificationGram, pow_two, Complex.ofReal_mul]
+    · simp only [Complex.ofReal_div, Complex.ofReal_add, ne_eq, h, not_false_eq_true,
+        Matrix.diagonal_apply_ne, diagonalPurificationGram, Complex.ofReal_pow]
   change star (e D) * e D = e (diagonalPurificationGram eigenvalue s)
   calc
     star (e D) * e D = e (star D) * e D := by rw [map_star]
@@ -1720,18 +1737,23 @@ def bornTracePairing
     { toFun := fun G => (Matrix.trace (ρ * (F ⊗ₖ G))).re
       map_add' := by
         intro G H
-        simp [Matrix.kronecker_add, Matrix.mul_add, Matrix.trace_add]
+        simp only [Matrix.kronecker_add, Matrix.mul_add, Matrix.trace_add, Complex.add_re]
       map_smul' := by
         intro r G
-        simp [Matrix.kronecker_smul, mul_smul_comm, Matrix.trace_smul] }
+        simp only [Matrix.kronecker_smul, mul_smul_comm, Matrix.trace_smul, Complex.real_smul,
+          Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, zero_mul, sub_zero,
+          Real.ringHom_apply, smul_eq_mul] }
   map_add' := by
     intro F H
     ext G
-    simp [Matrix.add_kronecker, Matrix.mul_add, Matrix.trace_add]
+    simp only [Matrix.add_kronecker, Matrix.mul_add, Matrix.trace_add, Complex.add_re,
+      LinearMap.coe_mk, AddHom.coe_mk, LinearMap.add_apply]
   map_smul' := by
     intro r F
     ext G
-    simp [Matrix.smul_kronecker, mul_smul_comm, Matrix.trace_smul]
+    simp only [Matrix.smul_kronecker, mul_smul_comm, Matrix.trace_smul, Complex.real_smul,
+      Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, zero_mul, sub_zero, LinearMap.coe_mk,
+      AddHom.coe_mk, Real.ringHom_apply, LinearMap.smul_apply, smul_eq_mul]
 
 end
 
@@ -1789,7 +1811,7 @@ theorem marginalX_mul_conditionalYGivenX
       have hnonneg := G.weight_nonneg x y
       rw [hx] at hle
       linarith
-    simp [hx, hzero]
+    simp only [hx, hzero, div_zero, mul_zero]
   · field_simp
 
 theorem marginalY_mul_conditionalXGivenY
@@ -1803,7 +1825,7 @@ theorem marginalY_mul_conditionalXGivenY
       have hnonneg := G.weight_nonneg x y
       rw [hy] at hle
       linarith
-    simp [hy, hzero]
+    simp only [hy, hzero, div_zero, mul_zero]
   · field_simp
 
 theorem conditionalYGivenX_sum
@@ -2054,7 +2076,7 @@ end RepeatedQuantumFilters
 theorem history_forward_telescope (E : ℕ → ℝ) (m : ℕ) :
     (∑ k ∈ Finset.range m, (E (k + 1) - E k))
       = E m - E 0 := by
-  simpa [Nat.succ_eq_add_one] using Finset.sum_range_sub E m
+  simpa only [Finset.sum_sub_distrib] using Finset.sum_range_sub E m
 
 end
 
@@ -2091,7 +2113,8 @@ theorem spectralSupportFunctional_id
     {d : Type*} [Fintype d] [DecidableEq d]
     (F : Matrix d d ℂ) (hF : F.PosSemidef) :
     spectralSupportFunctional F hF (fun x => x) = F := by
-  simpa [spectralSupportFunctional, Function.comp_def] using
+  simpa only [spectralSupportFunctional, Unitary.conjStarAlgAut_apply, Complex.coe_algebraMap,
+    Function.comp_def] using
     hF.isHermitian.spectral_theorem.symm
 
 theorem spectralSupportFunctional_congr
@@ -2122,7 +2145,7 @@ theorem spectralSupportFunctional_isHermitian
     apply Matrix.isHermitian_diagonal_iff.mpr
     intro i
     change star (f (hF.isHermitian.eigenvalues i) : ℂ) = _
-    simp
+    simp only [RCLike.star_def, Complex.conj_ofReal]
   have hDstar : star D = D := by
     simpa only [Matrix.star_eq_conjTranspose] using hD.eq
   change Matrix.conjTranspose (e D) = e D
@@ -2173,8 +2196,8 @@ theorem spectralSupportInverse_mul
     _ = _ := spectralSupportFunctional_congr F hF (by
       intro i
       by_cases hi : hF.isHermitian.eigenvalues i = 0
-      · simp [hi]
-      · simp [hi])
+      · simp only [hi, inv_zero, mul_zero, ↓reduceIte]
+      · simp only [ne_eq, hi, not_false_eq_true, inv_mul_cancel₀, ↓reduceIte])
 
 theorem mul_spectralSupportInverse
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -2193,8 +2216,8 @@ theorem mul_spectralSupportInverse
     _ = _ := spectralSupportFunctional_congr F hF (by
       intro i
       by_cases hi : hF.isHermitian.eigenvalues i = 0
-      · simp [hi]
-      · simp [hi])
+      · simp only [hi, inv_zero, mul_zero, ↓reduceIte]
+      · simp only [ne_eq, hi, not_false_eq_true, mul_inv_cancel₀, ↓reduceIte])
 
 theorem spectralSupportProjection_mul
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -2241,8 +2264,8 @@ theorem spectralSupportInverse_penrose
     _ = _ := spectralSupportFunctional_congr F hF (by
       intro i
       by_cases hi : hF.isHermitian.eigenvalues i = 0
-      · simp [hi]
-      · simp [hi])
+      · simp only [hi, inv_zero, mul_zero]
+      · simp only [ne_eq, hi, not_false_eq_true, inv_mul_cancel₀, one_mul])
 
 theorem spectralSupportSqrt_sq
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -2275,9 +2298,8 @@ theorem mul_spectralSupportProjection
     F * spectralSupportProjection F hF = F := by
   have h := congrArg Matrix.conjTranspose
     (spectralSupportProjection_mul F hF)
-  simpa [Matrix.conjTranspose_mul,
-    (spectralSupportProjection_isHermitian F hF).eq,
-    hF.isHermitian.eq] using h
+  simpa only [conjTranspose_mul, hF.isHermitian.eq,
+    (spectralSupportProjection_isHermitian F hF).eq] using h
 
 theorem posSemidef_kernel_of_sub_posSemidef
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -2301,7 +2323,7 @@ theorem posSemidef_kernel_of_sub_posSemidef
       _ = star x ⬝ᵥ (F *ᵥ x) := by
         have hsum : A + (F - A) = F := by abel
         rw [hsum]
-      _ = 0 := by rw [hx]; simp
+      _ = 0 := by rw [hx]; simp only [dotProduct_zero]
   exact (add_eq_zero_iff_of_nonneg hA_nonneg hsub_nonneg).mp hzero |>.1
 
 theorem posSemidef_mul_spectralSupportProjection
@@ -2324,7 +2346,7 @@ theorem posSemidef_mul_spectralSupportProjection
     have hAi := posSemidef_kernel_of_sub_posSemidef hA hsub hxi
     simpa only [Matrix.mulVec_mulVec, Matrix.zero_mulVec] using hAi
   have hdiff : A - A * P = 0 := by
-    simpa [mul_sub] using hAzero
+    simpa only [mul_sub, mul_one] using hAzero
   exact (sub_eq_zero.mp hdiff).symm
 
 theorem spectralSupportProjection_mul_posSemidef
@@ -2335,8 +2357,7 @@ theorem spectralSupportProjection_mul_posSemidef
     spectralSupportProjection F hF * A = A := by
   have h := congrArg Matrix.conjTranspose
     (posSemidef_mul_spectralSupportProjection hF hA hsub)
-  simpa [Matrix.conjTranspose_mul,
-    (spectralSupportProjection_isHermitian F hF).eq,
+  simpa only [conjTranspose_mul, (spectralSupportProjection_isHermitian F hF).eq,
     hA.isHermitian.eq] using h
 
 theorem refinement_complement_posSemidef
@@ -2353,7 +2374,7 @@ theorem refinement_complement_posSemidef
   have hsum : effect a +
       (∑ b ∈ Finset.univ.erase a, effect b) =
       ∑ b : ι, effect b := by
-    simp
+    simp only [Finset.mem_univ, Finset.sum_erase_eq_sub, add_sub_cancel]
   rw [← hsum, add_sub_cancel_left]
   exact herase
 
@@ -2382,8 +2403,8 @@ theorem purificationRangeProjection_isHermitian
   unfold purificationRangeProjection
   change Matrix.conjTranspose
     (Γ * spectralSupportInverse F hF * Matrix.conjTranspose Γ) = _
-  simp [Matrix.conjTranspose_mul,
-    (spectralSupportInverse_isHermitian F hF).eq, Matrix.mul_assoc]
+  simp only [Matrix.mul_assoc, conjTranspose_mul, conjTranspose_conjTranspose,
+    (spectralSupportInverse_isHermitian F hF).eq]
 
 theorem purificationRangeProjection_idempotent
     {d e : Type*} [Fintype d] [DecidableEq d]
@@ -2426,7 +2447,7 @@ theorem purificationRangeProjection_complement_posSemidef
     calc
       Matrix.conjTranspose (1 - P) * (1 - P) =
           (1 - P) * (1 - P) := by
-            simp [Matrix.conjTranspose_sub, hPstar]
+            simp only [conjTranspose_sub, conjTranspose_one, hPstar]
       _ = 1 - P - P + P * P := by noncomm_ring
       _ = 1 - P := by rw [hPsq]; noncomm_ring
   have hpositive := Matrix.posSemidef_conjTranspose_mul_self
@@ -2456,9 +2477,8 @@ theorem purifiedRefinementCore_posSemidef
     (purifiedRefinementCore F hF Γ effect a).PosSemidef := by
   have h := (hpositive a).mul_mul_conjTranspose_same
     (Γ * spectralSupportInverse F hF)
-  simpa [purifiedRefinementCore, Matrix.conjTranspose_mul,
-    (spectralSupportInverse_isHermitian F hF).eq,
-    Matrix.mul_assoc] using h
+  simpa only [purifiedRefinementCore, Matrix.mul_assoc, conjTranspose_mul,
+    (spectralSupportInverse_isHermitian F hF).eq] using h
 
 theorem purifiedRefinementCore_sum
     {ι d e : Type*} [Fintype ι]
@@ -2533,7 +2553,7 @@ theorem purifiedRefinedEffect_complete
   unfold purifiedRefinedEffect
   rw [Finset.sum_add_distrib]
   rw [purifiedRefinementCore_sum F hF Γ effect hsum]
-  simp
+  simp only [Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte, add_sub_cancel]
 
 theorem purificationRangeProjection_compression
     {d e : Type*} [Fintype d] [DecidableEq d]
@@ -2568,7 +2588,7 @@ theorem purificationRangeProjection_complement_compression
       Matrix.conjTranspose Γ * Γ -
         Matrix.conjTranspose Γ * purificationRangeProjection F hF Γ * Γ := by
           rw [Matrix.mul_sub, Matrix.sub_mul]
-          simp
+          simp only [Matrix.mul_one]
     _ = F - F := by
       rw [hΓ, purificationRangeProjection_compression F hF Γ hΓ]
     _ = 0 := sub_self F
@@ -2631,7 +2651,7 @@ theorem purifiedRefinedEffect_compression
         Γ = 0 := by
     split
     · exact purificationRangeProjection_complement_compression F hF Γ hΓ
-    · simp
+    · simp only [Matrix.mul_zero, Matrix.zero_mul]
   change Matrix.conjTranspose Γ *
       (purifiedRefinementCore F hF Γ effect a +
         if a = a₀ then 1 - purificationRangeProjection F hF Γ else 0) *
@@ -2705,7 +2725,8 @@ def fullHistoryAliceQuestion
   if hiD : i ∈ D then h.aliceConditioned ⟨i, hiD⟩
   else if hiL : i ∈ L then h.aliceRevealed ⟨i, hiL⟩
   else hidden ⟨i, by
-    simp [fullHistoryRemaining, hiD, hiL]⟩
+    simp only [fullHistoryRemaining, Finset.mem_sdiff, Finset.mem_univ, hiD, not_false_eq_true,
+      and_self, hiL]⟩
 
 def fullHistoryBobQuestion
     {X Y : Type*} [Fintype X] [Fintype Y]
@@ -2716,7 +2737,8 @@ def fullHistoryBobQuestion
   if hiD : i ∈ D then h.bobConditioned ⟨i, hiD⟩
   else if hiL : i ∈ L then hidden ⟨i, hiL⟩
   else h.bobRemaining ⟨i, by
-    simp [fullHistoryRemaining, hiD, hiL]⟩
+    simp only [fullHistoryRemaining, Finset.mem_sdiff, Finset.mem_univ, hiD, not_false_eq_true,
+      and_self, hiL]⟩
 
 def fullHistoryQuestionEquiv
     {X Y : Type*} [Fintype X] [Fintype Y]
@@ -2741,22 +2763,22 @@ def fullHistoryQuestionEquiv
     apply Prod.ext
     · apply FullSubsetHistory.ext
       · funext i
-        simp [fullHistoryAliceQuestion, i.property]
+        simp only [fullHistoryAliceQuestion, i.property, ↓reduceDIte, Subtype.coe_eta]
       · funext i
-        simp [fullHistoryBobQuestion, i.property]
+        simp only [fullHistoryBobQuestion, i.property, ↓reduceDIte, Subtype.coe_eta]
       · funext i
         have hiD : (i : Fin n) ∉ D :=
           (Finset.mem_sdiff.mp (hL i.property)).2
-        simp [fullHistoryAliceQuestion, hiD, i.property]
+        simp only [fullHistoryAliceQuestion, hiD, ↓reduceDIte, i.property, Subtype.coe_eta]
       · funext i
         have hiD : (i : Fin n) ∉ D := by
           have := i.property
-          simpa [fullHistoryRemaining] using
+          simpa only [fullHistoryRemaining] using
             (Finset.mem_sdiff.mp
               (Finset.mem_sdiff.mp i.property).1).2
         have hiL : (i : Fin n) ∉ L :=
           (Finset.mem_sdiff.mp i.property).2
-        simp [fullHistoryBobQuestion, hiD, hiL]
+        simp only [fullHistoryBobQuestion, hiD, ↓reduceDIte, hiL, Subtype.coe_eta]
     · apply Prod.ext
       · funext i
         have hiD : (i : Fin n) ∉ D :=
@@ -2764,24 +2786,24 @@ def fullHistoryQuestionEquiv
             (Finset.mem_sdiff.mp i.property).1).2
         have hiL : (i : Fin n) ∉ L :=
           (Finset.mem_sdiff.mp i.property).2
-        simp [fullHistoryAliceQuestion, hiD, hiL]
+        simp only [fullHistoryAliceQuestion, hiD, ↓reduceDIte, hiL, Subtype.coe_eta]
       · funext i
         have hiD : (i : Fin n) ∉ D :=
           (Finset.mem_sdiff.mp (hL i.property)).2
-        simp [fullHistoryBobQuestion, hiD, i.property]
+        simp only [fullHistoryBobQuestion, hiD, ↓reduceDIte, i.property, Subtype.coe_eta]
   right_inv := by
     rintro ⟨xs, ys⟩
     apply Prod.ext
     · funext i
       by_cases hiD : i ∈ D
-      · simp [fullHistoryAliceQuestion, hiD]
+      · simp only [fullHistoryAliceQuestion, hiD, ↓reduceDIte]
       · by_cases hiL : i ∈ L <;>
-          simp [fullHistoryAliceQuestion, hiD, hiL]
+          simp only [fullHistoryAliceQuestion, hiD, ↓reduceDIte, hiL]
     · funext i
       by_cases hiD : i ∈ D
-      · simp [fullHistoryBobQuestion, hiD]
+      · simp only [fullHistoryBobQuestion, hiD, ↓reduceDIte]
       · by_cases hiL : i ∈ L <;>
-          simp [fullHistoryBobQuestion, hiD, hiL]
+          simp only [fullHistoryBobQuestion, hiD, ↓reduceDIte, hiL]
 
 section ActualHistoryWeights
 
@@ -2880,8 +2902,8 @@ theorem fullHistoryWeight_mul_hidden
         ∏ i : {i : Fin n // i ∈ D}, q i := by
           apply Finset.prod_congr rfl
           intro i _
-          simp [q, fullHistoryAliceQuestion,
-            fullHistoryBobQuestion, i.property]
+          simp only [fullHistoryAliceQuestion, fullHistoryBobQuestion, i.property, ↓reduceDIte,
+            Subtype.coe_eta, q]
       _ = ∏ i ∈ D, q i := Finset.prod_coe_sort D q
   have hLprod :
       (∏ i : {i : Fin n // i ∈ L},
@@ -2900,8 +2922,8 @@ theorem fullHistoryWeight_mul_hidden
           intro i _
           have hiD : (i : Fin n) ∉ D :=
             (Finset.mem_sdiff.mp (hL i.property)).2
-          simpa [q, fullHistoryAliceQuestion,
-            fullHistoryBobQuestion, hiD, i.property] using
+          simpa only [fullHistoryAliceQuestion, fullHistoryBobQuestion, hiD, ↓reduceDIte,
+            i.property, Subtype.coe_eta, q] using
               G.marginalX_mul_conditionalYGivenX
                 (h.aliceRevealed i) (hy i)
       _ = ∏ i ∈ L, q i := Finset.prod_coe_sort L q
@@ -2925,8 +2947,8 @@ theorem fullHistoryWeight_mul_hidden
               (Finset.mem_sdiff.mp i.property).1).2
           have hiL : (i : Fin n) ∉ L :=
             (Finset.mem_sdiff.mp i.property).2
-          simpa [q, fullHistoryAliceQuestion,
-            fullHistoryBobQuestion, hiD, hiL] using
+          simpa only [fullHistoryAliceQuestion, fullHistoryBobQuestion, hiD, ↓reduceDIte, hiL,
+            Subtype.coe_eta, q] using
               G.marginalY_mul_conditionalXGivenY
                 (hx i) (h.bobRemaining i)
       _ = ∏ i ∈ fullHistoryRemaining n D L, q i :=
@@ -2947,7 +2969,8 @@ theorem fullHistoryWeight_mul_hidden
   have hcover : D ∪ L ∪ fullHistoryRemaining n D L =
       (Finset.univ : Finset (Fin n)) := by
     ext i
-    simp [fullHistoryRemaining]
+    simp only [fullHistoryRemaining, Finset.union_assoc, Finset.union_sdiff_self_eq_union,
+      Finset.mem_union, Finset.mem_sdiff, Finset.mem_univ, true_and, iff_true]
     tauto
   rw [Game.repeat_questionWeight]
   change fullHistoryWeight G h *
@@ -3109,7 +3132,7 @@ theorem conditionedEffects_born_expansion
     split_ifs with hb
     · rfl
     · exact map_zero _
-  · simp
+  · simp only [map_zero, LinearMap.zero_apply, Finset.sum_const_zero]
 
 theorem finite_sum_four_swap
     {I J K T : Type*}
@@ -3166,11 +3189,11 @@ theorem fullHistoryWinIndicator_eq_question
   apply propext
   constructor
   · intro hw i
-    simpa [fullHistoryAliceQuestion,
-      fullHistoryBobQuestion, i.property] using hw i
+    simpa only [fullHistoryAliceQuestion, i.property, ↓reduceDIte, Subtype.coe_eta,
+      fullHistoryBobQuestion] using hw i
   · intro hw i
-    simpa [fullHistoryAliceQuestion,
-      fullHistoryBobQuestion, i.property] using hw i
+    simpa only [fullHistoryAliceQuestion, i.property, ↓reduceDIte, Subtype.coe_eta,
+      fullHistoryBobQuestion] using hw i
 
 theorem conditionedEffects_postselection_sum
     [DecidableEq A] [DecidableEq B]
@@ -3224,8 +3247,9 @@ theorem conditionedEffects_postselection_sum
       intro aa _
       apply Finset.sum_congr rfl
       intro bb _
-      simp [conditionedAnswerMatches_iff,
-        fullQuestionWinIndicator, mul_ite]
+      simp only [fullQuestionWinIndicator, Subtype.forall, conditionedAnswerMatches_iff, mul_ite,
+        ite_mul, one_mul, zero_mul, mul_zero, Finset.sum_ite_irrel, Finset.sum_ite_eq',
+        Finset.mem_univ, ↓reduceIte, Finset.sum_const_zero]
 
 theorem repeated_partialWinMass_expansion
     (G : Game X Y A B) (n : ℕ)
@@ -3512,8 +3536,10 @@ theorem spectralPurificationFilter_mul_shift
     ext i j
     by_cases hij : i = j
     · subst j
-      simp [D]
-    · simp [D, hij]
+      simp only [Matrix.add_apply, Matrix.diagonal_apply_eq, Matrix.smul_apply,
+        Matrix.one_apply_eq, Complex.real_smul, mul_one, Complex.ofReal_add, D]
+    · simp only [Matrix.add_apply, ne_eq, hij, not_false_eq_true, Matrix.diagonal_apply_ne,
+        Matrix.smul_apply, Matrix.one_apply_ne, smul_zero, add_zero, Complex.ofReal_add, D]
   have hproduct : T * (D + s • (1 : Matrix d d ℂ)) = D := by
     rw [hshift_inner]
     change
@@ -3535,7 +3561,7 @@ theorem spectralPurificationFilter_mul_shift
       (U : Matrix d d ℂ) * (s • (1 : Matrix d d ℂ)) *
           star (U : Matrix d d ℂ) = s • (1 : Matrix d d ℂ)
     rw [mul_smul_comm, mul_one, smul_mul_assoc]
-    simp
+    simp only [SetLike.coe_mem, Unitary.mul_star_self_of_mem]
   change e T * (F + s • (1 : Matrix d d ℂ)) = F
   rw [hFspec, ← hscalar, ← map_add, ← map_mul, hproduct]
 
@@ -3589,7 +3615,8 @@ theorem spectralPurificationFilter_square_contraction
     apply Matrix.isHermitian_diagonal_iff.mpr
     intro i
     change star ((eigenvalue i / (eigenvalue i + s) : ℝ) : ℂ) = _
-    simp
+    simp only [Complex.ofReal_div, Complex.ofReal_add, star_div₀, RCLike.star_def,
+      Complex.conj_ofReal, star_add]
   have hDstar : star D = D := by
     simpa only [Matrix.star_eq_conjTranspose] using hDhermitian.eq
   have hdiag : (D - D * D).PosSemidef := by
@@ -3599,7 +3626,7 @@ theorem spectralPurificationFilter_square_contraction
         rw [Matrix.diagonal_mul_diagonal]
         congr 1
         funext i
-        simp [pow_two]]
+        simp only [Complex.ofReal_div, Complex.ofReal_add, pow_two, Complex.ofReal_mul]]
     have hsub : D - Matrix.diagonal (fun i =>
         (((eigenvalue i / (eigenvalue i + s)) ^ 2 : ℝ) : ℂ)) =
         Matrix.diagonal (fun i =>
@@ -3608,8 +3635,11 @@ theorem spectralPurificationFilter_square_contraction
       ext i j
       by_cases hij : i = j
       · subst j
-        simp [D]
-      · simp [D, hij]
+        simp only [Complex.ofReal_div, Complex.ofReal_add, Complex.ofReal_pow, Matrix.sub_apply,
+          Matrix.diagonal_apply_eq, Complex.ofReal_sub, D]
+      · simp only [Complex.ofReal_div, Complex.ofReal_add, Complex.ofReal_pow, Matrix.sub_apply,
+          ne_eq, hij, not_false_eq_true, Matrix.diagonal_apply_ne, sub_self, Complex.ofReal_sub,
+          D]
     rw [hsub]
     apply Matrix.PosSemidef.diagonal
     intro i
@@ -3632,7 +3662,7 @@ theorem spectralPurificationFilter_square_contraction
   rw [← map_star, hDstar, ← map_mul, ← map_sub]
   change ((U : Matrix d d ℂ) * (D - D * D) *
     star (U : Matrix d d ℂ)).PosSemidef
-  simpa [Matrix.star_eq_conjTranspose] using
+  simpa only [Matrix.star_eq_conjTranspose] using
     hdiag.mul_mul_conjTranspose_same (U : Matrix d d ℂ)
 
 end
@@ -3653,8 +3683,8 @@ def matrixQuadraticCLM
     { toFun := fun A => star x ⬝ᵥ A.mulVec x
       map_add' := by
         intro A B
-        simp [Matrix.mulVec, dotProduct, add_mul, mul_add,
-          Finset.sum_add_distrib]
+        simp only [dotProduct, Pi.star_apply, RCLike.star_def, Matrix.mulVec, Matrix.add_apply,
+          add_mul, Finset.sum_add_distrib, mul_add]
       map_smul' := by
         intro r A
         change
@@ -3701,7 +3731,7 @@ theorem bochner_integral_posSemidef
     have hstar : star (∫ t, f t ∂μ) = ∫ t, f t ∂μ :=
       hadjoint.trans (integral_congr_ae hadjoint_ae)
     have hentry := congr_fun (congr_fun hstar i) j
-    simpa [Matrix.star_eq_conjTranspose, Matrix.conjTranspose] using hentry
+    simpa only [RCLike.star_def, Matrix.star_apply] using hentry
   apply Matrix.PosSemidef.of_dotProduct_mulVec_nonneg hhermitian
   intro x
   have hcomm :
@@ -3737,7 +3767,7 @@ theorem spectralPurificationFilter_eq_one_sub_shifted_inverse
       (shifted_posSemidef_matrix_posDef hF hs).isUnit
   rw [spectralPurificationFilter_eq_resolvent F hF hs]
   apply eq_sub_of_add_eq
-  simpa [add_mul, smul_mul_assoc] using
+  simpa only [add_mul, Algebra.smul_mul_assoc, one_mul] using
     Matrix.mul_nonsing_inv
       (F + s • (1 : Matrix d d ℂ)) hdet
 
@@ -3792,7 +3822,7 @@ theorem spectralPurificationFilter_sub_resolvent
       (shifted_posSemidef_matrix_posDef hM hs).isUnit
   rw [spectralPurificationFilter_eq_resolvent F hF hs,
     spectralPurificationFilter_eq_resolvent M hM hs]
-  simpa [smul_mul_assoc] using
+  simpa only [Algebra.smul_mul_assoc, one_mul] using
     noncommutative_filtered_resolvent_identity
       F M (s • (1 : Matrix d d ℂ))
       (F + s • (1 : Matrix d d ℂ))⁻¹
@@ -3872,7 +3902,7 @@ theorem weighted_shifted_inverse_second_order
   have hW_normalized : (∑ i : ι, W i) = 1 := by
     dsimp [W]
     rw [← Finset.sum_smul, normalized]
-    simp
+    simp only [one_smul]
   have hW_centered : (∑ i : ι, W i * (F i - M)) = 0 := by
     dsimp [W]
     simp_rw [smul_mul_assoc, one_mul]
@@ -4022,7 +4052,9 @@ theorem spectralPurificationFilter_memLp_two
         Matrix.diagonal (fun k =>
           ((eigenvalue k / (eigenvalue k + s) : ℝ) : ℂ)) *
         star (U : Matrix d d ℂ)) i j = _
-    simp [Matrix.mul_apply, Matrix.diagonal, mul_ite]
+    simp only [Matrix.diagonal, Complex.ofReal_div, Complex.ofReal_add, Matrix.mul_apply,
+      Matrix.of_apply, mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte,
+      Matrix.star_apply, RCLike.star_def]
   rw [hform]
   apply memLp_finsetSum Finset.univ
   intro k _
@@ -4145,7 +4177,8 @@ theorem spectralEntropyKernel_integrable
         MeasureTheory.Integrable.ofReal (𝕜 := ℂ)
           (scalar_entropy_resolvent_integrable heigenvalue)
       simpa only [Matrix.diagonal_apply_eq] using hcomplex
-    · simp [hij]
+    · simp only [Complex.ofReal_sub, Complex.ofReal_div, Complex.ofReal_add, Complex.ofReal_one,
+        ne_eq, hij, not_false_eq_true, Matrix.diagonal_apply_ne, integrable_fun_zero]
   exact
     (spectralConjugationCLM hF.isHermitian.eigenvectorUnitary).integrable_comp
       hdiag
@@ -4186,8 +4219,12 @@ theorem spectralEntropyKernel_eq_scalar_sub_filter
     ext i j
     by_cases hij : i = j
     · subst j
-      simp [K, D, G, div_eq_mul_inv, mul_comm]
-    · simp [K, D, G, hij]
+      simp only [div_eq_mul_inv, mul_comm, Complex.ofReal_sub, Complex.ofReal_mul,
+        Complex.ofReal_inv, Complex.ofReal_add, Complex.ofReal_one, Matrix.diagonal_apply_eq,
+        one_mul, Matrix.sub_apply, Matrix.smul_apply, Complex.real_smul, K, D, G]
+    · simp only [Complex.ofReal_sub, Complex.ofReal_div, Complex.ofReal_add, Complex.ofReal_one,
+        ne_eq, hij, not_false_eq_true, Matrix.diagonal_apply_ne, one_div, Matrix.sub_apply,
+        Matrix.smul_apply, smul_zero, sub_self, K, D, G]
   change L K = (1 / (1 + s) : ℝ) • F - L G
   rw [hFspec, ← L.map_smul, ← L.map_sub, hdiag]
 
@@ -4302,7 +4339,7 @@ theorem weightedSpectralEntropyJensen_eq_shifted_inverse
             simp_rw [smul_sub]
             rw [Finset.sum_sub_distrib, ← Finset.sum_smul,
               normalized, hscale]
-            simp
+            simp only [one_smul]
   unfold weightedSpectralEntropyJensen
   simp_rw [spectralEntropyKernel_eq_scalar_sub_filter]
   change
@@ -4376,7 +4413,7 @@ theorem scalar_entropy_resolvent_integral
     (∫ s in Ioi (0 : ℝ),
       (z / (1 + s) - z / (z + s))) = z * Real.log z := by
   rcases hz.eq_or_lt with rfl | hzpos
-  · simp
+  · simp only [zero_div, zero_add, sub_self, integral_zero, Real.log_zero, mul_zero]
   · have hderiv :
         ∀ x ∈ Ici (0 : ℝ),
           HasDerivAt
@@ -4397,12 +4434,13 @@ theorem scalar_entropy_resolvent_integral
             (fun t : ℝ => z * Real.log ((1 + t) / (z + t)))
             (z * (((z + x) - (1 + x)) / (z + x) ^ 2 /
               ((1 + x) / (z + x)))) x := by
-        simpa [Function.comp_def] using
+        simpa only [add_sub_add_right_eq_sub, Pi.div_apply, Pi.add_apply, id_eq, zero_add,
+          one_mul, mul_one] using
           ((hdnum.div hdden hden).log hratio).const_mul z
       apply hd.congr_deriv
       field_simp [hnum, hden]
     have hden_top : Tendsto (fun t : ℝ => z + t) atTop atTop := by
-      simpa [add_comm] using
+      simpa only [id_eq, add_comm] using
         tendsto_atTop_add_const_right atTop z tendsto_id
     have hzero :
         Tendsto (fun t : ℝ => (1 - z) / (z + t))
@@ -4416,7 +4454,7 @@ theorem scalar_entropy_resolvent_integral
       have h' :
           Tendsto (fun t : ℝ => 1 + (1 - z) / (z + t))
             atTop (𝓝 (1 : ℝ)) := by
-        simpa using hone.add hzero
+        simpa only [add_zero] using hone.add hzero
       apply h'.congr'
       filter_upwards [eventually_gt_atTop (-z)] with t ht
       have hden : z + t ≠ 0 := ne_of_gt (by linarith)
@@ -4440,7 +4478,7 @@ theorem scalar_entropy_resolvent_integral
         Tendsto (fun t : ℝ =>
           z * Real.log ((1 + t) / (z + t)))
           atTop (𝓝 (0 : ℝ)) := by
-      simpa using tendsto_const_nhds.mul hlog_limit
+      simpa only [mul_zero] using tendsto_const_nhds.mul hlog_limit
     have hftc := integral_Ioi_of_hasDerivAt_of_tendsto'
       hderiv (scalar_entropy_resolvent_integrable hzpos.le) hlimit
     calc
@@ -4448,7 +4486,7 @@ theorem scalar_entropy_resolvent_integral
         (z / (1 + s) - z / (z + s))) =
           0 - z * Real.log ((1 + 0) / (z + 0)) := hftc
       _ = z * Real.log z := by
-        simp [Real.log_inv]
+        simp only [add_zero, one_div, Real.log_inv, mul_neg, sub_neg_eq_add, zero_add]
 
 end
 
@@ -4490,7 +4528,9 @@ theorem diagonalEntropyKernel_integrable
         (scalar_entropy_resolvent_integrable (nonnegative i))
     simpa only [diagonalEntropyKernel,
       Matrix.diagonal_apply_eq] using hcomplex
-  · simp [diagonalEntropyKernel, hij]
+  · simp only [diagonalEntropyKernel, Complex.ofReal_sub, Complex.ofReal_div, Complex.ofReal_add,
+      Complex.ofReal_one, ne_eq, hij, not_false_eq_true, Matrix.diagonal_apply_ne,
+      integrable_fun_zero]
 
 theorem integral_diagonalEntropyKernel
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -4530,7 +4570,9 @@ theorem integral_diagonalEntropyKernel
             integral_ofReal
       _ = ((eigenvalue i * Real.log (eigenvalue i) : ℝ) : ℂ) := by
             rw [scalar_entropy_resolvent_integral (nonnegative i)]
-  · simp [diagonalEntropyKernel, hij]
+  · simp only [diagonalEntropyKernel, Complex.ofReal_sub, Complex.ofReal_div, Complex.ofReal_add,
+      Complex.ofReal_one, ne_eq, hij, not_false_eq_true, Matrix.diagonal_apply_ne, integral_zero,
+      Complex.ofReal_mul]
 
 theorem integral_spectralEntropyKernel_eq_cfc
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -4647,7 +4689,7 @@ theorem Game.conditionalYGivenX_sum_le_one
     (G : Game X Y A B) (x : X) :
     (∑ y : Y, G.conditionalYGivenX x y) ≤ 1 := by
   by_cases hx : G.marginalX x = 0
-  · simp [Game.conditionalYGivenX, hx]
+  · simp only [conditionalYGivenX, hx, div_zero, Finset.sum_const_zero, zero_le_one]
   · have hpos : 0 < G.marginalX x :=
       lt_of_le_of_ne (G.marginalX_nonneg x) (Ne.symm hx)
     rw [G.conditionalYGivenX_sum x hpos]
@@ -4656,7 +4698,7 @@ theorem Game.conditionalXGivenY_sum_le_one
     (G : Game X Y A B) (y : Y) :
     (∑ x : X, G.conditionalXGivenY y x) ≤ 1 := by
   by_cases hy : G.marginalY y = 0
-  · simp [Game.conditionalXGivenY, hy]
+  · simp only [conditionalXGivenY, hy, div_zero, Finset.sum_const_zero, zero_le_one]
   · have hpos : 0 < G.marginalY y :=
       lt_of_le_of_ne (G.marginalY_nonneg y) (Ne.symm hy)
     rw [G.conditionalXGivenY_sum y hpos]
@@ -4774,7 +4816,7 @@ theorem matrixLogEntropy_nonpos_of_contraction
     apply cfc_nonpos
     intro z hz
     exact Real.mul_log_nonpos (hlower z hz) (hupper z hz)
-  simpa using Matrix.le_iff.mp hnonpos
+  simpa only [zero_sub] using Matrix.le_iff.mp hnonpos
 
 theorem matrixLogEntropy_born_nonpos_left
     {dA dB : Type*}
@@ -4796,7 +4838,7 @@ theorem matrixLogEntropy_born_nonpos_left
       (-(cfc (fun z : ℝ => z * Real.log z) F)) G =
       -bornTracePairing ρ.matrix
         (cfc (fun z : ℝ => z * Real.log z) F) G := by
-    simp
+    simp only [map_neg, LinearMap.neg_apply]
   rw [hrewrite] at hpair
   exact neg_nonneg.mp hpair
 
@@ -4879,11 +4921,11 @@ theorem positiveMatrixSpectralAtom_posSemidef
     intro j
     by_cases hij : i = j
     · subst j
-      simp
-    · simp [hij]
+      simp only [Pi.zero_apply, Pi.single_eq_same, zero_le_one]
+    · simp only [Pi.zero_apply, ne_eq, hij, not_false_eq_true, Pi.single_eq_of_ne', Std.le_refl]
   unfold positiveMatrixSpectralAtom
   rw [spectralConjugationCLM_apply]
-  simpa [Matrix.star_eq_conjTranspose] using
+  simpa only [star_eq_conjTranspose] using
     hdiag.mul_mul_conjTranspose_same
       (hF.isHermitian.eigenvectorUnitary : Matrix d d ℂ)
 
@@ -4899,14 +4941,16 @@ theorem positiveMatrixSpectralAtom_sum
     ext j k
     by_cases hjk : j = k
     · subst k
-      simp [Matrix.sum_apply, Pi.single_apply]
-    · simp [Matrix.sum_apply,         hjk]
+      simp only [Matrix.sum_apply, diagonal_apply_eq, Pi.single_apply, Finset.sum_ite_eq,
+        Finset.mem_univ, ↓reduceIte, one_apply_eq]
+    · simp only [Matrix.sum_apply, ne_eq, hjk, not_false_eq_true, diagonal_apply_ne,
+        Finset.sum_const_zero, one_apply_ne]
   change
     (∑ i : d,
       spectralConjugationCLM U
         (Matrix.diagonal (Pi.single i (1 : ℂ)))) = 1
   rw [← map_sum, hdiag]
-  simp [spectralConjugationCLM_apply]
+  simp only [spectralConjugationCLM_apply, mul_one, SetLike.coe_mem, Unitary.mul_star_self_of_mem]
 
 theorem positiveMatrix_cfc_spectral_sum
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -4927,8 +4971,11 @@ theorem positiveMatrix_cfc_spectral_sum
     ext j k
     by_cases hjk : j = k
     · subst k
-      simp [Matrix.sum_apply, Pi.single_apply]
-    · simp [Matrix.sum_apply,         hjk]
+      simp only [Matrix.sum_apply, Matrix.smul_apply, diagonal_apply_eq, Pi.single_apply,
+        smul_ite, Complex.real_smul, mul_one, smul_zero, Finset.sum_ite_eq, Finset.mem_univ,
+        ↓reduceIte]
+    · simp only [Matrix.sum_apply, Matrix.smul_apply, ne_eq, hjk, not_false_eq_true,
+        diagonal_apply_ne, smul_zero, Finset.sum_const_zero]
   calc
     cfc f F =
         spectralConjugationCLM U
@@ -4943,7 +4990,8 @@ theorem positiveMatrix_cfc_spectral_sum
     _ = ∑ i : d,
         f (eigenvalue i) •
           positiveMatrixSpectralAtom F hF i := by
-      simp [positiveMatrixSpectralAtom, U, eigenvalue]
+      simp only [map_sum, map_smul, spectralConjugationCLM_apply, positiveMatrixSpectralAtom, U,
+        eigenvalue]
 
 def leftSpectralBornWeight
     {dA dB : Type*}
@@ -4984,7 +5032,7 @@ theorem leftSpectralBornWeight_sum
         (positiveMatrixSpectralAtom F hF i) G) =
       bornTracePairing ρ.matrix
         (∑ i : dA, positiveMatrixSpectralAtom F hF i) G := by
-          simp [map_sum, LinearMap.sum_apply]
+          simp only [map_sum, LinearMap.sum_apply]
     _ = bornTracePairing ρ.matrix (1 : Matrix dA dA ℂ) G := by
       rw [positiveMatrixSpectralAtom_sum]
 
@@ -5070,7 +5118,8 @@ theorem bornTracePairing_one_one
     (ρ : DensityMatrix (dA × dB)) :
     bornTracePairing ρ.matrix
       (1 : Matrix dA dA ℂ) (1 : Matrix dB dB ℂ) = 1 := by
-  simp [bornTracePairing, ρ.trace_one]
+  simp only [bornTracePairing, LinearMap.coe_mk, AddHom.coe_mk, zero_mul, implies_true, mul_zero,
+    mul_one, kroneckerMap_one_one, ρ.trace_one, Complex.one_re]
 
 theorem bornTracePairing_one_le_one
     {dA dB : Type*}
@@ -5121,7 +5170,7 @@ theorem leftSpectralBornWeight_negEntropy
     ← Finset.sum_neg_distrib]
   apply Finset.sum_congr rfl
   intro i _
-  simp [Real.negMulLog]
+  simp only [Real.negMulLog, neg_mul, mul_neg]
 
 theorem matrixLogEntropy_born_lower_bound_left
     {dA dB : Type*}
@@ -5175,8 +5224,8 @@ theorem matrixLogEntropy_born_lower_bound_left
       apply Finset.sum_eq_zero
       intro i _
       rcases mul_eq_zero.mp (hterm i) with hw | he
-      · simp [hw]
-      · simp [he]
+      · simp only [hw, zero_mul]
+      · simp only [he, Real.negMulLog_zero, mul_zero]
     calc
       -bornTracePairing ρ.matrix
           (cfc (fun z : ℝ => z * Real.log z) F) G =
@@ -5187,7 +5236,7 @@ theorem matrixLogEntropy_born_lower_bound_left
       _ = 0 := hentropy
       _ ≤ Real.negMulLog (bornTracePairing ρ.matrix F G) := by
         rw [hp]
-        simp
+        simp only [Real.negMulLog_zero, Std.le_refl]
   · have hp_pos : 0 < bornTracePairing ρ.matrix F G :=
       lt_of_le_of_ne hp_nonneg (Ne.symm hp)
     have hW_pos : 0 <
@@ -5217,7 +5266,7 @@ theorem matrixLogEntropy_born_lower_bound_left
           Real.log (1 / bornTracePairing ρ.matrix F G) := hscalar
       _ = Real.negMulLog (bornTracePairing ρ.matrix F G) := by
         rw [one_div, Real.log_inv]
-        simp [Real.negMulLog]
+        simp only [mul_neg, Real.negMulLog, neg_mul]
 
 end
 
@@ -5241,7 +5290,8 @@ theorem rawEmbezzlementState_ne_zero
   let j : Fin n := ⟨0, hn⟩
   have hj := congrArg
     (fun z : EuclideanSpace ℂ (Fin n × Fin n) => z (j, j)) h
-  simp [rawEmbezzlementState, j] at hj
+  simp only [rawEmbezzlementState, Complex.ofReal_inv, ↓reduceIte, CharP.cast_eq_zero, zero_add,
+    Real.sqrt_one, Complex.ofReal_one, inv_one, PiLp.zero_apply, one_ne_zero, j] at hj
 
 def harmonicNumber (n : ℕ) : ℝ :=
   ∑ j : Fin n, ((j.val : ℝ) + 1)⁻¹
@@ -5284,7 +5334,8 @@ theorem rawEmbezzlementState_norm_sq (n : ℕ) :
         0‖ ^ 2) =
         ‖(↑((Real.sqrt ((i.val : ℝ) + 1))⁻¹) : ℂ)‖ ^ 2 := by
           simp_rw [hterm]
-          simp
+          simp only [Complex.ofReal_inv, norm_inv, Complex.norm_real, Real.norm_eq_abs, inv_pow,
+            sq_abs, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
     _ = ((i.val : ℝ) + 1)⁻¹ := hamp i
 
 def embezzlementState (n : ℕ) :
@@ -5342,7 +5393,7 @@ theorem spectralAtom_trace
   rw [spectralConjugationCLM_apply, Matrix.trace_mul_cycle,
     Matrix.UnitaryGroup.star_mul_self, one_mul,
     Matrix.trace_diagonal]
-  simp [Pi.single_apply]
+  simp only [Pi.single_apply, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
 
 theorem spectralAtom_mul
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -5375,8 +5426,10 @@ theorem spectralAtom_mul
     ext k l
     by_cases hik : k = i
     · subst k
-      simp [Matrix.diagonal_apply, Pi.single_apply, hij]
-    · simp [Matrix.diagonal_apply, Pi.single_apply, hik]
+      simp only [Pi.single_apply, mul_ite, mul_one, mul_zero, Matrix.diagonal_apply, hij,
+        ↓reduceIte, ite_self, Matrix.zero_apply]
+    · simp only [Pi.single_apply, mul_ite, mul_one, mul_zero, Matrix.diagonal_apply, hik,
+        ↓reduceIte, ite_self, Matrix.zero_apply]
 
 theorem spectralAtomSum_mul_self
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -5397,7 +5450,7 @@ theorem spectralAtomSum_mul_self
     _ = ∑ i ∈ s, positiveMatrixSpectralAtom F hF i := by
       apply Finset.sum_congr rfl
       intro i hi
-      simp [spectralAtom_mul, hi]
+      simp only [spectralAtom_mul, Finset.sum_ite_eq, hi, ↓reduceIte]
 
 theorem rectangularMatrix_norm_sq
     {d e : Type*}
@@ -5533,7 +5586,7 @@ theorem spectralAtomOverlap_sum_right
                 Matrix.mul_sum, Matrix.trace_sum, Complex.re_sum]
     _ = (Matrix.trace (positiveMatrixSpectralAtom F hF i)).re := by
       rw [positiveMatrixSpectralAtom_sum]
-      simp
+      simp only [mul_one]
     _ = 1 := by
       rw [spectralAtom_trace]
       rfl
@@ -5554,7 +5607,7 @@ theorem spectralAtomOverlap_sum_left
                 Matrix.sum_mul, Matrix.trace_sum, Complex.re_sum]
     _ = (Matrix.trace (positiveMatrixSpectralAtom G hG j)).re := by
       rw [positiveMatrixSpectralAtom_sum]
-      simp
+      simp only [one_mul]
     _ = 1 := by
       rw [spectralAtom_trace]
       rfl
@@ -5566,7 +5619,8 @@ theorem positiveDensity_eigenvalues_sum
     (∑ i : d, hF.isHermitian.eigenvalues i) = 1 := by
   have hspectral := congrArg Complex.re
     hF.isHermitian.trace_eq_sum_eigenvalues
-  simpa [htrace, Complex.re_sum] using hspectral.symm
+  simpa only [Complex.coe_algebraMap, Complex.re_sum, Complex.ofReal_re, htrace,
+    Complex.one_re] using hspectral.symm
 
 theorem spectralAtomOverlap_schmidtMass_le_one
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -5695,7 +5749,7 @@ theorem binaryBornProbability_normalized
             Matrix.trace_add, Complex.add_re]
     _ = (Matrix.trace ρ.matrix).re := by
       rw [hjoint]
-      simp
+      simp only [mul_one]
     _ = 1 := by
       rw [ρ.trace_one]
       rfl
@@ -5748,7 +5802,7 @@ theorem unitVector_distance_of_real_overlap
     exact hoverlap
   have hsq : ‖z - w‖ ^ 2 ≤ 2 * ε := by
     rw [@norm_sub_sq ℂ, hz, hw]
-    nlinarith [hoverlap']
+    linarith [hoverlap']
   have hsqrt : (Real.sqrt (2 * ε)) ^ 2 = 2 * ε :=
     Real.sq_sqrt (by positivity)
   nlinarith [norm_nonneg (z - w), Real.sqrt_nonneg (2 * ε)]
@@ -5783,7 +5837,8 @@ theorem sharedThresholdResourceRaw_norm_sq
       ‖if k = l ∧ i = j then (τ k : ℂ) else 0‖ ^ 2) =
         (Fintype.card d : ℝ) * ∑ k : κ, τ k ^ 2
   simp_rw [hterm]
-  simp [Finset.mul_sum]
+  simp only [Finset.sum_ite_irrel, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte,
+    Finset.sum_const_zero, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, Finset.mul_sum]
 
 theorem sharedThresholdResourceRaw_ne_zero
     {κ d : Type*} [Fintype κ] [Fintype d]
@@ -5796,7 +5851,8 @@ theorem sharedThresholdResourceRaw_ne_zero
         ((Σ _ : κ, d) × (Σ _ : κ, d)) =>
       z (⟨k, i⟩, ⟨k, i⟩)) hzero
   have hcast : (τ k : ℂ) = 0 := by
-    simpa [sharedThresholdResourceRaw] using hentry
+    simpa only [Complex.ofReal_eq_zero, sharedThresholdResourceRaw, and_self, ↓reduceIte,
+      PiLp.zero_apply] using hentry
   exact hk (by exact_mod_cast hcast)
 
 def sharedThresholdResource
@@ -5829,8 +5885,7 @@ def transposePOVM
     ext i j
     have hc := congrArg
       (fun M : Matrix d d ℂ => M j i) P.complete
-    simpa [Matrix.sum_apply, Matrix.transpose_apply,
-      Matrix.one_apply, eq_comm] using hc
+    simpa only [Matrix.sum_apply, Matrix.transpose_apply, Matrix.one_apply, eq_comm] using hc
 
 theorem transposePOVM_projective
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -5857,11 +5912,12 @@ theorem sharedThresholdResourceRaw_eq_vec
   · subst l
     by_cases hij : i = j
     · subst j
-      simp [sharedThresholdResourceRaw, Matrix.vec]
-    · simp [sharedThresholdResourceRaw,
-        Matrix.vec, hij, Ne.symm hij]
-  · simp [sharedThresholdResourceRaw,
-      Matrix.vec, h, Ne.symm h]
+      simp only [sharedThresholdResourceRaw, and_self, ↓reduceIte, Matrix.vec,
+        Matrix.diagonal_apply_eq]
+    · simp only [sharedThresholdResourceRaw, hij, and_false, ↓reduceIte, Matrix.vec, ne_eq,
+        Sigma.mk.injEq, heq_eq_eq, Ne.symm hij, not_false_eq_true, Matrix.diagonal_apply_ne]
+  · simp only [sharedThresholdResourceRaw, h, false_and, ↓reduceIte, Matrix.vec, ne_eq,
+      Sigma.mk.injEq, Ne.symm h, heq_eq_eq, not_false_eq_true, Matrix.diagonal_apply_ne]
 
 theorem sharedThresholdResourceRaw_local_action
     {κ d : Type*} [Fintype κ] [Fintype d]
@@ -5927,9 +5983,13 @@ theorem sharedThresholdDiagonal_eq_block
   · subst l
     by_cases hij : i = j
     · subst j
-      simp [Matrix.blockDiagonal'_apply]
-    · simp [Matrix.blockDiagonal'_apply, hij]
-  · simp [Matrix.blockDiagonal'_apply, h]
+      simp only [Matrix.diagonal_apply_eq, Complex.coe_smul, Matrix.blockDiagonal'_apply,
+        ↓reduceDIte, cast_eq, Matrix.smul_apply, Matrix.one_apply_eq, Complex.real_smul, mul_one]
+    · simp only [ne_eq, Sigma.mk.injEq, heq_eq_eq, hij, and_false, not_false_eq_true,
+        Matrix.diagonal_apply_ne, Complex.coe_smul, Matrix.blockDiagonal'_apply, ↓reduceDIte,
+        cast_eq, Matrix.smul_apply, Matrix.one_apply_ne, smul_zero]
+  · simp only [ne_eq, Sigma.mk.injEq, h, heq_eq_eq, false_and, not_false_eq_true,
+      Matrix.diagonal_apply_ne, Complex.coe_smul, Matrix.blockDiagonal'_apply, ↓reduceDIte]
 
 theorem sharedThresholdResourceRaw_block_action
     {κ d : Type*} [Fintype κ] [Fintype d]
@@ -5951,7 +6011,8 @@ theorem sharedThresholdResourceRaw_block_action
     ← Matrix.blockDiagonal'_mul]
   congr 1
   funext k
-  simp [Matrix.transpose_mul]
+  simp only [Complex.coe_smul, Algebra.mul_smul_comm, mul_one, Algebra.smul_mul_assoc,
+    Matrix.transpose_smul, Matrix.transpose_mul]
 
 theorem projectorProduct_hilbertSchmidt_trace
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -5966,7 +6027,7 @@ theorem projectorProduct_hilbertSchmidt_trace
     Matrix.trace ((B * A) * (A * B)) =
         Matrix.trace (B * (A * A) * B) := by
           congr 1
-          simp [Matrix.mul_assoc]
+          simp only [Matrix.mul_assoc]
     _ = Matrix.trace (B * A * B) := by rw [hAA]
     _ = Matrix.trace (B * B * A) := by
           rw [Matrix.trace_mul_cycle]
@@ -5987,7 +6048,8 @@ theorem weightedProjectorProduct_hilbertSchmidt_trace
   rw [Matrix.conjTranspose_smul,
     Matrix.smul_mul, Matrix.mul_smul,
     Matrix.trace_smul, Matrix.trace_smul, hgram]
-  simp [Complex.mul_re, pow_two, mul_assoc]
+  simp only [RCLike.star_def, Complex.conj_ofReal, smul_eq_mul, Complex.mul_re, Complex.ofReal_re,
+    Complex.ofReal_im, zero_mul, sub_zero, Complex.mul_im, add_zero, pow_two, mul_assoc]
 
 theorem sharedThresholdResourceRaw_block_action_norm_sq
     {κ d : Type*} [Fintype κ] [Fintype d]
@@ -6068,7 +6130,7 @@ theorem sharedThresholdResource_block_action_norm_sq
   rw [sharedThresholdResourceRaw_norm_sq,
     sharedThresholdResourceRaw_block_action_norm_sq
       τ A B hA hB hAA hBB]
-  simp [div_eq_mul_inv, mul_comm]
+  simp only [mul_inv_rev, mul_comm, div_eq_mul_inv]
 
 theorem doublyStochasticSchmidtMass_le_one
     {ι κ : Type*} [Fintype ι] [Fintype κ]
@@ -6284,7 +6346,7 @@ theorem twoSidedSchmidtSpectralEnergy_le
     hσunit hμunit hLrow hLcol, hdistance]
   change 2 - 2 * a ≤ 2 *
     (2 - 2 * (inner ℂ ψ φ).re)
-  nlinarith [sq_nonneg ((inner ℂ ψ φ).re - 1)]
+  linarith [sq_nonneg ((inner ℂ ψ φ).re - 1)]
 
 def tensorEmbezzlementTarget
     {d n : ℕ} (ξ : BipartiteUnitVector d) :
@@ -6396,9 +6458,9 @@ theorem unitary_row_norm_sq_sum
     rw [← Complex.normSq_eq_norm_sq, Complex.normSq_apply]
   have h := congrArg
     (fun M : Matrix d d ℂ => (M i i).re) U.property.2
-  simpa [Matrix.mul_apply, Matrix.star_eq_conjTranspose,
-    Matrix.conjTranspose_apply, Complex.re_sum,
-    Complex.mul_re, hnorm, Matrix.one_apply] using h
+  simpa only [Matrix.star_eq_conjTranspose, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    RCLike.star_def, Complex.re_sum, Complex.mul_re, Complex.conj_re, Complex.conj_im, mul_neg,
+    sub_neg_eq_add, hnorm, Matrix.one_apply_eq, Complex.one_re] using h
 
 theorem unitary_col_norm_sq_sum
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -6409,9 +6471,9 @@ theorem unitary_col_norm_sq_sum
     rw [← Complex.normSq_eq_norm_sq, Complex.normSq_apply]
   have h := congrArg
     (fun M : Matrix d d ℂ => (M j j).re) U.property.1
-  simpa [Matrix.mul_apply, Matrix.star_eq_conjTranspose,
-    Matrix.conjTranspose_apply, Complex.re_sum,
-    Complex.mul_re, hnorm, Matrix.one_apply] using h
+  simpa only [Matrix.star_eq_conjTranspose, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    RCLike.star_def, Complex.re_sum, Complex.mul_re, Complex.conj_re, Complex.conj_im, neg_mul,
+    sub_neg_eq_add, hnorm, Matrix.one_apply_eq, Complex.one_re] using h
 
 def unitaryBasisOverlap
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -6440,7 +6502,7 @@ theorem diagonalSchmidtState_norm_sq
         if i = j then σ i ^ 2 else 0 := by
     split_ifs <;> simp [Complex.norm_real, Real.norm_eq_abs, sq_abs]
   simp_rw [hterm]
-  simp
+  simp only [Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
 
 def schmidtVector
     {d : ℕ}
@@ -6468,10 +6530,9 @@ theorem schmidtVector_apply
     schmidtVector σ U V (a, b) =
       ∑ i : Fin d, (σ i : ℂ) * U a i * V b i := by
   classical
-  simp [schmidtVector, localUnitaryAction,
-    Matrix.mulVec, dotProduct, Matrix.kroneckerMap_apply,
-    diagonalSchmidtState, Fintype.sum_prod_type,
-    mul_assoc, mul_comm]
+  simp only [schmidtVector, localUnitaryAction, diagonalSchmidtState, Matrix.mulVec, dotProduct,
+    Matrix.kroneckerMap_apply, mul_comm, ite_mul, zero_mul, Fintype.sum_prod_type,
+    Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, mul_assoc]
 
 theorem weightedComplexOverlapVector_inner
     {ι κ : Type*} [Fintype ι] [Fintype κ]
@@ -6506,7 +6567,10 @@ theorem weightedComplexOverlapVector_inner
     ((Real.sqrt (σ i * μ j) : ℂ) * R i j) *
         star ((Real.sqrt (σ i * μ j) : ℂ) * star (L i j)) =
       ((Real.sqrt (σ i * μ j) : ℂ) * R i j) *
-        ((Real.sqrt (σ i * μ j) : ℂ) * L i j) := by simp
+        ((Real.sqrt (σ i * μ j) : ℂ) * L i j) := by simp only [RCLike.star_def, star_mul',
+                                                      Complex.conj_ofReal,
+                                                      RingHomCompTriple.comp_apply,
+                                                      RingHom.id_apply]
     _ =
       ((Real.sqrt (σ i * μ j) : ℂ) *
         (Real.sqrt (σ i * μ j) : ℂ)) *
@@ -6534,8 +6598,9 @@ theorem diagonalSchmidtState_eq_vec
   ext ⟨i, j⟩
   by_cases h : i = j
   · subst j
-    simp [diagonalSchmidtState, Matrix.vec]
-  · simp [diagonalSchmidtState, Matrix.vec, h, Ne.symm h]
+    simp only [diagonalSchmidtState, ↓reduceIte, Matrix.vec, Matrix.diagonal_apply_eq]
+  · simp only [diagonalSchmidtState, h, ↓reduceIte, Matrix.vec, ne_eq, Ne.symm h,
+      not_false_eq_true, Matrix.diagonal_apply_ne]
 
 theorem schmidtVector_eq_vec
     {d : ℕ}
@@ -6565,9 +6630,9 @@ theorem weightedSchmidtMatrixTrace
       ∑ i : d, ∑ j : d,
         (σ i : ℂ) * (μ j : ℂ) * L i j * R i j := by
   classical
-  simp [Matrix.trace, Matrix.mul_apply,
-    Matrix.diagonal_apply, Matrix.transpose_apply,
-    mul_assoc, mul_left_comm, mul_comm]
+  simp only [Matrix.trace, mul_assoc, Matrix.diag_apply, Matrix.mul_apply, Matrix.transpose_apply,
+    Matrix.diagonal_apply, mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte,
+    mul_comm, mul_left_comm, Finset.sum_ite_eq]
   rw [Finset.sum_comm]
 
 theorem schmidtVector_inner
@@ -6605,7 +6670,7 @@ theorem schmidtVector_inner
         (((B * S * A.transpose).conjTranspose *
           (D * T)) * C.transpose) := by
             congr 1
-            simp [Matrix.mul_assoc]
+            simp only [Matrix.mul_assoc, Matrix.conjTranspose_mul]
     _ = Matrix.trace
         (C.transpose *
           ((B * S * A.transpose).conjTranspose * (D * T))) :=
@@ -6614,12 +6679,9 @@ theorem schmidtVector_inner
         ((A.conjTranspose * C).transpose * S *
           (B.conjTranspose * D) * T) := by
             congr 1
-            simp [Matrix.conjTranspose_mul,
-              Matrix.transpose_mul,
-              Matrix.transpose_conjTranspose,
-              Matrix.conjTranspose_transpose,
-              Matrix.diagonal_conjTranspose,
-              S, Pi.star_def, Matrix.mul_assoc]
+            simp only [Matrix.mul_assoc, Matrix.conjTranspose_mul, Matrix.transpose_conjTranspose,
+              RCLike.star_def, Matrix.diagonal_conjTranspose, Pi.star_def, Complex.conj_ofReal,
+              Matrix.transpose_mul, Matrix.conjTranspose_transpose, S]
     _ = _ := weightedSchmidtMatrixTrace
       σ μ (A.conjTranspose * C) (B.conjTranspose * D)
 
@@ -6683,7 +6745,7 @@ theorem schmidtVector_spectralEnergy_le
       σ μ hσ hμ
       (fun i j => unitaryBasisOverlap U X i j)
       (fun i j => unitaryBasisOverlap V Y i j)]
-    simpa [unitaryBasisOverlap_apply] using
+    simpa only [unitaryBasisOverlap_apply] using
       schmidtVector_inner σ μ U V X Y
   simpa [L] using
     twoSidedSchmidtSpectralEnergy_le
@@ -6763,14 +6825,14 @@ theorem linearMap_exists_singularBases
       have hs :
           starRingEnd ℂ ((σ (i : Fin d) : ℂ)⁻¹) =
             ((σ (i : Fin d) : ℂ)⁻¹) := by
-        simp
+        simp only [map_inv₀, conj_ofReal]
       rw [hs]
       push_cast
       field_simp
     · have hval : (i : Fin d) ≠ (j : Fin d) := by
         intro h
         exact hij (Subtype.ext h)
-      simp [hij, hval]
+      simp only [map_inv₀, conj_ofReal, ofReal_pow, hval, ↓reduceIte, mul_zero, hij]
   obtain ⟨u, hu⟩ :=
     Orthonormal.exists_orthonormalBasis_extension_of_card_eq
       (by
@@ -6781,18 +6843,18 @@ theorem linearMap_exists_singularBases
   by_cases hi : σ i = 0
   · have hker : (T.adjoint ∘ₗ T) (v i) = 0 := by
       rw [heigen i, hi]
-      simp
+      simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, ofReal_zero, zero_smul]
     have hTv : T (v i) = 0 := by
       apply LinearMap.mem_ker.mp
       rw [← T.ker_adjoint_comp_self]
       exact LinearMap.mem_ker.mpr hker
-    simp [hi, hTv]
+    simp only [hTv, hi, ofReal_zero, zero_smul]
   · have hui : u i = f i := hu i hi
     rw [hui]
     change T (v i) =
       (σ i : ℂ) • (((σ i : ℂ)⁻¹) • T (v i))
     rw [smul_smul, mul_inv_cancel₀]
-    · simp
+    · simp only [one_smul]
     · exact_mod_cast hi
 
 end
@@ -6831,10 +6893,11 @@ def conjugateUnitary
       ((U.val.conjTranspose).transpose).conjTranspose =
         U.val.transpose := by
     ext i j
-    simp [Matrix.conjTranspose_apply, Matrix.transpose_apply]
+    simp only [conjTranspose_apply, transpose_apply, RCLike.star_def,
+      RingHomCompTriple.comp_apply, RingHom.id_apply]
   rw [htranspose]
   have h := congrArg Matrix.transpose U.property.1
-  simpa [Matrix.star_eq_conjTranspose, Matrix.transpose_mul] using h
+  simpa only [star_eq_conjTranspose, transpose_mul, transpose_one] using h
 
 @[simp] theorem conjugateUnitary_apply
     {d : ℕ}
@@ -6873,7 +6936,7 @@ theorem exists_proofSchmidtDecomposition
               v i) := by
         rw [v.sum_repr']
       _ = _ := by
-        simp
+        simp only [EuclideanSpace.basisFun_apply, map_sum, map_smul]
   have hcoord := congrArg
     (fun z : EuclideanSpace ℂ (Fin d) => z b) hrepr
   simpa [T, C, Matrix.toLpLin_apply,
@@ -6912,12 +6975,12 @@ theorem harmonicNumber_eq_harmonic (n : ℕ) :
   simp only [Rat.cast_sum, Rat.cast_inv, Nat.cast_add, Nat.cast_one]
   apply Finset.sum_congr rfl
   intro i hi
-  simp [Finset.mem_range.mp hi]
+  simp only [Finset.mem_range.mp hi, ↓reduceDIte, Rat.cast_add, Rat.cast_natCast, Rat.cast_one]
 
 theorem harmonicNumber_log_lower (n : ℕ) :
     Real.log ((n : ℝ) + 1) ≤ harmonicNumber n := by
   rw [harmonicNumber_eq_harmonic]
-  simpa [Nat.cast_add, Nat.cast_one] using log_add_one_le_harmonic n
+  simpa only [Nat.cast_add, Nat.cast_one] using log_add_one_le_harmonic n
 
 theorem harmonicNumber_log_upper (n : ℕ) :
     harmonicNumber n ≤ 1 + Real.log (n : ℝ) := by
@@ -6977,7 +7040,7 @@ theorem exists_proofHarmonicNumber_ratio_ge
   have hn : 0 < n := by
     have hzero : harmonicNumber 0 = 0 := by
       rw [harmonicNumber_eq_harmonic]
-      simp
+      simp only [harmonic_zero, Rat.cast_zero]
     by_contra hnot
     have hnzero : n = 0 := by omega
     rw [hnzero, hzero] at hnlarge
@@ -6988,7 +7051,7 @@ theorem exists_proofHarmonicNumber_ratio_ge
   have hupper := harmonicNumber_mul_le_add hd hn
   have hbudget : C < ε * harmonicNumber n := by
     have h := (div_lt_iff₀ hε).mp hnlarge
-    nlinarith
+    linarith
   refine ⟨n, hn, (le_div_iff₀ hden).mpr ?_⟩
   have hscaled := mul_le_mul_of_nonneg_left
     hupper (sub_nonneg.mpr hεone)
@@ -6999,7 +7062,7 @@ theorem exists_proofHarmonicNumber_ratio_ge
     harmonicNumber n + C at hupper
   change (1 - ε) * harmonicNumber (d * n) ≤
     (1 - ε) * (harmonicNumber n + C) at hscaled
-  nlinarith
+  linarith
 
 end
 
@@ -7035,7 +7098,7 @@ theorem ePRState_norm (m : ℕ) (hm : 0 < m) :
           if i = j then (m : ℝ)⁻¹ else 0 := by
       split_ifs with h
       · exact hamp
-      · simp
+      · simp only [norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
     change
       (∑ i : Fin m, ∑ j : Fin m,
         ‖if i = j then
@@ -7043,7 +7106,8 @@ theorem ePRState_norm (m : ℕ) (hm : 0 < m) :
         else
           0‖ ^ 2) = 1
     simp_rw [hterm]
-    simp [hmreal.ne']
+    simp only [sum_ite_eq, mem_univ, ↓reduceIte, sum_const, card_univ, Fintype.card_fin,
+      nsmul_eq_mul, ne_eq, hmreal.ne', not_false_eq_true, mul_inv_cancel₀]
   nlinarith [norm_nonneg (ePRState m)]
 
 theorem permutationMatrix_mem_unitary
@@ -7052,7 +7116,7 @@ theorem permutationMatrix_mem_unitary
     σ.permMatrix ℂ ∈ Matrix.unitaryGroup ι ℂ := by
   rw [Matrix.mem_unitaryGroup_iff, Matrix.star_eq_conjTranspose,
     Matrix.conjTranspose_permMatrix, ← Matrix.permMatrix_mul]
-  simp
+  simp only [inv_mul_cancel, permMatrix_one]
 
 def permutationUnitary
     {ι : Type*} [Fintype ι] [DecidableEq ι]
@@ -7104,8 +7168,9 @@ theorem diagonalInner_real_eq_sum
   apply Finset.sum_eq_single i
   · intro j _ hji
     rw [hz i j (Ne.symm hji)]
-    simp
-  · simp
+    simp only [RCLike.inner_apply, map_zero, mul_zero, zero_re]
+  · simp only [mem_univ, not_true_eq_false, RCLike.inner_apply, mul_re, conj_re, conj_im, mul_neg,
+      sub_neg_eq_add, IsEmpty.forall_iff]
 
 end
 
@@ -7135,31 +7200,31 @@ theorem harmonicSchmidtFiber_count_sq_le
           apply Finset.card_le_card
           intro k hk
           exact Finset.mem_Iic.mpr (S.le_max' k hk)
-        _ = j.val + 1 := by simp
+        _ = j.val + 1 := by simp only [Fin.card_Iic]
     have hjpositive : 0 < (j.val : ℝ) + 1 := by positivity
     have hsqrtpositive : 0 < Real.sqrt ((j.val : ℝ) + 1) :=
       Real.sqrt_pos.2 hjpositive
     have hscaled :
         x * Real.sqrt ((j.val : ℝ) + 1) ≤ a := by
       apply (le_div_iff₀ hsqrtpositive).mp
-      simpa [div_eq_mul_inv] using hjthreshold
+      simpa only [div_eq_mul_inv] using hjthreshold
     have hsquares :
         ((j.val : ℝ) + 1) * x ^ 2 ≤ a ^ 2 := by
       have hnonneg : 0 ≤ x * Real.sqrt ((j.val : ℝ) + 1) :=
         mul_nonneg hx (Real.sqrt_nonneg _)
       have hs :
           (x * Real.sqrt ((j.val : ℝ) + 1)) ^ 2 ≤ a ^ 2 := by
-        nlinarith [mul_nonneg (sub_nonneg.mpr hscaled)
+        linarith [mul_nonneg (sub_nonneg.mpr hscaled)
           (add_nonneg ha hnonneg)]
       rw [mul_pow, Real.sq_sqrt hjpositive.le] at hs
-      nlinarith
+      linarith
     have hcardreal : (S.card : ℝ) ≤ (j.val : ℝ) + 1 := by
       exact_mod_cast hcard
     exact (mul_le_mul_of_nonneg_right hcardreal (sq_nonneg x)).trans
       hsquares
   · have hempty : S = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
     rw [hempty]
-    simp [sq_nonneg a]
+    simp only [card_empty, CharP.cast_eq_zero, zero_mul, sq_nonneg a]
 
 def harmonicTensorSchmidtAmplitude
     {d n : ℕ} (σ : Fin d → ℝ) (q : Fin (d * n)) : ℝ :=
@@ -7198,7 +7263,7 @@ theorem harmonicSchmidtThreshold_card_eq
       ∑ q : Fin (d * n),
         if x ≤ harmonicTensorSchmidtAmplitude (n := n) σ q
           then (1 : ℝ) else 0 := by
-            simp
+            simp only [sum_boole]
     _ = ∑ p : Fin d × Fin n,
       if x ≤ harmonicTensorSchmidtAmplitude (n := n) σ
           (finProdFinEquiv p)
@@ -7213,7 +7278,7 @@ theorem harmonicSchmidtThreshold_card_eq
           rw [Fintype.sum_prod_type]
           apply Finset.sum_congr rfl
           intro i _
-          simp [harmonicTensorSchmidtAmplitude]
+          simp only [harmonicTensorSchmidtAmplitude, Equiv.symm_apply_apply, sum_boole]
 
 theorem harmonicSchmidtThreshold_count_sq_le_one
     {d n : ℕ} (σ : Fin d → ℝ)
@@ -7265,8 +7330,8 @@ theorem descendingHarmonicSchmidtAmplitude_rank_sq_le_one
       (n := n) σ
   have hcard : k.val + 1 ≤ S.card := by
     calc
-      k.val + 1 = (Finset.Iic k).card := by simp
-      _ = ((Finset.Iic k).map π.toEmbedding).card := by simp
+      k.val + 1 = (Finset.Iic k).card := by simp only [Fin.card_Iic]
+      _ = ((Finset.Iic k).map π.toEmbedding).card := by simp only [Fin.card_Iic, card_map]
       _ ≤ S.card := by
         apply Finset.card_le_card
         intro q hq
@@ -7312,7 +7377,7 @@ theorem descendingHarmonicSchmidtAmplitude_le_harmonic
   have hsquare :
       (x * Real.sqrt ((k.val : ℝ) + 1)) ^ 2 ≤ 1 := by
     rw [mul_pow, Real.sq_sqrt hrank.le]
-    nlinarith
+    linarith
   have hnonneg :
       0 ≤ x * Real.sqrt ((k.val : ℝ) + 1) :=
     mul_nonneg hx hsqrt.le
@@ -7337,12 +7402,10 @@ theorem diagonalSchmidtTensorTarget_diagonal
         (‖rawEmbezzlementState n‖⁻¹ : ℝ) •
           (harmonicTensorSchmidtAmplitude
             (n := n) σ q : ℂ) := by
-  simp [tensorEmbezzlementTarget,
-    diagonalSchmidtUnitVector,
-    diagonalSchmidtState,
-    embezzlementState_apply,
-    harmonicTensorSchmidtAmplitude,
-    mul_assoc, mul_comm]
+  simp only [tensorEmbezzlementTarget, diagonalSchmidtUnitVector, diagonalSchmidtState,
+    finProdFinEquiv_symm_apply, embezzlementState_apply, Fin.coe_modNat, ofReal_inv, smul_ite,
+    real_smul, mul_comm, smul_zero, mul_ite, ite_mul, zero_mul, mul_zero, ite_self, ↓reduceIte,
+    harmonicTensorSchmidtAmplitude, ofReal_mul, mul_assoc]
 
 def harmonicSchmidtPermutationUnitary
     {d n : ℕ} (σ : Fin d → ℝ) :
@@ -7368,7 +7431,7 @@ theorem harmonicSchmidtPermutationAction_off_diagonal
         (n := n) σ).symm j :=
     (descendingHarmonicSchmidtPermutation
       (n := n) σ).symm.injective.ne hij
-  simp [hperm]
+  simp only [hperm, ↓reduceIte, smul_zero]
 
 theorem harmonicSchmidtPermutationAction_diagonal
     {d n : ℕ} (σ : Fin d → ℝ)
@@ -7386,7 +7449,7 @@ theorem harmonicSchmidtPermutationAction_diagonal
   rw [harmonicSchmidtPermutationUnitary,
     localPermutationUnitaryAction_apply,
     embezzlementState_apply]
-  simp
+  simp only [Equiv.symm_apply_apply, ↓reduceIte, ofReal_inv, real_smul]
 
 theorem harmonicTensorSchmidtAmplitude_sq_sum
     {d n : ℕ} (σ : Fin d → ℝ)
@@ -7527,8 +7590,10 @@ theorem universalCatalystOverlap_eq_sum
           intro k _
           rw [harmonicSchmidtPermutationAction_diagonal,
             diagonalSchmidtTensorTarget_diagonal]
-          simp [universalCatalystOverlapTerm,
-            mul_assoc, mul_comm, mul_left_comm]
+          simp only [ofReal_inv, real_smul, mul_comm, RCLike.inner_apply, map_mul, map_inv₀,
+            conj_ofReal, mul_left_comm, mul_assoc, mul_re, inv_re, ofReal_re, normSq_ofReal,
+            div_self_mul_self', inv_im, ofReal_im, neg_zero, zero_div, mul_zero, sub_zero, mul_im,
+            zero_mul, add_zero, universalCatalystOverlapTerm]
 
 theorem universalCatalystOverlapTerm_lower
     {d n : ℕ} (σ : Fin d → ℝ)
@@ -7649,8 +7714,8 @@ def harmonicTargetLiftUnitary
       star ((Matrix.reindex e e) M) =
         (Matrix.reindex e e) (star M) := by
     ext i j
-    simp [Matrix.star_eq_conjTranspose,
-      Matrix.reindex_apply, Matrix.conjTranspose_apply]
+    simp only [reindex_apply, star_apply, submatrix_apply, RCLike.star_def, star_eq_conjTranspose,
+      conjTranspose_apply]
   rw [hstar]
   change (Matrix.reindexRingEquiv ℂ e) (star M) *
     (Matrix.reindexRingEquiv ℂ e) M = 1
@@ -7671,8 +7736,8 @@ def harmonicTargetLiftUnitary
       (U.val ⊗ₖ (1 : Matrix (Fin n) (Fin n) ℂ)))
         (finProdFinEquiv (a, i))
         (finProdFinEquiv (b, j)) = _
-  simp [Matrix.reindex_apply,
-    Matrix.kroneckerMap_apply, Matrix.one_apply]
+  simp only [reindex_apply, submatrix_apply, Equiv.symm_apply_apply, kroneckerMap_apply,
+    Matrix.one_apply, mul_ite, mul_one, mul_zero]
 
 theorem localUnitaryAction_comp
     {m : ℕ}
@@ -7757,9 +7822,7 @@ theorem harmonicTargetLift_diagonal_action_apply
       ∑ r : Fin (d * n), ∑ s : Fin (d * n),
         LU (finProdFinEquiv (a, i)) r *
           LV (finProdFinEquiv (b, j)) s * T (r, s) := by
-            simp [Matrix.mulVec, dotProduct,
-              Matrix.kroneckerMap_apply,
-              Fintype.sum_prod_type, mul_assoc]
+            simp only [mulVec, dotProduct, kroneckerMap_apply, mul_assoc, Fintype.sum_prod_type]
     _ = ∑ p : Fin d × Fin n,
         ∑ q : Fin d × Fin n,
           LU (finProdFinEquiv (a, i)) (finProdFinEquiv p) *
@@ -7772,11 +7835,9 @@ theorem harmonicTargetLift_diagonal_action_apply
     _ = schmidtVector σ U V (a, b) *
       embezzlementState n (i, j) := by
         simp_rw [hT]
-        simp [LU, LV,
-          harmonicTargetLiftUnitary_apply,
-          schmidtVector_apply,
-          Fintype.sum_prod_type,
-          mul_assoc, mul_comm, mul_left_comm]
+        simp only [ite_mul, zero_mul, mul_comm, mul_assoc, Fintype.sum_prod_type,
+          harmonicTargetLiftUnitary_apply, mul_ite, mul_left_comm, mul_zero, sum_ite_irrel,
+          sum_ite_eq, mem_univ, ↓reduceIte, sum_const_zero, schmidtVector_apply, LU, LV]
         rw [Finset.mul_sum]
         apply Finset.sum_congr rfl
         intro k _
@@ -7815,7 +7876,7 @@ theorem harmonicTargetLift_diagonal_action
           (diagonalSchmidtUnitVector σ hunit))
           (finProdFinEquiv (p.1, p.2),
             finProdFinEquiv (q.1, q.2)) := by
-          simp [hr, hs]
+          simp only [Prod.mk.eta, hr, hs]
     _ = schmidtVector σ U V (p.1, q.1) *
       embezzlementState n (p.2, q.2) :=
         harmonicTargetLift_diagonal_action_apply
@@ -7838,7 +7899,7 @@ theorem harmonicTargetLift_diagonal_action
                     (finProdFinEquiv (q.1, q.2))).2)
           simp only [Equiv.symm_apply_apply]
     _ = tensorEmbezzlementTarget (n := n) ξ (r, s) := by
-      simp [hr, hs]
+      simp only [Prod.mk.eta, hr, hs]
 
 theorem localUnitaryAction_sub
     {m : ℕ}
@@ -7889,7 +7950,7 @@ theorem universalDiagonalCatalystOverlap_of_harmonic_ratio
       rawEmbezzlementState_norm_sq]
   have hgoalnonneg : 0 ≤ 1 - δ := sub_nonneg.mpr hδone
   have hgoalsquare : (1 - δ) ^ 2 ≤ 1 - δ := by
-    nlinarith [mul_nonneg hδ hgoalnonneg]
+    linarith [mul_nonneg hδ hgoalnonneg]
   have hqbound : 1 - δ ≤ q := by
     rw [← hqsquare] at hratio
     nlinarith [sq_nonneg (q + (1 - δ))]
@@ -8032,7 +8093,7 @@ def spectralPartitionPOVM
         ∑ i ∈ Finset.univ.filter (fun i : d => bin i = k),
           positiveMatrixSpectralAtom F hF i) =
         ∑ i : d, positiveMatrixSpectralAtom F hF i := by
-          simp [Finset.sum_filter, Finset.sum_comm]
+          simp only [sum_filter, sum_comm, sum_ite_eq, mem_univ, ↓reduceIte]
       _ = 1 := positiveMatrixSpectralAtom_sum F hF
 
 theorem spectralPartitionPOVM_projective
@@ -8078,8 +8139,8 @@ theorem spectralPartitionPOVM_trace_eq_atom_count
       ((spectralPartitionPOVM F hF bin).effect k)).re =
       ∑ i : d, if bin i = k then (1 : ℝ) else 0 := by
   classical
-  simp [spectralPartitionPOVM,
-    Matrix.trace_sum, spectralAtom_trace]
+  simp only [spectralPartitionPOVM, trace_sum, spectralAtom_trace, sum_const, nsmul_eq_mul,
+    mul_one, natCast_re, sum_boole]
 
 theorem spectralPartitionPOVM_trace_mul_eq_atom_overlap
     {κ d : Type*}
@@ -8094,10 +8155,8 @@ theorem spectralPartitionPOVM_trace_mul_eq_atom_overlap
         ∑ j ∈ (Finset.univ.filter fun j : d => binG j = k),
           spectralAtomOverlap F G hF hG i j := by
   classical
-  simp [spectralPartitionPOVM,
-    spectralAtomOverlap,
-    Matrix.sum_mul, Matrix.mul_sum,
-    Matrix.trace_sum]
+  simp only [spectralPartitionPOVM, Matrix.mul_sum, Matrix.sum_mul, trace_sum, re_sum,
+    spectralAtomOverlap]
   rw [Finset.sum_comm]
 
 theorem spectralPartitionPOVM_weighted_trace_deficit_eq_mismatch
@@ -8142,7 +8201,7 @@ theorem spectralPartitionPOVM_weighted_trace_deficit_eq_mismatch
           if binG j = k then τ k ^ 2 else 0 :=
             Finset.sum_comm
       _ = ∑ j : d, τ (binG j) ^ 2 := by
-            simp
+            simp only [sum_ite_eq, mem_univ, ↓reduceIte]
   have hPQ :
       (∑ k : κ, τ k ^ 2 *
         (Matrix.trace
@@ -8168,8 +8227,8 @@ theorem spectralPartitionPOVM_weighted_trace_deficit_eq_mismatch
       apply Finset.sum_congr rfl
       intro i _
       by_cases hi : binF i = k
-      · simp [hi]
-      · simp [hi]
+      · simp only [hi, ↓reduceIte, true_and]
+      · simp only [hi, ↓reduceIte, false_and, sum_const_zero]
     simp_rw [hsingle]
     calc
       (∑ k : κ, ∑ i : d, ∑ j : d,
@@ -8203,10 +8262,10 @@ theorem spectralPartitionPOVM_weighted_trace_deficit_eq_mismatch
                   else 0 := by
               by_cases hk : binG j = k
               · subst k
-                simp
-              · simp [hk]
+                simp only [and_true, ↓reduceIte]
+              · simp only [hk, and_false, ↓reduceIte]
             simp_rw [reindex]
-            simp
+            simp only [sum_ite_eq, mem_univ, ↓reduceIte]
   rw [hQ, hPQ]
   have hcolumn : ∀ j : d, (∑ i : d, w i j) = 1 :=
     spectralAtomOverlap_sum_left F G hF hG
@@ -8219,7 +8278,7 @@ theorem spectralPartitionPOVM_weighted_trace_deficit_eq_mismatch
           ∑ j : d,
             τ (binG j) ^ 2 * (∑ i : d, w i j) := by
               simp_rw [hcolumn]
-              simp
+              simp only [mul_one]
       _ = ∑ i : d, ∑ j : d,
           τ (binG j) ^ 2 * w i j := by
             simp_rw [Finset.mul_sum]
@@ -8284,7 +8343,7 @@ theorem finiteUniformGrid_interval_card_le
     have cardinal : selected.card ≤
         last.val + 1 - first.val := by
       have h := Finset.card_le_card interval
-      simpa using h
+      simpa only [ge_iff_le, Fin.card_Icc] using h
     have ordered_indices : first.val ≤ last.val := by
       change (selected.min' present).val ≤ (selected.max' present).val
       exact Finset.min'_le_max' selected present
@@ -8299,7 +8358,7 @@ theorem finiteUniformGrid_interval_card_le
       (Finset.mem_filter.mp last_mem).2.2
     have spread :
         ((last.val : ℝ) - (first.val : ℝ)) * step ≤ hi - lo := by
-      nlinarith
+      linarith
     have scaled :
         (last.val : ℝ) - (first.val : ℝ) ≤
           (hi - lo) / step :=
@@ -8338,7 +8397,7 @@ theorem finiteUniformThresholdCrossing_le
             max a b).card : ℝ) ≤
         (max a b - min a b) /
           ((upper - lower) / (N : ℝ)) + 1 := by
-    simpa [finiteUniformThresholdGrid] using count
+    simpa only [finiteUniformThresholdGrid, inf_le_iff, le_sup_iff] using count
   calc
     ((Finset.univ.filter fun k : Fin N =>
       min a b ≤ finiteUniformThresholdGrid lower upper N k ∧
@@ -8368,7 +8427,8 @@ theorem localUnitaryPureResidual_targetLocalInverse_reset
         (localUnitaryAction U V x) = x := by
   rw [localUnitaryAction_comp,
     inv_mul_cancel, inv_mul_cancel]
-  simp [localUnitaryAction]
+  simp only [localUnitaryAction, OneMemClass.coe_one, zero_mul, implies_true, mul_zero, mul_one,
+    kroneckerMap_one_one, one_mulVec, toLp_ofLp]
 
 def targetCoefficientMatrix
     {d : ℕ} (ξ : BipartiteUnitVector d) :
@@ -8411,9 +8471,9 @@ theorem targetSpectralAtom_apply
       (hF.isHermitian.eigenvectorUnitary : Matrix d d ℂ) a i *
         star ((hF.isHermitian.eigenvectorUnitary : Matrix d d ℂ) b i) := by
   classical
-  simp [positiveMatrixSpectralAtom, spectralConjugationCLM_apply,
-    Matrix.mul_apply, Matrix.diagonal_apply,
-    Pi.single_apply]
+  simp only [positiveMatrixSpectralAtom, spectralConjugationCLM_apply, Matrix.mul_apply,
+    IsHermitian.eigenvectorUnitary_apply, diagonal_apply, Pi.single_apply, mul_ite, mul_one,
+    mul_zero, sum_ite_eq', mem_univ, ↓reduceIte, star_apply, RCLike.star_def, ite_mul, zero_mul]
 
 theorem targetSpectralAtomOverlap_eq_basis_norm_sq
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -8454,11 +8514,11 @@ theorem targetSpectralAtomOverlap_eq_basis_norm_sq
       unitaryBasisOverlap
         hF.isHermitian.eigenvectorUnitary
         hG.isHermitian.eigenvectorUnitary i j = z := by
-    simp [unitaryBasisOverlap_apply,
-      Matrix.mul_apply, Matrix.conjTranspose_apply, U, V, z]
+    simp only [unitaryBasisOverlap_apply, Matrix.mul_apply, conjTranspose_apply,
+      IsHermitian.eigenvectorUnitary_apply, RCLike.star_def, z, U, V]
   rw [coeff, ← Complex.normSq_eq_norm_sq]
   change (star z * z).re = Complex.normSq z
-  simpa [Complex.star_def] using
+  simpa only [RCLike.star_def, mul_re, conj_re, conj_im, neg_mul, sub_neg_eq_add, ofReal_re] using
     (congrArg Complex.re
       (@Complex.normSq_eq_conj_mul_self z)).symm
 
@@ -8564,14 +8624,14 @@ theorem exists_proofTargetCanonicalSpectralSchmidtDecomposition
       simp only [ite_true, mul_one]
       have real_star :
           starRingEnd ℂ ((σ (i : Fin d) : ℂ)⁻¹) =
-            ((σ (i : Fin d) : ℂ)⁻¹) := by simp
+            ((σ (i : Fin d) : ℂ)⁻¹) := by simp only [map_inv₀, conj_ofReal]
       rw [real_star]
       push_cast
       field_simp
     · have unequal : (i : Fin d) ≠ (j : Fin d) := by
         intro equal
         exact same (Subtype.ext equal)
-      simp [same, unequal]
+      simp only [map_inv₀, conj_ofReal, ofReal_pow, unequal, ↓reduceIte, mul_zero, same]
   obtain ⟨u, hu⟩ :=
     Orthonormal.exists_orthonormalBasis_extension_of_card_eq
       (by
@@ -8582,18 +8642,19 @@ theorem exists_proofTargetCanonicalSpectralSchmidtDecomposition
     by_cases zero : σ i = 0
     · have kernel : (T.adjoint ∘ₗ T) (v i) = 0 := by
         rw [heigen i, zero]
-        simp
+        simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, ofReal_zero,
+          zero_smul]
       have image : T (v i) = 0 := by
         apply LinearMap.mem_ker.mp
         rw [← T.ker_adjoint_comp_self]
         exact LinearMap.mem_ker.mpr kernel
-      simp [zero, image]
+      simp only [image, zero, ofReal_zero, zero_smul]
     · have chosen : u i = f i := hu i zero
       rw [chosen]
       change T (v i) =
         (σ i : ℂ) • (((σ i : ℂ)⁻¹) • T (v i))
       rw [smul_smul, mul_inv_cancel₀]
-      · simp
+      · simp only [one_smul]
       · exact_mod_cast zero
   refine ⟨orthonormalBasisUnitary u, ?_⟩
   have eigen_unitary :
@@ -8611,7 +8672,7 @@ theorem exists_proofTargetCanonicalSpectralSchmidtDecomposition
           T (∑ i : Fin d,
             inner ℂ (v i) ((EuclideanSpace.basisFun (Fin d) ℂ) a) •
               v i) := by rw [v.sum_repr']
-      _ = _ := by simp
+      _ = _ := by simp only [EuclideanSpace.basisFun_apply, map_sum, map_smul]
   have coordinate := congrArg
     (fun z : EuclideanSpace ℂ (Fin d) => z b) repr
   have replace :
@@ -8647,9 +8708,9 @@ theorem conjugateUnitaryBasisOverlap_norm_sq
         (conjugateUnitary U)
         (conjugateUnitary V) i j =
         star (unitaryBasisOverlap U V i j) := by
-    simp [unitaryBasisOverlap_apply,
-      Matrix.mul_apply, Matrix.conjTranspose_apply,
-      conjugateUnitary_apply]
+    simp only [unitaryBasisOverlap_apply, Matrix.mul_apply, conjTranspose_apply,
+      conjugateUnitary_apply, RCLike.star_def, RingHomCompTriple.comp_apply, RingHom.id_apply,
+      star_sum, star_mul']
   rw [hconj, norm_star]
 
 def targetCanonicalSpectralEnergy
@@ -8710,7 +8771,7 @@ theorem targetCanonicalSpectralEnergy_le_of_canonicalSchmidt
     ← targetSpectralAtomOverlap_eq_basis_norm_sq F G hF hG] at henergy
   change targetCanonicalSpectralEnergy ξ ζ ≤
     2 * ‖ξ.val - ζ.val‖ ^ 2
-  simpa [targetCanonicalSpectralEnergy, F, G, hF, hG, hξ, hζ]
+  simpa only [targetCanonicalSpectralEnergy, hξ, hζ]
     using henergy
 
 theorem targetCanonicalSpectralEnergy_le
@@ -8752,7 +8813,7 @@ theorem harmonicCoherentSharedResource_inverseAbsorption_distance
         (localUnitaryAction U⁻¹ V⁻¹
           (tensorEmbezzlementTarget (n := n) resource)) =
         tensorEmbezzlementTarget (n := n) resource := by
-    simpa using
+    simpa only [inv_inv] using
       (localUnitaryPureResidual_targetLocalInverse_reset
         U⁻¹ V⁻¹
         (tensorEmbezzlementTarget (n := n) resource))
@@ -8795,7 +8856,7 @@ theorem dSVProjectorSquaredDifference_trace
       hP, hQ, Matrix.trace_mul_comm Q P]
     ring
   rw [complex]
-  simp
+  simp only [sub_re, add_re, mul_re, re_ofNat, im_ofNat, zero_mul, sub_zero]
 
 end
 
@@ -8854,10 +8915,11 @@ theorem dSVCanonicalFailurePrefix_norm_sq
     by_cases same : i = j
     · subst j
       by_cases before : i.val < r.val <;> simp [before]
-    · simp [same]
+    · simp only [same, false_and, ↓reduceIte, norm_zero, ne_eq, OfNat.ofNat_ne_zero,
+        not_false_eq_true, zero_pow]
   simp_rw [atom]
   have count := dSVCanonicalFailurePrefix_card r
-  simpa [Finset.sum_boole] using congrArg
+  simpa only [sum_ite_eq, mem_univ, ↓reduceIte, sum_boole, Nat.cast_inj] using congrArg
     (fun n : ℕ => (n : ℝ)) count
 
 end
@@ -8880,7 +8942,7 @@ theorem dSVProjectorComplement_posSemidef
       (1 - P).conjTranspose * (1 - P) = (1 - P) := by
     rw [Matrix.conjTranspose_sub, Matrix.conjTranspose_one,
       positive.isHermitian.eq]
-    simp [Matrix.sub_mul, Matrix.mul_sub, projective]
+    simp only [Matrix.mul_sub, mul_one, Matrix.sub_mul, one_mul, projective, sub_self, sub_zero]
   rw [← gram]
   exact Matrix.posSemidef_conjTranspose_mul_self (1 - P)
 
@@ -8924,12 +8986,15 @@ theorem dSVCanonicalFailurePrefix_inner
     · subst j
       by_cases belowr : i.val < r.val
       · by_cases belows : i.val < s.val
-        · simp [belowr, belows]
-        · simp [belowr, belows]
+        · simp only [belows, and_self, ↓reduceIte, belowr, star_one, mul_one, lt_inf_iff]
+        · simp only [belows, and_false, ↓reduceIte, belowr, and_self, star_one, mul_one,
+            lt_inf_iff]
       · by_cases belows : i.val < s.val
-        · simp [belowr, belows]
-        · simp [belowr, belows]
-    · simp [same]
+        · simp only [belows, and_self, ↓reduceIte, belowr, and_false, star_zero, mul_zero,
+            lt_inf_iff, and_true]
+        · simp only [belows, and_false, ↓reduceIte, belowr, star_zero, mul_zero, lt_inf_iff,
+            and_self]
+    · simp only [same, false_and, ↓reduceIte, star_zero, mul_zero]
   simp_rw [atom]
   let t : Fin (d + 1) := ⟨min r.val s.val, by
     have hr : r.val ≤ d := by omega
@@ -9000,11 +9065,11 @@ theorem dSVMixedProjectorSuccessLoss_le_square
     rw [Matrix.sub_mul, Matrix.mul_sub, Matrix.mul_sub,
       hPP, hRR, Matrix.trace_sub, Matrix.trace_sub,
       Matrix.trace_sub, Matrix.trace_mul_comm R P]
-    simp [Complex.sub_re]
+    simp only [sub_re]
     ring
   have rest :
       0 ≤ (Matrix.trace R).re - (Matrix.trace (P * R)).re := by
-    simpa [Matrix.sub_mul, Matrix.trace_sub] using remainder
+    simpa only [sub_nonneg, Matrix.sub_mul, one_mul, trace_sub, sub_re] using remainder
   rw [square]
   linarith
 
@@ -9058,9 +9123,12 @@ def dSVGlobalProjectorBinaryPOVM
     ext ⟨k, i⟩ ⟨l, j⟩
     by_cases same : k = l
     · subst l
-      simp [Matrix.blockDiagonal'_apply, Matrix.one_apply,
-        Matrix.sub_apply]
-    · simp [Matrix.blockDiagonal'_apply, same]
+      simp only [↓reduceIte, Bool.false_eq_true, Matrix.add_apply, blockDiagonal'_apply,
+        ↓reduceDIte, cast_eq, Matrix.sub_apply, Matrix.one_apply, add_sub_cancel, Sigma.mk.injEq,
+        heq_eq_eq, true_and]
+    · simp only [↓reduceIte, Bool.false_eq_true, Matrix.add_apply, blockDiagonal'_apply, same,
+        ↓reduceDIte, add_zero, ne_eq, Sigma.mk.injEq, heq_eq_eq, false_and, not_false_eq_true,
+        one_apply_ne]
 
 theorem dSVGlobalProjectorBinaryPOVM_projective
     {κ d : Type*} [Fintype κ] [Fintype d]
@@ -9084,7 +9152,8 @@ theorem dSVGlobalProjectorBinaryPOVM_projective
   apply congrArg (fun A : κ → Matrix d d ℂ => Matrix.blockDiagonal' A)
   funext k
   cases b
-  · simp [Matrix.mul_sub, Matrix.sub_mul, projective k]
+  · simp only [Bool.false_eq_true, ↓reduceIte, Matrix.mul_sub, mul_one, Matrix.sub_mul, one_mul,
+      projective k, sub_self, sub_zero]
   · exact projective k
 
 theorem dSVActualGlobalMixedBornSuccess_eq
@@ -9181,7 +9250,7 @@ theorem dSVRationalSoftPass_lipschitz
   apply (le_div_iff₀ positive).mpr
   have wide : t ^ 2 ≤ (a + t) * (b + t) := by
     nlinarith [mul_nonneg ha hb]
-  nlinarith [mul_le_mul_of_nonneg_left wide (abs_nonneg (a - b))]
+  linarith [mul_le_mul_of_nonneg_left wide (abs_nonneg (a - b))]
 
 end
 
@@ -9203,10 +9272,10 @@ theorem dSVAdaptiveSoft_sqrt_sub_sq_le_abs
   rcases le_total a b with ordered | ordered
   · rw [abs_of_nonpos (sub_nonpos.mpr ordered)]
     have roots := Real.sqrt_le_sqrt ordered
-    nlinarith [mul_nonneg sa (sub_nonneg.mpr roots)]
+    linarith [mul_nonneg sa (sub_nonneg.mpr roots)]
   · rw [abs_of_nonneg (sub_nonneg.mpr ordered)]
     have roots := Real.sqrt_le_sqrt ordered
-    nlinarith [mul_nonneg sb (sub_nonneg.mpr roots)]
+    linarith [mul_nonneg sb (sub_nonneg.mpr roots)]
 
 end
 
@@ -9254,8 +9323,8 @@ def dSVOriginalComputationalReindexedUnitary
       star ((Matrix.reindex e e) M) =
         (Matrix.reindex e e) (star M) := by
     ext i j
-    simp [Matrix.star_eq_conjTranspose,
-      Matrix.reindex_apply, Matrix.conjTranspose_apply]
+    simp only [reindex_apply, star_apply, submatrix_apply, RCLike.star_def, star_eq_conjTranspose,
+      conjTranspose_apply]
   rw [compatible]
   change (Matrix.reindexRingEquiv ℂ e) (star M) *
     (Matrix.reindexRingEquiv ℂ e) M = 1
@@ -9278,8 +9347,7 @@ theorem dSVHeterogeneousRealPrefix_succ
     dSVHeterogeneousRealPrefix continuation (k + 1) =
       dSVHeterogeneousRealPrefix continuation k *
         continuation k := by
-  simp [dSVHeterogeneousRealPrefix,
-    Finset.prod_range_succ]
+  simp only [dSVHeterogeneousRealPrefix, prod_range_succ]
 
 theorem dSVHeterogeneousRealStopping_escape_identity
     (continuation : ℕ → ℝ) (N : ℕ) :
@@ -9289,7 +9357,7 @@ theorem dSVHeterogeneousRealStopping_escape_identity
       1 - dSVHeterogeneousRealPrefix continuation N := by
   induction N with
   | zero =>
-      simp [dSVHeterogeneousRealPrefix]
+      simp only [range_zero, dSVHeterogeneousRealPrefix, sum_empty, prod_empty, sub_self]
   | succ N ih =>
       simp only [Finset.sum_range_succ,
         dSVHeterogeneousRealPrefix_succ]
@@ -9357,7 +9425,8 @@ theorem dSVUniformDensityThresholdRaw_norm_sq
     ‖sharedThresholdResourceRaw (d := Fin d)
       (fun _ : Fin N => (1 : ℝ))‖ ^ 2 =
       (d : ℝ) * (N : ℝ) := by
-  simpa using sharedThresholdResourceRaw_norm_sq
+  simpa only [Fintype.card_fin, one_pow, sum_const, card_univ, nsmul_eq_mul,
+    mul_one] using sharedThresholdResourceRaw_norm_sq
     (d := Fin d) (fun _ : Fin N => (1 : ℝ))
 
 theorem dSVUniformDensityThresholdSharedState_norm
@@ -9372,18 +9441,18 @@ theorem dSVUniformDensityThresholdSharedState_mismatchedFlag
     (different : k ≠ l) :
     dSVUniformDensityThresholdSharedState N d
       (⟨k, i⟩, ⟨l, j⟩) = 0 := by
-  simp [dSVUniformDensityThresholdSharedState,
-    sharedThresholdResource,
-    sharedThresholdResourceRaw, different]
+  simp only [dSVUniformDensityThresholdSharedState, sharedThresholdResource,
+    sharedThresholdResourceRaw, ofReal_one, PiLp.smul_apply, different, false_and, ↓reduceIte,
+    smul_zero]
 
 theorem dSVUniformDensityThresholdSharedState_mismatchedWork
     (N d : ℕ) (k l : Fin N) (i j : Fin d)
     (different : i ≠ j) :
     dSVUniformDensityThresholdSharedState N d
       (⟨k, i⟩, ⟨l, j⟩) = 0 := by
-  simp [dSVUniformDensityThresholdSharedState,
-    sharedThresholdResource,
-    sharedThresholdResourceRaw, different]
+  simp only [dSVUniformDensityThresholdSharedState, sharedThresholdResource,
+    sharedThresholdResourceRaw, ofReal_one, PiLp.smul_apply, different, and_false, ↓reduceIte,
+    smul_zero]
 
 def dSVUniformDensityThresholdSharedDensity
     {N d : ℕ} (grid : 0 < N) (dimension : 0 < d) :
@@ -9412,8 +9481,8 @@ theorem dSVUniformDensityThresholdShared_mixedBorn_eq
         (dSVGlobalProjectorBinaryPOVM R hR hRc)) =
       (∑ k : Fin N, (Matrix.trace (P k * R k)).re) /
         ((d : ℝ) * (N : ℝ)) := by
-  simpa [dSVUniformDensityThresholdSharedDensity,
-    dSVUniformDensityThresholdSharedState] using
+  simpa only [dSVUniformDensityThresholdSharedDensity, dSVUniformDensityThresholdSharedState,
+    one_pow, one_mul, Fintype.card_fin, sum_const, card_univ, nsmul_eq_mul, mul_one] using
     dSVActualGlobalMixedBornSuccess_eq
       (fun _ : Fin N => (1 : ℝ))
       ⟨0, grid⟩ ⟨0, dimension⟩ (by norm_num)
@@ -9475,11 +9544,10 @@ theorem dSVUniformDensityIndependentSharedState_apply
       ∏ j : Fin L,
         dSVUniformDensityThresholdSharedState N d
           (alice j, bob j) := by
-  simp [dSVUniformDensityIndependentSharedState,
-    dSVUniformDensityIndependentHistoryPairReindex,
-    LinearIsometryEquiv.piLpCongrLeft_apply,
-    finiteTensorVector,
-    bilateralWorkPairEquiv]
+  simp only [dSVUniformDensityIndependentSharedState,
+    dSVUniformDensityIndependentHistoryPairReindex, bilateralWorkPairEquiv, Equiv.symm_mk,
+    finiteTensorVector, LinearIsometryEquiv.piLpCongrLeft_apply, Equiv.piCongrLeft'_apply,
+    Equiv.coe_fn_mk]
 
 theorem dSVUniformDensityIndependentSharedState_norm
     (L : ℕ) {N d : ℕ}
@@ -9545,7 +9613,7 @@ theorem dSVUniformDensitySchmidtSumMass_le_four
         intro i _
         rw [← Finset.mul_sum,
           spectralAtomOverlap_sum_right F G hF hG i]
-        simp
+        simp only [mul_one]
       _ = 1 := targetCanonicalSchmidtCoefficient_sq_sum ξ
   have right :
       (∑ i : Fin d, ∑ j : Fin d,
@@ -9559,7 +9627,7 @@ theorem dSVUniformDensitySchmidtSumMass_le_four
             intro j _
             rw [← Finset.mul_sum,
               spectralAtomOverlap_sum_left F G hF hG j]
-            simp
+            simp only [mul_one]
       _ = 1 := targetCanonicalSchmidtCoefficient_sq_sum ζ
   have cross :
       (∑ i : Fin d, ∑ j : Fin d,
@@ -9587,7 +9655,7 @@ theorem dSVUniformDensitySchmidtSumMass_le_four
     intro j _
     ring
   rw [split, left, right]
-  nlinarith
+  linarith
 
 theorem dSVUniformDensitySpectralAtomDiscrepancy_le
     {d : ℕ} (ξ ζ : BipartiteUnitVector d) :
@@ -9667,7 +9735,7 @@ theorem dSVUniformDensitySpectralAtomDiscrepancy_le
     apply Real.sqrt_le_iff.mpr
     constructor
     · norm_num
-    · nlinarith
+    · linarith
   calc
     _ ≤ Real.sqrt (targetCanonicalSpectralEnergy ξ ζ) *
         Real.sqrt (dSVUniformDensitySchmidtSumMass ξ ζ) :=
@@ -9704,7 +9772,7 @@ theorem markedFirst_mem (rank : α ≃ Fin (Fintype.card α))
   have hmin := (marked.image (fun a => rank (permutation a))).min'_mem
     (nonempty.image (fun a => rank (permutation a)))
   obtain ⟨a, ha, heq⟩ := Finset.mem_image.mp hmin
-  simpa [markedFirst, ← heq] using ha
+  simpa only [markedFirst, ← heq, Equiv.symm_apply_apply] using ha
 
 omit [DecidableEq α] in
 
@@ -9714,7 +9782,7 @@ theorem markedFirst_rank (rank : α ≃ Fin (Fintype.card α))
     rank (permutation (markedFirst rank marked nonempty permutation)) =
       (marked.image (fun a => rank (permutation a))).min'
         (nonempty.image (fun a => rank (permutation a))) := by
-  simp [markedFirst]
+  simp only [markedFirst, Equiv.apply_symm_apply]
 
 omit [DecidableEq α] in
 
@@ -9839,10 +9907,10 @@ theorem swap_mem_iff_of_mem {marked : Finset α} {x y : α}
     Equiv.swap x y a ∈ marked ↔ a ∈ marked := by
   by_cases hax : a = x
   · subst a
-    simp [hx, hy]
+    simp only [Equiv.swap_apply_left, hy, hx]
   · by_cases hay : a = y
     · subst a
-      simp [hx, hy]
+      simp only [Equiv.swap_apply_right, hx, hy]
     · rw [Equiv.swap_apply_of_ne_of_ne hax hay]
 
 theorem markedFirst_swap_trans
@@ -9859,7 +9927,7 @@ theorem markedFirst_swap_trans
   · intro a ha
     have hminimal := markedFirst_rank_le rank marked nonempty permutation
       ((swap_mem_iff_of_mem hx hy a).mpr ha)
-    simpa [Equiv.trans_apply] using hminimal
+    simpa only [Equiv.trans_apply, Equiv.swap_apply_self, ge_iff_le] using hminimal
 
 def firstFiber (rank : α ≃ Fin (Fintype.card α))
     (marked : Finset α) (nonempty : marked.Nonempty)
@@ -9894,10 +9962,10 @@ theorem firstFiber_card_eq
       hfirst, Equiv.swap_apply_right]
   · intro permutation _
     ext a
-    simp [Equiv.trans_apply]
+    simp only [Equiv.trans_apply, Equiv.swap_apply_self]
   · intro permutation _
     ext a
-    simp [Equiv.trans_apply]
+    simp only [Equiv.trans_apply, Equiv.swap_apply_self]
 
 theorem markedFirst_event_card_mul
     (rank : α ≃ Fin (Fintype.card α))
@@ -9919,7 +9987,7 @@ theorem markedFirst_event_card_mul
           ∑ a ∈ event,
             (firstFiber rank marked ⟨base, hbase⟩ a).card := by
               symm
-              simpa [firstFiber] using
+              simpa only [firstFiber] using
                 (Finset.sum_card_fiberwise_eq_card_filter
                   (Finset.univ : Finset (Equiv.Perm α)) event
                   (markedFirst rank marked ⟨base, hbase⟩))
@@ -9931,10 +9999,10 @@ theorem markedFirst_event_card_mul
         marked.card * (firstFiber rank marked ⟨base, hbase⟩ base).card := by
     calc
       Fintype.card (Equiv.Perm α) =
-          (Finset.univ : Finset (Equiv.Perm α)).card := by simp
+          (Finset.univ : Finset (Equiv.Perm α)).card := by simp only [card_univ]
       _ = ∑ a ∈ marked,
             (firstFiber rank marked ⟨base, hbase⟩ a).card := by
-              simpa [firstFiber] using
+              simpa only [card_univ, firstFiber] using
                 (Finset.card_eq_sum_card_fiberwise
                   (f := markedFirst rank marked ⟨base, hbase⟩)
                   (s := (Finset.univ : Finset (Equiv.Perm α)))
@@ -10115,13 +10183,13 @@ theorem rationalMarked_fiber_card
       · intro point hpoint
         have hpoint' :
             point.2.val < numerator point.1 ∧ point.1 = letter := by
-          simpa [rationalMarked] using hpoint
+          simpa only [rationalMarked, mem_filter, mem_univ, true_and] using hpoint
         apply Finset.mem_filter.mpr
-        exact ⟨Finset.mem_univ _, by simpa [hpoint'.2] using hpoint'.1⟩
+        exact ⟨Finset.mem_univ _, by simpa only [hpoint'.2] using hpoint'.1⟩
       · intro copy hcopy
         have hcopy' : copy.val < numerator letter :=
           (Finset.mem_filter.mp hcopy).2
-        simp [rationalMarked, hcopy']
+        simp only [rationalMarked, mem_filter, mem_univ, hcopy', and_self]
       · intro point hpoint
         have hletter : point.1 = letter :=
           (Finset.mem_filter.mp hpoint).2
@@ -10131,7 +10199,7 @@ theorem rationalMarked_fiber_card
       · intro copy _
         rfl
     _ = min denominator (numerator letter) := by
-      simpa using
+      simpa only using
         (Fin.card_filter_val_lt (n := denominator)
           (m := numerator letter))
 
@@ -10155,7 +10223,7 @@ theorem rationalMarked_card
         ∑ letter : β,
           ((rationalMarked denominator numerator).filter
             fun point => point.1 = letter).card := by
-      simpa using
+      simpa only using
         (Finset.card_eq_sum_card_fiberwise
           (f := fun point : β × Fin denominator => point.1)
           (s := rationalMarked denominator numerator)
@@ -10204,7 +10272,7 @@ theorem rationalMarked_letter_probability
       congr 1
       funext permutation
       apply propext
-      simp [event, markedFirst_mem rank marked nonempty permutation]
+      simp only [mem_filter, markedFirst_mem rank marked nonempty permutation, true_and, event]
     _ = (event.card : ℝ) / marked.card :=
       markedFirst_event_probability rank marked nonempty event hsub
     _ = (numerator letter : ℝ) / denominator := by
@@ -10240,7 +10308,8 @@ theorem centered_log_lower_of_one_le {x : ℝ} (hx : 1 ≤ x) :
     ring
   have hseries :
       t ≤ (1 / 2 : ℝ) * Real.log ((1 + t) / (1 - t)) := by
-    simpa using (Real.sum_range_le_log_div ht0 ht1 1)
+    simpa only [one_div, range_one, sum_singleton, mul_zero, zero_add, pow_one,
+      CharP.cast_eq_zero, div_one] using (Real.sum_range_le_log_div ht0 ht1 1)
   rw [hratio] at hseries
   dsimp [t] at hseries
   calc
@@ -10252,7 +10321,7 @@ theorem centered_log_upper_of_le_one
     Real.log x ≤ 2 * (x - 1) / (x + 1) := by
   have hinv : 1 ≤ (1 : ℝ) / x := by
     apply (le_div_iff₀ hx0).mpr
-    simpa using hx1
+    simpa only [one_mul] using hx1
   have h := centered_log_lower_of_one_le hinv
   have hratio :
       2 * ((1 : ℝ) / x - 1) / ((1 : ℝ) / x + 1) =
@@ -10296,7 +10365,7 @@ theorem pinsker_rational_coefficient_le {x : ℝ} (hx : 0 < x) :
   have hleft : 0 < 2 * (x + 2) ^ 2 := by positivity
   have hright : 0 < x + 1 := by linarith
   apply (div_le_div_iff₀ hleft hright).mpr
-  nlinarith [sq_nonneg (x - 1)]
+  linarith [sq_nonneg (x - 1)]
 
 theorem pinskerScalarGap_derivative_nonneg
     {x : ℝ} (hx : 1 ≤ x) :
@@ -10364,7 +10433,9 @@ theorem pinskerScalarGap_nonneg {x : ℝ} (hx : 0 ≤ x) :
     have hbound := hmonotone
       (show (1 : ℝ) ∈ Set.Icc 1 x from ⟨le_rfl, hone⟩)
       (show x ∈ Set.Icc (1 : ℝ) x from ⟨hone, le_rfl⟩) hone
-    simpa [pinskerScalarGap, InformationTheory.klFun] using hbound
+    simpa only [pinskerScalarGap, InformationTheory.klFun, sub_nonneg, ge_iff_le, Real.log_one,
+      mul_zero, zero_add, sub_self, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      zero_div] using hbound
   · have hxone : x ≤ 1 := le_of_not_ge hone
     let derivative : ℝ → ℝ := fun y =>
       Real.log y - 3 * (y - 1) * (y + 5) / (2 * (y + 2) ^ 2)
@@ -10388,7 +10459,9 @@ theorem pinskerScalarGap_nonneg {x : ℝ} (hx : 0 ≤ x) :
     have hbound := hantitone
       (show x ∈ Set.Icc x (1 : ℝ) from ⟨le_rfl, hxone⟩)
       (show (1 : ℝ) ∈ Set.Icc x 1 from ⟨hxone, le_rfl⟩) hxone
-    simpa [pinskerScalarGap, InformationTheory.klFun] using hbound
+    simpa only [pinskerScalarGap, InformationTheory.klFun, sub_nonneg, ge_iff_le, Real.log_one,
+      mul_zero, zero_add, sub_self, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      zero_div] using hbound
 
 theorem quadratic_le_klFun {x : ℝ} (hx : 0 ≤ x) :
     3 * (x - 1) ^ 2 / (2 * (x + 2)) ≤ InformationTheory.klFun x := by
@@ -10468,7 +10541,7 @@ theorem finite_pinsker
       (fun i => |p i - q i|)
       (g := weight)
       (fun i _ => hweight i)
-    simpa [hweight_sum] using h
+    simpa only [sq_abs, ge_iff_le, hweight_sum, div_one] using h
   have hpoint : ∀ i,
       |p i - q i| ^ 2 / weight i ≤
         2 * (q i * InformationTheory.klFun (p i / q i)) := by
@@ -10501,7 +10574,7 @@ theorem finite_pinsker
       (∑ i, |p i - q i|) ^ 2 ≤ 2 * finiteRelativeEntropy p q :=
     hcauchy.trans hsum
   unfold finiteTotalVariation
-  nlinarith
+  linarith
 
 theorem sum_over_positive_reference_support
     {ι : Type*} [Fintype ι]
@@ -10513,7 +10586,7 @@ theorem sum_over_positive_reference_support
   calc
     (∑ i : {i : ι // 0 < q i}, f i) =
         ∑ i ∈ (Finset.univ.filter fun i : ι => 0 < q i), f i := by
-      simpa using
+      simpa only [subtype_univ] using
         (Finset.sum_subtype_eq_sum_filter
           (s := (Finset.univ : Finset ι))
           (p := fun i : ι => 0 < q i) f)
@@ -10555,7 +10628,7 @@ theorem finite_pinsker_of_absolute_continuity
     rw [sum_over_positive_reference_support
       q (fun i => |p i - q i|) hq]
     intro i hqi
-    simp [hqi, absolute_continuity i hqi]
+    simp only [absolute_continuity i hqi, hqi, sub_self, abs_zero]
   have hkl : finiteRelativeEntropy p' q' = finiteRelativeEntropy p q := by
     unfold finiteRelativeEntropy
     change
@@ -10565,7 +10638,7 @@ theorem finite_pinsker_of_absolute_continuity
     apply sum_over_positive_reference_support
       q (fun i => q i * InformationTheory.klFun (p i / q i)) hq
     intro i hqi
-    simp [hqi]
+    simp only [hqi, div_zero, zero_mul]
   have h := finite_pinsker p' q'
     hp'_nonnegative hq'_positive hp'_normalized hq'_normalized
   rwa [htv, hkl] at h
@@ -10586,7 +10659,8 @@ theorem finiteRelativeEntropy_eq_log_sum_of_absolute_continuity
       apply Finset.sum_congr rfl
       intro i _
       by_cases hqi : q i = 0
-      · simp [hqi, absolute_continuity i hqi]
+      · simp only [hqi, absolute_continuity i hqi, div_zero, zero_mul, Real.log_zero, mul_zero,
+          add_zero, sub_self]
       · unfold InformationTheory.klFun
         have hqpos : 0 < q i := lt_of_le_of_ne (hq i) (Ne.symm hqi)
         field_simp [hqpos.ne']
@@ -10608,7 +10682,7 @@ theorem finite_pinsker_sqrt_of_absolute_continuity
   apply Real.le_sqrt_of_sq_le
   have h := finite_pinsker_of_absolute_continuity
     p q hp hq absolute_continuity hp_normalized hq_normalized
-  nlinarith
+  linarith
 
 end Pinsker
 
@@ -10691,13 +10765,13 @@ theorem distributionFloorNumerator_sum_le
     calc
       ((∑ i, distributionFloorNumerator denominator p i) : ℝ) =
           ∑ i, (distributionFloorNumerator denominator p i : ℝ) := by
-        simp
+        simp only
       _ ≤ ∑ i, p i * (denominator : ℝ) :=
         Finset.sum_le_sum fun i _ =>
           distributionFloorNumerator_cast_le denominator p hp i
       _ = (denominator : ℝ) := by
         rw [← Finset.sum_mul, normalized]
-        simp
+        simp only [one_mul]
   exact_mod_cast hreal
 
 theorem distributionRoundedNumerator_sum
@@ -10740,12 +10814,11 @@ theorem distributionRoundedProbability_eq_floor_add
           (distributionFloorResidual denominator p : ℝ) / denominator
         else 0 := by
   by_cases hbase : i = base
-  · simp [distributionRoundedProbability,
-      distributionRoundedNumerator, distributionFloorProbability,
-      hbase, Nat.cast_add]
+  · simp only [distributionRoundedProbability, distributionRoundedNumerator, hbase, ↓reduceIte,
+      Nat.cast_add, distributionFloorProbability]
     ring
-  · simp [distributionRoundedProbability,
-      distributionRoundedNumerator, distributionFloorProbability, hbase]
+  · simp only [distributionRoundedProbability, distributionRoundedNumerator, hbase, ↓reduceIte,
+      add_zero, distributionFloorProbability]
 
 theorem distributionRoundedProbability_totalVariation_le
     (base : ι) (denominator : ℕ) (positive : 0 < denominator)
@@ -10782,8 +10855,8 @@ theorem distributionRoundedProbability_totalVariation_le
           else 0 := by
       rw [distributionRoundedProbability_eq_floor_add]
       by_cases hbase : i = base
-      · simp [hbase, abs_of_nonneg hres]
-      · simp [hbase]
+      · simp only [hbase, ↓reduceIte, sub_add_cancel_left, abs_neg, abs_of_nonneg hres]
+      · simp only [hbase, ↓reduceIte, add_zero, sub_self, abs_zero]
     rw [hcorrection] at htriangle
     exact htriangle
   have htv_defect :
@@ -10817,7 +10890,7 @@ theorem distributionRoundedProbability_totalVariation_le
       Finset.sum_le_sum fun i _ =>
         (distributionFloorProbability_error_lt denominator positive p i).le
     _ = (Fintype.card ι : ℝ) / denominator := by
-      simp [div_eq_mul_inv]
+      simp only [div_eq_mul_inv, one_mul, sum_const, card_univ, nsmul_eq_mul]
 
 omit [Fintype ι] [DecidableEq ι] in
 
@@ -10847,7 +10920,7 @@ theorem finite_log_sum_inequality
         apply Finset.sum_congr rfl
         intro i _
         by_cases hqi : q i = 0
-        · simp [hqi, absolute_continuity i hqi]
+        · simp only [hqi, zero_div, absolute_continuity i hqi, div_zero, mul_zero]
         · field_simp [hqi, htotal.ne']
       _ = (∑ i ∈ indices, p i) / total := by
         rw [Finset.sum_div]
@@ -11053,7 +11126,8 @@ theorem finite_relative_entropy_joint_chain_rule
             (fun j _ => hp (i, j))).mp
               (show (∑ j : κ, p (i, j)) = 0 from hpzero)
               j (Finset.mem_univ j)
-        simp [hpzero, hcoordinates]
+        simp only [hcoordinates, zero_div, Real.log_zero, mul_zero, sum_const_zero, hpzero,
+          zero_mul, add_zero]
       · have hqzero : jointFirstMarginal q i ≠ 0 := by
           intro hzero
           exact hpzero (h_marginal_absolute i hzero)
@@ -11066,7 +11140,7 @@ theorem finite_relative_entropy_joint_chain_rule
             rcases (div_eq_zero_iff.mp hzero) with hpoint | hmarginal
             · exact hpoint
             · exact (hqzero hmarginal).elim
-          simp [jointConditional, absolute_continuity (i, j) hpoint]
+          simp only [jointConditional, absolute_continuity (i, j) hpoint, zero_div]
         have hconditional_log :
             finiteRelativeEntropy (jointConditional p i)
               (jointConditional q i) =
@@ -11096,7 +11170,8 @@ theorem finite_relative_entropy_joint_chain_rule
               apply Finset.sum_congr rfl
               intro j _
               by_cases hpj : p (i, j) = 0
-              · simp [hpj, jointConditional]
+              · simp only [hpj, zero_div, Real.log_zero, mul_zero, zero_mul, jointConditional,
+                  add_zero]
               · have hqj : q (i, j) ≠ 0 := by
                   intro hzero
                   exact hpj (absolute_continuity (i, j) hzero)
@@ -11177,7 +11252,7 @@ theorem rationalMarked_inter
     rationalMarked denominator left ∩ rationalMarked denominator right =
       rationalMarked denominator (fun i => min (left i) (right i)) := by
   ext point
-  simp [rationalMarked]
+  simp only [rationalMarked, mem_inter, mem_filter, mem_univ, true_and, lt_inf_iff]
 
 theorem rationalMarked_inter_card
     (denominator : ℕ) (left right : ι → ℕ)
@@ -11194,7 +11269,7 @@ theorem rationalMarked_inter_card
         ((rationalMarked denominator
           (fun i => min (left i) (right i))).filter
             fun point => point.1 = i).card := by
-      simpa using
+      simpa only using
         (Finset.card_eq_sum_card_fiberwise
           (f := fun point : ι × Fin denominator => point.1)
           (s := rationalMarked denominator
@@ -11450,7 +11525,7 @@ theorem dSVUniformLeftDensityConjugateSwapVector_distance
     ext ij
     change star (z (ij.2, ij.1)) - star (w (ij.2, ij.1)) =
       star ((z - w) (ij.2, ij.1))
-    simp
+    simp only [RCLike.star_def, PiLp.sub_apply, star_sub]
   rw [difference,
     dSVUniformLeftDensityConjugateSwapVector_norm]
 
@@ -11579,7 +11654,7 @@ theorem dSVUniformDensityGridPrefix_eq_count
     dSVUniformDensityThresholdWeight
   simp_rw [mul_ite, mul_one, mul_zero]
   rw [← Finset.sum_filter]
-  simp [div_eq_mul_inv, mul_comm]
+  simp only [div_eq_mul_inv, mul_comm, mul_one, sum_const, nsmul_eq_mul]
 
 def dSVUniformDensityThresholdMismatch
     (N : ℕ) (alice bob : ℝ) : ℝ :=
@@ -11609,7 +11684,8 @@ theorem dSVUniformDensityThresholdMismatch_indicator_le_crossing
             dSVUniformDensityThresholdGrid N k ≤ max alice bob :=
         ⟨(min_le_right alice bob).trans lower.le,
           left.trans (le_max_left alice bob)⟩
-      simp [left, right, interval]
+      simp only [left, right, iff_false, not_true_eq_false, ↓reduceIte, interval, and_self,
+        Std.le_refl]
   · by_cases right : dSVUniformDensityThresholdGrid N k ≤ bob
     · have lower : alice < dSVUniformDensityThresholdGrid N k :=
         lt_of_not_ge left
@@ -11618,8 +11694,8 @@ theorem dSVUniformDensityThresholdMismatch_indicator_le_crossing
             dSVUniformDensityThresholdGrid N k ≤ max alice bob :=
         ⟨(min_le_left alice bob).trans lower.le,
           right.trans (le_max_right alice bob)⟩
-      simp [left, right, interval]
-    · simp [left, right]
+      simp only [left, right, iff_true, ↓reduceIte, interval, and_self, Std.le_refl]
+    · simp only [left, right, ↓reduceIte, inf_le_iff, le_sup_iff, or_self, and_false, Std.le_refl]
 
 theorem dSVUniformDensityThresholdMismatch_le
     {N : ℕ} (positive : 0 < N) (alice bob : ℝ) :
@@ -11657,7 +11733,8 @@ theorem dSVUniformDensityThresholdMismatch_le
             dSVUniformDensityThresholdGrid
           simp_rw [mul_ite, mul_one, mul_zero]
           rw [← Finset.sum_filter]
-          simp [div_eq_mul_inv, mul_comm]
+          simp only [div_eq_mul_inv, mul_comm, mul_one, inf_le_iff, le_sup_iff, sum_const,
+            nsmul_eq_mul]
     _ ≤ |alice - bob| /
         ((1 + 1 / (N : ℝ)) - (1 / (N : ℝ))) +
           1 / (N : ℝ) :=
@@ -11680,7 +11757,7 @@ theorem dSVUniformDensityThresholdGrid_count_eq_floor
     have product : density * (N : ℝ) ≤ (N : ℝ) := by
       nlinarith
     have floor := Nat.floor_mono product
-    simpa using floor
+    simpa only [ge_iff_le, Nat.floor_natCast] using floor
   have same :
       (Finset.univ.filter fun k : Fin N =>
         dSVUniformDensityThresholdGrid N k ≤ density) =
@@ -11693,14 +11770,14 @@ theorem dSVUniformDensityThresholdGrid_count_eq_floor
     constructor
     · intro threshold
       have cast : ((k.val + 1 : ℕ) : ℝ) ≤ density * (N : ℝ) := by
-        simpa using threshold
+        simpa only [Nat.cast_add, Nat.cast_one] using threshold
       have below := (Nat.le_floor_iff densitypositive).2 cast
       omega
     · intro below
       have integer : k.val + 1 ≤ Nat.floor (density * (N : ℝ)) := by
         omega
       have cast := (Nat.le_floor_iff densitypositive).1 integer
-      simpa using cast
+      simpa only [ge_iff_le, Nat.cast_add, Nat.cast_one] using cast
   rw [same, Fin.card_filter_val_lt, min_eq_right floor_bound]
 
 end
@@ -11743,8 +11820,8 @@ theorem dSVUniformDensitySchmidtVector_sub
   ext ⟨i, j⟩
   by_cases equal : i = j
   · subst j
-    simp [diagonalSchmidtState]
-  · simp [diagonalSchmidtState, equal]
+    simp only [diagonalSchmidtState, PiLp.sub_apply, ↓reduceIte, ofReal_sub]
+  · simp only [diagonalSchmidtState, PiLp.sub_apply, equal, ↓reduceIte, sub_self, ofReal_sub]
 
 theorem dSVUniformDensity_normalize_sub_self_norm
     {d : ℕ} (v : EuclideanSpace ℂ (Fin d × Fin d))
@@ -11781,8 +11858,8 @@ theorem normalizeOrDefault_norm
     ‖normalizeOrDefault fallback z‖ = 1 := by
   classical
   by_cases hz : z = 0
-  · simp [normalizeOrDefault, hz, hfallback]
-  · simp [normalizeOrDefault, hz, NormedSpace.norm_normalize hz]
+  · simp only [normalizeOrDefault, hz, ↓reduceIte, hfallback]
+  · simp only [normalizeOrDefault, hz, ↓reduceIte, NormedSpace.norm_normalize hz]
 
 theorem normalizeOrDefault_sub_le
     (fallback u v : E)
@@ -11808,7 +11885,7 @@ theorem normalizeOrDefault_sub_le
     have hrevv : ‖v‖ • v₀ = v :=
       NormedSpace.norm_smul_normalize v
     have hreverse : |‖v‖ - ‖u‖| ≤ ‖u - v‖ := by
-      simpa [norm_sub_rev] using abs_norm_sub_norm_le v u
+      simpa only [norm_sub_rev] using abs_norm_sub_norm_le v u
     have hscaled :
         ‖u‖ * ‖u₀ - v₀‖ = ‖u - ‖u‖ • v₀‖ := by
       calc
@@ -11836,7 +11913,7 @@ theorem normalizeOrDefault_sub_le
         _ = ‖u - v‖ + |‖v‖ - ‖u‖| := by rw [hsecond]
         _ ≤ 2 * ‖u - v‖ := by linarith
     change ‖u₀ - v₀‖ ≤ 2 * ‖u - v‖ / ‖u‖
-    exact (le_div_iff₀ hupos).mpr (by nlinarith)
+    exact (le_div_iff₀ hupos).mpr (by linarith)
 
 end
 
@@ -11866,7 +11943,8 @@ theorem dSVCanonicalFailurePrefix_eq_zero_of_rank_zero
     dSVCanonicalFailurePrefix rank = 0 := by
   have squared :
       ‖dSVCanonicalFailurePrefix rank‖ ^ 2 = 0 := by
-    simpa [zero] using dSVCanonicalFailurePrefix_norm_sq rank
+    simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, norm_eq_zero,
+      zero, CharP.cast_eq_zero] using dSVCanonicalFailurePrefix_norm_sq rank
   have normzero : ‖dSVCanonicalFailurePrefix rank‖ = 0 := by
     nlinarith [norm_nonneg (dSVCanonicalFailurePrefix rank)]
   exact norm_eq_zero.mp normzero
@@ -11941,7 +12019,7 @@ theorem dSVUniformDensityPolarConjugateSwap_reducedDensity
   unfold targetReducedDensity
     dSVSoftBobLeftReducedDensity
   rw [dSVUniformDensityPolarConjugateSwap_coefficient]
-  simp
+  simp only [conjTranspose_conjTranspose]
 
 def dSVUniformDensityPolarLeftSchmidtCoefficient
     {d : ℕ} (ξ : BipartiteUnitVector d)
@@ -11983,8 +12061,9 @@ theorem exists_proofDSVUniformDensityPolarLeftCanonicalSchmidt
   rw [schmidtVector_apply] at coordinate
   have unconjugated := congrArg star coordinate
   rw [schmidtVector_apply]
-  simpa [map_sum, map_mul, conjugateUnitary_apply,
-    mul_assoc, mul_left_comm, mul_comm] using unconjugated
+  simpa only [conjugateUnitary_apply, RCLike.star_def, mul_comm, mul_left_comm,
+    RingHomCompTriple.comp_apply, RingHom.id_apply, star_sum, star_mul',
+    conj_ofReal] using unconjugated
 
 end
 
@@ -12041,12 +12120,12 @@ theorem finiteTensorLocalUnitaryMatrix_gram
       (U i).property
     have entry := congrArg
       (fun M : Matrix β β ℂ => M (p i) (q i)) gram
-    simpa [Matrix.star_eq_conjTranspose,
-      Matrix.mul_apply, Matrix.conjTranspose_apply] using entry
+    simpa only [RCLike.star_def, star_eq_conjTranspose, Matrix.mul_apply,
+      conjTranspose_apply] using entry
   simp_rw [single]
   by_cases equal : p = q
   · subst q
-    simp
+    simp only [one_apply_eq, prod_const_one]
   · have different : ∃ i : ι, p i ≠ q i := by
       by_contra h
       push Not at h
@@ -12055,9 +12134,9 @@ theorem finiteTensorLocalUnitaryMatrix_gram
     have zero :
         (∏ j : ι, (1 : Matrix β β ℂ) (p j) (q j)) = 0 := by
       apply Finset.prod_eq_zero (Finset.mem_univ i)
-      simp [hi]
+      simp only [ne_eq, hi, not_false_eq_true, one_apply_ne]
     rw [zero]
-    simp [equal]
+    simp only [ne_eq, equal, not_false_eq_true, one_apply_ne]
 
 def finiteTensorLocalUnitary
     {ι β : Type*}
@@ -12102,14 +12181,11 @@ theorem controlledFiniteTensorLocalUnitary_apply
   classical
   by_cases equal : ω = ν
   · subst ν
-    simp [controlledFiniteTensorLocalUnitary,
-      coherentSharedRandomControlledUnitary,
-      finiteTensorLocalUnitary,
-      finiteTensorLocalUnitaryMatrix,
-      Matrix.blockDiagonal'_apply]
-  · simp [controlledFiniteTensorLocalUnitary,
-      coherentSharedRandomControlledUnitary,
-      Matrix.blockDiagonal'_apply, equal]
+    simp only [controlledFiniteTensorLocalUnitary, coherentSharedRandomControlledUnitary,
+      finiteTensorLocalUnitary, blockDiagonal'_apply, ↓reduceDIte, finiteTensorLocalUnitaryMatrix,
+      cast_eq, ↓reduceIte]
+  · simp only [controlledFiniteTensorLocalUnitary, coherentSharedRandomControlledUnitary,
+      blockDiagonal'_apply, equal, ↓reduceDIte, ↓reduceIte]
 
 end
 
@@ -12151,7 +12227,7 @@ theorem dSVUniformDensityThresholdWholeHistorySharedState_norm
   apply sharedThresholdResource_norm
     (fun flag : Fin (L + 1) =>
       if flag.val = 0 then (1 : ℝ) else 0) k i
-  simp [k]
+  simp only [↓reduceIte, ne_eq, one_ne_zero, not_false_eq_true, k]
 
 def dSVUniformDensityThresholdWholeHistoryTargetSplitEquiv
     (N d L : ℕ) :
@@ -12177,7 +12253,7 @@ def dSVUniformDensityThresholdWholeHistoryTargetSplitEquiv
     exact Fin.cons_self_tail history
   right_inv := by
     rintro ⟨target, threshold, flag, history⟩
-    simp
+    simp only [Fin.cons_zero, Fin.cons_succ]
 
 def dSVUniformDensityAliceHistorySpectralCopy
     {N d : ℕ} (ξ : BipartiteUnitVector d) :
@@ -12229,7 +12305,7 @@ theorem dSVUniformDensityCompletePureHistory_raw_norm
     calc
       (‖single‖ ^ (L + 1)) ^ 2 =
         (‖single‖ ^ 2) ^ (L + 1) := by
-          simp [← pow_mul, Nat.mul_comm]
+          simp only [← pow_mul, Nat.mul_comm]
       _ = (((N * d) ^ (L + 1) : ℕ) : ℝ) := by
           rw [hsquare]
           push_cast
@@ -12280,19 +12356,21 @@ theorem dSVUniformDensityCompletePureHistory_zeroFlag_apply
             dSVUniformDensityThresholdWholeHistorySharedState
                 N d L (⟨0, alice⟩, ⟨0, alice⟩) =
               ((‖whole‖⁻¹ : ℝ) : ℂ) := by
-          simp [dSVUniformDensityThresholdWholeHistorySharedState,
-            sharedThresholdResource,
-            sharedThresholdResourceRaw, whole]
+          simp only [dSVUniformDensityThresholdWholeHistorySharedState, sharedThresholdResource,
+            sharedThresholdResourceRaw, Fin.val_eq_zero_iff, PiLp.smul_apply, and_self,
+            ↓reduceIte, ofReal_one, real_smul, ofReal_inv, mul_one, whole]
         have single_amplitude
             (q : DSVUniformDensityThresholdLocalIndex N d) :
             dSVUniformDensityThresholdSharedState N d (q, q) =
               ((‖single‖⁻¹ : ℝ) : ℂ) := by
-          simp [dSVUniformDensityThresholdSharedState,
-            sharedThresholdResource,
-            sharedThresholdResourceRaw, single]
+          simp only [dSVUniformDensityThresholdSharedState, sharedThresholdResource,
+            sharedThresholdResourceRaw, ofReal_one, PiLp.smul_apply, and_self, ↓reduceIte,
+            real_smul, ofReal_inv, mul_one, single]
         rw [whole_amplitude]
         simp_rw [single_amplitude]
-        simpa using complex_scalar
+        simpa only [ofReal_inv, Fin.coe_ofNat_eq_mod, Nat.zero_mod, ↓reduceIte, prod_inv_distrib,
+          prod_const, card_univ, Fintype.card_fin, _root_.inv_inj, inv_pow,
+          ofReal_pow] using complex_scalar
       · obtain ⟨j, different⟩ :
           ∃ j : Fin (L + 1), alice j ≠ bob j := by
           by_contra absent
@@ -12305,7 +12383,7 @@ theorem dSVUniformDensityCompletePureHistory_zeroFlag_apply
           · have works : (alice j).2 ≠ (bob j).2 := by
               intro same
               apply different
-              exact Sigma.ext labels (by simpa using same)
+              exact Sigma.ext labels (by simpa only [heq_eq_eq] using same)
             exact
               dSVUniformDensityThresholdSharedState_mismatchedWork
                 N d (alice j).1 (bob j).1
@@ -12320,21 +12398,21 @@ theorem dSVUniformDensityCompletePureHistory_zeroFlag_apply
                 (alice i, bob i)) = 0 :=
           Finset.prod_eq_zero (Finset.mem_univ j) zero
         rw [product_zero]
-        simp [dSVUniformDensityThresholdWholeHistorySharedState,
-          sharedThresholdResource,
-          sharedThresholdResourceRaw, histories]
+        simp only [dSVUniformDensityThresholdWholeHistorySharedState, sharedThresholdResource,
+          sharedThresholdResourceRaw, Fin.val_eq_zero_iff, PiLp.smul_apply, histories, and_false,
+          ↓reduceIte, smul_zero, Fin.coe_ofNat_eq_mod, Nat.zero_mod]
     · have nonzero : other.val ≠ 0 := by
-        simpa using second_zero
+        simpa only [ne_eq, Fin.val_eq_zero_iff] using second_zero
       have different : (0 : Fin (L + 1)) ≠ other := by
         exact Ne.symm second_zero
-      simp [dSVUniformDensityThresholdWholeHistorySharedState,
-        sharedThresholdResource,
-        sharedThresholdResourceRaw, different, nonzero]
+      simp only [dSVUniformDensityThresholdWholeHistorySharedState, sharedThresholdResource,
+        sharedThresholdResourceRaw, Fin.val_eq_zero_iff, PiLp.smul_apply, different, false_and,
+        ↓reduceIte, smul_zero, Fin.coe_ofNat_eq_mod, Nat.zero_mod, nonzero, and_false]
   · have nonzero : flag.val ≠ 0 := by
-      simpa using first_zero
-    simp [dSVUniformDensityThresholdWholeHistorySharedState,
-      sharedThresholdResource,
-      sharedThresholdResourceRaw, first_zero, nonzero]
+      simpa only [ne_eq, Fin.val_eq_zero_iff] using first_zero
+    simp only [dSVUniformDensityThresholdWholeHistorySharedState, sharedThresholdResource,
+      sharedThresholdResourceRaw, Fin.val_eq_zero_iff, PiLp.smul_apply, first_zero, ↓reduceIte,
+      ofReal_zero, ite_self, smul_zero, nonzero, false_and]
 
 end
 
@@ -12496,8 +12574,9 @@ theorem spectralPurificationFilterEntryLp_eq_eigen_sum
       ∑ k : d, (coefficient k • generator k :
         Lp ℂ 2 (volume.restrict (Ioi (0 : ℝ)))) s
   simp_rw [hg]
-  simp [Matrix.mul_apply, Matrix.diagonal, coefficient,
-    mul_assoc, mul_comm]
+  simp only [Matrix.diagonal, ofReal_div, ofReal_add, Matrix.mul_apply, of_apply, mul_comm,
+    ite_mul, zero_mul, sum_ite_eq', Finset.mem_univ, ↓reduceIte, star_apply, RCLike.star_def,
+    mul_assoc, coefficient]
 
 theorem ensemble_spectralPurificationFilterEntryLp_mem_common
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12629,7 +12708,7 @@ theorem finitePurificationMatrix_gram_apply
   change (∑ k, star (b.repr u k) * b.repr v k) =
     inner ℂ u v
   rw [← hisometry, EuclideanSpace.inner_eq_star_dotProduct]
-  simp [dotProduct, mul_comm]
+  simp only [RCLike.star_def, mul_comm, dotProduct, Pi.star_apply]
 
 theorem ensemblePurificationSubspaceEntry_inner_eq_integral
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12657,7 +12736,7 @@ theorem ensemblePurificationSubspaceEntry_inner_eq_integral
       (spectralPurificationFilterEntryLp
         (F a) (positive a) r j s) = _
   rw [hs, ht]
-  simp [RCLike.inner_apply, mul_comm]
+  simp only [RCLike.inner_apply, RCLike.star_def, mul_comm]
 
 theorem finitePurificationMatrix_gram_eq_integral
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12698,7 +12777,7 @@ theorem finitePurificationMatrix_gram_eq_integral
   rw [← integral_finsetSum Finset.univ (fun r _ => hproduct r)]
   apply integral_congr_ae
   filter_upwards with s
-  simp [Matrix.mul_apply, Matrix.star_apply]
+  simp only [RCLike.star_def, Matrix.mul_apply, star_apply]
 
 theorem finitePurificationMatrix_gram
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12758,7 +12837,8 @@ theorem finitePurificationMatrix_difference_gram_apply
       (b.repr v k - b.repr v₀ k)) =
       inner ℂ (u - u₀) (v - v₀)
   rw [← hisometry, EuclideanSpace.inner_eq_star_dotProduct]
-  simp [dotProduct, map_sub, mul_comm]
+  simp only [star_sub, RCLike.star_def, mul_comm, dotProduct, map_sub, PiLp.sub_apply,
+    WithLp.ofLp_sub, Pi.star_apply, Pi.sub_apply]
 
 theorem purificationSubspaceEntry_difference_inner_eq_integral
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12805,7 +12885,7 @@ theorem purificationSubspaceEntry_difference_inner_eq_integral
         (F a) (positive a) r j : ℝ → ℂ) s -
         (spectralPurificationFilterEntryLp M hM r j : ℝ → ℂ) s) = _
   rw [hfi', hmi', hfj', hmj']
-  simp [RCLike.inner_apply, mul_comm]
+  simp only [RCLike.inner_apply, map_sub, star_sub, RCLike.star_def, mul_comm]
 
 theorem finitePurificationMatrix_difference_gram_eq_integral
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12859,7 +12939,7 @@ theorem finitePurificationMatrix_difference_gram_eq_integral
   rw [← integral_finsetSum Finset.univ (fun r _ => hproduct r)]
   apply integral_congr_ae
   filter_upwards with s
-  simp [Matrix.mul_apply, Matrix.star_apply]
+  simp only [star_sub, RCLike.star_def, Matrix.mul_apply, Matrix.sub_apply, star_apply]
 
 theorem weighted_finitePurificationMatrix_difference_gram
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -12999,7 +13079,7 @@ theorem strategyPurificationVector_norm_sq
       ‖matrixPurificationVector
           (spectralSupportSqrt S.state.matrix S.state.positive)‖ ^ 2 := by
   rw [EuclideanSpace.norm_sq_eq, EuclideanSpace.norm_sq_eq]
-  simpa [strategyPurificationVector, matrixPurificationVector] using
+  simpa only [strategyPurificationVector, vec, matrixPurificationVector] using
     Equiv.sum_comp (strategyPurificationShuffle S.Alice S.Bob)
       (fun q : (S.Alice × S.Bob) × (S.Alice × S.Bob) =>
         ‖Matrix.vec
@@ -13049,7 +13129,7 @@ theorem reindexedMatrixQuadratic
   have h_mul :
       (M.submatrix φ φ).mulVec (v ∘ φ) =
         M.mulVec v ∘ φ := by
-    simpa [Function.comp_def] using
+    simpa only [Function.comp_def, Equiv.apply_symm_apply] using
       Matrix.submatrix_mulVec_equiv M (v ∘ φ) φ φ
   have h_star : star (v ∘ φ) = star v ∘ φ := by
     rfl
@@ -13068,8 +13148,7 @@ def purificationAlicePOVM
       (∑ a : ι, P.effect a ⊗ₖ (1 : Matrix k k ℂ)) =
           (∑ a : ι, P.effect a) ⊗ₖ (1 : Matrix k k ℂ) := by
             ext ⟨i, u⟩ ⟨j, v⟩
-            simp [Matrix.sum_apply, Matrix.kroneckerMap_apply,
-              Finset.sum_mul]
+            simp only [Matrix.sum_apply, kroneckerMap_apply, sum_mul]
       _ = 1 := by
         rw [P.complete]
         exact Matrix.one_kronecker_one
@@ -13085,8 +13164,8 @@ theorem purificationJointEffect_submatrix
           (strategyPurificationShuffle dA dB) := by
   classical
   ext ⟨⟨a, k⟩, b⟩ ⟨⟨a', k'⟩, b'⟩
-  simp [Matrix.kroneckerMap_apply, Matrix.submatrix_apply,
-    strategyPurificationShuffle, Matrix.one_apply]
+  simp only [kroneckerMap_apply, Matrix.one_apply, mul_ite, mul_one, mul_zero, ite_mul, zero_mul,
+    strategyPurificationShuffle, Equiv.coe_fn_mk, submatrix_apply, one_mul]
 
 theorem strategyPurificationVector_quadratic
     {X Y A B : Type*}
@@ -13245,7 +13324,7 @@ theorem finiteLocalPurificationJointMatrix_gram
     ← Matrix.mul_kronecker_mul,
     Matrix.conjTranspose_kronecker,
     ← Matrix.mul_kronecker_mul]
-  simp
+  simp only [conjTranspose_one, mul_one]
 
 theorem finiteLocalPurificationVector_norm_sq
     {X Y A B eA eB : Type*}
@@ -13284,12 +13363,13 @@ theorem dSVUniformDensityMixedProtocolLocalAction_norm
   have unitary : M ∈ Matrix.unitaryGroup (ι × ι) ℂ :=
     Matrix.kronecker_mem_unitary U.property V.property
   have gram : M.conjTranspose * M = 1 := by
-    simpa [Matrix.star_eq_conjTranspose] using
+    simpa only [star_eq_conjTranspose] using
       (Matrix.mem_unitaryGroup_iff'.mp unitary)
   have squared :
       ‖toLp 2 (M.mulVec (ofLp z))‖ ^ 2 = ‖z‖ ^ 2 := by
     rw [rectangular_matrix_mulVec_norm_sq, gram]
-    simp [quadraticExpectation, ← Complex.ofReal_pow]
+    simp only [quadraticExpectation, map_one, one_apply_eq_self, inner_self_eq_norm_sq_to_K,
+      coe_algebraMap, ← ofReal_pow, ofReal_re]
   change ‖toLp 2 (M.mulVec (ofLp z))‖ = ‖z‖
   nlinarith [norm_nonneg (toLp 2 (M.mulVec (ofLp z))),
     norm_nonneg z]
@@ -13321,7 +13401,7 @@ theorem dSVUniformDensityPhysicalAsyncSigmaContinuation_norm
       ((Σ _ : ι, κ) × (Σ _ : ι, κ))) :
     ‖dSVUniformDensityPhysicalAsyncSigmaContinuation U V z‖ =
       ‖z‖ := by
-  simpa [dSVUniformDensityPhysicalAsyncSigmaContinuation]
+  simpa only [dSVUniformDensityPhysicalAsyncSigmaContinuation]
     using dSVUniformDensityMixedProtocolLocalAction_norm
       (coherentSharedRandomControlledUnitary U)
       (coherentSharedRandomControlledUnitary V) z
@@ -13337,7 +13417,7 @@ theorem dSVUniformDensityFirstAcceptFinitePrefix
     by_cases nonempty : s.Nonempty
     · have minimum : s.min' nonempty = j := by
         have equal : (s.min' nonempty).succ = j.succ := by
-          simpa [nonempty] using selected
+          simpa only [Fin.succ_inj, nonempty, ↓reduceDIte] using selected
         exact Fin.succ_injective L equal
       constructor
       · rw [← minimum]
@@ -13347,7 +13427,7 @@ theorem dSVUniformDensityFirstAcceptFinitePrefix
         rw [minimum] at least
         exact (not_le_of_gt before) least
     · have impossible : (0 : Fin (L + 1)) = j.succ := by
-        simpa [nonempty] using selected
+        simpa only [nonempty, ↓reduceDIte] using selected
       exact False.elim (Fin.succ_ne_zero j impossible.symm)
   · rintro ⟨accepted, prior⟩
     have nonempty : s.Nonempty := ⟨j, accepted⟩
@@ -13356,7 +13436,7 @@ theorem dSVUniformDensityFirstAcceptFinitePrefix
       refine ⟨accepted, ?_⟩
       intro i contained
       exact le_of_not_gt (fun before => prior i before contained)
-    simp [nonempty, minimum]
+    simp only [nonempty, ↓reduceDIte, minimum]
 
 end
 
@@ -13391,9 +13471,9 @@ theorem dSVUniformDensityFirstAcceptControlledTensor_inv_apply
   rw [controlledFiniteTensorLocalUnitary_apply]
   by_cases same : ω = ν
   · subst ν
-    simp [star_prod]
+    simp only [↓reduceIte, star_prod, RCLike.star_def]
   · have reversed : ν ≠ ω := Ne.symm same
-    simp [same, reversed]
+    simp only [reversed, ↓reduceIte, star_zero, same]
 
 end
 
@@ -13420,11 +13500,11 @@ theorem coherentSharedRandomControlledUnitary_inv
         Matrix (Σ _ : ι, κ) (Σ _ : ι, κ) ℂ) ⟨i, x⟩ ⟨j, y⟩
   by_cases same : i = j
   · subst j
-    simp [coherentSharedRandomControlledUnitary,
-      Matrix.blockDiagonal'_apply]
+    simp only [coherentSharedRandomControlledUnitary, blockDiagonal'_apply, ↓reduceDIte, cast_eq,
+      RCLike.star_def, UnitaryGroup.inv_val, star_apply]
   · have reversed : j ≠ i := Ne.symm same
-    simp [coherentSharedRandomControlledUnitary,
-      Matrix.blockDiagonal'_apply, same, reversed]
+    simp only [coherentSharedRandomControlledUnitary, blockDiagonal'_apply, reversed, ↓reduceDIte,
+      star_zero, UnitaryGroup.inv_val, same]
 
 end
 
@@ -13484,8 +13564,10 @@ theorem spectralPartitionPOVM_effect_eq_spectralDiagonal
     ext i j
     by_cases same : i = j
     · subst j
-      simp [Matrix.sum_apply, selected, Pi.single_apply]
-    · simp [Matrix.sum_apply, same]
+      simp only [Matrix.sum_apply, diagonal_apply_eq, Pi.single_apply, sum_ite_eq, mem_filter,
+        mem_univ, true_and, selected]
+    · simp only [Matrix.sum_apply, ne_eq, same, not_false_eq_true, diagonal_apply_ne,
+        sum_const_zero]
   change
     (∑ i ∈ selected,
       spectralConjugationCLM positive.isHermitian.eigenvectorUnitary
@@ -13501,7 +13583,7 @@ theorem dSVUniformDensityPhysicalSpectralAliceCopy_inv
           dSVUniformDensityThresholdLeftBobBasis ξ) := by
   unfold dSVUniformDensityAliceHistorySpectralCopy
   rw [coherentSharedRandomControlledUnitary_inv]
-  simp
+  simp only [inv_inv]
 
 theorem dSVUniformDensityPhysicalSpectralAliceCopy_transpose
     {N d : ℕ} (ξ : BipartiteUnitVector d) :
@@ -13670,13 +13752,12 @@ theorem dSVUniformDensityCorrectedMatchedSigmaWeightedResidual_controlled
           localUnitaryAction (U a) (V b) (work a b)) := by
   classical
   ext ⟨⟨a, i⟩, ⟨b, j⟩⟩
-  simp [dSVUniformDensityPhysicalAsyncSigmaContinuation,
-    dSVUniformDensityCorrectedMatchedSigmaWeightedResidual,
-    coherentSharedRandomControlledUnitary,
-    localUnitaryAction, Matrix.mulVec, dotProduct,
-    Matrix.kroneckerMap_apply, Matrix.blockDiagonal'_apply,
-    Fintype.sum_prod_type, Fintype.sum_sigma,
-    mul_assoc, mul_comm]
+  simp only [dSVUniformDensityPhysicalAsyncSigmaContinuation,
+    coherentSharedRandomControlledUnitary, dSVUniformDensityCorrectedMatchedSigmaWeightedResidual,
+    mulVec, dotProduct, kroneckerMap_apply, blockDiagonal'_apply, cast_eq, dite_eq_ite, mul_ite,
+    ite_mul, zero_mul, mul_comm, mul_zero, ite_self, mul_assoc, Fintype.sum_prod_type,
+    Fintype.sum_sigma, sum_ite_irrel, sum_const_zero, sum_ite_eq, mem_univ, ↓reduceIte,
+    localUnitaryAction]
   simp_rw [Finset.mul_sum]
 
 theorem
@@ -13773,7 +13854,7 @@ theorem
       (∑ i : Fin d, ∑ j : Fin d,
         spectralAtomOverlap F G hF hG i j) = (d : ℝ) := by
     simp_rw [spectralAtomOverlap_sum_right]
-    simp
+    simp only [sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul, mul_one]
   have discrepancy :
       (∑ i : Fin d, ∑ j : Fin d,
         |hF.isHermitian.eigenvalues i -
@@ -13786,11 +13867,8 @@ theorem
     intro i _
     apply Finset.sum_congr rfl
     intro j _
-    simp [Real.sq_sqrt
-      ((dSVSoftBobLeftReducedDensity_posSemidef ξ).eigenvalues_nonneg i),
-      Real.sq_sqrt
-        ((dSVSoftBobLeftReducedDensity_posSemidef ζ).eigenvalues_nonneg j),
-      F, G]
+    simp only [Real.sq_sqrt ((dSVSoftBobLeftReducedDensity_posSemidef ξ).eigenvalues_nonneg i),
+      Real.sq_sqrt ((dSVSoftBobLeftReducedDensity_posSemidef ζ).eigenvalues_nonneg j), F, G]
   calc
     dSVDensityRationalLeftProjectiveThresholdAtomMismatch
         w N ξ ζ ≤
@@ -13814,7 +13892,7 @@ theorem
       apply mul_le_mul_of_nonneg_left _
         (spectralAtomOverlap_nonneg F G hF hG i j)
       exact (dSVUniformDensityThresholdMismatch_le grid _ _).trans
-        (by simpa [add_comm] using
+        (by simpa only [one_div, add_comm, add_le_add_iff_left] using
           (add_le_add_right
             (dSVRationalSoftPass_lipschitz width
               (hF.eigenvalues_nonneg i) (hG.eigenvalues_nonneg j))
@@ -13958,7 +14036,8 @@ theorem dSVDensityRationalLeftProjectiveDiagonalMass_lower
     _ = ∑ i : Fin d,
         (dSVRationalSoftPass w
           (hF.isHermitian.eigenvalues i) - 1 / (N : ℝ)) := by
-      simp [Finset.sum_sub_distrib]
+      simp only [one_div, sum_sub_distrib, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul,
+        sub_right_inj]
       ring
     _ ≤ dSVDensityRationalLeftProjectiveDiagonalMass w N ξ := by
       unfold dSVDensityRationalLeftProjectiveDiagonalMass
@@ -14170,12 +14249,14 @@ theorem dSVDensityRationalPhysicalProjectorSquare_grid_eq
       dSVRationalSoftPass w (hF.isHermitian.eigenvalues i)
   · by_cases right : dSVUniformDensityThresholdGrid N k ≤
         dSVRationalSoftPass w (hG.isHermitian.eigenvalues j)
-    · simp [left, right]
-    · simp [left, right, div_eq_mul_inv]
+    · simp only [left, decide_true, right, ↓reduceIte, zero_div, one_div, mul_zero]
+    · simp only [left, decide_true, right, decide_false, Bool.true_eq_false, ↓reduceIte,
+        div_eq_mul_inv, one_mul, iff_false, not_true_eq_false, mul_one]
   · by_cases right : dSVUniformDensityThresholdGrid N k ≤
         dSVRationalSoftPass w (hG.isHermitian.eigenvalues j)
-    · simp [left, right, div_eq_mul_inv]
-    · simp [left, right]
+    · simp only [left, decide_false, right, decide_true, Bool.false_eq_true, ↓reduceIte,
+        div_eq_mul_inv, one_mul, iff_true, mul_one]
+    · simp only [left, decide_false, right, ↓reduceIte, zero_div, one_div, mul_zero]
 
 theorem dSVDensityRationalPhysicalProjector_weighted_rank_eq
     {d N : ℕ} (w : ℝ) (ξ : BipartiteUnitVector d) :
@@ -14208,8 +14289,8 @@ theorem dSVDensityRationalPhysicalProjector_weighted_rank_eq
   by_cases accepted : dSVUniformDensityThresholdGrid N k ≤
       dSVRationalSoftPass w
         (hF.isHermitian.eigenvalues i)
-  · simp [accepted]
-  · simp [accepted]
+  · simp only [accepted, decide_true, ↓reduceIte, mul_one]
+  · simp only [accepted, decide_false, Bool.false_eq_true, ↓reduceIte, mul_zero]
 
 def dSVDensityRationalPhysicalDiagonalBornSuccess
     {d N : ℕ} (grid : 0 < N) (dimension : 0 < d)
@@ -14555,7 +14636,7 @@ theorem dSVDensityRationalSoftPass_rescaled_le_density
   calc
     w * (a / (a + w)) = w * a / (a + w) := by ring
     _ ≤ a := (div_le_iff₀ denominator).mpr (by
-      nlinarith [sq_nonneg a])
+      linarith [sq_nonneg a])
 
 theorem dSVDensityRationalSoftPass_density_defect_le
     {w a : ℝ} (width : 0 < w)
@@ -14570,7 +14651,7 @@ theorem dSVDensityRationalSoftPass_density_defect_le
       ring
     _ ≤ a / w := by
       apply (div_le_div_iff₀ denominator width).mpr
-      nlinarith [mul_nonneg (mul_nonneg nonnegative width.le)
+      linarith [mul_nonneg (mul_nonneg nonnegative width.le)
         (sub_nonneg.mpr bounded), sq_nonneg a]
 
 theorem dSVDensityRationalGrid_rescaled_le_density
@@ -14744,7 +14825,7 @@ theorem dSVDensityRationalCanonicalAcceptedTarget_distance_sq_le
         (dSVSoftBobLeftReducedDensity ξ)
         (dSVSoftBobLeftReducedDensity_posSemidef ξ)
         (dSVSoftBobLeftReducedDensity_trace ξ)]
-      simp
+      simp only [one_div, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul, add_right_inj]
       ring
 
 theorem dSVDensityRationalCanonicalAcceptedTarget_distance_le
@@ -14809,7 +14890,7 @@ theorem dSVDensityRationalCanonicalNormalizedTarget_distance_le
       width grid fine ξ
   have reverse : |1 - ‖v‖| ≤ ‖ξ.val - v‖ := by
     have actual := abs_norm_sub_norm_le ξ.val v
-    simpa [ξ.property] using actual
+    simpa only [ge_iff_le, ξ.property] using actual
   have movement :
       ‖v - NormedSpace.normalize v‖ = |1 - ‖v‖| := by
     rw [norm_sub_rev]
@@ -14928,7 +15009,7 @@ theorem
   have floor_scaled : 1 ≤ 2 * (w + 1) * M := by
     have denominator : 0 < 2 * (w + 1) := by positivity
     have crossed := (div_le_iff₀ denominator).mp mass_floor
-    nlinarith
+    linarith
   change
     dSVDensityRationalLeftProjectiveThresholdAtomMismatch
       w N ξ ζ ≤ (2 * (w + 1) * D) * M
@@ -14936,7 +15017,7 @@ theorem
     dSVDensityRationalLeftProjectiveThresholdAtomMismatch
         w N ξ ζ ≤ D := actual
     _ ≤ D * (2 * (w + 1) * M) := by
-      nlinarith [mul_nonneg defect_nonnegative
+      linarith [mul_nonneg defect_nonnegative
         (show 0 ≤ 2 * (w + 1) * M - 1 by linarith)]
     _ = (2 * (w + 1) * D) * M := by ring
 
@@ -14958,7 +15039,7 @@ theorem
   have denominator : 0 < w := width
   have ratio : (w + 1) / w ≤ 2 := by
     apply (div_le_iff₀ denominator).mpr
-    nlinarith
+    linarith
   calc
     dSVDensityRationalLeftProjectiveThresholdAtomMismatch
         w N ξ ζ /
@@ -15002,7 +15083,7 @@ theorem dSVDensityRationalLargeWidth_exists_fine_grid
   have crossed := (div_lt_iff₀ denominator).mp large
   have small : (d : ℝ) / N < ε / (2 * (w + 1)) := by
     apply (div_lt_iff₀ real_grid).mpr
-    nlinarith
+    linarith
   have positive : 0 < 2 * (w + 1) := by positivity
   have scaled := (lt_div_iff₀ positive).mp small
   linarith
@@ -15026,21 +15107,21 @@ theorem dSVDensityRationalLargeWidth_exists_sourceUniformParameters
   have width : 0 < w := by dsimp [w]; positivity
   have large : 1 ≤ w := by
     dsimp [w]
-    exact (le_div_iff₀ precision).mpr (by simpa using small)
+    exact (le_div_iff₀ precision).mpr (by simpa only [one_mul] using small)
   obtain ⟨N, grid, budget⟩ :=
     dSVDensityRationalLargeWidth_exists_fine_grid
       d dimension w width ε precision
   have fine : (d : ℝ) / N ≤ 1 / (2 * (w + 1)) := by
     have denominator : 0 < 2 * (w + 1) := by positivity
     apply (le_div_iff₀ denominator).mpr
-    nlinarith
+    linarith
   have inverse : 1 / w = ε := by
     dsimp [w]
     field_simp
   have rounding : 1 / w + w * ((d : ℝ) / N) ≤ 3 * ε / 2 := by
     have grid_cost : w * ((d : ℝ) / N) ≤ ε / 2 := by
       have weight : 0 ≤ (d : ℝ) / N := by positivity
-      nlinarith
+      linarith
     rw [inverse]
     linarith
   refine ⟨w, N, large, grid, budget, rounding, ?_, ?_⟩
@@ -15259,11 +15340,8 @@ theorem dSVDensityRationalActualMixedOutcome_norm_sq_eq_born
     z (dSVUniformDensityThresholdSharedState_norm
       grid dimension) a b
   rw [alice_physical, bob_physical] at actual
-  simpa [z,
-    dSVDensityRationalCompleteProjectiveOutcome,
-    dSVUniformDensityThresholdSharedDensity,
-    binaryBornProbability,
-    ← alice_physical, ← bob_physical] using actual
+  simpa only [dSVDensityRationalCompleteProjectiveOutcome, binaryBornProbability,
+    dSVUniformDensityThresholdSharedDensity, ← alice_physical, ← bob_physical] using actual
 
 theorem dSVDensityRationalActualMixedContinueMass_eq_born
     {d N : ℕ} (grid : 0 < N) (dimension : 0 < d)
@@ -15361,7 +15439,7 @@ def dSVDensityRationalPhysicalAcceptedRank
           ξ).isHermitian.eigenvalues i) = true
   ⟨selected.card, by
     have bounded : selected.card ≤ N := by
-      simpa using Finset.card_le_univ selected
+      simpa only [Fintype.card_fin] using Finset.card_le_univ selected
     omega⟩
 
 theorem dSVDensityRationalPhysicalAcceptedRank_gridPrefix
@@ -15375,8 +15453,8 @@ theorem dSVDensityRationalPhysicalAcceptedRank_gridPrefix
         w N ξ i).val : ℝ) / (N : ℝ) := by
   classical
   rw [dSVUniformDensityGridPrefix_eq_count]
-  simp [dSVDensityRationalPhysicalAcceptedRank,
-    dSVDensityRationalProjectiveThresholdBin]
+  simp only [dSVDensityRationalPhysicalAcceptedRank, dSVDensityRationalProjectiveThresholdBin,
+    decide_eq_true_eq]
 
 theorem dSVDensityRationalPhysicalAcceptedRank_targetCoefficient_sq
     {d : ℕ} {w : ℝ} (width : 0 < w) (N : ℕ)
@@ -15411,10 +15489,10 @@ theorem dSVUniformDensityGridPrefix_mono
   by_cases low : dSVUniformDensityThresholdGrid N k ≤ a
   · have high : dSVUniformDensityThresholdGrid N k ≤ b :=
       low.trans ordered
-    simp [low, high]
+    simp only [low, ↓reduceIte, high, Std.le_refl]
   · by_cases high : dSVUniformDensityThresholdGrid N k ≤ b
-    · simp [low, high]
-    · simp [low, high]
+    · simp only [low, ↓reduceIte, high, zero_le_one]
+    · simp only [low, ↓reduceIte, high, Std.le_refl]
 
 theorem dSVUniformDensityThresholdMismatch_eq_sub_of_le
     (N : ℕ) {a b : ℝ} (ordered : a ≤ b) :
@@ -15429,10 +15507,10 @@ theorem dSVUniformDensityThresholdMismatch_eq_sub_of_le
   by_cases low : dSVUniformDensityThresholdGrid N k ≤ a
   · have high : dSVUniformDensityThresholdGrid N k ≤ b :=
       low.trans ordered
-    simp [low, high]
+    simp only [low, high, ↓reduceIte, mul_zero, mul_one, sub_self]
   · by_cases high : dSVUniformDensityThresholdGrid N k ≤ b
-    · simp [low, high]
-    · simp [low, high]
+    · simp only [low, high, iff_true, ↓reduceIte, mul_one, mul_zero, sub_zero]
+    · simp only [low, high, ↓reduceIte, mul_zero, sub_self]
 
 theorem dSVUniformDensityThresholdMismatch_eq_abs_gridPrefix
     (N : ℕ) (a b : ℝ) :
@@ -15453,11 +15531,11 @@ theorem dSVUniformDensityThresholdMismatch_eq_abs_gridPrefix
       intro k _
       by_cases low : dSVUniformDensityThresholdGrid N k ≤ a
       · by_cases high : dSVUniformDensityThresholdGrid N k ≤ b
-        · simp [low, high]
-        · simp [low, high]
+        · simp only [low, high, ↓reduceIte, mul_zero]
+        · simp only [low, high, iff_false, not_true_eq_false, ↓reduceIte, mul_one, iff_true]
       · by_cases high : dSVUniformDensityThresholdGrid N k ≤ b
-        · simp [low, high]
-        · simp [low, high]
+        · simp only [low, high, iff_true, ↓reduceIte, mul_one, iff_false, not_true_eq_false]
+        · simp only [low, high, ↓reduceIte, mul_zero]
     rw [symmetric,
       dSVUniformDensityThresholdMismatch_eq_sub_of_le
         N ordered,
@@ -15542,8 +15620,8 @@ theorem dSVDensityRationalPhysicalAcceptedRank_eq_floor
   have unit := dSVRationalSoftPass_mem_unit width
     ((dSVSoftBobLeftReducedDensity_posSemidef
       ξ).eigenvalues_nonneg i)
-  simpa [dSVDensityRationalPhysicalAcceptedRank,
-    dSVDensityRationalProjectiveThresholdBin] using
+  simpa only [dSVDensityRationalPhysicalAcceptedRank, dSVDensityRationalProjectiveThresholdBin,
+    decide_eq_true_eq] using
     (dSVUniformDensityThresholdGrid_count_eq_floor grid
       (dSVRationalSoftPass w
         ((dSVSoftBobLeftReducedDensity_posSemidef
@@ -15581,7 +15659,7 @@ theorem dSVDensityRationalProjectiveThresholdBin_eq_true_iff_prefix
           dSVRationalSoftPass w
             ((dSVSoftBobLeftReducedDensity_posSemidef
               ξ).isHermitian.eigenvalues i) * (N : ℝ) := by
-      simpa using accepted
+      simpa only [Nat.cast_add, Nat.cast_one] using accepted
     have below := (Nat.le_floor_iff product_nonnegative).2 cast
     omega
   · intro below
@@ -15593,7 +15671,7 @@ theorem dSVDensityRationalProjectiveThresholdBin_eq_true_iff_prefix
                 ξ).isHermitian.eigenvalues i) * (N : ℝ)) := by
       omega
     have cast := (Nat.le_floor_iff product_nonnegative).1 integer
-    simpa using cast
+    simpa only [ge_iff_le, Nat.cast_add, Nat.cast_one] using cast
 
 end
 
@@ -15649,13 +15727,13 @@ theorem dSVDensityRationalMixedSpectralAtomBlock_eq_projectorProduct
   · by_cases bob : dSVDensityRationalProjectiveThresholdBin w N k
         ((dSVSoftBobLeftReducedDensity_posSemidef
           ζ).isHermitian.eigenvalues j) = b
-    · simp [alice, bob]
-    · simp [alice, bob]
+    · simp only [alice, bob, and_self, ↓reduceIte]
+    · simp only [alice, bob, and_false, ↓reduceIte, mul_zero]
   · by_cases bob : dSVDensityRationalProjectiveThresholdBin w N k
         ((dSVSoftBobLeftReducedDensity_posSemidef
           ζ).isHermitian.eigenvalues j) = b
-    · simp [alice, bob]
-    · simp [alice, bob]
+    · simp only [alice, bob, and_true, ↓reduceIte, zero_mul]
+    · simp only [alice, bob, and_self, ↓reduceIte, mul_zero]
 
 theorem dSVDensityRationalMixedSpectralAtomBlock_trace_eq
     {d : ℕ} (w : ℝ) (N : ℕ)
@@ -15723,7 +15801,7 @@ theorem dSVDensityRationalActualMixedAsynchronousMass_eq_crossHazard
     (dSVDensityRationalPhysicalProjector_projective w ξ k)
     (dSVDensityRationalPhysicalProjector_projective w ζ k)
   rw [square]
-  simp [Matrix.mul_sub, Matrix.sub_mul, Matrix.trace_sub]
+  simp only [Matrix.mul_sub, mul_one, trace_sub, sub_re, Matrix.sub_mul, one_mul]
   ring
 
 theorem dSVDensityRationalActualMixed_escape_ge_diagonal
@@ -15962,7 +16040,7 @@ theorem dSVDensityRationalCanonicalPrefixMask_transpose
       w N ξ).transpose =
       dSVDensityRationalCanonicalPrefixMask w N ξ := by
   classical
-  simp [dSVDensityRationalCanonicalPrefixMask]
+  simp only [dSVDensityRationalCanonicalPrefixMask, blockDiagonal'_diagonal, diagonal_transpose]
 
 theorem dSVDensityRationalPhysicalAcceptedProjector_eq_spectralMask
     {d : ℕ} (w : ℝ) (N : ℕ)
@@ -16061,9 +16139,9 @@ theorem dSVDensityRationalCompleteStoppedOptionalOutcome_some_some
       dSVDensityRationalCompleteProjectiveOutcome
         w N ξ ζ alice bob := by
   rw [dSVDensityRationalCompleteProjectiveOutcome_eq_block_action]
-  simp [dSVDensityRationalCompleteStoppedOptionalOutcome,
+  simp only [dSVDensityRationalCompleteStoppedOptionalOutcome,
     dSVDensityRationalCompleteStoppedOptionalLocalEffect,
-    dSVDensityRationalCompleteProjectiveBinaryPOVM_effect]
+    dSVDensityRationalCompleteProjectiveBinaryPOVM_effect, blockDiagonal'_transpose]
 
 theorem dSVDensityRationalCompleteStoppedOptionalOutcome_none_none
     {d : ℕ} (w : ℝ) (N : ℕ)
@@ -16071,8 +16149,9 @@ theorem dSVDensityRationalCompleteStoppedOptionalOutcome_none_none
     dSVDensityRationalCompleteStoppedOptionalOutcome
         w N ξ ζ none none =
       dSVUniformDensityThresholdSharedState N d := by
-  simp [dSVDensityRationalCompleteStoppedOptionalOutcome,
-    dSVDensityRationalCompleteStoppedOptionalLocalEffect]
+  simp only [dSVDensityRationalCompleteStoppedOptionalOutcome,
+    dSVDensityRationalCompleteStoppedOptionalLocalEffect, transpose_one, zero_mul, implies_true,
+    mul_zero, mul_one, kroneckerMap_one_one, one_mulVec, toLp_ofLp]
 
 def dSVDensityRationalCompleteStoppedOptionalLocalSchedule
     (L : ℕ) (hit copy : Fin (L + 1)) : Option Bool :=
@@ -16088,14 +16167,14 @@ theorem dSVDensityRationalCompleteStoppedOptionalLocalSchedule_zero
     dSVDensityRationalCompleteStoppedOptionalLocalSchedule
       L 0 copy =
       if copy.val < L then some false else none := by
-  simp [dSVDensityRationalCompleteStoppedOptionalLocalSchedule]
+  simp only [dSVDensityRationalCompleteStoppedOptionalLocalSchedule, ↓reduceIte]
 
 theorem dSVDensityRationalCompleteStoppedOptionalLocalSchedule_hit
     {L : ℕ} (j : Fin L) :
     dSVDensityRationalCompleteStoppedOptionalLocalSchedule
       L j.succ j.castSucc = some true := by
-  simp [dSVDensityRationalCompleteStoppedOptionalLocalSchedule,
-    j.isLt]
+  simp only [dSVDensityRationalCompleteStoppedOptionalLocalSchedule, Fin.val_castSucc, j.isLt,
+    ↓reduceIte, Fin.succ_ne_zero, Fin.val_succ, lt_self_iff_false]
 
 end
 
@@ -16171,7 +16250,8 @@ theorem dSVDensityRationalFirstAcceptLocalSpectralMask_transpose
       dSVDensityRationalFirstAcceptLocalSpectralMask
         w N ξ outcome := by
   classical
-  simp [dSVDensityRationalFirstAcceptLocalSpectralMask]
+  simp only [dSVDensityRationalFirstAcceptLocalSpectralMask, blockDiagonal'_diagonal,
+    diagonal_transpose]
 
 theorem
     dSVDensityRationalFirstAcceptPhysicalBobEffect_eq_spectralMask
@@ -16199,7 +16279,7 @@ theorem
     dSVDensityRationalFirstAcceptLocalSpectralMask_transpose,
     dSVUniformDensityPhysicalSpectralAliceCopy_transpose,
     dSVUniformDensityPhysicalSpectralAliceCopy_inv_transpose]
-  simp [Matrix.mul_assoc]
+  simp only [UnitaryGroup.inv_val, Matrix.mul_assoc]
 
 end
 
@@ -16341,16 +16421,16 @@ theorem dSVBobTargetLocalHarmonicCleanup_stable
       tensorEmbezzlementTarget_sub_norm hn]
   have triangle : ‖source - residual‖ ≤
       ‖source - reference‖ + ‖reference - residual‖ := by
-    simpa [dist_eq_norm] using dist_triangle source reference residual
+    simpa only [dist_eq_norm] using dist_triangle source reference residual
   change ‖source - residual‖ ≤ ‖ξ.val - ζ.val‖ + ε
   calc
     ‖source - residual‖ ≤
         ‖source - reference‖ + ‖reference - residual‖ := triangle
     _ ≤ ‖ξ.val - ζ.val‖ + ε := by
       rw [preserved]
-      simpa [add_comm] using add_le_add_left
+      simpa only [add_comm] using add_le_add_left
         (show ‖reference - residual‖ ≤ ε by
-          simpa [reference, residual] using clean)
+          simpa only [reference, residual] using clean)
         ‖ξ.val - ζ.val‖
 
 theorem dSVBobTargetLocalUniformHarmonicWorkCleanup
@@ -16415,7 +16495,8 @@ theorem dSVDensityRationalCanonicalUnitPrefix_relative_distance_sq
   · by_cases zero_s : s.val = 0
     · have same : r = s := Fin.ext (zero.trans zero_s.symm)
       subst s
-      simp
+      simp only [sub_self, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+        abs_zero, mul_zero, min_self, Nat.cast_max, Nat.cast_one, zero_div, Std.le_refl]
     · have s_positive : 0 < s.val := Nat.pos_of_ne_zero zero_s
       have s_one : (1 : ℝ) ≤ (s.val : ℝ) := by
         exact_mod_cast (Nat.one_le_iff_ne_zero.mpr zero_s)
@@ -16434,9 +16515,9 @@ theorem dSVDensityRationalCanonicalUnitPrefix_relative_distance_sq
             norm_num
       have magnitude :
           |(r.val : ℝ) - (s.val : ℝ)| = (s.val : ℝ) := by
-        simp [zero]
+        simp only [zero, CharP.cast_eq_zero, zero_sub, abs_neg, Nat.abs_cast]
       have denominator : max 1 (min r.val s.val) = 1 := by
-        simp [zero]
+        simp only [zero, zero_le, inf_of_le_left, sup_of_le_left]
       change x ^ 2 ≤ _
       rw [magnitude, denominator]
       norm_num only [Nat.cast_one, div_one]
@@ -16674,7 +16755,8 @@ theorem dSVDensityRationalPublicBucketCoherentPhaseHistory_apply_norm_sq
     rw [Complex.norm_real, Real.norm_eq_abs,
       abs_of_nonneg (inv_nonneg.mpr (Real.sqrt_nonneg _)),
       inv_pow, Real.sq_sqrt (by positivity : (0 : ℝ) ≤ B)]
-  · simp [ePRState, same]
+  · simp only [ePRState, ofReal_inv, same, ↓reduceIte, norm_zero, ne_eq, OfNat.ofNat_ne_zero,
+      not_false_eq_true, zero_pow, zero_mul]
 
 def dSVDensityRationalPublicBucketCoherentPhaseSigmaState
     {H : Type*} [Fintype H] {m : ℕ} (B : ℕ)
@@ -16761,7 +16843,8 @@ theorem dSVDensityRationalPublicBucketCoherentPhaseSigmaReset_distance_sq
       intro φ _
       apply Finset.sum_congr rfl
       intro a _
-      simp [mul_assoc]
+      simp only [ite_mul, zero_mul, mul_assoc, sum_ite_irrel, sum_const_zero, sum_ite_eq,
+        mem_univ, ↓reduceIte]
     _ = (B : ℝ)⁻¹ *
         (∑ φ : Fin B, ∑ a : H, ∑ b : H,
           ‖history (a, b)‖ ^ 2 *
@@ -16809,7 +16892,7 @@ theorem dSVDensityRationalPublicLogRank_real_log_bound
         ring
   rcases le_total r s with ordered | ordered
   · exact in_order positive_r positive_s ordered
-  · simpa [min_comm, abs_sub_comm] using
+  · simpa only [ge_iff_le, min_comm, abs_sub_comm] using
       in_order positive_s positive_r ordered
 
 theorem dSVDensityRationalPublicLogRank_zeroSafe_nat_bound
@@ -16819,14 +16902,17 @@ theorem dSVDensityRationalPublicLogRank_zeroSafe_nat_bound
           Real.log ((max 1 s : ℕ) : ℝ)| ≤
       |(r : ℝ) - (s : ℝ)| := by
   by_cases zero_r : r = 0
-  · simp [zero_r]
+  · simp only [zero_r, CharP.cast_eq_zero, Nat.cast_nonneg, inf_of_le_left, zero_le,
+      sup_of_le_left, Nat.cast_one, Real.log_one, Nat.cast_max, zero_sub, abs_neg, zero_mul,
+      Nat.abs_cast]
   by_cases zero_s : s = 0
-  · simp [zero_s]
+  · simp only [zero_s, CharP.cast_eq_zero, Nat.cast_nonneg, inf_of_le_right, Nat.cast_max,
+      Nat.cast_one, zero_le, sup_of_le_left, Real.log_one, sub_zero, zero_mul, Nat.abs_cast]
   have positive_r : 0 < r := Nat.pos_of_ne_zero zero_r
   have positive_s : 0 < s := Nat.pos_of_ne_zero zero_s
   have one_r : 1 ≤ r := positive_r
   have one_s : 1 ≤ s := positive_s
-  simpa [max_eq_right one_r, max_eq_right one_s] using
+  simpa only [max_eq_right one_r, max_eq_right one_s, ge_iff_le] using
     (dSVDensityRationalPublicLogRank_real_log_bound
       (by exact_mod_cast positive_r : (0 : ℝ) < r)
       (by exact_mod_cast positive_s : (0 : ℝ) < s))
@@ -16854,8 +16940,8 @@ theorem dSVDensityRationalPublicLogRankPhaseWeight_sum
       dSVDensityRationalPublicLogRankPhaseWeight B phase) = 1 := by
   have real_positive : (0 : ℝ) < (B : ℝ) := by
     exact_mod_cast positive
-  simp [dSVDensityRationalPublicLogRankPhaseWeight,
-    real_positive.ne']
+  simp only [dSVDensityRationalPublicLogRankPhaseWeight, one_div, sum_const, card_univ,
+    Fintype.card_fin, nsmul_eq_mul, ne_eq, real_positive.ne', not_false_eq_true, mul_inv_cancel₀]
 
 def dSVDensityRationalPublicLogRankBucket
     {N B : ℕ} (Q : ℕ) (phase : Fin B)
@@ -16882,8 +16968,8 @@ theorem dSVDensityRationalPublicLogRankBucket_fineLabel_sub_lt
         phase.val) / B =
       (dSVDensityRationalPublicLogRankFineLabel Q s +
         phase.val) / B := by
-    simpa [dSVDensityRationalPublicLogRankBucket,
-      nonzero_r, nonzero_s] using same
+    simpa only [dSVDensityRationalPublicLogRankBucket, nonzero_r, ↓reduceIte, nonzero_s,
+      Option.some.injEq] using same
   have remainder_r := Nat.mod_lt
     (dSVDensityRationalPublicLogRankFineLabel Q r + phase.val)
     positive
@@ -16967,10 +17053,10 @@ theorem dSVDensityRationalPublicLogRankBucket_log_sub_lt
       (Real.log ((max 1 s.val : ℕ) : ℝ)) with ordered | ordered
   · rw [abs_of_nonpos (sub_nonpos.mpr ordered)]
     have integer_order := (abs_lt.mp bucket_bounds).1
-    nlinarith [rank_bounds.1, other_bounds.2]
+    linarith [rank_bounds.1, other_bounds.2]
   · rw [abs_of_nonneg (sub_nonneg.mpr ordered)]
     have integer_order := (abs_lt.mp bucket_bounds).2
-    nlinarith [rank_bounds.2, other_bounds.1]
+    linarith [rank_bounds.2, other_bounds.1]
 
 def dSVDensityRationalPublicLogRankBucketFiber
     {N B : ℕ} (Q : ℕ) (phase : Fin B) (label : Option ℕ) :
@@ -16986,7 +17072,8 @@ theorem dSVDensityRationalPublicLogRankBucketFiber_mem
         Q phase label ↔
       r.val ≠ 0 ∧
         dSVDensityRationalPublicLogRankBucket Q phase r = label := by
-  simp [dSVDensityRationalPublicLogRankBucketFiber]
+  simp only [dSVDensityRationalPublicLogRankBucketFiber, ne_eq, Fin.val_eq_zero_iff, mem_filter,
+    mem_univ, true_and]
 
 def dSVDensityRationalPublicLogRankBucketRepresentative
     {N B : ℕ} (Q : ℕ) (phase : Fin B) (label : Option ℕ) :
@@ -17007,8 +17094,7 @@ theorem dSVDensityRationalPublicLogRankBucketRepresentative_mem
         (N := N) Q phase label ∈
       dSVDensityRationalPublicLogRankBucketFiber
         (N := N) Q phase label := by
-  simpa [dSVDensityRationalPublicLogRankBucketRepresentative,
-    present] using
+  simpa only [dSVDensityRationalPublicLogRankBucketRepresentative, present, ↓reduceDIte] using
     (Finset.min'_mem
       (dSVDensityRationalPublicLogRankBucketFiber
         (N := N) Q phase label) present)
@@ -17106,7 +17192,8 @@ theorem dSVDensityRationalPublicMultiscalePhase_card
     Fintype.card
         (DSVDensityRationalPublicMultiscalePhase S B) =
       B ^ S := by
-  simp [DSVDensityRationalPublicMultiscalePhase]
+  simp only [DSVDensityRationalPublicMultiscalePhase, Fintype.card_pi, Fintype.card_fin,
+    prod_const, card_univ]
 
 theorem dSVDensityRationalPublicMultiscalePhase_card_pos
     {S B : ℕ} (positive : 0 < B) :
@@ -17304,13 +17391,15 @@ theorem dSVDensityRationalMixedCanonicalRawSource_apply
           dSVDensityRationalProjectiveThresholdBin w N k
             ((dSVSoftBobLeftReducedDensity_posSemidef
               ζ).isHermitian.eigenvalues j) = true
-      · simp [dSVDensityRationalMixedCanonicalCrossMatrix,
-          dSVDensityRationalLocalSpectralPairBasisOverlap,
-          Matrix.blockDiagonal'_apply, alice, bob]
-      · simp [bob]
-    · simp [alice]
-  · simp [dSVDensityRationalMixedCanonicalCrossMatrix,
-      Matrix.blockDiagonal'_apply, flags]
+      · simp only [bob, ↓reduceIte, dSVDensityRationalMixedCanonicalCrossMatrix, transpose_apply,
+          blockDiagonal'_apply, ↓reduceDIte, cast_eq, unitaryBasisOverlap_apply, one_mul, alice,
+          mul_one, and_self, dSVDensityRationalLocalSpectralPairBasisOverlap]
+      · simp only [bob, Bool.false_eq_true, ↓reduceIte, zero_mul, mul_ite, mul_one, mul_zero,
+          ite_self, and_false]
+    · simp only [ite_mul, one_mul, zero_mul, alice, Bool.false_eq_true, ↓reduceIte, mul_zero,
+        false_and, and_false]
+  · simp only [dSVDensityRationalMixedCanonicalCrossMatrix, transpose_apply, blockDiagonal'_apply,
+      flags, ↓reduceDIte, mul_zero, mul_ite, mul_one, ite_self, false_and, ↓reduceIte]
 
 theorem dSVDensityRationalMixedCanonicalProjectorMatrix_eq
     {d : ℕ} (w : ℝ) (N : ℕ)
@@ -17476,7 +17565,7 @@ theorem dSVDensityRationalMixedCanonicalProjectorMatrix_eq
             Matrix.mul_assoc, M, R]
     _ = R * (ZI * (X : Matrix _ _ ℂ)) * M := by
           rw [cancel_x, cancel_z]
-          simp
+          simp only [one_mul, mul_one]
     _ = _ := by
       dsimp only [ZI]
       rw [dSVDensityRationalMixedCanonicalCrossGauge_eq N ξ ζ]
@@ -17617,8 +17706,8 @@ theorem dSVDensityRationalPublicLogPhasePureSource_apply
       else 0) *
         dSVUniformDensityThresholdWholeHistorySharedState
           N d L (a, b) := by
-  simp [dSVDensityRationalPublicLogPhasePureSource,
-    dSVDensityRationalPublicLogBilateralPureTensor, ePRState]
+  simp only [dSVDensityRationalPublicLogPhasePureSource,
+    dSVDensityRationalPublicLogBilateralPureTensor, ePRState, ofReal_inv, ite_mul, zero_mul]
 
 theorem dSVDensityRationalPublicLogPhasePureSource_norm
     {B N d L : ℕ}
@@ -17706,10 +17795,10 @@ def dSVDensityRationalPublicLogPhaseTargetSplitEquiv
         N d L).symm (q.1, q.2.2))
   left_inv := by
     rintro ⟨phase, history⟩
-    simp
+    simp only [Prod.mk.eta, Equiv.symm_apply_apply]
   right_inv := by
     rintro ⟨target, phase, catalyst⟩
-    simp
+    simp only [Equiv.apply_symm_apply]
 
 def dSVDensityRationalPublicLogPhaseResidual
     (B N d L m : ℕ) : ℕ :=
@@ -17764,8 +17853,9 @@ theorem dSVDensityRationalPublicLogPhaseTargetFirstPreparedSource_apply
           N d L (a, b) *
         embezzlementState m (i, j) := by
   unfold dSVDensityRationalPublicLogPhaseTargetFirstPreparedSource
-  simpa [LinearIsometryEquiv.piLpCongrLeft_apply,
-    Equiv.piCongrLeft'] using
+  simpa only [LinearIsometryEquiv.piLpCongrLeft_apply, Equiv.piCongrLeft', Equiv.prodCongr_symm,
+    Equiv.prodCongr_apply, eq_rec_constant, Equiv.coe_fn_mk, Prod.map_apply,
+    Equiv.symm_apply_apply, ofReal_inv, ite_mul, zero_mul] using
     (dSVDensityRationalPublicLogPhaseHarmonicPureSource_apply
       B N d L m φ ψ a b i j)
 
@@ -17883,8 +17973,8 @@ theorem
         B N d L m (a, i))
       (dSVDensityRationalPublicLogPhaseTargetFirstIndexEquiv
         B N d L m (b, j)) = _
-  simp [Matrix.reindex_apply, Matrix.kroneckerMap_apply,
-    Matrix.one_apply]
+  simp only [reindex_apply, submatrix_apply, Equiv.symm_apply_apply, kroneckerMap_apply,
+    Matrix.one_apply, mul_ite, mul_one, mul_zero]
 
 def dSVDensityRationalPublicLogPhasePhysicalHistoryUnitary
     (B : ℕ) {N d L : ℕ}
@@ -17914,7 +18004,7 @@ theorem dSVDensityRationalPublicLogPhasePhysicalHistoryUnitary_apply
   change
     ((1 : Matrix (Fin B) (Fin B) ℂ) ⊗ₖ U.val)
       (φ, a) (ψ, b) = _
-  simp [Matrix.kroneckerMap_apply, Matrix.one_apply]
+  simp only [kroneckerMap_apply, Matrix.one_apply, ite_mul, one_mul, zero_mul]
 
 end
 
@@ -17955,7 +18045,8 @@ theorem dSVDensityRationalHeterogeneousActualFirstAccepted_prefix_iff
           ¬ accepted i (history i.castSucc) := by
   classical
   unfold dSVDensityRationalHeterogeneousActualFirstAccepted
-  simpa [dSVDensityRationalHeterogeneousActualAcceptSet] using
+  simpa only [dSVDensityRationalHeterogeneousActualAcceptSet, mem_filter, mem_univ,
+    true_and] using
     dSVUniformDensityFirstAcceptFinitePrefix
       (dSVDensityRationalHeterogeneousActualAcceptSet
         accepted history) j
@@ -18006,10 +18097,10 @@ def dSVDensityRationalHeterogeneousActualFirstAcceptEquiv
         accepted q.2)) q.1, q.2⟩
   left_inv := by
     rintro ⟨flag, history⟩
-    simp
+    simp only [Equiv.swap_apply_self]
   right_inv := by
     rintro ⟨flag, history⟩
-    simp
+    simp only [Equiv.swap_apply_self]
 
 def dSVDensityRationalHeterogeneousActualFirstAcceptUnitary
     {β : Type*} [Fintype β] [DecidableEq β]
@@ -18067,10 +18158,10 @@ theorem
     have injective :=
       (Equiv.swap (0 : Fin (L + 1)) selected).injective
     apply injective
-    simpa using zero
+    simpa only [Equiv.swap_apply_right] using zero
   · intro same
     subst flag
-    simp
+    simp only [Equiv.swap_apply_right]
 
 def dSVDensityRationalHeterogeneousActualCopyAccepted
     {S N d L : ℕ}
@@ -18112,14 +18203,13 @@ theorem
       · intro failed i
         by_cases active : i.val < L
         · have actual := failed (⟨i.val, active⟩ : Fin L)
-          simpa [dSVDensityRationalHeterogeneousActualCopyCondition,
-            active] using actual
-        · simp [dSVDensityRationalHeterogeneousActualCopyCondition,
-            active]
+          simpa only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte,
+            ↓reduceIte, Fin.castSucc_mk, Fin.eta] using actual
+        · simp only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte]
       · intro all i
         have actual := all i.castSucc
-        simpa [dSVDensityRationalHeterogeneousActualCopyCondition,
-          i.isLt] using actual
+        simpa only [dSVDensityRationalHeterogeneousActualCopyCondition, Fin.val_castSucc, i.isLt,
+          ↓reduceDIte, ↓reduceIte, Fin.eta] using actual
   | succ j =>
       rw [dSVDensityRationalHeterogeneousActualFirstAccepted_prefix_iff]
       constructor
@@ -18128,26 +18218,30 @@ theorem
         · by_cases before : i.val < j.val
           · have failure := earlier
               (⟨i.val, active⟩ : Fin L) (by exact before)
-            simpa [dSVDensityRationalHeterogeneousActualCopyCondition,
-              active, Fin.succ_ne_zero, before] using failure
+            simpa only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte,
+              Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ, Order.lt_add_one_iff,
+              Order.add_one_le_iff, before, Fin.castSucc_mk, Fin.eta] using failure
           · by_cases equal : i.val = j.val
             · have same : i = j.castSucc := Fin.ext equal
               subst i
-              simpa [dSVDensityRationalHeterogeneousActualCopyCondition,
-                j.isLt, Fin.succ_ne_zero] using hit
-            · simp [dSVDensityRationalHeterogeneousActualCopyCondition,
-                active, Fin.succ_ne_zero, before, equal]
-        · simp [dSVDensityRationalHeterogeneousActualCopyCondition,
-            active]
+              simpa only [dSVDensityRationalHeterogeneousActualCopyCondition, Fin.val_castSucc,
+                j.isLt, ↓reduceDIte, Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ,
+                lt_self_iff_false, Nat.add_left_cancel_iff, Fin.eta] using hit
+            · simp only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte,
+                Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ, Order.lt_add_one_iff,
+                Order.add_one_le_iff, before, Nat.add_right_cancel_iff, equal]
+        · simp only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte]
       · intro all
         constructor
         · have actual := all j.castSucc
-          simpa [dSVDensityRationalHeterogeneousActualCopyCondition,
-            j.isLt, Fin.succ_ne_zero] using actual
+          simpa only [dSVDensityRationalHeterogeneousActualCopyCondition, Fin.val_castSucc,
+            j.isLt, ↓reduceDIte, Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ, lt_self_iff_false,
+            Nat.add_left_cancel_iff, Fin.eta] using actual
         · intro i before
           have actual := all i.castSucc
-          simpa [dSVDensityRationalHeterogeneousActualCopyCondition,
-            i.isLt, Fin.succ_ne_zero, before] using actual
+          simpa only [dSVDensityRationalHeterogeneousActualCopyCondition, Fin.val_castSucc,
+            i.isLt, ↓reduceDIte, Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ, Order.lt_add_one_iff,
+            Order.add_one_le_iff, Fin.val_fin_lt, before, Fin.eta] using actual
 
 theorem
     dSVDensityRationalHeterogeneousActualFirstAccepted_sourceProduct
@@ -18206,7 +18300,7 @@ theorem
                   accepted flag k (history k)
               then D k (history k) else 0)) = 0 := by
         apply Finset.prod_eq_zero (Finset.mem_univ i)
-        simp [rejected]
+        simp only [rejected, ↓reduceIte, mul_zero]
       rw [if_neg (Ne.symm selected), mul_zero, zero]
   calc
     _ = ∑ history : Fin (L + 1) → β,
@@ -18356,23 +18450,18 @@ theorem dSVDensityRationalHeterogeneousPhysicalStage_partition
       dSVDensityRationalHeterogeneousPhysicalStageAsynchronous
           N width schedule ξ ζ k = 1 := by
   by_cases active : k < L
-  · simpa [
-      dSVDensityRationalHeterogeneousPhysicalStageContinue,
+  · simpa only [dSVDensityRationalHeterogeneousPhysicalStageContinue,
+      dSVDensityRationalHeterogeneousPhysicalStageOutcome, active, ↓reduceDIte,
       dSVDensityRationalHeterogeneousPhysicalStageSuccess,
       dSVDensityRationalHeterogeneousPhysicalStageAsynchronous,
-      dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-      active,
-      dSVDensityRationalActualMixedContinueMass,
-      dSVDensityRationalActualMixedSuccessMass,
+      dSVDensityRationalActualMixedContinueMass, dSVDensityRationalActualMixedSuccessMass,
       dSVDensityRationalActualMixedAsynchronousMass] using
         (dSVDensityRationalActualMixed_mass_partition
           grid dimension (width (schedule ⟨k, active⟩)) ξ ζ)
-  · simp [
-      dSVDensityRationalHeterogeneousPhysicalStageContinue,
-      dSVDensityRationalHeterogeneousPhysicalStageSuccess,
-      dSVDensityRationalHeterogeneousPhysicalStageAsynchronous,
-      dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-      active]
+  · simp only [dSVDensityRationalHeterogeneousPhysicalStageContinue,
+      dSVDensityRationalHeterogeneousPhysicalStageOutcome, active, ↓reduceDIte, and_self,
+      ↓reduceIte, dSVDensityRationalHeterogeneousPhysicalStageSuccess, Bool.true_eq_false,
+      add_zero, dSVDensityRationalHeterogeneousPhysicalStageAsynchronous, and_true, and_false]
 
 theorem
     dSVDensityRationalHeterogeneousPhysicalStageAsynchronous_eq_hazard
@@ -18383,10 +18472,8 @@ theorem
         N width schedule ξ ζ k.val =
       dSVDensityRationalPhysicalProjectorCrossHazard
         N (width (schedule k)) ξ ζ := by
-  simpa [
-    dSVDensityRationalHeterogeneousPhysicalStageAsynchronous,
-    dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-    k.isLt,
+  simpa only [dSVDensityRationalHeterogeneousPhysicalStageAsynchronous,
+    dSVDensityRationalHeterogeneousPhysicalStageOutcome, k.isLt, ↓reduceDIte, Fin.eta,
     dSVDensityRationalActualMixedAsynchronousMass] using
       (dSVDensityRationalActualMixedAsynchronousMass_eq_crossHazard
         (width (schedule k)) N ξ ζ)
@@ -18516,7 +18603,7 @@ theorem
             N width schedule ξ ζ k.val *
           dSVDensityRationalHeterogeneousPhysicalStageAsynchronous
             N width schedule ξ ζ k.val := by
-          simpa using
+          simpa only using
             (Fin.sum_univ_eq_sum_range
               (fun k : ℕ =>
                 dSVDensityRationalHeterogeneousPhysicalSurvival
@@ -18599,7 +18686,7 @@ theorem
   change h = (p + h) * (h / (p + h))
   by_cases vanished : p + h = 0
   · have h_zero : h = 0 := by linarith
-    simp [h_zero]
+    simp only [h_zero, add_zero, zero_div, mul_zero]
   · field_simp
 
 theorem
@@ -18682,13 +18769,10 @@ theorem
           N width schedule ξ ζ k.val +
         dSVDensityRationalHeterogeneousPhysicalStageAsynchronous
           N width schedule ξ ζ k.val := by
-  simpa [
-    dSVDensityRationalHeterogeneousPhysicalStageSuccess,
+  simpa only [dSVDensityRationalHeterogeneousPhysicalStageSuccess,
+    dSVDensityRationalHeterogeneousPhysicalStageOutcome, k.isLt, ↓reduceDIte, Fin.eta,
     dSVDensityRationalHeterogeneousPhysicalStageAsynchronous,
-    dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-    k.isLt,
-    dSVDensityRationalActualMixedSuccessMass,
-    dSVDensityRationalActualMixedAsynchronousMass]
+    dSVDensityRationalActualMixedSuccessMass, dSVDensityRationalActualMixedAsynchronousMass]
     using dSVDensityRationalActualMixed_escape_ge_diagonal
       grid dimension (width (schedule k)) ξ ζ
 
@@ -18774,7 +18858,7 @@ theorem
         2 * (W + 1) * ((d : ℝ) / N) := by
       have scale := upper (schedule k)
       have grid_cost : 0 ≤ (d : ℝ) / N := by positivity
-      nlinarith [mul_nonneg grid_cost (sub_nonneg.mpr scale)]
+      linarith [mul_nonneg grid_cost (sub_nonneg.mpr scale)]
 
 theorem dSVDensityRationalHeterogeneousPhysicalStoppedEscape_budget
     {d S L N : ℕ} (grid : 0 < N) (dimension : 0 < d)
@@ -18807,8 +18891,7 @@ theorem dSVDensityRationalHeterogeneousPhysicalStoppedEscape_budget
         grid dimension width schedule ξ ζ k
     dsimp [continuation, escape]
     linarith
-  simpa [continuation, escape,
-    dSVDensityRationalHeterogeneousPhysicalSurvival]
+  simpa only [dSVDensityRationalHeterogeneousPhysicalSurvival, ge_iff_le]
     using dSVHeterogeneousRealStopping_escape_budget
       continuation escape continuation_nonnegative stage L
 
@@ -18887,7 +18970,7 @@ theorem
         mul_nonneg survival_nonnegative
           (add_nonneg success_nonnegative asynchronous_nonnegative)
       apply mul_le_mul_of_nonneg_left _ coefficient_nonnegative
-      simpa [stage, bound] using ratio
+      simpa only [bound] using ratio
     _ =
       (∑ k ∈ Finset.range L,
         dSVDensityRationalHeterogeneousPhysicalSurvival
@@ -18898,7 +18981,7 @@ theorem
               N width schedule ξ ζ k)) * bound := by
       rw [Finset.sum_mul]
     _ ≤ bound := by
-      nlinarith [mul_nonneg bound_nonnegative
+      linarith [mul_nonneg bound_nonnegative
         (sub_nonneg.mpr escape_budget)]
 
 def dSVDensityRationalHeterogeneousPhysicalUniformEscapeRate
@@ -18928,7 +19011,7 @@ theorem
     positivity
   unfold dSVDensityRationalHeterogeneousPhysicalUniformEscapeRate
   apply (div_le_div_iff₀ denominator (by norm_num : (0 : ℝ) < 2)).mpr
-  nlinarith [mul_nonneg W_nonnegative real_dimension.le]
+  linarith [mul_nonneg W_nonnegative real_dimension.le]
 
 theorem
     dSVDensityRationalHeterogeneousPhysicalStageDiagonalSuccess_ge_uniform
@@ -18959,7 +19042,7 @@ theorem
         d W = 1 / (2 * (W + 1) * (d : ℝ)) := rfl
     _ ≤ 1 / (2 * (width (schedule k) + 1) * (d : ℝ)) := by
       apply (div_le_div_iff₀ wide_positive stage_positive).mpr
-      nlinarith [mul_nonneg real_dimension.le
+      linarith [mul_nonneg real_dimension.le
         (sub_nonneg.mpr width_bound)]
     _ ≤ dSVDensityRationalPhysicalDiagonalBornSuccess
         grid dimension (width (schedule k)) ξ :=
@@ -19030,7 +19113,7 @@ theorem
     induction k with
     | zero =>
         intro _
-        simp [dSVHeterogeneousRealPrefix]
+        simp only [dSVHeterogeneousRealPrefix, range_zero, prod_empty, pow_zero, Std.le_refl]
     | succ k induction =>
         intro within
         have active : k < L := by omega
@@ -19138,7 +19221,9 @@ omit [DecidableEq α] in
 
 theorem fairPartitionWeight_sum :
     (∑ _s : Finset α, fairPartitionWeight α) = 1 := by
-  simp [fairPartitionWeight, Fintype.card_finset]
+  simp only [fairPartitionWeight, sum_const, card_univ, Fintype.card_finset, nsmul_eq_mul,
+    Nat.cast_pow, Nat.cast_ofNat, ne_eq, pow_eq_zero_iff', OfNat.ofNat_ne_zero, false_and,
+    not_false_eq_true, mul_inv_cancel₀]
 
 omit [DecidableEq α] in
 
@@ -19154,7 +19239,7 @@ omit [DecidableEq α] in
 
 @[simp] theorem reversePartitionWeight_empty :
     reversePartitionWeight (α := α) ∅ = 0 := by
-  simp [reversePartitionWeight]
+  simp only [reversePartitionWeight, card_empty, CharP.cast_eq_zero, mul_zero, zero_div]
 
 omit [DecidableEq α] in
 
@@ -19166,7 +19251,8 @@ theorem reversePartitionWeight_pos_iff
     apply Finset.card_pos.mp
     by_contra hcard
     have hzero : s.card = 0 := Nat.eq_zero_of_not_pos hcard
-    simp [reversePartitionWeight, hzero] at hs
+    simp only [reversePartitionWeight, hzero, CharP.cast_eq_zero, mul_zero, zero_div,
+      lt_self_iff_false] at hs
   · intro hs
     unfold reversePartitionWeight
     have hcard : 0 < s.card := Finset.card_pos.mpr hs
@@ -19234,7 +19320,7 @@ theorem rightSpectralBornWeight_sum
         (positiveMatrixSpectralAtom G hG i)) =
       bornTracePairing ρ.matrix F
         (∑ i : dB, positiveMatrixSpectralAtom G hG i) := by
-          simp [map_sum]
+          simp only [map_sum]
     _ = bornTracePairing ρ.matrix F (1 : Matrix dB dB ℂ) := by
       rw [positiveMatrixSpectralAtom_sum]
 
@@ -19320,7 +19406,7 @@ theorem rightSpectralBornWeight_negEntropy
     ← Finset.sum_neg_distrib]
   apply Finset.sum_congr rfl
   intro i _
-  simp [Real.negMulLog]
+  simp only [Real.negMulLog, neg_mul, mul_neg]
 
 theorem bornTracePairing_le_one_one
     {dA dB : Type*}
@@ -19339,7 +19425,7 @@ theorem bornTracePairing_le_one_one
       bornTracePairing ρ.matrix
         (1 : Matrix dA dA ℂ) (1 : Matrix dB dB ℂ) -
       bornTracePairing ρ.matrix F (1 : Matrix dB dB ℂ) := by
-    simp
+    simp only [map_sub, LinearMap.sub_apply]
   rw [hdiff, bornTracePairing_one_one] at hpositive
   linarith
 
@@ -19395,8 +19481,8 @@ theorem matrixLogEntropy_born_lower_bound_right
       apply Finset.sum_eq_zero
       intro i _
       rcases mul_eq_zero.mp (hterm i) with hw | he
-      · simp [hw]
-      · simp [he]
+      · simp only [hw, zero_mul]
+      · simp only [he, Real.negMulLog_zero, mul_zero]
     calc
       -bornTracePairing ρ.matrix F
           (cfc (fun z : ℝ => z * Real.log z) G) =
@@ -19407,7 +19493,7 @@ theorem matrixLogEntropy_born_lower_bound_right
       _ = 0 := hentropy
       _ ≤ Real.negMulLog (bornTracePairing ρ.matrix F G) := by
         rw [hp]
-        simp
+        simp only [Real.negMulLog_zero, Std.le_refl]
   · have hp_pos : 0 < bornTracePairing ρ.matrix F G :=
       lt_of_le_of_ne hp_nonneg (Ne.symm hp)
     have hW_pos : 0 <
@@ -19437,7 +19523,7 @@ theorem matrixLogEntropy_born_lower_bound_right
           Real.log (1 / bornTracePairing ρ.matrix F G) := hscalar
       _ = Real.negMulLog (bornTracePairing ρ.matrix F G) := by
         rw [one_div, Real.log_inv]
-        simp [Real.negMulLog]
+        simp only [mul_neg, Real.negMulLog, neg_mul]
 
 section HistoryNormalization
 
@@ -19461,7 +19547,7 @@ def fullSubsetHistoryFieldEquiv
     apply FullSubsetHistory.ext <;> rfl
   right_inv t := by
     rcases t with ⟨q, x, y⟩
-    simp
+    simp only [Prod.mk.eta]
 
 theorem fullHistoryWeight_sum
     (G : Game X Y A B) {n : ℕ}
@@ -19488,7 +19574,7 @@ theorem fullHistoryWeight_sum
         intro i _
         rw [Fintype.sum_prod_type]
         exact G.weight_normalized
-      _ = 1 := by simp
+      _ = 1 := by simp only [prod_const_one]
   have hL :
       (∑ x : Lsub → X,
         ∏ i : Lsub, G.marginalX (x i)) = 1 := by
@@ -19498,7 +19584,7 @@ theorem fullHistoryWeight_sum
         ∏ _i : Lsub, ∑ z : X, G.marginalX z := by
           exact (Fintype.prod_sum
             (fun _i : Lsub => fun z : X => G.marginalX z)).symm
-      _ = 1 := by simp [G.marginalX_normalized]
+      _ = 1 := by simp only [G.marginalX_normalized, prod_const_one]
   have hR :
       (∑ y : Rsub → Y,
         ∏ i : Rsub, G.marginalY (y i)) = 1 := by
@@ -19508,7 +19594,7 @@ theorem fullHistoryWeight_sum
         ∏ _i : Rsub, ∑ z : Y, G.marginalY z := by
           exact (Fintype.prod_sum
             (fun _i : Rsub => fun z : Y => G.marginalY z)).symm
-      _ = 1 := by simp [G.marginalY_normalized]
+      _ = 1 := by simp only [G.marginalY_normalized, prod_const_one]
   let f : (Dsub → X × Y) × (Lsub → X) × (Rsub → Y) → ℝ :=
     fun t =>
       (∏ i : Dsub, G.questionWeight (t.1 i).1 (t.1 i).2) *
@@ -19579,7 +19665,8 @@ theorem fullHistoryAnswerCount_eq
       (Fintype.card A : ℝ) ^ D.card *
         (Fintype.card B : ℝ) ^ D.card := by
   classical
-  simp [fullHistoryAnswerCount]
+  simp only [fullHistoryAnswerCount, Fintype.card_pi, univ_eq_attach, prod_const, card_attach,
+    Nat.cast_pow]
 
 abbrev FullHistoryEntropyAtom
     (X Y A B : Type*)
@@ -19640,7 +19727,7 @@ theorem bornTracePairing_contractions_le_one
   have hdiff : bornTracePairing ρ.matrix (1 - F) G =
       bornTracePairing ρ.matrix (1 : Matrix dA dA ℂ) G -
         bornTracePairing ρ.matrix F G := by
-    simp
+    simp only [map_sub, LinearMap.sub_apply]
   rw [hdiff] at hpositive
   have hone := bornTracePairing_one_le_one ρ G hGcomplement
   linarith
@@ -19672,7 +19759,7 @@ theorem fullHistoryAtomCountingWeight_sum_le
       ∑ α : {i : Fin n // i ∈ D} → A,
       ∑ β : {i : Fin n // i ∈ D} → B,
         fullHistoryWeight G h * fullHistoryWinIndicator G h α β := by
-        simp [fullHistoryAtomCountingWeight, Fintype.sum_prod_type]
+        simp only [fullHistoryAtomCountingWeight, Fintype.sum_prod_type]
     _ ≤ ∑ h : FullSubsetHistory X Y n D L,
         ∑ _α : {i : Fin n // i ∈ D} → A,
         ∑ _β : {i : Fin n // i ∈ D} → B,
@@ -19689,8 +19776,8 @@ theorem fullHistoryAtomCountingWeight_sum_le
     _ = fullHistoryAnswerCount (A := A) (B := B) D *
         (∑ h : FullSubsetHistory X Y n D L,
           fullHistoryWeight G h) := by
-      simp [fullHistoryAnswerCount, Finset.mul_sum,
-        mul_assoc]
+      simp only [sum_const, card_univ, Fintype.card_pi, univ_eq_attach, prod_const, card_attach,
+        nsmul_eq_mul, Nat.cast_pow, fullHistoryAnswerCount, mul_sum, mul_assoc]
     _ = fullHistoryAnswerCount (A := A) (B := B) D := by
       rw [fullHistoryWeight_sum G D L]
       ring
@@ -19707,8 +19794,7 @@ theorem fullHistoryAtomBornMass_sum
       (strategyEventLaw (G.repeat n) S).eventMass
         (FiniteEventLaw.winEvent (repeatedCoordinateWin G n) D) := by
   classical
-  simpa [fullHistoryAtomCountingWeight, fullHistoryAtomBornMass,
-    Fintype.sum_prod_type] using
+  simpa only [fullHistoryAtomCountingWeight, fullHistoryAtomBornMass, Fintype.sum_prod_type] using
     fullSubsetHistory_mass_eq_postselection G n S D L hL
 
 theorem fullHistoryAtomEntropy_le
@@ -19799,7 +19885,7 @@ theorem fullHistoryAliceEntropyPotential_lower_bound
       (fullHistoryBobFilter G n S D L h β)
       (fullHistoryBobFilter_posSemidef G n S D L h β)
       (fullHistoryBobFilter_complement_posSemidef G n S D L h β)
-    nlinarith [mul_le_mul_of_nonneg_left hlocal hw]
+    linarith [mul_le_mul_of_nonneg_left hlocal hw]
   have hscalar := fullHistoryAtomEntropy_le G n S D L hL hp
   linarith
 
@@ -19853,7 +19939,8 @@ def fullCoordinateOldHistory
       (Finset.mem_sdiff.mp j.property).1).2
   have hjL : (j : Fin n) ∉ L :=
     (Finset.mem_sdiff.mp j.property).2
-  simp [fullHistoryRemaining, hjD, hjL, hj]
+  simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hjD, not_false_eq_true, and_self,
+    mem_insert, hj, hjL, or_self]
 
 def fullCoordinateBaseOfNewHistory
     {X Y : Type*} [Fintype X] [Fintype Y]
@@ -19887,7 +19974,8 @@ def fullCoordinateOldHistoryEquiv
   toFun h :=
     (fullCoordinateBaseOfOldHistory D L i h,
       h.bobRemaining
-        ⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩)
+        ⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD, not_false_eq_true,
+                 and_self, hiL]⟩)
   invFun t := fullCoordinateOldHistory D L i t.1 t.2
   left_inv h := by
     apply FullSubsetHistory.ext
@@ -19897,10 +19985,10 @@ def fullCoordinateOldHistoryEquiv
     · funext j
       by_cases hj : (j : Fin n) = i
       · subst i
-        simp [fullCoordinateOldHistory,
-          fullCoordinateBaseOfOldHistory]
-      · simp [fullCoordinateOldHistory,
-          fullCoordinateBaseOfOldHistory, hj]
+        simp only [fullCoordinateOldHistory, fullCoordinateBaseOfOldHistory, SetLike.coe_eq_coe,
+          Subtype.coe_eta, dite_eq_ite, ↓reduceIte]
+      · simp only [fullCoordinateOldHistory, fullCoordinateBaseOfOldHistory, Subtype.coe_eta,
+          dite_eq_ite, hj, ↓reduceIte]
   right_inv t := by
     rcases t with ⟨h, y⟩
     apply Prod.ext
@@ -19914,10 +20002,10 @@ def fullCoordinateOldHistoryEquiv
           have hnot : (j : Fin n) ∉ insert i L :=
             (Finset.mem_sdiff.mp j.property).2
           apply hnot
-          simp [he]
-        simp [fullCoordinateBaseOfOldHistory,
-          fullCoordinateOldHistory, hj]
-    · simp [fullCoordinateOldHistory]
+          simp only [he, mem_insert, true_or]
+        simp only [fullCoordinateBaseOfOldHistory, fullCoordinateOldHistory, Subtype.coe_eta,
+          dite_eq_ite, hj, ↓reduceIte]
+    · simp only [fullCoordinateOldHistory, ↓reduceDIte]
 
 def fullCoordinateNewHistoryEquiv
     {X Y : Type*} [Fintype X] [Fintype Y]
@@ -19940,10 +20028,10 @@ def fullCoordinateNewHistoryEquiv
               {j : Fin n // j ∈ insert i L}) :=
           Subtype.ext hj
         subst j
-        simp [fullCoordinateNewHistory,
-          fullCoordinateBaseOfNewHistory]
-      · simp [fullCoordinateNewHistory,
-          fullCoordinateBaseOfNewHistory, hj]
+        simp only [fullCoordinateNewHistory, fullCoordinateBaseOfNewHistory, Subtype.coe_eta,
+          dite_eq_ite, ↓reduceIte]
+      · simp only [fullCoordinateNewHistory, fullCoordinateBaseOfNewHistory, Subtype.coe_eta,
+          dite_eq_ite, hj, ↓reduceIte]
     · rfl
   right_inv t := by
     rcases t with ⟨h, x⟩
@@ -19955,10 +20043,10 @@ def fullCoordinateNewHistoryEquiv
         have hj : (j : Fin n) ≠ i := by
           intro he
           exact hiL (he ▸ j.property)
-        simp [fullCoordinateBaseOfNewHistory,
-          fullCoordinateNewHistory, hj]
+        simp only [fullCoordinateBaseOfNewHistory, fullCoordinateNewHistory, Subtype.coe_eta,
+          dite_eq_ite, hj, ↓reduceIte]
       · rfl
-    · simp [fullCoordinateNewHistory]
+    · simp only [fullCoordinateNewHistory, ↓reduceDIte]
 
 end
 
@@ -19988,8 +20076,8 @@ theorem finsetSubtype_prod_insert
     rcases j with ⟨j, hj⟩
     by_cases hji : j = i
     · subst j
-      simp [e, g, Finset.subtypeInsertEquivOption]
-    · simp [e, g, Finset.subtypeInsertEquivOption, hji]
+      simp only [subtypeInsertEquivOption, Equiv.coe_fn_mk, ↓reduceDIte, g, e]
+    · simp only [subtypeInsertEquivOption, Equiv.coe_fn_mk, hji, ↓reduceDIte, g, e]
   calc
     (∏ j : {j : ι // j ∈ insert i s}, f j) =
       ∏ j : {j : ι // j ∈ insert i s}, g (e j) := by
@@ -20015,16 +20103,18 @@ def fullHistoryRemainingCoordinateEquiv
           (Finset.mem_sdiff.mp j.property).1).2
       have hjL : (j : Fin n) ∉ L :=
         (Finset.mem_sdiff.mp j.property).2
-      simp [fullHistoryRemaining, hjD, hjL, hj]⟩
+      simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hjD, not_false_eq_true, and_self,
+        mem_insert, hj, hjL, or_self]⟩
   invFun
-    | none => ⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩
+    | none => ⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD, not_false_eq_true,
+                       and_self, hiL]⟩
     | some j =>
       ⟨j, fullHistoryRemaining_insert_subset D L i j.property⟩
   left_inv j := by
     apply Subtype.ext
     by_cases hj : (j : Fin n) = i
-    · simp [hj]
-    · simp [hj]
+    · simp only [hj, ↓reduceDIte]
+    · simp only [hj, ↓reduceDIte, Subtype.coe_eta]
   right_inv j := by
     cases j with
     | none => simp
@@ -20034,8 +20124,8 @@ def fullHistoryRemainingCoordinateEquiv
         have hnot : (j : Fin n) ∉ insert i L :=
           (Finset.mem_sdiff.mp j.property).2
         apply hnot
-        simp [he]
-      simp [hj]
+        simp only [he, mem_insert, true_or]
+      simp only [hj, ↓reduceDIte, Subtype.coe_eta]
 
 theorem fullHistoryRemaining_prod_split
     {n : ℕ} {T : Type*} [CommMonoid T]
@@ -20043,7 +20133,8 @@ theorem fullHistoryRemaining_prod_split
     (hiD : i ∉ D) (hiL : i ∉ L)
     (f : {j : Fin n // j ∈ fullHistoryRemaining n D L} → T) :
     (∏ j : {j : Fin n // j ∈ fullHistoryRemaining n D L}, f j) =
-      f ⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩ *
+      f ⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD, not_false_eq_true,
+                 and_self, hiL]⟩ *
         ∏ j : {j : Fin n //
           j ∈ fullHistoryRemaining n D (insert i L)},
           f ⟨j, fullHistoryRemaining_insert_subset D L i j.property⟩ := by
@@ -20051,7 +20142,8 @@ theorem fullHistoryRemaining_prod_split
   let e := fullHistoryRemainingCoordinateEquiv D L i hiD hiL
   let g : Option {j : Fin n //
       j ∈ fullHistoryRemaining n D (insert i L)} → T
-    | none => f ⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩
+    | none => f ⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD,
+                         not_false_eq_true, and_self, hiL]⟩
     | some j =>
       f ⟨j, fullHistoryRemaining_insert_subset D L i j.property⟩
   have hcomp (j : {j : Fin n //
@@ -20059,12 +20151,14 @@ theorem fullHistoryRemaining_prod_split
       g (e j) = f j := by
     by_cases hj : (j : Fin n) = i
     · have hjsub :
-          j = (⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩ :
+          j = (⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD,
+                        not_false_eq_true, and_self, hiL]⟩ :
             {j : Fin n // j ∈ fullHistoryRemaining n D L}) :=
         Subtype.ext hj
       subst j
-      simp [e, g, fullHistoryRemainingCoordinateEquiv]
-    · simp [e, g, fullHistoryRemainingCoordinateEquiv, hj]
+      simp only [fullHistoryRemainingCoordinateEquiv, Equiv.coe_fn_mk, ↓reduceDIte, g, e]
+    · simp only [fullHistoryRemainingCoordinateEquiv, Equiv.coe_fn_mk, hj, ↓reduceDIte,
+        Subtype.coe_eta, g, e]
   calc
     (∏ j : {j : Fin n // j ∈ fullHistoryRemaining n D L}, f j) =
       ∏ j : {j : Fin n // j ∈ fullHistoryRemaining n D L},
@@ -20129,8 +20223,8 @@ theorem fullCoordinateOldHistory_weight
       have hnot : (j : Fin n) ∉ insert i L :=
         (Finset.mem_sdiff.mp j.property).2
       apply hnot
-      simp [he]
-    simp [fullCoordinateOldHistory, hj]
+      simp only [he, mem_insert, true_or]
+    simp only [fullCoordinateOldHistory, hj, ↓reduceDIte, Subtype.coe_eta]
   unfold fullHistoryWeight fullCoordinateBaseWeight
   change
     (∏ j : {j : Fin n // j ∈ D},
@@ -20142,7 +20236,7 @@ theorem fullCoordinateOldHistory_weight
         ((fullCoordinateOldHistory D L i h y).bobRemaining j)) = _
   rw [fullHistoryRemaining_prod_split D L i hiD hiL]
   simp_rw [hold]
-  simp [fullCoordinateOldHistory]
+  simp only [univ_eq_attach, fullCoordinateOldHistory, ↓reduceDIte]
   ring
 
 theorem fullCoordinateNewHistory_weight
@@ -20160,7 +20254,7 @@ theorem fullCoordinateNewHistory_weight
     have hj : (j : Fin n) ≠ i := by
       intro he
       exact hiL (he ▸ j.property)
-    simp [fullCoordinateNewHistory, hj]
+    simp only [fullCoordinateNewHistory, hj, ↓reduceDIte, Subtype.coe_eta]
   unfold fullHistoryWeight fullCoordinateBaseWeight
   change
     (∏ j : {j : Fin n // j ∈ D},
@@ -20173,7 +20267,7 @@ theorem fullCoordinateNewHistory_weight
       G.marginalY (h.bobRemaining j)) = _
   rw [finsetSubtype_prod_insert L i hiL]
   simp_rw [hnew]
-  simp [fullCoordinateNewHistory]
+  simp only [univ_eq_attach, fullCoordinateNewHistory, ↓reduceDIte]
   ring
 
 end CoordinateWeights
@@ -20221,7 +20315,8 @@ theorem finitePurificationMatrix_pair_difference_gram_apply
       (basis.repr v k - basis.repr v₀ k)) =
       inner ℂ (u - u₀) (v - v₀)
   rw [← hisometry, EuclideanSpace.inner_eq_star_dotProduct]
-  simp [dotProduct, map_sub, mul_comm]
+  simp only [star_sub, RCLike.star_def, mul_comm, dotProduct, map_sub, PiLp.sub_apply,
+    WithLp.ofLp_sub, Pi.star_apply, Pi.sub_apply]
 
 theorem ensemblePurificationSubspaceEntry_pair_difference_inner_eq_integral
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -20274,7 +20369,7 @@ theorem ensemblePurificationSubspaceEntry_pair_difference_inner_eq_integral
         (spectralPurificationFilterEntryLp
           (F b) (positive b) r j : ℝ → ℂ) s) = _
   rw [hfi', hgi', hfj', hgj']
-  simp [RCLike.inner_apply, mul_comm]
+  simp only [RCLike.inner_apply, map_sub, star_sub, RCLike.star_def, mul_comm]
 
 theorem finitePurificationMatrix_pair_difference_gram_eq_integral
     {ι d : Type*} [Fintype ι] [Fintype d] [DecidableEq d]
@@ -20328,7 +20423,7 @@ theorem finitePurificationMatrix_pair_difference_gram_eq_integral
   rw [← integral_finsetSum Finset.univ (fun r _ => hproduct r)]
   apply integral_congr_ae
   filter_upwards with s
-  simp [Matrix.mul_apply, Matrix.star_apply]
+  simp only [star_sub, RCLike.star_def, Matrix.mul_apply, Matrix.sub_apply, star_apply]
 
 end
 
@@ -20353,8 +20448,7 @@ theorem finiteLocalPurificationVector_sub_left
         finiteLocalPurificationJointMatrix S KA' KB =
       finiteLocalPurificationJointMatrix S (KA - KA') KB := by
     ext ⟨⟨a, k⟩, b⟩ ⟨⟨a', k'⟩, b'⟩
-    simp [finiteLocalPurificationJointMatrix,
-      Matrix.kroneckerMap_apply, sub_mul]
+    simp only [finiteLocalPurificationJointMatrix, Matrix.sub_apply, kroneckerMap_apply, sub_mul]
   unfold finiteLocalPurificationVector
   rw [← WithLp.toLp_sub, ← Matrix.sub_mulVec, hmatrix]
 
@@ -20373,8 +20467,7 @@ theorem finiteLocalPurificationVector_sub_right
         finiteLocalPurificationJointMatrix S KA KB' =
       finiteLocalPurificationJointMatrix S KA (KB - KB') := by
     ext ⟨⟨a, k⟩, b⟩ ⟨⟨a', k'⟩, b'⟩
-    simp [finiteLocalPurificationJointMatrix,
-      Matrix.kroneckerMap_apply, mul_sub]
+    simp only [finiteLocalPurificationJointMatrix, Matrix.sub_apply, kroneckerMap_apply, mul_sub]
   unfold finiteLocalPurificationVector
   rw [← WithLp.toLp_sub, ← Matrix.sub_mulVec, hmatrix]
 
@@ -20484,7 +20577,8 @@ def fullCoordinateAssembleHiddenAlice
           (Finset.mem_sdiff.mp j.property).1).2
       have hjL : (j : Fin n) ∉ L :=
         (Finset.mem_sdiff.mp j.property).2
-      simp [fullHistoryRemaining, hjD, hjL, hj]⟩
+      simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hjD, not_false_eq_true, and_self,
+        mem_insert, hj, hjL, or_self]⟩
 
 def fullCoordinateHiddenAliceEquiv
     {X : Type*} [Fintype X] {n : ℕ}
@@ -20494,7 +20588,8 @@ def fullCoordinateHiddenAliceEquiv
       X × ({j : Fin n //
         j ∈ fullHistoryRemaining n D (insert i L)} → X) where
   toFun hidden :=
-    (hidden ⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩,
+    (hidden ⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD, not_false_eq_true,
+                     and_self, hiL]⟩,
       fun j => hidden
         ⟨j, fullHistoryRemaining_insert_subset D L i j.property⟩)
   invFun t := fullCoordinateAssembleHiddenAlice D L i t.1 t.2
@@ -20502,24 +20597,25 @@ def fullCoordinateHiddenAliceEquiv
     funext j
     by_cases hj : (j : Fin n) = i
     · have hjsub :
-          j = (⟨i, by simp [fullHistoryRemaining, hiD, hiL]⟩ :
+          j = (⟨i, by simp only [fullHistoryRemaining, mem_sdiff, mem_univ, hiD,
+                        not_false_eq_true, and_self, hiL]⟩ :
             {j : Fin n // j ∈ fullHistoryRemaining n D L}) :=
         Subtype.ext hj
       subst j
-      simp [fullCoordinateAssembleHiddenAlice]
-    · simp [fullCoordinateAssembleHiddenAlice, hj]
+      simp only [fullCoordinateAssembleHiddenAlice, ↓reduceDIte]
+    · simp only [fullCoordinateAssembleHiddenAlice, hj, ↓reduceDIte, Subtype.coe_eta]
   right_inv t := by
     rcases t with ⟨x, hidden⟩
     apply Prod.ext
-    · simp [fullCoordinateAssembleHiddenAlice]
+    · simp only [fullCoordinateAssembleHiddenAlice, ↓reduceDIte]
     · funext j
       have hj : (j : Fin n) ≠ i := by
         intro he
         have hnot : (j : Fin n) ∉ insert i L :=
           (Finset.mem_sdiff.mp j.property).2
         apply hnot
-        simp [he]
-      simp [fullCoordinateAssembleHiddenAlice, hj]
+        simp only [he, mem_insert, true_or]
+      simp only [fullCoordinateAssembleHiddenAlice, hj, ↓reduceDIte, Subtype.coe_eta]
 
 def fullCoordinateAssembleHiddenBob
     {Y : Type*} {n : ℕ}
@@ -20550,17 +20646,17 @@ def fullCoordinateHiddenBobEquiv
             {j : Fin n // j ∈ insert i L}) :=
         Subtype.ext hj
       subst j
-      simp [fullCoordinateAssembleHiddenBob]
-    · simp [fullCoordinateAssembleHiddenBob, hj]
+      simp only [fullCoordinateAssembleHiddenBob, ↓reduceDIte]
+    · simp only [fullCoordinateAssembleHiddenBob, hj, ↓reduceDIte, Subtype.coe_eta]
   right_inv t := by
     rcases t with ⟨y, hidden⟩
     apply Prod.ext
-    · simp [fullCoordinateAssembleHiddenBob]
+    · simp only [fullCoordinateAssembleHiddenBob, ↓reduceDIte]
     · funext j
       have hj : (j : Fin n) ≠ i := by
         intro he
         exact hiL (he ▸ j.property)
-      simp [fullCoordinateAssembleHiddenBob, hj]
+      simp only [fullCoordinateAssembleHiddenBob, hj, ↓reduceDIte, Subtype.coe_eta]
 
 section CoordinateFilters
 
@@ -20582,23 +20678,20 @@ theorem fullCoordinateAliceQuestion_eq
   classical
   funext j
   by_cases hjD : j ∈ D
-  · simp [fullHistoryAliceQuestion, fullCoordinateOldHistory,
-      fullCoordinateNewHistory, hjD]
+  · simp only [fullHistoryAliceQuestion, hjD, ↓reduceDIte, fullCoordinateOldHistory,
+      fullCoordinateNewHistory]
   · by_cases hjL : j ∈ L
     · have hji : j ≠ i := by
         intro he
         exact hiL (he ▸ hjL)
-      simp [fullHistoryAliceQuestion, fullCoordinateOldHistory,
-        fullCoordinateNewHistory, hjD, hjL, hji]
+      simp only [fullHistoryAliceQuestion, hjD, ↓reduceDIte, hjL, fullCoordinateOldHistory,
+        mem_insert, hji, or_true, fullCoordinateNewHistory]
     · by_cases hji : j = i
       · subst j
-        simp [fullHistoryAliceQuestion,
-          fullCoordinateAssembleHiddenAlice,
-          fullCoordinateNewHistory,
-          hiD, hiL]
-      · simp [fullHistoryAliceQuestion,
-          fullCoordinateAssembleHiddenAlice,
-                    hjD, hjL, hji]
+        simp only [fullHistoryAliceQuestion, hiD, ↓reduceDIte, hiL,
+          fullCoordinateAssembleHiddenAlice, mem_insert, or_false, fullCoordinateNewHistory]
+      · simp only [fullHistoryAliceQuestion, hjD, ↓reduceDIte, hjL,
+          fullCoordinateAssembleHiddenAlice, hji, mem_insert, or_self]
 
 theorem fullCoordinateBobQuestion_eq
     {n : ℕ} (D L : Finset (Fin n)) (i : Fin n)
@@ -20614,23 +20707,20 @@ theorem fullCoordinateBobQuestion_eq
   classical
   funext j
   by_cases hjD : j ∈ D
-  · simp [fullHistoryBobQuestion, fullCoordinateOldHistory,
-      fullCoordinateNewHistory, hjD]
+  · simp only [fullHistoryBobQuestion, hjD, ↓reduceDIte, fullCoordinateNewHistory,
+      fullCoordinateOldHistory]
   · by_cases hjL : j ∈ L
     · have hji : j ≠ i := by
         intro he
         exact hiL (he ▸ hjL)
-      simp [fullHistoryBobQuestion,
-        fullCoordinateAssembleHiddenBob,
-                hjD, hjL, hji]
+      simp only [fullHistoryBobQuestion, hjD, ↓reduceDIte, mem_insert, hji, hjL, or_true,
+        fullCoordinateAssembleHiddenBob]
     · by_cases hji : j = i
       · subst j
-        simp [fullHistoryBobQuestion,
-          fullCoordinateAssembleHiddenBob,
-          fullCoordinateOldHistory,           hiD, hiL]
-      · simp [fullHistoryBobQuestion,
-                    fullCoordinateOldHistory, fullCoordinateNewHistory,
-          hjD, hjL, hji]
+        simp only [fullHistoryBobQuestion, hiD, ↓reduceDIte, mem_insert, hiL, or_false,
+          fullCoordinateAssembleHiddenBob, fullCoordinateOldHistory]
+      · simp only [fullHistoryBobQuestion, hjD, ↓reduceDIte, mem_insert, hji, hjL, or_self,
+          fullCoordinateNewHistory, fullCoordinateOldHistory]
 
 theorem fullCoordinateHiddenAliceWeight_split
     (G : Game X Y A B) {n : ℕ}
@@ -20659,9 +20749,8 @@ theorem fullCoordinateHiddenAliceWeight_split
     have hnot : (j : Fin n) ∉ insert i L :=
       (Finset.mem_sdiff.mp j.property).2
     apply hnot
-    simp [he]
-  simp [fullCoordinateNewHistory,
-    hj]
+    simp only [he, mem_insert, true_or]
+  simp only [hj, ↓reduceDIte, Subtype.coe_eta, fullCoordinateNewHistory]
 
 theorem fullCoordinateHiddenBobWeight_split
     (G : Game X Y A B) {n : ℕ}
@@ -20687,7 +20776,7 @@ theorem fullCoordinateHiddenBobWeight_split
   have hj : (j : Fin n) ≠ i := by
     intro he
     exact hiL (he ▸ j.property)
-  simp [fullCoordinateOldHistory,     hj]
+  simp only [hj, ↓reduceDIte, Subtype.coe_eta, fullCoordinateOldHistory]
 
 theorem fullCoordinateAliceFilter_conditional_mean
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -20735,8 +20824,8 @@ theorem fullCoordinateAliceFilter_conditional_mean
     _ = conditionalAliceAverage G
         (fun x => fullHistoryAliceFilter G n S D (insert i L)
           (fullCoordinateNewHistory D L i r x) α) y := by
-      simp [f, conditionalAliceAverage, fullHistoryAliceFilter,
-        Fintype.sum_prod_type, Finset.smul_sum, smul_smul]
+      simp only [Fintype.sum_prod_type, conditionalAliceAverage, fullHistoryAliceFilter, smul_sum,
+        smul_smul, f]
 
 theorem fullCoordinateBobFilter_conditional_mean
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -20782,8 +20871,8 @@ theorem fullCoordinateBobFilter_conditional_mean
     _ = conditionalBobAverage G
         (fun y => fullHistoryBobFilter G n S D L
           (fullCoordinateOldHistory D L i r y) β) x := by
-      simp [f, conditionalBobAverage, fullHistoryBobFilter,
-        Fintype.sum_prod_type, Finset.smul_sum, smul_smul]
+      simp only [Fintype.sum_prod_type, conditionalBobAverage, fullHistoryBobFilter, smul_sum,
+        smul_smul, f]
 
 end CoordinateFilters
 
@@ -20905,7 +20994,7 @@ theorem fullCoordinateAliceEntropyIncrement_nonneg
   apply Finset.sum_nonneg
   intro y _
   by_cases hy : G.marginalY y = 0
-  · simp [hy]
+  · simp only [hy, map_sub, LinearMap.sub_apply, zero_mul, Std.le_refl]
   · have hypos : 0 < G.marginalY y :=
       lt_of_le_of_ne (G.marginalY_nonneg y) (Ne.symm hy)
     have hmean := fullCoordinateAliceFilter_conditional_mean
@@ -20976,8 +21065,8 @@ theorem fullCoordinateOldHistory_winIndicator_eq
       (fullCoordinateOldHistory D L i r y) α β =
       fullCoordinateBaseWinIndicator G D L i r α β := by
   classical
-  simp [fullHistoryWinIndicator, fullCoordinateBaseWinIndicator,
-    fullCoordinateOldHistory]
+  simp only [fullHistoryWinIndicator, fullCoordinateOldHistory, Subtype.forall,
+    fullCoordinateBaseWinIndicator]
 
 theorem fullCoordinateNewHistory_winIndicator_eq
     (G : Game X Y A B) {n : ℕ}
@@ -20990,8 +21079,8 @@ theorem fullCoordinateNewHistory_winIndicator_eq
       (fullCoordinateNewHistory D L i r x) α β =
       fullCoordinateBaseWinIndicator G D L i r α β := by
   classical
-  simp [fullHistoryWinIndicator, fullCoordinateBaseWinIndicator,
-    fullCoordinateNewHistory]
+  simp only [fullHistoryWinIndicator, fullCoordinateNewHistory, Subtype.forall,
+    fullCoordinateBaseWinIndicator]
 
 theorem fullCoordinate_three_sum_rotate
     {I J K T : Type*}
@@ -21017,7 +21106,8 @@ theorem fullCoordinateOldHistory_sum
       ∑ r : FullCoordinateRevealHistory X Y n D L i,
       ∑ y : Y, f (fullCoordinateOldHistory D L i r y) := by
   classical
-  simpa [fullCoordinateOldHistoryEquiv, Fintype.sum_prod_type]
+  simpa only [fullCoordinateOldHistoryEquiv, Equiv.symm_mk, Equiv.coe_fn_mk,
+    Fintype.sum_prod_type]
     using ((fullCoordinateOldHistoryEquiv
       (X := X) (Y := Y) D L i hiD hiL).symm.sum_comp f).symm
 
@@ -21030,7 +21120,8 @@ theorem fullCoordinateNewHistory_sum
       ∑ r : FullCoordinateRevealHistory X Y n D L i,
       ∑ x : X, f (fullCoordinateNewHistory D L i r x) := by
   classical
-  simpa [fullCoordinateNewHistoryEquiv, Fintype.sum_prod_type]
+  simpa only [fullCoordinateNewHistoryEquiv, Equiv.symm_mk, Equiv.coe_fn_mk,
+    Fintype.sum_prod_type]
     using ((fullCoordinateNewHistoryEquiv
       (X := X) (Y := Y) D L i hiL).symm.sum_comp f).symm
 
@@ -21238,7 +21329,7 @@ def sourceRemainingPermutationCoordinate
     (k : Fin (Finset.univ \ D).card) :
     sourceRemainingPermutationRank D π
       (sourceRemainingPermutationCoordinateSubtype D π k) = k := by
-  simp [sourceRemainingPermutationCoordinateSubtype]
+  simp only [sourceRemainingPermutationCoordinateSubtype, Equiv.apply_symm_apply]
 
 theorem sourceRemainingPermutationCoordinate_not_mem
     {n : ℕ} (D : Finset (Fin n))
@@ -21273,7 +21364,7 @@ theorem sourceRemainingPermutationPrefix_subset
   classical
   intro i hi
   obtain ⟨j, _, hj⟩ := Finset.mem_image.mp hi
-  simpa [hj] using j.property
+  simpa only [mem_sdiff, mem_univ, true_and, hj] using j.property
 
 theorem sourceRemainingPermutationCoordinate_not_mem_prefix
     {n : ℕ} (D : Finset (Fin n))
@@ -21289,7 +21380,8 @@ theorem sourceRemainingPermutationCoordinate_not_mem_prefix
     exact hval
   subst j
   have hlt := (Finset.mem_filter.mp hj).2
-  simp at hlt
+  simp only [sourceRemainingPermutationRank_coordinate, Fin.val_castSucc,
+    lt_self_iff_false] at hlt
 
 theorem sourceRemainingPermutationPrefixSubtype_succ
     {n : ℕ} (D : Finset (Fin n))
@@ -21316,11 +21408,12 @@ theorem sourceRemainingPermutationPrefixSubtype_succ
           sourceRemainingPermutationRank D π i = k := by
         apply Fin.ext
         omega
-      simpa using heq
+      simpa only [sourceRemainingPermutationRank_coordinate] using heq
   · intro hi
     rcases hi with hi | hi
     · subst i
-      simp
+      simp only [sourceRemainingPermutationRank_coordinate, lt_add_iff_pos_right,
+        Order.lt_one_iff]
     · omega
 
 theorem sourceRemainingPermutationPrefix_succ
@@ -21341,8 +21434,8 @@ theorem sourceRemainingPermutationPrefix_succ
     (π : SourceRemainingPermutation D) :
     sourceRemainingPermutationPrefix D π 0 = ∅ := by
   classical
-  simp [sourceRemainingPermutationPrefix,
-    sourceRemainingPermutationPrefixSubtype]
+  simp only [sourceRemainingPermutationPrefix, sourceRemainingPermutationPrefixSubtype,
+    Fin.coe_ofNat_eq_mod, Nat.zero_mod, not_lt_zero, filter_false, image_empty]
 
 @[simp] theorem sourceRemainingPermutationPrefix_last
     {n : ℕ} (D : Finset (Fin n))
@@ -21448,7 +21541,8 @@ theorem sourcePermutationAliceEntropyIncrement_sum
       fin_sum_successive_sub
         (fun k => fullHistoryAliceEntropyPotential G n S D
           (sourceRemainingPermutationPrefix D π k))
-    _ = _ := by simp
+    _ = _ := by simp only [sourceRemainingPermutationPrefix_last,
+                  sourceRemainingPermutationPrefix_zero]
 
 theorem sourcePermutationAliceEntropyIncrement_sum_le
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -21519,7 +21613,7 @@ theorem sourceUniformPermutationAverage_le
         intro π _
         exact hC π
       _ = (Fintype.card (SourceRemainingPermutation D) : ℝ) * C := by
-        simp
+        simp only [sum_const, card_univ, nsmul_eq_mul]
   unfold sourceUniformPermutationAverage
   calc
     (∑ π : SourceRemainingPermutation D,
@@ -21590,13 +21684,15 @@ theorem exactLeft_coordinate_not_mem
     {M : Type*} [Fintype M] [DecidableEq M]
     (coordinate : M) (partition : M → Bool) :
     coordinate ∉ exactLeft coordinate partition := by
-  simp [exactLeft]
+  simp only [exactLeft, ne_eq, mem_filter, mem_univ, not_true_eq_false, false_and, and_false,
+    not_false_eq_true]
 
 theorem exactRight_coordinate_not_mem
     {M : Type*} [Fintype M] [DecidableEq M]
     (coordinate : M) (partition : M → Bool) :
     coordinate ∉ exactRight coordinate partition := by
-  simp [exactRight]
+  simp only [exactRight, ne_eq, mem_filter, mem_univ, not_true_eq_false, false_and, and_false,
+    not_false_eq_true]
 
 structure ExactForwardSeed
     (M : Type*) [Fintype M] [DecidableEq M] where
@@ -21743,8 +21839,7 @@ theorem exactForwardSeed_sum
           f ((exactSeedEquiv M).symm t) :=
       ((exactSeedEquiv M).symm.sum_comp f).symm
     _ = _ := by
-      simp [Fintype.sum_sigma, Fintype.sum_prod_type,
-        exactSeedEquiv_symm_apply]
+      simp only [exactSeedEquiv_symm_apply, Fintype.sum_sigma, Fintype.sum_prod_type]
 
 theorem exactUniform_sum
     {T : Type*} [Fintype T]
@@ -21769,7 +21864,8 @@ theorem exactPrefixUniform_sum_mul
       value * (1 / ((m : ℝ) + 1))) = value := by
   simpa only [Fintype.card_fin, Nat.cast_add, Nat.cast_one] using
     (exactUniform_sum_mul
-      (T := Fin (m + 1)) (by simp) value)
+      (T := Fin (m + 1)) (by simp only [Fintype.card_fin, lt_add_iff_pos_left,
+                               Order.lt_add_one_iff, zero_le]) value)
 
 theorem exactPermutationUniform_sum_mul
     {T : Type*} [Fintype T] (value : ℝ) :
@@ -22046,7 +22142,7 @@ theorem finiteLocalPurificationJointMatrix_compression
     Matrix.conjTranspose_kronecker,
     ← Matrix.mul_kronecker_mul,
     ← Matrix.mul_kronecker_mul]
-  simp
+  simp only [conjTranspose_one, mul_one]
 
 theorem finiteLocalPurificationVector_quadratic
     {X Y A B eA eB : Type*}
@@ -22162,8 +22258,8 @@ theorem conditionedAliceCoordinateEffect_sum
       else 0 := by
         apply Fintype.sum_eq_single (answers i)
         intro a ha
-        simp [ha.symm]
-    _ = _ := by simp
+        simp only [ha.symm, and_false, ↓reduceIte]
+    _ = _ := by simp only [and_true]
 
 theorem conditionedBobCoordinateEffect_sum
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -22189,8 +22285,8 @@ theorem conditionedBobCoordinateEffect_sum
       else 0 := by
         apply Fintype.sum_eq_single (answers i)
         intro b hb
-        simp [hb.symm]
-    _ = _ := by simp
+        simp only [hb.symm, and_false, ↓reduceIte]
+    _ = _ := by simp only [and_true]
 
 def fullHistoryAliceCoordinateEffect
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -22339,7 +22435,7 @@ theorem exactPriorQuestionWeight_sum
     (G : Game X Y A B) (n : ℕ) :
     (∑ q : ExactFullQuestion X Y n,
       exactPriorQuestionWeight G n q) = 1 := by
-  simpa [exactPriorQuestionWeight,
+  simpa only [exactPriorQuestionWeight, Game.repeat_questionWeight,
     Fintype.sum_prod_type] using (G.repeat n).weight_normalized
 
 def exactRevealMass
@@ -22662,9 +22758,8 @@ theorem exactAliceCoordinateFilter_sum
   intro q _
   by_cases hq : exactRevealCode D seed q = history ∧
       q.1 seed.coordinate.val = x
-  · simp [hq, ← Finset.smul_sum,
-      conditionedAliceCoordinateEffect_sum]
-  · simp [hq]
+  · simp only [hq, and_self, ↓reduceIte, ← smul_sum, conditionedAliceCoordinateEffect_sum]
+  · simp only [hq, ↓reduceIte, sum_const_zero]
 
 theorem exactBobCoordinateFilter_sum
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -22686,9 +22781,8 @@ theorem exactBobCoordinateFilter_sum
   intro q _
   by_cases hq : exactRevealCode D seed q = history ∧
       q.2 seed.coordinate.val = y
-  · simp [hq, ← Finset.smul_sum,
-      conditionedBobCoordinateEffect_sum]
-  · simp [hq]
+  · simp only [hq, and_self, ↓reduceIte, ← smul_sum, conditionedBobCoordinateEffect_sum]
+  · simp only [hq, ↓reduceIte, sum_const_zero]
 
 def exactAlicePurificationFamily
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -22907,8 +23001,8 @@ theorem exactHistoryFlag_sum
       ((exactHistoryFlagEquiv
         (X := X) (Y := Y) (A := A) (B := B) D).symm.sum_comp f).symm
     _ = _ := by
-      simp [Fintype.sum_sigma, Fintype.sum_prod_type,
-        exactHistoryFlagEquiv]
+      simp only [exactHistoryFlagEquiv, Equiv.symm_mk, Equiv.coe_fn_mk, Fintype.sum_sigma,
+        Fintype.sum_prod_type]
 
 abbrev ExactAliceLocalIndex
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -23179,8 +23273,9 @@ theorem exactPaddedVector_norm
   classical
   have hsquare :
       ‖exactPaddedVector G n S D r z‖ ^ 2 = ‖z‖ ^ 2 := by
-    simp [EuclideanSpace.norm_sq_eq, exactPaddedVector,
-      Fintype.sum_prod_type, Fintype.sum_sum_type]
+    simp only [exactPaddedVector, EuclideanSpace.norm_sq_eq, Fintype.sum_prod_type,
+      Fintype.sum_sum_type, univ_unique, PUnit.default_eq_unit, norm_zero, ne_eq,
+      OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, sum_const_zero, zero_add, add_zero]
   nlinarith [norm_nonneg (exactPaddedVector G n S D r z),
     norm_nonneg z]
 
@@ -23217,7 +23312,7 @@ theorem exactPaddedDefault_norm
     (r : ExactHistoryFlag X Y A B D) :
     ‖exactPaddedDefault G n S D r‖ = 1 := by
   classical
-  simp [exactPaddedDefault]
+  simp only [exactPaddedDefault, PiLp.norm_single, norm_one]
 
 def exactPsi
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -23376,7 +23471,7 @@ theorem exactCompatible_coordinate_eq_or
   · left
     exact (ha.1 ⟨j, hj⟩).trans (ha'.1 ⟨j, hj⟩).symm
   · let jr : SourceRemainingCoordinate D :=
-      ⟨j, by simp [hj]⟩
+      ⟨j, by simp only [mem_sdiff, mem_univ, hj, not_false_eq_true, and_self]⟩
     by_cases hcoordinate : jr = seed.coordinate
     · left
       have hval : j = seed.coordinate.val :=
@@ -23389,7 +23484,8 @@ theorem exactCompatible_coordinate_eq_or
           have hleft :
               jr ∈ exactLeft
                 seed.coordinate seed.partition := by
-            simp [exactLeft, hcoordinate, hbit]
+            simp only [exactLeft, ne_eq, univ_eq_attach, mem_filter, mem_attach, hcoordinate,
+              not_false_eq_true, hbit, and_self]
           exact (ha.2.1 ⟨jr, hleft⟩).trans
             (ha'.2.1 ⟨jr, hleft⟩).symm
       | true =>
@@ -23397,7 +23493,8 @@ theorem exactCompatible_coordinate_eq_or
           have hright :
               jr ∈ exactRight
                 seed.coordinate seed.partition := by
-            simp [exactRight, hcoordinate, hbit]
+            simp only [exactRight, ne_eq, univ_eq_attach, mem_filter, mem_attach, hcoordinate,
+              not_false_eq_true, hbit, and_self]
           exact (hb.2.1 ⟨jr, hright⟩).trans
             (hb'.2.1 ⟨jr, hright⟩).symm
 
@@ -23427,8 +23524,8 @@ theorem exactQuestionWeight_rectangle
   rcases exactCompatible_coordinate_eq_or
     D seed history x y xs xs' ys ys'
     ha ha' hb hb' j with hAlice | hBob
-  · simp [hAlice, mul_comm]
-  · simp [hBob]
+  · simp only [hAlice, mul_comm]
+  · simp only [hBob]
 
 def exactFiberQuestionWeight
     (G : Game X Y A B) (n : ℕ)
@@ -23583,12 +23680,12 @@ theorem exactSeedWeight_sum
     Fintype.card_pos_iff.mpr ⟨fun _ => false⟩
   rw [exactForwardSeed_sum]
   conv_rhs => rw [← exactUniform_sum nonempty]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro coordinate _
   conv_rhs =>
     rw [← exactUniform_sum_mul hbits
       (1 / (Fintype.card M : ℝ))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro partition _
   letI : DecidableEq
       {j : M // j ∈ exactLeft coordinate partition} :=
@@ -23601,7 +23698,7 @@ theorem exactSeedWeight_sum
       (T := {j : M // j ∈ exactLeft coordinate partition})
       ((1 / (Fintype.card M : ℝ)) *
         (1 / (Fintype.card (M → Bool) : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro leftOrder _
   conv_rhs =>
     rw [← exactPermutationUniform_sum_mul
@@ -23611,7 +23708,7 @@ theorem exactSeedWeight_sum
         (1 / (Fintype.card
           (Equiv.Perm
             {j : M // j ∈ exactLeft coordinate partition}) : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro rightOrder _
   conv_rhs =>
     rw [← exactPrefixUniform_sum_mul
@@ -23624,7 +23721,7 @@ theorem exactSeedWeight_sum
         (1 / (Fintype.card
           (Equiv.Perm
             {j : M // j ∈ exactRight coordinate partition}) : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro leftCut _
   conv_rhs =>
     rw [← exactPrefixUniform_sum_mul
@@ -23638,7 +23735,7 @@ theorem exactSeedWeight_sum
           (Equiv.Perm
             {j : M // j ∈ exactRight coordinate partition}) : ℝ)) *
         (1 / ((exactLeft coordinate partition).card + 1 : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro rightCut _
   simp only [exactSeedWeight]
   refine congrArg₂ (· * ·) (congrArg₂ (· * ·) (congrArg₂ (· * ·)
@@ -23662,7 +23759,8 @@ def HasSubexponentialWitness (v : ℕ → ℝ) : Prop :=
 
 theorem not_hasExponentialBound_iff (v : ℕ → ℝ) :
     ¬ HasExponentialBound v ↔ HasSubexponentialWitness v := by
-  simp [HasExponentialBound, HasSubexponentialWitness]
+  simp only [HasExponentialBound, neg_mul, not_exists, not_and, not_forall, not_le,
+    HasSubexponentialWitness]
 
 theorem arbitrarily_large_witness_of_not_hasExponentialBound
     {v : ℕ → ℝ}
@@ -23765,7 +23863,7 @@ theorem expectation_le_add_totalVariation
       (p i - q i) * f i ≤ U * max (p i - q i) 0 := by
     by_cases hi : 0 ≤ p i - q i
     · rw [max_eq_left hi]
-      nlinarith [mul_nonneg hi (sub_nonneg.mpr (hfupper i))]
+      linarith [mul_nonneg hi (sub_nonneg.mpr (hfupper i))]
     · have hineg : p i - q i < 0 := lt_of_not_ge hi
       rw [max_eq_right hineg.le]
       simp only [mul_zero]
@@ -23864,8 +23962,8 @@ theorem flaggedQuestionWeight_sum
     (∑ ω : J × (X × Y),
       flaggedQuestionWeight G flagWeight ω) = 1 := by
   classical
-  simp [flaggedQuestionWeight, Fintype.sum_prod_type,
-    ← Finset.mul_sum, G.weight_normalized, normalized]
+  simp only [flaggedQuestionWeight, Fintype.sum_prod_type, ← mul_sum, G.weight_normalized,
+    mul_one, normalized]
 
 end ActualSharedFlag
 
@@ -23900,32 +23998,33 @@ theorem totalSamplingLoss_tendsto_zero
       Tendsto (fun i => (α i) ^ (1 / 12 : ℝ)) l (𝓝 0) :=
     hα.rpow_const_nhds_zero (by norm_num)
   have hηscaled : Tendsto (fun i => 32 * η i) l (𝓝 0) := by
-    simpa using hη.const_mul (32 : ℝ)
+    simpa only [mul_zero] using hη.const_mul (32 : ℝ)
   have hηroot :
       Tendsto (fun i => (32 * η i) ^ (1 / 12 : ℝ)) l (𝓝 0) :=
     hηscaled.rpow_const_nhds_zero (by norm_num)
   have hηeight : Tendsto (fun i => 8 * η i) l (𝓝 0) := by
-    simpa using hη.const_mul (8 : ℝ)
+    simpa only [mul_zero] using hη.const_mul (8 : ℝ)
   have hsqrt : Tendsto (fun i => Real.sqrt (8 * η i)) l (𝓝 0) := by
-    simpa using hηeight.sqrt
+    simpa only [Nat.ofNat_nonneg, Real.sqrt_mul, Real.sqrt_zero] using hηeight.sqrt
   have hquantum :
       Tendsto
         (fun i => K₀ * ((α i) ^ (1 / 12 : ℝ) +
           (32 * η i) ^ (1 / 12 : ℝ))) l (𝓝 0) := by
-    simpa using (hαroot.add hηroot).const_mul K₀
+    simpa only [one_div, add_zero, mul_zero] using (hαroot.add hηroot).const_mul K₀
   have hceiling :
       Tendsto (fun i => universalErrorCeiling K₀ * lam i)
         l (𝓝 0) := by
-    simpa using hlam.const_mul (universalErrorCeiling K₀)
+    simpa only [mul_zero] using hlam.const_mul (universalErrorCeiling K₀)
   have hinner :
       Tendsto
         (fun i => K₀ * ((α i) ^ (1 / 12 : ℝ) +
             (32 * η i) ^ (1 / 12 : ℝ)) +
           Real.sqrt (8 * η i) + universalErrorCeiling K₀ * lam i)
         l (𝓝 0) := by
-    simpa using (hquantum.add hsqrt).add hceiling
+    simpa only [one_div, Nat.ofNat_nonneg, Real.sqrt_mul,
+      add_zero] using (hquantum.add hsqrt).add hceiling
   have hclassical : Tendsto (fun i => 5 * lam i) l (𝓝 0) := by
-    simpa using hlam.const_mul (5 : ℝ)
+    simpa only [mul_zero] using hlam.const_mul (5 : ℝ)
   have hdouble :
       Tendsto
         (fun i => 2 *
@@ -23933,8 +24032,9 @@ theorem totalSamplingLoss_tendsto_zero
               (32 * η i) ^ (1 / 12 : ℝ)) +
             Real.sqrt (8 * η i) + universalErrorCeiling K₀ * lam i))
         l (𝓝 0) := by
-    simpa using hinner.const_mul (2 : ℝ)
-  simpa [totalSamplingLoss] using hclassical.add hdouble
+    simpa only [one_div, Nat.ofNat_nonneg, Real.sqrt_mul, mul_zero] using hinner.const_mul (2 : ℝ)
+  simpa only [totalSamplingLoss, one_div, Nat.ofNat_nonneg, Real.sqrt_mul,
+    add_zero] using hclassical.add hdouble
 
 theorem totalSamplingLoss_eventually_lt
     {ι : Type*} {l : Filter ι}
@@ -23986,11 +24086,12 @@ theorem matched_payoff_discard_le
   apply Finset.sum_le_sum
   intro i _
   by_cases hi : matched i = true
-  · simp [hi]
+  · simp only [hi, ↓reduceIte, mul_zero, sub_zero, Std.le_refl]
   · have hone := payoff_le_one i
     simp only [Bool.not_eq_true] at hi
-    simp [hi]
-    nlinarith [mul_nonneg (nonnegative i)
+    simp only [hi, Bool.false_eq_true, ↓reduceIte, mul_one, mul_zero, tsub_le_iff_right, zero_add,
+      ge_iff_le]
+    linarith [mul_nonneg (nonnegative i)
       (sub_nonneg.mpr hone)]
 
 end
@@ -24060,7 +24161,7 @@ theorem weighted_rpow_mean_le
     (∑ i, weight i * value i ^ r) ≤
       (∑ i, weight i * value i) ^ r := by
   classical
-  simpa [smul_eq_mul] using
+  simpa only [smul_eq_mul] using
     (Real.concaveOn_rpow hrzero hrone).le_map_sum
       (t := Finset.univ)
       (w := weight)
@@ -24122,8 +24223,8 @@ def fullCoordinateAnswerExtensionEquiv
       have hj : (j : Fin n) ≠ i := by
         intro he
         exact hiD (he ▸ j.property)
-      simp [fullCoordinateAnswerExtension, hj]
-    · simp [fullCoordinateAnswerExtension]
+      simp only [fullCoordinateAnswerExtension, hj, ↓reduceDIte, Subtype.coe_eta]
+    · simp only [fullCoordinateAnswerExtension, ↓reduceDIte]
   right_inv α := by
     funext j
     by_cases hj : (j : Fin n) = i
@@ -24131,8 +24232,8 @@ def fullCoordinateAnswerExtensionEquiv
           j = (⟨i, Finset.mem_insert_self i D⟩ :
             {j : Fin n // j ∈ insert i D}) := Subtype.ext hj
       subst j
-      simp [fullCoordinateAnswerExtension]
-    · simp [fullCoordinateAnswerExtension, hj]
+      simp only [fullCoordinateAnswerExtension, ↓reduceDIte]
+    · simp only [fullCoordinateAnswerExtension, hj, ↓reduceDIte, Subtype.coe_eta]
 
 def fullCoordinateInsertedHistory
     {X Y : Type*} [Fintype X] [Fintype Y]
@@ -24183,21 +24284,18 @@ def fullCoordinateInsertedHistoryEquiv
         have hj : (j : Fin n) ≠ i := by
           intro he
           exact hiD (he ▸ j.property)
-        simp [fullCoordinateBaseOfInsertedHistory,
-          fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension, hj]
+        simp only [fullCoordinateBaseOfInsertedHistory, fullCoordinateInsertedHistory,
+          fullCoordinateAnswerExtension, Subtype.coe_eta, dite_eq_ite, hj, ↓reduceIte]
       · funext j
         have hj : (j : Fin n) ≠ i := by
           intro he
           exact hiD (he ▸ j.property)
-        simp [fullCoordinateBaseOfInsertedHistory,
-          fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension, hj]
+        simp only [fullCoordinateBaseOfInsertedHistory, fullCoordinateInsertedHistory,
+          fullCoordinateAnswerExtension, Subtype.coe_eta, dite_eq_ite, hj, ↓reduceIte]
       · rfl
       · rfl
     · apply Prod.ext <;>
-        simp [fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension]
+        simp only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, ↓reduceDIte]
   right_inv h := by
     apply FullSubsetHistory.ext
     · funext j
@@ -24206,24 +24304,20 @@ def fullCoordinateInsertedHistoryEquiv
             j = (⟨i, Finset.mem_insert_self i D⟩ :
               {j : Fin n // j ∈ insert i D}) := Subtype.ext hj
         subst j
-        simp [fullCoordinateInsertedHistory,
-          fullCoordinateBaseOfInsertedHistory,
-          fullCoordinateAnswerExtension]
-      · simp [fullCoordinateInsertedHistory,
-          fullCoordinateBaseOfInsertedHistory,
-          fullCoordinateAnswerExtension, hj]
+        simp only [fullCoordinateInsertedHistory, fullCoordinateBaseOfInsertedHistory,
+          Subtype.coe_eta, fullCoordinateAnswerExtension, ↓reduceDIte]
+      · simp only [fullCoordinateInsertedHistory, fullCoordinateBaseOfInsertedHistory,
+          Subtype.coe_eta, fullCoordinateAnswerExtension, hj, ↓reduceDIte]
     · funext j
       by_cases hj : (j : Fin n) = i
       · have hjsub :
             j = (⟨i, Finset.mem_insert_self i D⟩ :
               {j : Fin n // j ∈ insert i D}) := Subtype.ext hj
         subst j
-        simp [fullCoordinateInsertedHistory,
-          fullCoordinateBaseOfInsertedHistory,
-          fullCoordinateAnswerExtension]
-      · simp [fullCoordinateInsertedHistory,
-          fullCoordinateBaseOfInsertedHistory,
-          fullCoordinateAnswerExtension, hj]
+        simp only [fullCoordinateInsertedHistory, fullCoordinateBaseOfInsertedHistory,
+          Subtype.coe_eta, fullCoordinateAnswerExtension, ↓reduceDIte]
+      · simp only [fullCoordinateInsertedHistory, fullCoordinateBaseOfInsertedHistory,
+          Subtype.coe_eta, fullCoordinateAnswerExtension, hj, ↓reduceDIte]
     · rfl
     · rfl
 
@@ -24271,8 +24365,8 @@ theorem fullCoordinateInsertedHistory_weight
     have hj : (j : Fin n) ≠ i := by
       intro he
       exact hiD (he ▸ j.property)
-    simp [fullCoordinateInsertedHistory,
-      fullCoordinateAnswerExtension, hj]
+    simp only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, hj, ↓reduceDIte,
+      Subtype.coe_eta]
   unfold fullHistoryWeight fullCoordinateBaseWeight
   change
     (∏ j : {j : Fin n // j ∈ insert i D},
@@ -24288,8 +24382,8 @@ theorem fullCoordinateInsertedHistory_weight
   rw [finsetSubtype_prod_insert D i hiD]
   rw [hremaining]
   simp_rw [hpair]
-  simp [fullCoordinateInsertedHistory,
-    fullCoordinateAnswerExtension]
+  simp only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, ↓reduceDIte,
+    univ_eq_attach]
   ring
 
 theorem conditionedAliceEffect_insert_eq_coordinate
@@ -24316,16 +24410,16 @@ theorem conditionedAliceEffect_insert_eq_coordinate
         have hji : j ≠ i := by
           intro he
           exact hiD (he ▸ hj)
-        simpa [fullCoordinateAnswerExtension, hji]
+        simpa only [fullCoordinateAnswerExtension, hji, ↓reduceDIte]
           using h j (Finset.mem_insert_of_mem hj)
-      · simpa [fullCoordinateAnswerExtension]
+      · simpa only [fullCoordinateAnswerExtension, ↓reduceDIte]
           using h i (Finset.mem_insert_self i D)
     · rintro ⟨hD, ha⟩ j hj
       by_cases hji : j = i
       · subst j
-        simpa [fullCoordinateAnswerExtension] using ha
+        simpa only [fullCoordinateAnswerExtension, ↓reduceDIte] using ha
       · have hjD := (Finset.mem_insert.mp hj).resolve_left hji
-        simpa [fullCoordinateAnswerExtension, hji] using hD j hjD
+        simpa only [fullCoordinateAnswerExtension, hji, ↓reduceDIte] using hD j hjD
   by_cases h :
       ∀ (j : Fin n) (hj : j ∈ insert i D),
         answers j = fullCoordinateAnswerExtension D i α a ⟨j, hj⟩
@@ -24357,16 +24451,16 @@ theorem conditionedBobEffect_insert_eq_coordinate
         have hji : j ≠ i := by
           intro he
           exact hiD (he ▸ hj)
-        simpa [fullCoordinateAnswerExtension, hji]
+        simpa only [fullCoordinateAnswerExtension, hji, ↓reduceDIte]
           using h j (Finset.mem_insert_of_mem hj)
-      · simpa [fullCoordinateAnswerExtension]
+      · simpa only [fullCoordinateAnswerExtension, ↓reduceDIte]
           using h i (Finset.mem_insert_self i D)
     · rintro ⟨hD, hb⟩ j hj
       by_cases hji : j = i
       · subst j
-        simpa [fullCoordinateAnswerExtension] using hb
+        simpa only [fullCoordinateAnswerExtension, ↓reduceDIte] using hb
       · have hjD := (Finset.mem_insert.mp hj).resolve_left hji
-        simpa [fullCoordinateAnswerExtension, hji] using hD j hjD
+        simpa only [fullCoordinateAnswerExtension, hji, ↓reduceDIte] using hD j hjD
   by_cases h :
       ∀ (j : Fin n) (hj : j ∈ insert i D),
         answers j = fullCoordinateAnswerExtension D i β b ⟨j, hj⟩
@@ -24417,7 +24511,7 @@ theorem conditionedCoordinateEffects_born_expansion
     split_ifs with hb
     · rfl
     · exact map_zero _
-  · simp
+  · simp only [map_zero, LinearMap.zero_apply, sum_const_zero]
 
 end
 
@@ -24439,9 +24533,11 @@ theorem quadraticExpectation_normalizedPureVector
       quadraticExpectation W z / ‖z‖ ^ 2 := by
   unfold quadraticExpectation normalizedPureVector
   rw [map_smul, inner_smul_left, inner_smul_right]
-  simp [Complex.mul_re, div_eq_mul_inv, pow_two]
+  simp only [ofReal_inv, map_inv₀, conj_ofReal, mul_re, inv_re, ofReal_re, normSq_ofReal,
+    div_eq_mul_inv, _root_.mul_inv_rev, inv_im, ofReal_im, neg_zero, zero_mul, sub_zero, mul_im,
+    add_zero, pow_two]
   by_cases hz : ‖z‖ = 0
-  · simp [hz]
+  · simp only [hz, _root_.inv_zero, mul_zero, zero_mul]
   · field_simp
 
 end
@@ -24540,7 +24636,7 @@ theorem divisorStopping_nat_bound
     n < 2 * (n / q) * q := by
   have hT : 0 < n / q := by
     apply (Nat.le_div_iff_mul_le hq).2
-    simpa using hqn
+    simpa only [Nat.succ_eq_add_one, zero_add, one_mul] using hqn
   have hnext : n < (n / q + 1) * q := by
     exact (Nat.div_lt_iff_lt_mul hq).mp (Nat.lt_succ_self (n / q))
   have hfactor : n / q + 1 ≤ 2 * (n / q) := by
@@ -24557,7 +24653,7 @@ theorem sourceRate_mul_lt_divisorStopping
     exact_mod_cast divisorStopping_nat_bound hq hqn
   have hqreal : 0 < (q : ℝ) := by exact_mod_cast hq
   have hT : 0 < ((n / q : ℕ) : ℝ) := by
-    exact_mod_cast ((Nat.le_div_iff_mul_le hq).2 (by simpa using hqn) :
+    exact_mod_cast ((Nat.le_div_iff_mul_le hq).2 (by simpa only [one_mul] using hqn) :
       1 ≤ n / q)
   have hrate : 0 < η / (4 * (q : ℝ)) := by positivity
   calc
@@ -24698,8 +24794,8 @@ theorem sourceHistoryFlag_sum
       ((sourceHistoryFlagEquiv (X := X) (Y := Y)
         (A := A) (B := B) D).symm.sum_comp f).symm
     _ = _ := by
-      simp [Fintype.sum_sigma, Fintype.sum_prod_type,
-        sourceHistoryFlagEquiv]
+      simp only [sourceHistoryFlagEquiv, Equiv.symm_mk, Equiv.coe_fn_mk, Fintype.sum_sigma,
+        Fintype.sum_prod_type]
 
 def sourceHistoryPermutationPositionWeight
     {n : ℕ} (D : Finset (Fin n)) : ℝ :=
@@ -24789,7 +24885,7 @@ theorem uniformRemainingFailure_lt_of_failure_sum
   rw [← Finset.sum_div]
   apply (div_lt_iff₀ hmreal).mpr
   apply (div_lt_iff₀ hp).mpr
-  nlinarith
+  linarith
 
 end FiniteSamples
 
@@ -24823,7 +24919,7 @@ theorem repeatedPostselectionMass_pos
 theorem remainingCoordinates_card
     {n : ℕ} (C : Finset (Fin n)) :
     (Finset.univ \ C).card = n - C.card := by
-  simp [Finset.card_sdiff_of_subset (Finset.subset_univ C)]
+  simp only [Finset.card_sdiff_of_subset (Finset.subset_univ C), card_univ, Fintype.card_fin]
 
 theorem repeatedStrategy_exists_conditioning
     (G : Game X Y A B) (n : ℕ)
@@ -24850,13 +24946,13 @@ theorem repeatedStrategy_exists_conditioning
   have hp : 0 < repeatedPostselectionMass G n S C :=
     repeatedPostselectionMass_pos G n S C hwin
   refine ⟨C, hC, ?_, hp, hremaining, ?_⟩
-  · simpa [repeatedPostselectionMass, postselectionMass] using hmass
+  · simpa only [repeatedPostselectionMass, postselectionMass] using hmass
   · apply uniformRemainingFailure_lt_of_failure_sum
       (strategyEventLaw (G.repeat n) S)
       (repeatedCoordinateWin G n) C
-      (by simpa [repeatedPostselectionMass] using hp)
+      (by simpa only [repeatedPostselectionMass] using hp)
       hremaining
-    simpa [postselectionMass] using hfailure
+    simpa only [subset_univ, sum_sdiff_eq_sub, postselectionMass] using hfailure
 
 end ActualRepeatedStrategy
 
@@ -25002,7 +25098,7 @@ theorem aliceMartingaleEntropyBudget
           repeatedPostselectionMass G n S D) /
         ((Finset.univ \ D).card : ℝ) at hbudget
   rw [martingale_log_cost_eq G n S D hp] at hbudget
-  simpa [martingaleRate, mul_div_assoc] using hbudget
+  simpa only [martingaleRate, ge_iff_le, mul_div_assoc] using hbudget
 
 end ActualFilters
 
@@ -25019,7 +25115,8 @@ theorem bornWeighted_normalized_distance
         normalizeOrDefault fallback v‖ ^ 2 ≤
       4 * ‖u - v‖ ^ 2 := by
   by_cases hu : u = 0
-  · simp [hu]
+  · simp only [hu, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul,
+      zero_sub, norm_neg, Nat.ofNat_pos, mul_nonneg_iff_of_pos_left, norm_nonneg, pow_succ_nonneg]
   · have hu_pos : 0 < ‖u‖ := norm_pos_iff.mpr hu
     have hdist := normalizeOrDefault_sub_le fallback u v hfallback hu
     have hscaled :
@@ -25029,7 +25126,7 @@ theorem bornWeighted_normalized_distance
       (le_div_iff₀ hu_pos).mp hdist
     have hsquare := mul_self_le_mul_self
       (mul_nonneg (norm_nonneg _) (norm_nonneg u)) hscaled
-    nlinarith [sq_nonneg
+    linarith [sq_nonneg
       (‖normalizeOrDefault fallback u -
         normalizeOrDefault fallback v‖ * ‖u‖),
       sq_nonneg (‖u - v‖)]
@@ -25081,11 +25178,11 @@ theorem fullCoordinateInsertedHistory_winIndicator_eq
         have hji : (j : Fin n) ≠ i := by
           intro he
           exact hiD (he ▸ j.property)
-        simpa [fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension, hji] using
+        simpa only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, hji,
+          ↓reduceDIte, Subtype.coe_eta] using
           h ⟨j, Finset.mem_insert_of_mem j.property⟩
-      · simpa [fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension] using
+      · simpa only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension,
+          ↓reduceDIte] using
           h ⟨i, Finset.mem_insert_self i D⟩
     · rintro ⟨hD, hi⟩ j
       by_cases hji : (j : Fin n) = i
@@ -25093,12 +25190,12 @@ theorem fullCoordinateInsertedHistory_winIndicator_eq
             j = (⟨i, Finset.mem_insert_self i D⟩ :
               {j : Fin n // j ∈ insert i D}) := Subtype.ext hji
         subst j
-        simpa [fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension] using hi
+        simpa only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension,
+          ↓reduceDIte] using hi
       · have hjD : (j : Fin n) ∈ D :=
           (Finset.mem_insert.mp j.property).resolve_left hji
-        simpa [fullCoordinateInsertedHistory,
-          fullCoordinateAnswerExtension, hji] using hD ⟨j, hjD⟩
+        simpa only [fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, hji,
+          ↓reduceDIte] using hD ⟨j, hjD⟩
   change
     (if ∀ j : {j : Fin n // j ∈ insert i D},
       G.predicate
@@ -25123,10 +25220,10 @@ def fullCoordinateInsertedHiddenAliceEquiv
   invFun hidden j := hidden (fullHistoryRemainingInsertedEquiv D L i j)
   left_inv hidden := by
     funext j
-    simp
+    simp only [Equiv.symm_apply_apply]
   right_inv hidden := by
     funext j
-    simp
+    simp only [Equiv.apply_symm_apply]
 
 theorem fullCoordinateInsertedAliceQuestion_eq
     {n : ℕ} (D L : Finset (Fin n)) (i : Fin n)
@@ -25146,20 +25243,19 @@ theorem fullCoordinateInsertedAliceQuestion_eq
   · have hji : j ≠ i := by
       intro he
       exact hiD (he ▸ hjD)
-    simp [fullHistoryAliceQuestion, fullCoordinateInsertedHistory,
-      fullCoordinateAnswerExtension, fullCoordinateNewHistory,
-      hjD, hji]
+    simp only [fullHistoryAliceQuestion, mem_insert, hji, hjD, or_true, ↓reduceDIte,
+      fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, fullCoordinateNewHistory]
   · by_cases hji : j = i
     · subst j
-      simp [fullHistoryAliceQuestion, fullCoordinateInsertedHistory,
-        fullCoordinateAnswerExtension, fullCoordinateNewHistory,
-        hiD, hiL]
+      simp only [fullHistoryAliceQuestion, mem_insert, hiD, or_false, ↓reduceDIte,
+        fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, hiL,
+        fullCoordinateNewHistory]
     · by_cases hjL : j ∈ L
-      · simp [fullHistoryAliceQuestion, fullCoordinateInsertedHistory,
-          fullCoordinateNewHistory,
-          hjD, hji, hjL]
-      · simp [fullHistoryAliceQuestion,                     fullCoordinateInsertedHiddenAliceEquiv,
-          fullHistoryRemainingInsertedEquiv, hjD, hji, hjL]
+      · simp only [fullHistoryAliceQuestion, mem_insert, hji, hjD, or_self, ↓reduceDIte, hjL,
+          fullCoordinateInsertedHistory, or_true, fullCoordinateNewHistory]
+      · simp only [fullHistoryAliceQuestion, mem_insert, hji, hjD, or_self, ↓reduceDIte, hjL,
+          fullCoordinateInsertedHiddenAliceEquiv, fullHistoryRemainingInsertedEquiv,
+          Equiv.symm_mk, Equiv.coe_fn_mk]
         congr 1
 
 theorem fullCoordinateInsertedHiddenAliceWeight_eq
@@ -25213,19 +25309,17 @@ theorem fullCoordinateInsertedBobQuestion_eq
   · have hji : j ≠ i := by
       intro he
       exact hiD (he ▸ hjD)
-    simp [fullHistoryBobQuestion, fullCoordinateInsertedHistory,
-      fullCoordinateAnswerExtension, fullCoordinateOldHistory,
-      hjD, hji]
+    simp only [fullHistoryBobQuestion, mem_insert, hji, hjD, or_true, ↓reduceDIte,
+      fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, fullCoordinateOldHistory]
   · by_cases hji : j = i
     · subst j
-      simp [fullHistoryBobQuestion, fullCoordinateInsertedHistory,
-        fullCoordinateAnswerExtension, fullCoordinateOldHistory,
-        hiD, hiL]
+      simp only [fullHistoryBobQuestion, mem_insert, hiD, or_false, ↓reduceDIte,
+        fullCoordinateInsertedHistory, fullCoordinateAnswerExtension, hiL,
+        fullCoordinateOldHistory]
     · by_cases hjL : j ∈ L
-      · simp [fullHistoryBobQuestion,                     hjD, hji, hjL]
-      · simp [fullHistoryBobQuestion, fullCoordinateInsertedHistory,
-          fullCoordinateOldHistory,
-          hjD, hji, hjL]
+      · simp only [fullHistoryBobQuestion, mem_insert, hji, hjD, or_self, ↓reduceDIte, hjL]
+      · simp only [fullHistoryBobQuestion, mem_insert, hji, hjD, or_self, ↓reduceDIte, hjL,
+          fullCoordinateInsertedHistory, fullCoordinateOldHistory]
 
 theorem fullCoordinateInsertedHiddenBobWeight_eq
     (G : Game X Y A B) {n : ℕ}
@@ -25350,7 +25444,7 @@ theorem fullCoordinateInsertedHistory_sum
       ∑ x : X, ∑ y : Y,
         f (fullCoordinateInsertedHistory D L i r x y) := by
   classical
-  simpa [fullCoordinateInsertedHistoryEquiv, Fintype.sum_prod_type]
+  simpa only [fullCoordinateInsertedHistoryEquiv, Equiv.coe_fn_mk, Fintype.sum_prod_type]
     using ((fullCoordinateInsertedHistoryEquiv
       (X := X) (Y := Y) D L i hiD).sum_comp f).symm
 
@@ -25363,7 +25457,7 @@ theorem fullCoordinateAnswerExtension_sum
       ∑ α : {j : Fin n // j ∈ D} → T, ∑ a : T,
         f (fullCoordinateAnswerExtension D i α a) := by
   classical
-  simpa [fullCoordinateAnswerExtensionEquiv, Fintype.sum_prod_type]
+  simpa only [fullCoordinateAnswerExtensionEquiv, Equiv.coe_fn_mk, Fintype.sum_prod_type]
     using ((fullCoordinateAnswerExtensionEquiv
       (T := T) D i hiD).sum_comp f).symm
 
@@ -25553,7 +25647,7 @@ theorem fullCoordinateAcceptedPostselectedMass_eq
     have hji : j ≠ i := by
       intro he
       exact hiL (he ▸ hj)
-    simp [hjD, hji]
+    simp only [mem_sdiff, mem_univ, mem_insert, hji, hjD, or_self, not_false_eq_true, and_self]
   calc
     fullCoordinateAcceptedPostselectedMass G n S D L i =
       ∑ h : FullSubsetHistory X Y n (insert i D) L,
@@ -25572,7 +25666,8 @@ theorem fullCoordinateAcceptedPostselectedMass_eq
         G n S D L i hiD hiL,
         fullCoordinateInsertedHistory_bobFilter
           G n S D L i hiD hiL] at hweighted
-      simpa [fullCoordinateAcceptedPostselectedMass] using hweighted.symm
+      simpa only [fullCoordinateAcceptedPostselectedMass, ite_mul, one_mul,
+        zero_mul] using hweighted.symm
     _ = _ := fullSubsetHistory_mass_eq_postselection
       G n S (insert i D) L hLinsert
 
@@ -25630,7 +25725,7 @@ theorem sourceHistoryQuadraticExpectation_matrix_sum
       ∑ i : I,
         quadraticExpectation
           (Matrix.toEuclideanCLM (n := d) (𝕜 := ℂ) (M i)) z := by
-  simp [quadraticExpectation]
+  simp only [quadraticExpectation, map_sum, _root_.sum_apply, CStarModule.inner_sum_right, re_sum]
 
 end
 
@@ -25746,7 +25841,8 @@ theorem sourceHistoryAcceptedMass_eq_remaining_average
         (∑ i : SourceRemainingCoordinate D,
           (strategyEventLaw (G.repeat n) S).eventMass
             (FiniteEventLaw.winEvent (repeatedCoordinateWin G n)
-              (insert i.val D))) := by simp
+              (insert i.val D))) := by simp only [univ_eq_attach, sum_const, card_univ,
+                                         nsmul_eq_mul]
   rw [hsum]
   exact mul_div_mul_left _ _ hperm.ne'
 
@@ -25790,7 +25886,8 @@ theorem sourceHistoryAcceptedMass_gt_of_greedy
             (strategyEventLaw (G.repeat n) S).eventMass
               (FiniteEventLaw.winEvent (repeatedCoordinateWin G n)
                 (insert i D))) := by
-    simp [FiniteEventLaw.failureMass, p, Finset.sum_sub_distrib]
+    simp only [FiniteEventLaw.failureMass, sum_sub_distrib, sum_const, nsmul_eq_mul, subset_univ,
+      sum_sdiff_eq_sub, p]
   rw [sourceHistoryAcceptedMass_eq_remaining_average]
   rw [← hsub]
   apply (lt_div_iff₀ hmreal).mpr
@@ -25801,7 +25898,7 @@ theorem sourceHistoryAcceptedMass_gt_of_greedy
         (strategyEventLaw (G.repeat n) S)
         (repeatedCoordinateWin G n) D i) <
       ((Finset.univ \ D).card : ℝ) * (η * p) at hgreedy
-  nlinarith [hgreedy, hfails]
+  linarith [hgreedy, hfails]
 
 end
 
@@ -25842,8 +25939,10 @@ theorem taggedTensorVector_norm
   classical
   have hsquare :
       ‖taggedTensorVector r z‖ ^ 2 = ‖z‖ ^ 2 := by
-    simp [EuclideanSpace.norm_sq_eq, taggedTensorVector,
-      Fintype.sum_prod_type, Fintype.sum_sum_type, Fintype.sum_sigma]
+    simp only [taggedTensorVector, EuclideanSpace.norm_sq_eq, Fintype.sum_prod_type,
+      Fintype.sum_sum_type, univ_unique, PUnit.default_eq_unit, norm_zero, ne_eq,
+      OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, sum_const_zero, Fintype.sum_sigma,
+      zero_add]
     calc
       _ = ∑ a : ι r, ∑ rB : R, ∑ b : ι rB,
           ‖if hA : (r : R) = r then
@@ -25851,18 +25950,20 @@ theorem taggedTensorVector_norm
             else 0‖ ^ 2 := by
         apply Fintype.sum_eq_single r
         intro rA hA
-        simp [hA]
+        simp only [hA, ↓reduceDIte, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+          zero_pow, sum_const_zero]
       _ = ∑ a : ι r, ∑ rB : R, ∑ b : ι rB,
           ‖if hB : rB = r then z (a, hB ▸ b) else 0‖ ^ 2 := by
-        simp
+        simp only [↓reduceDIte]
       _ = ∑ a : ι r, ∑ b : ι r,
           ‖if hB : (r : R) = r then z (a, hB ▸ b) else 0‖ ^ 2 := by
         apply Finset.sum_congr rfl
         intro a _
         apply Fintype.sum_eq_single r
         intro rB hB
-        simp [hB]
-      _ = _ := by simp
+        simp only [hB, ↓reduceDIte, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+          zero_pow, sum_const_zero]
+      _ = _ := by simp only [↓reduceDIte]
   nlinarith [norm_nonneg (taggedTensorVector r z),
     norm_nonneg z]
 
@@ -25921,7 +26022,7 @@ theorem remainingCoordinate_card_pos
     {n : ℕ} (D : Finset (Fin n))
     (hm : 0 < (Finset.univ \ D).card) :
     0 < Fintype.card (SourceRemainingCoordinate D) := by
-  simpa using hm
+  simpa only [Fintype.card_coe, card_pos] using hm
 
 theorem finiteTotalVariation_triangle
     {ι : Type*} [Fintype ι]
@@ -26053,7 +26154,7 @@ theorem conditionedEventDistribution_sum
       if ω ∈ event then law.weight ω / law.eventMass event else 0) =
       (∑ ω ∈ event, law.weight ω) / law.eventMass event := by
       rw [Finset.sum_div]
-      simp
+      simp only [sum_ite_mem, univ_inter]
     _ = 1 := by
       change law.eventMass event / law.eventMass event = 1
       exact div_self positive.ne'
@@ -26064,7 +26165,7 @@ theorem conditionedEventDistribution_absolute_continuity
     law.weight ω = 0 →
       conditionedEventDistribution law event ω = 0 := by
   intro hzero
-  simp [conditionedEventDistribution, hzero]
+  simp only [conditionedEventDistribution, hzero, zero_div, ite_self]
 
 theorem conditionedEventDistribution_relativeEntropy
     {Ω : Type*} [Fintype Ω]
@@ -26093,14 +26194,16 @@ theorem conditionedEventDistribution_relativeEntropy
       intro ω _
       by_cases hmem : ω ∈ event
       · by_cases hweight : law.weight ω = 0
-        · simp [conditionedEventDistribution, hmem, hweight]
+        · simp only [conditionedEventDistribution, hmem, ↓reduceIte, hweight, zero_div, div_zero,
+            Real.log_zero, mul_zero, one_div, Real.log_inv, mul_neg, zero_mul, neg_zero]
         · have hratio :
               (law.weight ω / law.eventMass event) /
                   law.weight ω = 1 / law.eventMass event := by
                 field_simp [hweight, positive.ne']
           simp only [conditionedEventDistribution,
             if_pos hmem, hratio]
-      · simp [conditionedEventDistribution, hmem]
+      · simp only [conditionedEventDistribution, hmem, ↓reduceIte, zero_div, Real.log_zero,
+          mul_zero, one_div, Real.log_inv, mul_neg, zero_mul, neg_zero]
     _ = Real.log (1 / law.eventMass event) := by
       rw [← Finset.sum_mul,
         conditionedEventDistribution_sum law event positive]
@@ -26225,7 +26328,7 @@ theorem finiteRelativeEntropy_uniform_le_log_card
       apply Finset.sum_le_sum
       intro z _
       by_cases hzero : p z = 0
-      · simp [hzero]
+      · simp only [hzero, zero_div, Real.log_zero, mul_zero, zero_mul, Std.le_refl]
       · have hp : 0 < p z :=
           lt_of_le_of_ne (nonnegative z) (Ne.symm hzero)
         have hpone : p z ≤ 1 :=
@@ -26369,7 +26472,7 @@ theorem uniformFlagRelativeEntropy_le
       apply Finset.sum_le_sum
       intro ω _
       by_cases hmass : jointFirstMarginal joint ω = 0
-      · simp [hmass]
+      · simp only [hmass, zero_mul, Std.le_refl]
       · have hprior_ne : prior ω ≠ 0 := by
           intro hzero
           exact hmass (absolute_continuity ω hzero)
@@ -26449,12 +26552,12 @@ theorem groupedMass_id
   have hfilter :
       (Finset.univ.filter fun a : Ω => a = ω) = {ω} := by
     ext a
-    simp
+    simp only [mem_filter, mem_univ, true_and, mem_singleton]
   unfold groupedMass
   change
     (∑ a ∈ (Finset.univ.filter fun a : Ω => a = ω), p a) = p ω
   rw [hfilter]
-  simp
+  simp only [sum_singleton]
 
 def finitePrefixMask
     {Ω Y : Type*} {h : ℕ} (base : Y)
@@ -26476,9 +26579,11 @@ theorem finitePrefixMask_comp
     by_cases hj : j.val < k.val
     · have hjfin : j < k := hj
       have hjle : j ≤ k := le_of_lt hjfin
-      simp [finitePrefixMask, Function.comp_apply, hjfin, hjle]
+      simp only [Function.comp_apply, finitePrefixMask, Fin.val_succ, Order.lt_add_one_iff,
+        Fin.val_fin_le, Fin.val_castSucc, Fin.val_fin_lt, hjfin, ↓reduceIte, hjle]
     · have hjfin : ¬ j < k := hj
-      simp [finitePrefixMask, Function.comp_apply, hjfin]
+      simp only [Function.comp_apply, finitePrefixMask, Fin.val_succ, Order.lt_add_one_iff,
+        Fin.val_fin_le, Fin.val_castSucc, Fin.val_fin_lt, hjfin, ↓reduceIte]
 
 theorem finitePrefixMask_last
     {Ω Y : Type*} {h : ℕ} (base : Y) :
@@ -26488,7 +26593,7 @@ theorem finitePrefixMask_last
   apply Prod.ext
   · rfl
   · funext j
-    simp [finitePrefixMask]
+    simp only [finitePrefixMask, Fin.val_last, Fin.is_lt, ↓reduceIte, id_eq]
 
 def finitePrefixRelativeEntropy
     {Ω Y : Type*} [Fintype Ω] [Fintype Y] {h : ℕ}
@@ -26631,7 +26736,7 @@ theorem groupedMass_first
   simp only [groupedMass, jointFirstMarginal,
     Finset.sum_filter, Fintype.sum_prod_type]
   rw [Finset.sum_comm]
-  simp
+  simp only [sum_ite_eq', mem_univ, ↓reduceIte]
 
 abbrev ConditionedAnswerFlag
     (A B : Type*) [Fintype A] [Fintype B]
@@ -26652,7 +26757,8 @@ theorem conditionedAnswerFlag_card
     {n : ℕ} (D : Finset (Fin n)) :
     (Fintype.card (ConditionedAnswerFlag A B D) : ℝ) =
       fullHistoryAnswerCount (A := A) (B := B) D := by
-  simp [fullHistoryAnswerCount]
+  simp only [Fintype.card_prod, Fintype.card_pi, univ_eq_attach, prod_const, card_attach,
+    Nat.cast_mul, Nat.cast_pow, fullHistoryAnswerCount]
 
 theorem conditionedAnswerFlag_card_pos
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -26678,7 +26784,7 @@ theorem conditionedAnswerFlag_log_card
   have hpost :
       postselectionLogCost G n S D =
         -Real.log (repeatedPostselectionMass G n S D) := by
-    simp [postselectionLogCost, one_div, Real.log_inv]
+    simp only [postselectionLogCost, one_div, Real.log_inv]
   linarith
 
 end
@@ -26713,7 +26819,7 @@ theorem exactRemainingSeedWeight_sum
     (∑ seed : ExactRemainingSeed D,
       exactSeedWeight seed) = 1 := by
   apply exactSeedWeight_sum
-  simpa using remaining
+  simpa only [Fintype.card_coe, card_pos] using remaining
 
 def exactPostselectedJointLaw
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -26763,7 +26869,7 @@ theorem exactPostselectedJointLaw_sum
     _ = ∑ seed : ExactRemainingSeed D,
         exactSeedWeight seed := by
           rw [hconditional_sum]
-          simp
+          simp only [mul_one]
     _ = 1 := exactRemainingSeedWeight_sum D remaining
 
 def exactSourcePushforward
@@ -26902,15 +27008,14 @@ theorem exactLocallySampleableLaw_eq_zero_of_question_zero
     rw [Game.repeat_questionWeight]
     apply Finset.prod_eq_zero
       (Finset.mem_univ q.1.coordinate.val)
-    simpa [hx, hy] using zero
+    simpa only [hx, hy] using zero
   have hprod :
       (∏ j : Fin n,
         G.questionWeight (q.2.1 j) (q.2.2.1 j)) = 0 := by
     simpa only [Game.repeat_questionWeight] using hproduct
-  simp [exactPostselectedJointLaw,
-    repeatedConditionedOutcomeLaw,
-    conditionedEventDistribution,
-    strategyEventLaw, hprod]
+  simp only [exactPostselectedJointLaw, repeatedConditionedOutcomeLaw,
+    conditionedEventDistribution, strategyEventLaw, Game.repeat_questionWeight, hprod, zero_mul,
+    zero_div, ite_self, mul_zero]
 
 def exactAliceLocalMass
     {n : ℕ} (D : Finset (Fin n))
@@ -27091,7 +27196,7 @@ theorem exactAliceLocalConditional_sum
       exactAliceLocalConditional D base Q i x r) = 1 := by
   unfold exactAliceLocalConditional
   split_ifs with hmass
-  · simp
+  · simp only [sum_ite_eq', mem_univ, ↓reduceIte]
   · rw [← Finset.sum_div]
     exact div_self hmass
 
@@ -27104,7 +27209,7 @@ theorem exactBobLocalConditional_sum
       exactBobLocalConditional D base Q i y r) = 1 := by
   unfold exactBobLocalConditional
   split_ifs with hmass
-  · simp
+  · simp only [sum_ite_eq', mem_univ, ↓reduceIte]
   · rw [← Finset.sum_div]
     exact div_self hmass
 
@@ -27166,7 +27271,7 @@ theorem exactRemainingCoordinate_card_pos
     {n : ℕ} (D : Finset (Fin n))
     (remaining : 0 < (Finset.univ \ D).card) :
     0 < Fintype.card (SourceRemainingCoordinate D) := by
-  simpa using remaining
+  simpa only [Fintype.card_coe, card_pos] using remaining
 
 theorem exactLocallySampleableJA_sum
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -27452,8 +27557,7 @@ theorem exactFiberQuestionMass_eq_jointQuestionMass
   intro xs _
   apply Finset.sum_congr rfl
   intro ys _
-  simp [exactPriorQuestionWeight,
-    exactRevealCode_compatible_iff]
+  simp only [Game.repeat_questionWeight, exactRevealCode_compatible_iff, exactPriorQuestionWeight]
 
 def exactJointAliceQuestionFilter
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -27550,7 +27654,7 @@ theorem exactFiber_born_of_rank_one
     (fun z : ℝ => z *
       bornTracePairing S.state.matrix (EA xs) (EB ys)) hrank
   field_simp [nonzero]
-  nlinarith [hborn]
+  linarith [hborn]
 
 theorem exactJointQuestionFilter_born
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -27711,11 +27815,11 @@ theorem exactFiberQuestionWeight_sum_bobQuestion
               D seed history y ys) ↔
             (exactRevealCode D seed (xs, ys) = history ∧
               xs seed.coordinate.val = x) := by
-        simpa [y] using
+        simpa only [and_true, y] using
           (exactRevealCode_compatible_iff
             D seed history x y xs ys).symm
-      simp [exactFiberQuestionWeight,
-        exactPriorQuestionWeight, hcompatible]
+      simp only [exactFiberQuestionWeight, hcompatible, Game.repeat_questionWeight,
+        exactPriorQuestionWeight]
 
 theorem exactFiberQuestionWeight_sum_aliceQuestion
     (G : Game X Y A B) (n : ℕ)
@@ -27752,11 +27856,11 @@ theorem exactFiberQuestionWeight_sum_aliceQuestion
               D seed history y ys) ↔
             (exactRevealCode D seed (xs, ys) = history ∧
               ys seed.coordinate.val = y) := by
-        simpa [x] using
+        simpa only [true_and, x] using
           (exactRevealCode_compatible_iff
             D seed history x y xs ys).symm
-      simp [exactFiberQuestionWeight,
-        exactPriorQuestionWeight, hcompatible]
+      simp only [exactFiberQuestionWeight, hcompatible, Game.repeat_questionWeight,
+        exactPriorQuestionWeight]
 
 theorem exactAliceQuestionMass_eq_sum_fiberMass
     (G : Game X Y A B) (n : ℕ)
@@ -27858,7 +27962,7 @@ theorem exactCompatible_aliceMixed_coordinate_eq_or
   · left
     exact (ha.1 ⟨j, hj⟩).trans (ha'.1 ⟨j, hj⟩).symm
   · let jr : SourceRemainingCoordinate D :=
-      ⟨j, by simp [hj]⟩
+      ⟨j, by simp only [mem_sdiff, mem_univ, hj, not_false_eq_true, and_self]⟩
     by_cases hcoordinate : jr = seed.coordinate
     · left
       have hval : j = seed.coordinate.val :=
@@ -27871,7 +27975,8 @@ theorem exactCompatible_aliceMixed_coordinate_eq_or
           have hleft :
               jr ∈ exactLeft
                 seed.coordinate seed.partition := by
-            simp [exactLeft, hcoordinate, hbit]
+            simp only [exactLeft, ne_eq, univ_eq_attach, mem_filter, mem_attach, hcoordinate,
+              not_false_eq_true, hbit, and_self]
           exact (ha.2.1 ⟨jr, hleft⟩).trans
             (ha'.2.1 ⟨jr, hleft⟩).symm
       | true =>
@@ -27879,7 +27984,8 @@ theorem exactCompatible_aliceMixed_coordinate_eq_or
           have hright :
               jr ∈ exactRight
                 seed.coordinate seed.partition := by
-            simp [exactRight, hcoordinate, hbit]
+            simp only [exactRight, ne_eq, univ_eq_attach, mem_filter, mem_attach, hcoordinate,
+              not_false_eq_true, hbit, and_self]
           exact (hb.2.1 ⟨jr, hright⟩).trans
             (hb'.2.1 ⟨jr, hright⟩).symm
 
@@ -27909,8 +28015,8 @@ theorem exactQuestionWeight_aliceMixed_rectangle
   rcases exactCompatible_aliceMixed_coordinate_eq_or
     D seed history x y y' xs xs' ys ys'
     ha ha' hb hb' j with hAlice | hBob
-  · simp [hAlice, mul_comm]
-  · simp [hBob]
+  · simp only [hAlice, mul_comm]
+  · simp only [hBob]
 
 theorem exactFiberQuestionWeight_aliceMixed_rectangle
     (G : Game X Y A B) (n : ℕ)
@@ -27963,7 +28069,7 @@ theorem exactCompatible_bobMixed_coordinate_eq_or
   · left
     exact (ha.1 ⟨j, hj⟩).trans (ha'.1 ⟨j, hj⟩).symm
   · let jr : SourceRemainingCoordinate D :=
-      ⟨j, by simp [hj]⟩
+      ⟨j, by simp only [mem_sdiff, mem_univ, hj, not_false_eq_true, and_self]⟩
     by_cases hcoordinate : jr = seed.coordinate
     · right
       have hval : j = seed.coordinate.val :=
@@ -27976,7 +28082,8 @@ theorem exactCompatible_bobMixed_coordinate_eq_or
           have hleft :
               jr ∈ exactLeft
                 seed.coordinate seed.partition := by
-            simp [exactLeft, hcoordinate, hbit]
+            simp only [exactLeft, ne_eq, univ_eq_attach, mem_filter, mem_attach, hcoordinate,
+              not_false_eq_true, hbit, and_self]
           exact (ha.2.1 ⟨jr, hleft⟩).trans
             (ha'.2.1 ⟨jr, hleft⟩).symm
       | true =>
@@ -27984,7 +28091,8 @@ theorem exactCompatible_bobMixed_coordinate_eq_or
           have hright :
               jr ∈ exactRight
                 seed.coordinate seed.partition := by
-            simp [exactRight, hcoordinate, hbit]
+            simp only [exactRight, ne_eq, univ_eq_attach, mem_filter, mem_attach, hcoordinate,
+              not_false_eq_true, hbit, and_self]
           exact (hb.2.1 ⟨jr, hright⟩).trans
             (hb'.2.1 ⟨jr, hright⟩).symm
 
@@ -28014,8 +28122,8 @@ theorem exactQuestionWeight_bobMixed_rectangle
   rcases exactCompatible_bobMixed_coordinate_eq_or
     D seed history x x' y xs xs' ys ys'
     ha ha' hb hb' j with hAlice | hBob
-  · simp [hAlice, mul_comm]
-  · simp [hBob]
+  · simp only [hAlice, mul_comm]
+  · simp only [hBob]
 
 theorem exactFiberQuestionWeight_bobMixed_rectangle
     (G : Game X Y A B) (n : ℕ)
@@ -28137,7 +28245,7 @@ theorem exactFiberBobMarginal_mul_cross_mass
       G n D seed history x' y xx yy)
     (by
       intro u v s t
-      simpa [mul_comm] using
+      simpa only [mul_comm] using
         (exactFiberQuestionWeight_bobMixed_rectangle
           G n D seed history x x' y s t u v)) ys
   change
@@ -28681,8 +28789,8 @@ theorem exactFixedBobQuestionMass_eq_product
       apply Finset.prod_congr rfl
       intro j _
       by_cases hj : j ∈ fixed
-      · simp [hj]
-      · simp [hj, Game.marginalX]
+      · simp only [hj, ↓reduceIte, sum_ite_eq', mem_univ]
+      · simp only [hj, ↓reduceIte, Game.marginalX]
 
 theorem exactFixedAliceQuestionMass_eq_product
     (G : Game X Y A B) (n : ℕ)
@@ -28742,8 +28850,8 @@ theorem exactFixedAliceQuestionMass_eq_product
       apply Finset.prod_congr rfl
       intro j _
       by_cases hj : j ∈ fixed
-      · simp [hj]
-      · simp [hj, Game.marginalY]
+      · simp only [hj, ↓reduceIte, sum_ite_eq', mem_univ]
+      · simp only [hj, ↓reduceIte, Game.marginalY]
 
 theorem exactFixedBobQuestionMass_insert
     (G : Game X Y A B) (n : ℕ)
@@ -28769,7 +28877,7 @@ theorem exactFixedBobQuestionMass_insert
     apply Finset.prod_congr rfl
     intro k hk
     have hkj : k ≠ j := (Finset.mem_erase.mp hk).1
-    simp [hkj]
+    simp only [mem_insert, hkj, false_or, ne_eq, not_false_eq_true, Function.update_of_ne]
   rw [← Finset.mul_prod_erase Finset.univ
         (fun k : Fin n =>
           if k ∈ insert j fixed then
@@ -28811,7 +28919,7 @@ theorem exactFixedAliceQuestionMass_insert
     apply Finset.prod_congr rfl
     intro k hk
     have hkj : k ≠ j := (Finset.mem_erase.mp hk).1
-    simp [hkj]
+    simp only [mem_insert, hkj, false_or, ne_eq, not_false_eq_true, Function.update_of_ne]
   rw [← Finset.mul_prod_erase Finset.univ
         (fun k : Fin n =>
           if k ∈ insert j fixed then
@@ -28853,29 +28961,29 @@ def exactReverseRightSide
     {M : Type*} [Fintype M] [DecidableEq M]
     (seed : ExactForwardSeed M) :
     seed.coordinate ∈ exactReverseLeftSide seed := by
-  simp [exactReverseLeftSide]
+  simp only [exactReverseLeftSide, mem_insert, true_or]
 
 @[simp] theorem exactReverseRightSide_coordinate_mem
     {M : Type*} [Fintype M] [DecidableEq M]
     (seed : ExactForwardSeed M) :
     seed.coordinate ∈ exactReverseRightSide seed := by
-  simp [exactReverseRightSide]
+  simp only [exactReverseRightSide, mem_insert, true_or]
 
 theorem exactReverseLeftSide_card
     {M : Type*} [Fintype M] [DecidableEq M]
     (seed : ExactForwardSeed M) :
     (exactReverseLeftSide seed).card =
       (exactLeft seed.coordinate seed.partition).card + 1 := by
-  simp [exactReverseLeftSide,
-    exactLeft_coordinate_not_mem, Nat.add_comm]
+  simp only [exactReverseLeftSide, exactLeft_coordinate_not_mem, not_false_eq_true,
+    card_insert_of_notMem, Nat.add_comm]
 
 theorem exactReverseRightSide_card
     {M : Type*} [Fintype M] [DecidableEq M]
     (seed : ExactForwardSeed M) :
     (exactReverseRightSide seed).card =
       (exactRight seed.coordinate seed.partition).card + 1 := by
-  simp [exactReverseRightSide,
-    exactRight_coordinate_not_mem, Nat.add_comm]
+  simp only [exactReverseRightSide, exactRight_coordinate_not_mem, not_false_eq_true,
+    card_insert_of_notMem, Nat.add_comm]
 
 theorem exactReverseLeftSide_markedWeight
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -28909,8 +29017,8 @@ theorem exactRemainingReverse_relativeEntropy_budget
           (s.card : ℝ))) ≤
       2 * cost / ((Finset.univ \ D).card : ℝ) := by
   have hcard : 0 < Fintype.card (SourceRemainingCoordinate D) := by
-    simpa using remaining
-  simpa using
+    simpa only [Fintype.card_coe, card_pos] using remaining
+  simpa only [ge_iff_le, Fintype.card_coe] using
     (reversePartition_relativeEntropy_budget
       hcard increment nonnegative_cost budget)
 
@@ -28975,8 +29083,7 @@ theorem exactReverseLeftPermutation_card
         ((exactLeft
           seed.coordinate seed.partition).card + 1) := by
   rw [Fintype.card_perm, Fintype.card_perm]
-  simp [exactReverseLeftSide_card,
-    Nat.factorial_succ, Nat.mul_comm]
+  simp only [Fintype.card_coe, exactReverseLeftSide_card, Nat.factorial_succ, Nat.mul_comm]
 
 theorem exactReverseRightPermutation_card
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -28991,8 +29098,7 @@ theorem exactReverseRightPermutation_card
         ((exactRight
           seed.coordinate seed.partition).card + 1) := by
   rw [Fintype.card_perm, Fintype.card_perm]
-  simp [exactReverseRightSide_card,
-    Nat.factorial_succ, Nat.mul_comm]
+  simp only [Fintype.card_coe, exactReverseRightSide_card, Nat.factorial_succ, Nat.mul_comm]
 
 theorem exactReverseLeftSeedWeight_eq_forward
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -29095,9 +29201,8 @@ theorem exactLocallySampleableLaw_zero_of_not_accepted
     rw [← hhistory]
     exact (exactHistoryCode_accepted_iff
       G n D q).mpr hw
-  simp [exactPostselectedJointLaw,
-    repeatedConditionedOutcomeLaw,
-    conditionedEventDistribution, hnot]
+  simp only [exactPostselectedJointLaw, repeatedConditionedOutcomeLaw,
+    conditionedEventDistribution, hnot, ↓reduceIte, mul_zero]
 
 end
 
@@ -29542,7 +29647,7 @@ theorem exactFairAliceHistoryVariation_le_entropy
       have hnonneg := G.weight_nonneg x y
       rw [hy] at hle
       linarith
-    simp [hy, hzero]
+    simp only [hzero, zero_mul, sum_const_zero, hy, Std.le_refl]
   · have hypos : 0 < G.marginalY y :=
       lt_of_le_of_ne (G.marginalY_nonneg y) (Ne.symm hy)
     have hlocal := exactFairAlice_conditional_variation_le
@@ -29578,7 +29683,7 @@ theorem exactFairBobHistoryVariation_le_entropy
       have hnonneg := G.weight_nonneg x y
       rw [hx] at hle
       linarith
-    simp [hx, hzero]
+    simp only [hzero, zero_mul, sum_const_zero, hx, Std.le_refl]
   · have hxpos : 0 < G.marginalX x :=
       lt_of_le_of_ne (G.marginalX_nonneg x) (Ne.symm hx)
     have hlocal := exactFairBob_conditional_variation_le
@@ -29977,7 +30082,7 @@ theorem exactSeedCoordinateFiber_sum
   conv_rhs =>
     rw [← exactUniform_sum_mul hbits
       (1 / (Fintype.card M : ℝ))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro partition _
   letI : DecidableEq
       {j : M // j ∈ exactLeft coordinate partition} :=
@@ -29990,7 +30095,7 @@ theorem exactSeedCoordinateFiber_sum
       (T := {j : M // j ∈ exactLeft coordinate partition})
       ((1 / (Fintype.card M : ℝ)) *
         (1 / (Fintype.card (M → Bool) : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro leftOrder _
   conv_rhs =>
     rw [← exactPermutationUniform_sum_mul
@@ -30000,7 +30105,7 @@ theorem exactSeedCoordinateFiber_sum
         (1 / (Fintype.card
           (Equiv.Perm
             {j : M // j ∈ exactLeft coordinate partition}) : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro rightOrder _
   conv_rhs =>
     rw [← exactPrefixUniform_sum_mul
@@ -30013,7 +30118,7 @@ theorem exactSeedCoordinateFiber_sum
         (1 / (Fintype.card
           (Equiv.Perm
             {j : M // j ∈ exactRight coordinate partition}) : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro leftCut _
   conv_rhs =>
     rw [← exactPrefixUniform_sum_mul
@@ -30027,7 +30132,7 @@ theorem exactSeedCoordinateFiber_sum
           (Equiv.Perm
             {j : M // j ∈ exactRight coordinate partition}) : ℝ)) *
         (1 / ((exactLeft coordinate partition).card + 1 : ℝ)))]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro rightCut _
   simp only [exactSeedWeight]
   refine congrArg₂ (· * ·) (congrArg₂ (· * ·) (congrArg₂ (· * ·)
@@ -30043,7 +30148,7 @@ theorem exactSeedWeight_coordinate_sum
       ∑ i : M, (1 / (Fintype.card M : ℝ)) * f i := by
   classical
   rw [exactForwardSeed_sum]
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro i _
   simp_rw [← Finset.sum_mul]
   rw [exactSeedCoordinateFiber_sum i]
@@ -30286,8 +30391,8 @@ def exactInsertedRank
     (cut : Fin (side.card + 1)) :
     exactInsertedRank i side not_mem rank cut
       ⟨i, Finset.mem_insert_self i side⟩ = cut := by
-  simp [exactInsertedRank,
-    Finset.subtypeInsertEquivOption]
+  simp only [exactInsertedRank, subtypeInsertEquivOption, Equiv.trans_apply, Equiv.coe_fn_mk,
+    ↓reduceDIte, Equiv.optionCongr_apply, Option.map_none, finSuccEquiv'_symm_none]
 
 theorem exactInsertedRank_old
     {M : Type*} [DecidableEq M]
@@ -30301,8 +30406,9 @@ theorem exactInsertedRank_old
   have hne : j.val ≠ i := by
     intro h
     exact not_mem (h ▸ j.property)
-  simp [exactInsertedRank,
-    Finset.subtypeInsertEquivOption, hne]
+  simp only [exactInsertedRank, subtypeInsertEquivOption, Equiv.trans_apply, Equiv.coe_fn_mk, hne,
+    ↓reduceDIte, Subtype.coe_eta, Equiv.optionCongr_apply, Option.map_some,
+    finSuccEquiv'_symm_some]
 
 def exactReverseLeftRank
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -30578,7 +30684,8 @@ theorem exactReverseLeftSide_complement
   ext j
   by_cases hcoordinate : j = seed.coordinate
   · subst j
-    simp [exactRight, exactReverseLeftSide]
+    simp only [exactRight, ne_eq, mem_filter, mem_univ, not_true_eq_false, false_and, and_false,
+      exactReverseLeftSide, mem_sdiff, mem_insert, true_or]
   · cases hbit : seed.partition j <;>
       simp [exactRight, exactLeft,
         exactReverseLeftSide, hcoordinate, hbit]
@@ -30591,7 +30698,8 @@ theorem exactReverseRightSide_complement
   ext j
   by_cases hcoordinate : j = seed.coordinate
   · subst j
-    simp [exactLeft, exactReverseRightSide]
+    simp only [exactLeft, ne_eq, mem_filter, mem_univ, not_true_eq_false, false_and, and_false,
+      exactReverseRightSide, mem_sdiff, mem_insert, true_or]
   · cases hbit : seed.partition j <;>
       simp [exactRight, exactLeft,
         exactReverseRightSide, hcoordinate, hbit]
@@ -30656,7 +30764,7 @@ def exactReverseBobContextAt
     exactReverseAliceContextAt
         (exactReverseLeftSide seed) seed =
       exactReverseAliceContext seed := by
-  simp [exactReverseAliceContextAt]
+  simp only [exactReverseAliceContextAt, ↓reduceDIte]
 
 @[simp] theorem exactReverseBobContextAt_actual
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -30664,7 +30772,7 @@ def exactReverseBobContextAt
     exactReverseBobContextAt
         (exactReverseRightSide seed) seed =
       exactReverseBobContext seed := by
-  simp [exactReverseBobContextAt]
+  simp only [exactReverseBobContextAt, ↓reduceDIte]
 
 @[simp] theorem exactReverseAliceContext_otherPrefix
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -30750,9 +30858,8 @@ def exactReverseBobSourceProjection
       ⟨seed.coordinate,
         exactReverseLeftSide_coordinate_mem seed⟩).val =
       seed.leftCut.val := by
-  simp [exactReverseAliceContext,
-    Equiv.trans_apply,
-    exactReverseLeftRank_coordinate]
+  simp only [exactReverseAliceContext, Equiv.trans_apply, exactReverseLeftRank_coordinate,
+    finCongr_apply, Fin.val_cast]
 
 @[simp] theorem exactReverseBobContext_marked_rank
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -30761,9 +30868,8 @@ def exactReverseBobSourceProjection
       ⟨seed.coordinate,
         exactReverseRightSide_coordinate_mem seed⟩).val =
       seed.rightCut.val := by
-  simp [exactReverseBobContext,
-    Equiv.trans_apply,
-    exactReverseRightRank_coordinate]
+  simp only [exactReverseBobContext, Equiv.trans_apply, exactReverseRightRank_coordinate,
+    finCongr_apply, Fin.val_cast]
 
 def exactReverseContextPrefixBefore
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -30815,8 +30921,8 @@ theorem exactReverseAliceContext_prefix_before_marked
           simpa only [Fin.val_castSucc,
             exactReverseAliceContext_marked_rank] using hlt
         convert hlt' using 1 ;
-          simp [exactReverseAliceContext,
-            exactReverseLeftRank, Equiv.trans_apply] ;
+          simp only [exactReverseAliceContext, exactReverseLeftRank, Equiv.trans_apply,
+            finCongr_apply, Fin.val_cast] ;
           congr 2
       · rintro ⟨hj, hlt⟩
         change j ∈ exactReverseLeftSide seed at hj
@@ -30825,8 +30931,8 @@ theorem exactReverseAliceContext_prefix_before_marked
             ((exactReverseAliceContext seed).sideRank
               ⟨j, hj⟩).val < seed.leftCut.val := by
           convert hlt using 1 ;
-            simp [exactReverseAliceContext,
-              exactReverseLeftRank, Equiv.trans_apply] ;
+            simp only [exactReverseAliceContext, exactReverseLeftRank, Equiv.trans_apply,
+              finCongr_apply, Fin.val_cast] ;
             congr 2
         simpa only [Fin.val_castSucc,
           exactReverseAliceContext_marked_rank] using hlt'
@@ -30875,8 +30981,8 @@ theorem exactReverseBobContext_prefix_before_marked
           simpa only [Fin.val_castSucc,
             exactReverseBobContext_marked_rank] using hlt
         convert hlt' using 1 ;
-          simp [exactReverseBobContext,
-            exactReverseRightRank, Equiv.trans_apply] ;
+          simp only [exactReverseBobContext, exactReverseRightRank, Equiv.trans_apply,
+            finCongr_apply, Fin.val_cast] ;
           congr 2
       · rintro ⟨hj, hlt⟩
         change j ∈ exactReverseRightSide seed at hj
@@ -30885,8 +30991,8 @@ theorem exactReverseBobContext_prefix_before_marked
             ((exactReverseBobContext seed).sideRank
               ⟨j, hj⟩).val < seed.rightCut.val := by
           convert hlt using 1 ;
-            simp [exactReverseBobContext,
-              exactReverseRightRank, Equiv.trans_apply] ;
+            simp only [exactReverseBobContext, exactReverseRightRank, Equiv.trans_apply,
+              finCongr_apply, Fin.val_cast] ;
             congr 2
         simpa only [Fin.val_castSucc,
           exactReverseBobContext_marked_rank] using hlt'
@@ -30932,25 +31038,24 @@ theorem exactPrefixNextDecode_comp
   · funext j
     by_cases heq : j = k
     · subst j
-      simp [exactPrefixNextDecode,
-        exactPrefixNextCode,
-        finitePrefixMask, Function.comp_apply]
+      simp only [Function.comp_apply, exactPrefixNextDecode, exactPrefixNextCode,
+        finitePrefixMask, Fin.val_castSucc, Fin.val_fin_lt, Function.update_self, Fin.val_succ,
+        Order.lt_add_one_iff, Fin.val_fin_le, Std.le_refl, ↓reduceIte]
     · by_cases hlt : j.val < k.val
       · have hfin : j < k := hlt
         have hnotgt : ¬ k < j := not_lt_of_ge (le_of_lt hfin)
-        simp [exactPrefixNextDecode,
-          exactPrefixNextCode,
-          finitePrefixMask, Function.comp_apply,
-          Function.update_of_ne heq, hfin, hnotgt]
+        simp only [Function.comp_apply, exactPrefixNextDecode, exactPrefixNextCode,
+          finitePrefixMask, Fin.val_castSucc, Fin.val_fin_lt, Function.update_of_ne heq, hfin,
+          ↓reduceIte, Fin.val_succ, Order.lt_add_one_iff, Fin.val_fin_le, left_eq_ite_iff, not_le,
+          hnotgt, IsEmpty.forall_iff]
       · have hfin : ¬ j < k := hlt
         have hnotle : ¬ j ≤ k := by
           intro hle
           have heqval : j.val = k.val := by omega
           exact heq (Fin.ext heqval)
-        simp [exactPrefixNextDecode,
-          exactPrefixNextCode,
-          finitePrefixMask, Function.comp_apply,
-          Function.update_of_ne heq, hfin, hnotle]
+        simp only [Function.comp_apply, exactPrefixNextDecode, exactPrefixNextCode,
+          finitePrefixMask, Fin.val_castSucc, Fin.val_fin_lt, Function.update_of_ne heq, hfin,
+          ↓reduceIte, Fin.val_succ, Order.lt_add_one_iff, Fin.val_fin_le, hnotle]
 
 theorem exactPrefixNextCode_comp
     {Ω V : Type*} {h : ℕ}
@@ -30962,8 +31067,9 @@ theorem exactPrefixNextCode_comp
   apply Prod.ext
   · exact congrFun
       (finitePrefixMask_comp (Ω := Ω) default k) t
-  · simp [exactPrefixNextCode,
-      finitePrefixMask, Function.comp_apply]
+  · simp only [Function.comp_apply, exactPrefixNextCode, finitePrefixMask, Fin.val_succ,
+      Order.lt_add_one_iff, Fin.val_fin_le, Fin.val_castSucc, Fin.val_fin_lt, Std.le_refl,
+      ↓reduceIte]
 
 theorem exactPrefixNext_relativeEntropy_eq
     {Ω V : Type*} [Fintype Ω] [Fintype V] {h : ℕ}
@@ -31180,7 +31286,7 @@ theorem exactReverseAliceCanonicalPartition_side
   ext j
   by_cases hj : j = coordinate
   · subst j
-    simp [member]
+    simp only [mem_insert, true_or, member]
   · by_cases hs : j ∈ side <;>
       simp [exactLeft,
         exactReverseAliceCanonicalPartition,
@@ -31197,18 +31303,18 @@ theorem exactReverseAliceCanonicalPartition_unique
   funext j
   by_cases hj : j = coordinate
   · subst j
-    simp [exactReverseAliceCanonicalPartition]
+    simp only [exactReverseAliceCanonicalPartition, ↓reduceIte]
   · cases hb : partition j
     · have hs : j ∈ side := by
         rw [← fiber]
-        simp [exactLeft, hj, hb]
-      simp [exactReverseAliceCanonicalPartition,
-        hj, hs]
+        simp only [exactLeft, ne_eq, mem_insert, hj, mem_filter, mem_univ, not_false_eq_true, hb,
+          and_self, or_true]
+      simp only [exactReverseAliceCanonicalPartition, hj, ↓reduceIte, hs]
     · have hs : j ∉ side := by
         rw [← fiber]
-        simp [exactLeft, hj, hb]
-      simp [exactReverseAliceCanonicalPartition,
-        hj, hs]
+        simp only [exactLeft, ne_eq, mem_insert, hj, mem_filter, mem_univ, not_false_eq_true, hb,
+          Bool.true_eq_false, and_false, or_self]
+      simp only [exactReverseAliceCanonicalPartition, hj, ↓reduceIte, hs]
 
 def exactReverseAlicePartitionFiberEquiv
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31227,7 +31333,7 @@ def exactReverseAlicePartitionFiberEquiv
     exact (exactReverseAliceCanonicalPartition_unique
       side coordinate partition.val partition.property).symm
   right_inv ignored := by
-    simp [exactReverseAliceCanonicalPartition]
+    simp only [exactReverseAliceCanonicalPartition, ↓reduceIte]
 
 def exactReverseBobCanonicalPartition
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31246,7 +31352,7 @@ theorem exactReverseBobCanonicalPartition_side
   ext j
   by_cases hj : j = coordinate
   · subst j
-    simp [member]
+    simp only [mem_insert, true_or, member]
   · by_cases hs : j ∈ side <;>
       simp [exactRight,
         exactReverseBobCanonicalPartition,
@@ -31263,18 +31369,18 @@ theorem exactReverseBobCanonicalPartition_unique
   funext j
   by_cases hj : j = coordinate
   · subst j
-    simp [exactReverseBobCanonicalPartition]
+    simp only [exactReverseBobCanonicalPartition, ↓reduceIte]
   · cases hb : partition j
     · have hs : j ∉ side := by
         rw [← fiber]
-        simp [exactRight, hj, hb]
-      simp [exactReverseBobCanonicalPartition,
-        hj, hs]
+        simp only [exactRight, ne_eq, mem_insert, hj, mem_filter, mem_univ, not_false_eq_true, hb,
+          Bool.false_eq_true, and_false, or_self]
+      simp only [exactReverseBobCanonicalPartition, hj, ↓reduceIte, hs]
     · have hs : j ∈ side := by
         rw [← fiber]
-        simp [exactRight, hj, hb]
-      simp [exactReverseBobCanonicalPartition,
-        hj, hs]
+        simp only [exactRight, ne_eq, mem_insert, hj, mem_filter, mem_univ, not_false_eq_true, hb,
+          and_self, or_true]
+      simp only [exactReverseBobCanonicalPartition, hj, ↓reduceIte, hs]
 
 def exactReverseBobPartitionFiberEquiv
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31293,7 +31399,7 @@ def exactReverseBobPartitionFiberEquiv
     exact (exactReverseBobCanonicalPartition_unique
       side coordinate partition.val partition.property).symm
   right_inv ignored := by
-    simp [exactReverseBobCanonicalPartition]
+    simp only [exactReverseBobCanonicalPartition, ↓reduceIte]
 
 theorem exactReverseAlicePartitionFiber_card
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31303,7 +31409,7 @@ theorem exactReverseAlicePartitionFiber_card
       {partition : M → Bool //
         insert coordinate
           (exactLeft coordinate partition) = side} = 2 := by
-  simpa using Fintype.card_congr
+  simpa only [Fintype.card_bool] using Fintype.card_congr
     (exactReverseAlicePartitionFiberEquiv
       side coordinate member)
 
@@ -31315,7 +31421,7 @@ theorem exactReverseBobPartitionFiber_card
       {partition : M → Bool //
         insert coordinate
           (exactRight coordinate partition) = side} = 2 := by
-  simpa using Fintype.card_congr
+  simpa only [Fintype.card_bool] using Fintype.card_congr
     (exactReverseBobPartitionFiberEquiv
       side coordinate member)
 
@@ -31334,7 +31440,7 @@ theorem exactFiniteIndicator_sum
           intro t _
           split_ifs <;> simp
     _ = (Fintype.card {t : T // predicate t} : ℝ) * weight := by
-      simp [Fintype.card_subtype]
+      simp only [sum_boole, Fintype.card_subtype]
 
 theorem exactReverseAlicePartitionFiber_sum
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31426,9 +31532,10 @@ theorem exactReverseAlicePartition_orderCut_fiber_sum
   by_cases hside :
       insert coordinate
         (exactLeft coordinate partition) = side
-  · simpa [exactReverseLeftSide, hside] using
+  · simpa only [exactReverseLeftSide, hside, ↓reduceIte, one_div, Fintype.card_pi,
+      Fintype.card_bool, prod_const, card_univ, Nat.cast_pow, Nat.cast_ofNat] using
       exactReversePartition_orderCut_sum coordinate partition
-  · simp [exactReverseLeftSide, hside]
+  · simp only [exactReverseLeftSide, hside, ↓reduceIte, sum_const_zero]
 
 theorem exactReverseBobPartition_orderCut_fiber_sum
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31457,9 +31564,10 @@ theorem exactReverseBobPartition_orderCut_fiber_sum
   by_cases hside :
       insert coordinate
         (exactRight coordinate partition) = side
-  · simpa [exactReverseRightSide, hside] using
+  · simpa only [exactReverseRightSide, hside, ↓reduceIte, one_div, Fintype.card_pi,
+      Fintype.card_bool, prod_const, card_univ, Nat.cast_pow, Nat.cast_ofNat] using
       exactReversePartition_orderCut_sum coordinate partition
-  · simp [exactReverseRightSide, hside]
+  · simp only [exactReverseRightSide, hside, ↓reduceIte, sum_const_zero]
 
 theorem exactReverseAliceSide_marginal
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31498,7 +31606,7 @@ theorem exactReverseAliceSide_marginal
         apply hmember
         rw [← h]
         exact Finset.mem_insert_self _ _
-      simp [hnot]
+      simp only [hnot, ↓reduceIte]
   simp_rw [hcoordinate]
   rw [exactFiniteIndicator_sum]
   simp only [Fintype.card_coe, Fintype.card_fun,
@@ -31543,7 +31651,7 @@ theorem exactReverseBobSide_marginal
         apply hmember
         rw [← h]
         exact Finset.mem_insert_self _ _
-      simp [hnot]
+      simp only [hnot, ↓reduceIte]
   simp_rw [hcoordinate]
   rw [exactFiniteIndicator_sum]
   simp only [Fintype.card_coe, Fintype.card_fun,
@@ -31605,7 +31713,7 @@ theorem exactReverseAliceConditionalSeedWeight_cancel
     simp only [exactReverseAliceConditionalSeedWeight,
       ↓reduceIte]
     field_simp [hpositive.ne']
-  · simp [exactReverseAliceConditionalSeedWeight, hs]
+  · simp only [exactReverseAliceConditionalSeedWeight, hs, ↓reduceIte, mul_zero]
 
 theorem exactReverseBobConditionalSeedWeight_cancel
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31627,7 +31735,7 @@ theorem exactReverseBobConditionalSeedWeight_cancel
     simp only [exactReverseBobConditionalSeedWeight,
       ↓reduceIte]
     field_simp [hpositive.ne']
-  · simp [exactReverseBobConditionalSeedWeight, hs]
+  · simp only [exactReverseBobConditionalSeedWeight, hs, ↓reduceIte, mul_zero]
 
 theorem exactReverseAliceConditionalSeedWeight_sum
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31731,7 +31839,7 @@ def exactReverseBobConditionalSeedLaw
     (exactReverseAliceConditionalSeedLaw
       nonempty side).weight seed =
       exactReverseAliceConditionalSeedWeight side seed := by
-  simp [exactReverseAliceConditionalSeedLaw, hside]
+  simp only [exactReverseAliceConditionalSeedLaw, hside, ↓reduceDIte]
 
 @[simp] theorem exactReverseBobConditionalSeedLaw_weight
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -31741,7 +31849,7 @@ def exactReverseBobConditionalSeedLaw
     (exactReverseBobConditionalSeedLaw
       nonempty side).weight seed =
       exactReverseBobConditionalSeedWeight side seed := by
-  simp [exactReverseBobConditionalSeedLaw, hside]
+  simp only [exactReverseBobConditionalSeedLaw, hside, ↓reduceDIte]
 
 end
 
@@ -31818,7 +31926,7 @@ theorem reweightedSeedWinEventMass
     split_ifs <;> simp
   simp_rw [hinner]
   rw [← Finset.sum_mul, seedLaw.weight_sum]
-  simp
+  simp only [sum_ite_mem, univ_inter, one_mul]
 
 def reweightedSeedPosterior
     {K : Type*} [Fintype K]
@@ -31846,7 +31954,7 @@ theorem reweightedSeedPosterior_eq_product
   by_cases hq : q.2 ∈ event
   · have hlift :
         q ∈ reweightedSeedWinEvent (K := K) G n D := by
-      simpa [reweightedSeedWinEvent] using hq
+      simpa only [reweightedSeedWinEvent, mem_filter, mem_univ, true_and] using hq
     unfold reweightedSeedPosterior
       repeatedConditionedOutcomeLaw
       conditionedEventDistribution
@@ -31863,12 +31971,11 @@ theorem reweightedSeedPosterior_eq_product
     ring
   · have hlift :
         q ∉ reweightedSeedWinEvent (K := K) G n D := by
-      simpa [reweightedSeedWinEvent] using hq
+      simpa only [reweightedSeedWinEvent, mem_filter, mem_univ, true_and] using hq
     change q.2 ∉
       FiniteEventLaw.winEvent (repeatedCoordinateWin G n) D at hq
-    simp [reweightedSeedPosterior,
-      repeatedConditionedOutcomeLaw,
-      conditionedEventDistribution, hlift, hq]
+    simp only [reweightedSeedPosterior, conditionedEventDistribution, hlift, ↓reduceIte,
+      repeatedConditionedOutcomeLaw, hq, mul_zero]
 
 theorem reweightedSeedProjection_relativeEntropy_le
     {K U : Type*} [Fintype K] [Fintype U]
@@ -32265,7 +32372,7 @@ theorem reweightedSeedPrefixJoint_sum
           repeatedConditionedAnswerFlag G n S D q.2))
       (conditionedEventDistribution law event)).trans
       (conditionedEventDistribution_sum law event hevent) using 1
-  apply Finset.sum_congr (by ext; simp)
+  apply Finset.sum_congr (by ext; simp only [mem_univ])
   intro t _
   exact congrFun
     (exactGroupedMass_decidableEq_irrel _ _
@@ -32470,8 +32577,9 @@ theorem exactReverseAliceConditionalSeedLaw_weight_cancel
       nonempty side seed
   · have hempty : side = ∅ := Finset.not_nonempty_iff_eq_empty.mp hside
     subst side
-    simp [exactReverseAliceConditionalSeedLaw,
-      exactReverseLeftSide]
+    simp only [reversePartitionWeight_empty, exactReverseAliceConditionalSeedLaw,
+      Finset.not_nonempty_empty, ↓reduceDIte, zero_mul, exactReverseLeftSide, insert_ne_empty,
+      ↓reduceIte]
 
 theorem exactReverseBobConditionalSeedLaw_weight_cancel
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -32489,8 +32597,9 @@ theorem exactReverseBobConditionalSeedLaw_weight_cancel
       nonempty side seed
   · have hempty : side = ∅ := Finset.not_nonempty_iff_eq_empty.mp hside
     subst side
-    simp [exactReverseBobConditionalSeedLaw,
-      exactReverseRightSide]
+    simp only [reversePartitionWeight_empty, exactReverseBobConditionalSeedLaw,
+      Finset.not_nonempty_empty, ↓reduceDIte, zero_mul, exactReverseRightSide, insert_ne_empty,
+      ↓reduceIte]
 
 def exactReverseSideContextWeight
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -32601,7 +32710,7 @@ def exactReverseBobMarkerCode
     (((exactReverseAliceMarkerCode seed).2.1.sideRank).symm
       (exactReverseAliceMarkerCode seed).2.2).val =
       seed.coordinate := by
-  simp [exactReverseAliceMarkerCode]
+  simp only [exactReverseAliceMarkerCode, Equiv.symm_apply_apply]
 
 @[simp] theorem exactReverseBobMarkerCode_coordinate
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -32609,7 +32718,7 @@ def exactReverseBobMarkerCode
     (((exactReverseBobMarkerCode seed).2.1.sideRank).symm
       (exactReverseBobMarkerCode seed).2.2).val =
       seed.coordinate := by
-  simp [exactReverseBobMarkerCode]
+  simp only [exactReverseBobMarkerCode, Equiv.symm_apply_apply]
 
 theorem exactReverseAliceMarkerCode_coordinate_injective
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -32656,14 +32765,15 @@ theorem exactReverseAliceMarkerCode_partition_injective
   funext j
   by_cases hj : j = a.coordinate
   · subst j
-    simpa [hcoordinate] using hbit
+    simpa only [hcoordinate] using hbit
   · have hbj : j ≠ b.coordinate := by
-      simpa [hcoordinate] using hj
+      simpa only [ne_eq, hcoordinate] using hj
     have hm :
         (a.partition j = false) ↔ (b.partition j = false) := by
       have := Finset.ext_iff.mp hside j
-      simpa [exactReverseLeftSide, exactLeft,
-        hj, hbj] using this
+      simpa only [Bool.coe_false_iff_false, Bool.not_eq_eq_eq_not, Bool.not_not,
+        exactReverseLeftSide, exactLeft, ne_eq, mem_insert, hj, mem_filter, mem_univ,
+        not_false_eq_true, true_and, false_or, hbj] using this
     cases ha : a.partition j <;>
       cases hb : b.partition j <;>
       simp_all
@@ -32689,14 +32799,14 @@ theorem exactReverseBobMarkerCode_partition_injective
   funext j
   by_cases hj : j = a.coordinate
   · subst j
-    simpa [hcoordinate] using hbit
+    simpa only [hcoordinate] using hbit
   · have hbj : j ≠ b.coordinate := by
-      simpa [hcoordinate] using hj
+      simpa only [ne_eq, hcoordinate] using hj
     have hm :
         (a.partition j = true) ↔ (b.partition j = true) := by
       have := Finset.ext_iff.mp hside j
-      simpa [exactReverseRightSide, exactRight,
-        hj, hbj] using this
+      simpa only [Bool.coe_iff_coe, exactReverseRightSide, exactRight, ne_eq, mem_insert, hj,
+        mem_filter, mem_univ, not_false_eq_true, true_and, false_or, hbj] using this
     cases ha : a.partition j <;>
       cases hb : b.partition j <;>
       simp_all
@@ -32776,7 +32886,8 @@ theorem exactReverseAliceMarkerCode_injective
           Fin (exactRight i p).card) =>
         e.trans (Finset.equivFin (exactRight i p)).symm)
       hotherRank
-    simpa [exactRightRank, Equiv.trans_assoc] using h
+    simpa only [exactRightRank, Equiv.trans_assoc, Equiv.self_trans_symm,
+      Equiv.trans_refl] using h
   have hright : r = r' := Equiv.symm_bijective.injective hrightSymm
   subst r'
   have hreverseLeftRank :
@@ -32846,7 +32957,7 @@ theorem exactReverseAliceMarkerCode_injective
           Fin (exactLeft i p).card) =>
         e.trans (Finset.equivFin (exactLeft i p)).symm)
       hleftRank
-    simpa [exactLeftRank, Equiv.trans_assoc] using h
+    simpa only [exactLeftRank, Equiv.trans_assoc, Equiv.self_trans_symm, Equiv.trans_refl] using h
   have hleft : l = l' := Equiv.symm_bijective.injective hleftSymm
   subst l'
   rfl
@@ -32941,7 +33052,7 @@ theorem exactReverseBobMarkerCode_injective
           Fin (exactLeft i p).card) =>
         e.trans (Finset.equivFin (exactLeft i p)).symm)
       hotherRank
-    simpa [exactLeftRank, Equiv.trans_assoc] using h
+    simpa only [exactLeftRank, Equiv.trans_assoc, Equiv.self_trans_symm, Equiv.trans_refl] using h
   have hleft : l = l' := Equiv.symm_bijective.injective hleftSymm
   subst l'
   have hreverseRightRank :
@@ -33011,7 +33122,8 @@ theorem exactReverseBobMarkerCode_injective
           Fin (exactRight i p).card) =>
         e.trans (Finset.equivFin (exactRight i p)).symm)
       hrightRank
-    simpa [exactRightRank, Equiv.trans_assoc] using h
+    simpa only [exactRightRank, Equiv.trans_assoc, Equiv.self_trans_symm,
+      Equiv.trans_refl] using h
   have hright : r = r' := Equiv.symm_bijective.injective hrightSymm
   subst r'
   rfl
@@ -33157,7 +33269,8 @@ theorem exactPermutationOfSideRank_rank
       (Finset.equivFin side) = rank := by
   apply Equiv.ext
   intro j
-  simp [exactPermutationOfSideRank, Equiv.trans_apply]
+  simp only [exactPermutationOfSideRank, Equiv.symm_trans, Equiv.symm_symm, Equiv.trans_apply,
+    Equiv.apply_symm_apply]
 
 theorem exactReverseAliceCanonicalPartition_otherSide
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -33170,7 +33283,8 @@ theorem exactReverseAliceCanonicalPartition_otherSide
   ext j
   by_cases marked : j = coordinate
   · subst j
-    simp [exactRight, member]
+    simp only [exactRight, ne_eq, mem_filter, mem_univ, not_true_eq_false, false_and, and_false,
+      mem_sdiff, member]
   · by_cases belongs : j ∈ side <;>
       simp [exactRight,
         exactReverseAliceCanonicalPartition,
@@ -33187,7 +33301,8 @@ theorem exactReverseBobCanonicalPartition_otherSide
   ext j
   by_cases marked : j = coordinate
   · subst j
-    simp [exactLeft, member]
+    simp only [exactLeft, ne_eq, mem_filter, mem_univ, not_true_eq_false, false_and, and_false,
+      mem_sdiff, member]
   · by_cases belongs : j ∈ side <;>
       simp [exactLeft,
         exactReverseBobCanonicalPartition,
@@ -33203,7 +33318,7 @@ theorem exactReverseAliceCanonicalPartition_card
   have h := congrArg Finset.card
     (exactReverseAliceCanonicalPartition_side
       side coordinate member ignored)
-  simpa [exactLeft_coordinate_not_mem] using h
+  simpa only [exactLeft_coordinate_not_mem, not_false_eq_true, card_insert_of_notMem] using h
 
 theorem exactReverseBobCanonicalPartition_card
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -33215,7 +33330,7 @@ theorem exactReverseBobCanonicalPartition_card
   have h := congrArg Finset.card
     (exactReverseBobCanonicalPartition_side
       side coordinate member ignored)
-  simpa [exactRight_coordinate_not_mem] using h
+  simpa only [exactRight_coordinate_not_mem, not_false_eq_true, card_insert_of_notMem] using h
 
 def exactReverseAliceMarkerDecode
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -33479,8 +33594,8 @@ attribute [local instance] Classical.propDecidable
       side context marker).partition
       (exactReverseAliceMarkerDecode
         side context marker).coordinate = context.ignoredBit := by
-  simp [exactReverseAliceMarkerDecode,
-    exactReverseAliceCanonicalPartition]
+  simp only [exactReverseAliceMarkerDecode, finCongr_apply, exactReverseAliceCanonicalPartition,
+    ↓reduceIte]
 
 @[simp] theorem exactReverseBobMarkerDecode_ignoredBit
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -33491,8 +33606,8 @@ attribute [local instance] Classical.propDecidable
       side context marker).partition
       (exactReverseBobMarkerDecode
         side context marker).coordinate = context.ignoredBit := by
-  simp [exactReverseBobMarkerDecode,
-    exactReverseBobCanonicalPartition]
+  simp only [exactReverseBobMarkerDecode, finCongr_apply, exactReverseBobCanonicalPartition,
+    ↓reduceIte]
 
 theorem exactSigmaFinCutTransport
     {M : Type*} [DecidableEq M]
@@ -33504,7 +33619,7 @@ theorem exactSigmaFinCutTransport
           cut⟩ : Σ side : Finset M, Fin (side.card + 1)) =
       ⟨target, cut⟩ := by
   subst target
-  simp
+  simp only [finCongr_refl, Equiv.refl_apply]
 
 theorem exactSigmaSideRankTransport
     {M : Type*} [DecidableEq M]
@@ -33521,7 +33636,7 @@ theorem exactSigmaSideRankTransport
   · apply heq_of_eq
     apply Equiv.ext
     intro j
-    simp [Equiv.trans_apply]
+    simp only [finCongr_refl, Equiv.trans_refl, Equiv.trans_apply, EmbeddingLike.apply_eq_iff_eq]
     apply Subtype.ext
     rfl
 
@@ -33652,16 +33767,11 @@ theorem exactReverseAliceMarkerDecode_sideRank
               apply Equiv.ext
               intro j
               apply Fin.ext
-              simp [coordinate, partition, transportedRank,
-                exactReverseAliceMarkerDecode,
-                exactReverseAliceContext,
-                exactReverseLeftSide,
-                exactReverseLeftRank,
-                exactLeftRank,
-                exactPermutationOfSideRank_rank,
-                exactInsertedRank_deleteMarked,
-                Equiv.trans_assoc, Equiv.trans_apply,
-                finCongr_apply, Fin.val_cast]
+              simp only [exactReverseAliceMarkerDecode, exactReverseLeftSide,
+                exactReverseAliceContext, exactReverseLeftRank, exactLeftRank, finCongr_apply,
+                exactPermutationOfSideRank_rank, exactInsertedRank_deleteMarked,
+                Equiv.trans_assoc, Equiv.trans_apply, Fin.cast_cast, Fin.val_cast,
+                transportedRank, coordinate, partition]
     _ = ⟨side, context.sideRank⟩ := transported
 
 theorem exactReverseAliceMarkerDecode_rightInverse
@@ -33889,16 +33999,11 @@ theorem exactReverseBobMarkerDecode_sideRank
               apply Equiv.ext
               intro j
               apply Fin.ext
-              simp [coordinate, partition, transportedRank,
-                exactReverseBobMarkerDecode,
-                exactReverseBobContext,
-                exactReverseRightSide,
-                exactReverseRightRank,
-                exactRightRank,
-                exactPermutationOfSideRank_rank,
-                exactInsertedRank_deleteMarked,
-                Equiv.trans_assoc, Equiv.trans_apply,
-                finCongr_apply, Fin.val_cast]
+              simp only [exactReverseBobMarkerDecode, exactReverseRightSide,
+                exactReverseBobContext, exactReverseRightRank, exactRightRank, finCongr_apply,
+                exactPermutationOfSideRank_rank, exactInsertedRank_deleteMarked,
+                Equiv.trans_assoc, Equiv.trans_apply, Fin.cast_cast, Fin.val_cast,
+                transportedRank, coordinate, partition]
     _ = ⟨side, context.sideRank⟩ := transported
 
 theorem exactReverseBobMarkerDecode_rightInverse
@@ -34054,7 +34159,7 @@ theorem exactReverseAliceOriginalSeedWeight_factor
           exactReverseAliceConditionalSeedWeight
             (exactReverseLeftSide seed) seed := by
       symm
-      simpa using
+      simpa only [↓reduceIte] using
         (exactReverseAliceConditionalSeedWeight_cancel
           nonempty (exactReverseLeftSide seed) seed)
     _ = _ := by
@@ -34076,7 +34181,7 @@ theorem exactReverseBobOriginalSeedWeight_factor
           exactReverseBobConditionalSeedWeight
             (exactReverseRightSide seed) seed := by
       symm
-      simpa using
+      simpa only [↓reduceIte] using
         (exactReverseBobConditionalSeedWeight_cancel
           nonempty (exactReverseRightSide seed) seed)
     _ = _ := by
@@ -34090,10 +34195,11 @@ theorem exactUniformFiniteMarkedAverage_sum
       ∑ marker : Fin n, weight * statistic marker := by
   by_cases empty : n = 0
   · subst n
-    simp
+    simp only [univ_eq_empty, sum_empty, CharP.cast_eq_zero, div_zero, mul_zero, sum_const_zero]
   · have nonzero : (n : ℝ) ≠ 0 := by
       exact_mod_cast empty
-    simp [Finset.mul_sum, nonzero, div_eq_mul_inv, mul_left_comm]
+    simp only [div_eq_mul_inv, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul,
+      mul_left_comm, ne_eq, nonzero, not_false_eq_true, mul_inv_cancel₀, mul_one, mul_sum]
 
 theorem exactReverseAliceUniformMarkedSeed_sum
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -34685,7 +34791,7 @@ theorem exactReverseAliceFilterOperatorMarkerEntropy_eq_sub
   · simp only [if_pos accepted]
     rw [exactFairAliceHistoryEntropy_eq_operatorPotential_sub]
     ring
-  · simp [accepted]
+  · simp only [accepted, ↓reduceIte, sub_self]
 
 theorem exactReverseBobFilterOperatorMarkerEntropy_eq_sub
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -34716,7 +34822,7 @@ theorem exactReverseBobFilterOperatorMarkerEntropy_eq_sub
   · simp only [if_pos accepted]
     rw [exactFairBobHistoryEntropy_eq_operatorPotential_sub]
     ring
-  · simp [accepted]
+  · simp only [accepted, ↓reduceIte, sub_self]
 
 end
 
@@ -34746,21 +34852,21 @@ theorem exactFixedQuestionPrefix_insert_iff
   constructor
   · intro h
     refine ⟨?_, ?_⟩
-    · simpa using h j (Finset.mem_insert_self j fixed)
+    · simpa only [Function.update_self] using h j (Finset.mem_insert_self j fixed)
     · intro k hk
       have different : k ≠ j := by
         intro same
         exact fresh (same ▸ hk)
-      simpa [Function.update_of_ne different] using
+      simpa only [Function.update_of_ne different] using
         h k (Finset.mem_insert_of_mem hk)
   · rintro ⟨hvalue, hfixed⟩ k hk
     rcases Finset.mem_insert.mp hk with same | hk
     · subst k
-      simpa using hvalue
+      simpa only [Function.update_self] using hvalue
     · have different : k ≠ j := by
         intro same
         exact fresh (same ▸ hk)
-      simpa [Function.update_of_ne different] using hfixed k hk
+      simpa only [Function.update_of_ne different] using hfixed k hk
 
 end
 
@@ -34797,34 +34903,38 @@ theorem exactRevealCode_splitAt_independent
     have different : j.val ≠ seed.coordinate.val := by
       intro h
       exact hiD (h ▸ j.property)
-    simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+      Equiv.coe_fn_mk, different, ↓reduceDIte]
   · funext j
     have hiD : seed.coordinate.val ∉ D :=
       (Finset.mem_sdiff.mp seed.coordinate.property).2
     have different : j.val ≠ seed.coordinate.val := by
       intro h
       exact hiD (h ▸ j.property)
-    simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+      Equiv.coe_fn_mk, different, ↓reduceDIte]
   · funext j
     have different : j.val.val ≠ seed.coordinate.val := by
       intro h
       have same : j.val = seed.coordinate := Subtype.ext h
       have mem : seed.coordinate ∈
           exactLeft seed.coordinate seed.partition := by
-        simpa [same] using j.property
+        simpa only [same] using j.property
       exact exactLeft_coordinate_not_mem
         seed.coordinate seed.partition mem
-    simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+      Equiv.coe_fn_mk, different, ↓reduceDIte]
   · funext j
     have different : j.val.val ≠ seed.coordinate.val := by
       intro h
       have same : j.val = seed.coordinate := Subtype.ext h
       have mem : seed.coordinate ∈
           exactRight seed.coordinate seed.partition := by
-        simpa [same] using j.property
+        simpa only [same] using j.property
       exact exactRight_coordinate_not_mem
         seed.coordinate seed.partition mem
-    simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+      Equiv.coe_fn_mk, different, ↓reduceDIte]
   · funext j
     have different : j.val.val ≠ seed.coordinate.val := by
       intro h
@@ -34832,7 +34942,8 @@ theorem exactRevealCode_splitAt_independent
       have hleft := exactLeftPrefix_subset seed j.property
       exact exactLeft_coordinate_not_mem
         seed.coordinate seed.partition (same ▸ hleft)
-    simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+      Equiv.coe_fn_mk, different, ↓reduceDIte]
   · funext j
     have different : j.val.val ≠ seed.coordinate.val := by
       intro h
@@ -34840,7 +34951,8 @@ theorem exactRevealCode_splitAt_independent
       have hright := exactRightPrefix_subset seed j.property
       exact exactRight_coordinate_not_mem
         seed.coordinate seed.partition (same ▸ hright)
-    simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+      Equiv.coe_fn_mk, different, ↓reduceDIte]
 
 theorem exactRepeatedQuestionWeight_splitAt_joint
     (G : Game X Y A B) (n : ℕ) (i : Fin n)
@@ -34875,7 +34987,7 @@ theorem exactRepeatedQuestionWeight_splitAt_joint
   apply Finset.prod_congr rfl
   intro j _
   have different : j.val ≠ i := (Finset.mem_erase.mp j.property).1
-  simp [different, e]
+  simp only [different, ↓reduceDIte, ne_eq, Equiv.coe_fn_mk, e]
 
 def exactFairQuestionTailWeight
     (G : Game X Y A B) (n : ℕ)
@@ -35042,7 +35154,9 @@ theorem exactJointQuestionMass_eq_question_mul_tail
                           apply propext
                           tauto
                     simp_rw [hcondition, ite_and]
-                    simp [Equiv.funSplitAt, Equiv.piSplitAt]
+                    simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant,
+                      Equiv.symm_mk, Equiv.coe_fn_mk, sum_ite_irrel, sum_ite_eq', mem_univ,
+                      ↓reduceIte, sum_const_zero]
     _ = G.questionWeight x y *
         exactFairQuestionTailWeight G n D seed history x y := by
           unfold exactFairQuestionTailWeight
@@ -35059,7 +35173,7 @@ theorem exactJointQuestionMass_eq_question_mul_tail
           · rw [if_pos h, if_pos h]
             exact exactRepeatedQuestionWeight_splitAt_joint
               G n seed.coordinate.val x y tailX tailY
-          · simp [h]
+          · simp only [ne_eq, h, ↓reduceIte, mul_zero]
 
 theorem exactJointQuestionMass_sum
     (G : Game X Y A B) (n : ℕ)
@@ -35129,11 +35243,11 @@ theorem exactJointQuestionMass_sum
                           apply Finset.sum_congr rfl
                           intro xx _
                           by_cases hx : q.1 seed.coordinate.val = xx
-                          · simp [hx]
-                          · simp [hx]
-                    _ = _ := by simp
-            simpa [h] using hsum
-          · simp [h]
+                          · simp only [hx, true_and, sum_ite_eq, mem_univ, ↓reduceIte]
+                          · simp only [hx, false_and, ↓reduceIte, sum_const_zero]
+                    _ = _ := by simp only [sum_ite_eq, mem_univ, ↓reduceIte]
+            simpa only [h, true_and, ↓reduceIte] using hsum
+          · simp only [h, false_and, ↓reduceIte, sum_const_zero]
 
 theorem exactJointQuestionMass_eq_reveal_mul_question
     (G : Game X Y A B) (n : ℕ)
@@ -35170,11 +35284,11 @@ theorem exactJointQuestionMass_eq_reveal_mul_question
           G.questionWeight xx yy) *
             exactFairQuestionTailWeight
               G n D seed history x y := by
-            simp [Finset.sum_mul]
+            simp only [sum_mul]
       _ = exactFairQuestionTailWeight
           G n D seed history x y := by
             rw [G.weight_normalized]
-            simp
+            simp only [one_mul]
   rw [exactJointQuestionMass_eq_question_mul_tail,
     ← htail]
   ring
@@ -35254,7 +35368,7 @@ theorem exactFairConditionedAnswerBornMass_eq_fiber_norm
   · have hz (xs : Fin n → X) (ys : Fin n → Y) :=
       exactFiberQuestionWeight_eq_zero_of_mass_zero
         G n D r.seed r.history x y hmass xs ys
-    simp [exactFairConditionedAnswerBornMass, hz, hmass]
+    simp only [exactFairConditionedAnswerBornMass, hz, zero_mul, sum_const_zero, hmass]
   · rw [exactUnnormalizedPsi_norm_sq]
     have hborn := exactSourceEquationTen
       G n S D r.seed r.history r.aliceAnswer r.bobAnswer
@@ -35327,8 +35441,7 @@ theorem exactLocallySampleableCode_fixedSeed_fiber_iff
         if hs : z.seed = r.seed then hs ▸ z.history else r.history) hr
     have hh :
         exactRevealCode D r.seed (o.1, o.2.1) = r.history := by
-      simpa [exactLocallySampleableCode,
-        exactHistoryCode] using hh0
+      simpa only [exactLocallySampleableCode, exactHistoryCode, ↓reduceDIte] using hh0
     refine ⟨hh, hx, hy, ?_, ?_⟩
     · have ha := congrArg ExactHistoryFlag.aliceAnswer hr
       intro j
@@ -35444,14 +35557,14 @@ theorem exactFairFullOutcomeBornMass_eq_conditioned
                 (r.seed.coordinate, x, y, r) := by
           intro code
           exact bok (hb.mpr (hf.mp code).2.2.2.2)
-        simp [notcode, bok]
+        simp only [notcode, ↓reduceIte, Game.repeat_questionWeight, bok, ite_self, mul_zero]
     · have notcode :
           exactLocallySampleableCode D
             (r.seed, (xs, ys, aa, bb)) ≠
               (r.seed.coordinate, x, y, r) := by
         intro code
         exact aok (ha.mpr (hf.mp code).2.2.2.1)
-      simp [notcode, aok]
+      simp only [notcode, ↓reduceIte, Game.repeat_questionWeight, aok, mul_zero]
   · have notfiber :
         ¬ (exactRevealCode D r.seed (xs, ys) = r.history ∧
           xs r.seed.coordinate.val = x ∧
@@ -35472,7 +35585,7 @@ theorem exactFairFullOutcomeBornMass_eq_conditioned
       have h := (exactLocallySampleableCode_fixedSeed_fiber_iff
         D r x y (xs, ys, aa, bb)).mp code
       exact notfiber ⟨h.1, h.2.1, h.2.2.1⟩
-    simp [notcode]
+    simp only [notcode, ↓reduceIte]
 
 theorem exactFairFullOutcomeBornMass_eq_reveal_question_norm
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -35546,13 +35659,11 @@ theorem exactLocallySampleableLaw_eq_fair_born
                   G n D (r.seed, o)).mp
                 rw [same_history]
                 exact accepted
-              simp [code, exactPostselectedJointLaw,
-                repeatedConditionedOutcomeLaw,
-                conditionedEventDistribution,
-                repeatedPostselectionMass, postselectionMass,
-                won]
+              simp only [code, ↓reduceIte, exactPostselectedJointLaw,
+                repeatedConditionedOutcomeLaw, conditionedEventDistribution, won,
+                repeatedPostselectionMass, postselectionMass]
               ring
-            · simp [code]
+            · simp only [code, ↓reduceIte, mul_zero, zero_div]
           _ = _ := by
             rw [exactFairFullOutcomeBornMass_eq_reveal_question_norm]
             ring
@@ -35571,8 +35682,8 @@ theorem exactLocallySampleableLaw_eq_fair_born
           (fun t : ExactLocallySampleableTuple X Y A B D =>
             t.2.2.2.seed) code
         exact different same
-      simp [notcode]
-    · simp
+      simp only [notcode, ↓reduceIte]
+    · simp only [mem_univ, not_true_eq_false, IsEmpty.forall_iff]
   · rw [if_neg accepted]
     exact exactLocallySampleableLaw_zero_of_not_accepted
       G n S D r.seed.coordinate x y r accepted
@@ -35665,7 +35776,7 @@ theorem exactFairPosteriorExpectation_reindex
       ∑ r : ExactHistoryFlag X Y A B D,
         exactLocallySampleableLaw G n S D (i, x, y, r) *
           f (i, x, y, r) := by
-            simp [Fintype.sum_prod_type]
+            simp only [Fintype.sum_prod_type, univ_eq_attach]
     _ = ∑ y : Y,
         ∑ r : ExactHistoryFlag X Y A B D,
         ∑ i : SourceRemainingCoordinate D,
@@ -35698,9 +35809,9 @@ theorem exactFairPosteriorExpectation_reindex
       intro x _
       rw [Finset.sum_eq_single r.seed.coordinate]
       · intro i _ different
-        simp [exactLocallySampleableLaw_zero_of_coordinate_mismatch
-          G n S D i x y r different]
-      · simp
+        simp only [exactLocallySampleableLaw_zero_of_coordinate_mismatch G n S D i x y r different,
+          zero_mul]
+      · simp only [univ_eq_attach, mem_attach, not_true_eq_false, mul_eq_zero, IsEmpty.forall_iff]
 
 def exactFairAcceptedAliceEntropy
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -35799,11 +35910,11 @@ theorem exactFairPsiPhiDistance_mul_postselection_le
             have hscaled := mul_le_mul_of_nonneg_left hnorm hw
             unfold exactFairHistoryPriorWeight at hscaled ⊢
             field_simp [positive.ne']
-            nlinarith
+            linarith
           · rw [if_neg accepted,
               exactLocallySampleableLaw_eq_fair_born,
               if_neg accepted]
-            simp
+            simp only [zero_mul, Std.le_refl]
     _ = 4 * exactFairAcceptedAliceVariation G n S D := by
       unfold exactFairAcceptedAliceVariation
         exactFairAliceHistoryVariation
@@ -35817,7 +35928,7 @@ theorem exactFairPsiPhiDistance_mul_postselection_le
         apply Finset.sum_congr rfl
         intro x _
         ring
-      · simp [accepted]
+      · simp only [accepted, ↓reduceIte, sum_const_zero, mul_zero]
 
 theorem exactFairGammaPsiDistance_mul_postselection_le
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -35880,11 +35991,11 @@ theorem exactFairGammaPsiDistance_mul_postselection_le
             have hscaled := mul_le_mul_of_nonneg_left hnorm hw
             unfold exactFairHistoryPriorWeight at hscaled ⊢
             field_simp [positive.ne']
-            nlinarith
+            linarith
           · rw [if_neg accepted,
               exactLocallySampleableLaw_eq_fair_born,
               if_neg accepted]
-            simp
+            simp only [zero_mul, Std.le_refl]
     _ = 4 * exactFairAcceptedBobVariation G n S D := by
       unfold exactFairAcceptedBobVariation
         exactFairBobHistoryVariation
@@ -35900,7 +36011,7 @@ theorem exactFairGammaPsiDistance_mul_postselection_le
         intro y _
         rw [norm_sub_rev]
         ring
-      · simp [accepted]
+      · simp only [accepted, ↓reduceIte, sum_const_zero, mul_zero]
 
 def ExactFairOperatorEntropyBound
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -36002,7 +36113,7 @@ theorem exactAliceQuestionConditionalWeight_sum
             rfl
     _ = _ := by
       split_ifs with zero
-      · simp [zero]
+      · simp only [zero, div_zero]
       · exact div_self zero
 
 theorem exactBobQuestionConditionalWeight_sum
@@ -36042,7 +36153,7 @@ theorem exactBobQuestionConditionalWeight_sum
             rfl
     _ = _ := by
       split_ifs with zero
-      · simp [zero]
+      · simp only [zero, div_zero]
       · exact div_self zero
 
 theorem exactAliceQuestionFilter_complement_posSemidef
@@ -36410,7 +36521,7 @@ theorem exactFairAliceHistoryLowOperatorPotential_neg_le_entropy
   have bound := mul_le_mul_of_nonneg_left
     (exactFairAliceMean_spectral_entropy_le G n S D r y)
     (G.marginalY_nonneg y)
-  nlinarith
+  linarith
 
 theorem exactFairBobHistoryLowOperatorPotential_neg_le_entropy
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -36432,7 +36543,7 @@ theorem exactFairBobHistoryLowOperatorPotential_neg_le_entropy
   have bound := mul_le_mul_of_nonneg_left
     (exactFairBobMean_spectral_entropy_le G n S D r x)
     (G.marginalX_nonneg x)
-  nlinarith
+  linarith
 
 theorem exactReverseAliceFilterHighOperatorPotential_nonpos
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -36634,7 +36745,7 @@ theorem exactJointPrefixQuestionMass_insert_alice
       exactFixedAliceQuestionMass_insert
         G n fixedX j fresh knownX ys x,
       compatible j opposite_fixed]
-  · simp [compatible]
+  · simp only [compatible, ↓reduceIte, mul_zero]
 
 theorem exactJointPrefixQuestionMass_insert_bob
     (G : Game X Y A B) (n : ℕ)
@@ -36659,7 +36770,7 @@ theorem exactJointPrefixQuestionMass_insert_bob
       exactFixedBobQuestionMass_insert
         G n fixedY j fresh xs knownY y,
       compatible j opposite_fixed]
-  · simp [compatible]
+  · simp only [compatible, ↓reduceIte, mul_zero]
 
 theorem exactJointPrefixQuestionAtom_zero_of_mass_zero
     (G : Game X Y A B) (n : ℕ)
@@ -36936,7 +37047,7 @@ theorem exactJointPrefixAliceOperatorFilter_martingale
             G n S D (insert j fixedX) fixedY answer
             (Function.update knownX j x) knownY child_zero
         rw [matrix_zero]
-        simp
+        simp only [smul_zero]
       · have insertion := exactJointPrefixQuestionMass_insert_alice
           G n fixedX fixedY j fresh opposite_fixed knownX knownY x
         have conditional :
@@ -37013,7 +37124,7 @@ theorem exactJointPrefixBobOperatorFilter_martingale
             G n S D fixedX (insert j fixedY) answer
             knownX (Function.update knownY j y) child_zero
         rw [matrix_zero]
-        simp
+        simp only [smul_zero]
       · have insertion := exactJointPrefixQuestionMass_insert_bob
           G n fixedX fixedY j opposite_fixed fresh knownX knownY y
         have conditional :
@@ -37607,7 +37718,7 @@ theorem exactJointPrefixAliceOperatorFilter_insert_bob
     by_cases zero :
         exactJointPrefixQuestionMass
           G n fixedX fixedY knownX knownY = 0
-    · simp [zero]
+    · simp only [zero, mul_zero, _root_.inv_zero, zero_mul]
     · field_simp
   rw [coefficient]
 
@@ -37640,7 +37751,7 @@ theorem exactJointPrefixBobOperatorFilter_insert_alice
     by_cases zero :
         exactJointPrefixQuestionMass
           G n fixedX fixedY knownX knownY = 0
-    · simp [zero]
+    · simp only [zero, mul_zero, _root_.inv_zero, zero_mul]
     · field_simp
   rw [coefficient]
 
@@ -37674,10 +37785,10 @@ theorem groupedMass_expectation
   apply Finset.sum_congr rfl
   intro outcome _
   rw [Finset.sum_eq_single (code outcome)]
-  · simp
+  · simp only [↓reduceIte]
   · intro t _ different
-    simp [different.symm]
-  · simp
+    simp only [different.symm, ↓reduceIte, zero_mul]
+  · simp only [mem_univ, not_true_eq_false, ↓reduceIte, mul_eq_zero, IsEmpty.forall_iff]
 
 theorem exactJointQuestionMass_eq_groupedMass
     (G : Game X Y A B) (n : ℕ)
@@ -37976,7 +38087,7 @@ theorem exactFairAcceptedJointStatistic_reindex
             apply Finset.sum_congr rfl
             intro y _
             ring
-          · simp [accepted]
+          · simp only [accepted, ↓reduceIte, sum_const_zero]
     _ = ∑ history : ExactRevealHistory X Y D seed,
       ∑ x : X, ∑ y : Y,
       ∑ aliceAnswer : {j : Fin n // j ∈ D} → A,
@@ -38648,7 +38759,8 @@ theorem exactReverseContextQuestionPrefix_succ
     obtain ⟨a, ha, equation⟩ := Finset.mem_image.mp member
     have lower := (Finset.mem_filter.mp ha).2
     have below : (context.sideRank a).val ≤ marker.val :=
-      Nat.lt_succ_iff.mp (by simpa [Nat.succ_eq_add_one] using lower)
+      Nat.lt_succ_iff.mp (by simpa only [Nat.succ_eq_add_one, Order.lt_add_one_iff,
+                               Fin.val_fin_le] using lower)
     rcases Nat.lt_or_eq_of_le below with earlier | same_rank
     · apply Finset.mem_insert_of_mem
       exact Finset.mem_image.mpr
@@ -38658,7 +38770,7 @@ theorem exactReverseContextQuestionPrefix_succ
         Fin.ext same_rank
       have position : a = context.sideRank.symm marker := by
         apply context.sideRank.injective
-        simpa using same
+        simpa only [Equiv.apply_symm_apply] using same
       subst a
       exact Finset.mem_insert.mpr (Or.inl equation.symm)
   · intro member
@@ -38668,7 +38780,7 @@ theorem exactReverseContextQuestionPrefix_succ
       refine ⟨context.sideRank.symm marker, ?_, rfl⟩
       apply Finset.mem_filter.mpr
       refine ⟨Finset.mem_univ _, ?_⟩
-      simp
+      simp only [Equiv.apply_symm_apply, lt_add_iff_pos_right, Order.lt_one_iff]
     · obtain ⟨a, ha, equation⟩ := Finset.mem_image.mp earlier
       apply Finset.mem_image.mpr
       refine ⟨a, ?_, equation⟩
@@ -38951,7 +39063,7 @@ theorem exactFairAliceMeanFilter_eq_jointPrefixOperatorFilter
   classical
   have question_nonzero :
       (G.repeat n).questionWeight q.1 q.2 ≠ 0 := by
-    simpa [exactPriorQuestionWeight] using supported
+    simpa only [Game.repeat_questionWeight, ne_eq, exactPriorQuestionWeight] using supported
   have question_positive :
       0 < (G.repeat n).questionWeight q.1 q.2 :=
     lt_of_le_of_ne ((G.repeat n).weight_nonneg q.1 q.2)
@@ -38975,11 +39087,11 @@ theorem exactFairAliceMeanFilter_eq_jointPrefixOperatorFilter
   apply Finset.sum_congr rfl
   intro x _
   by_cases missing : G.conditionalXGivenY (q.2 seed.coordinate.val) x = 0
-  · simp [missing]
+  · simp only [missing, zero_smul]
   · have edge : G.questionWeight x (q.2 seed.coordinate.val) ≠ 0 := by
       intro zero
       apply missing
-      simp [Game.conditionalXGivenY, zero]
+      simp only [Game.conditionalXGivenY, zero, zero_div]
     have mirror_edge :
         G.conditionalYGivenX x (q.2 seed.coordinate.val) ≠ 0 := by
       intro zero
@@ -39045,7 +39157,7 @@ theorem exactFairBobMeanFilter_eq_jointPrefixOperatorFilter
   classical
   have question_nonzero :
       (G.repeat n).questionWeight q.1 q.2 ≠ 0 := by
-    simpa [exactPriorQuestionWeight] using supported
+    simpa only [Game.repeat_questionWeight, ne_eq, exactPriorQuestionWeight] using supported
   have question_positive :
       0 < (G.repeat n).questionWeight q.1 q.2 :=
     lt_of_le_of_ne ((G.repeat n).weight_nonneg q.1 q.2)
@@ -39070,11 +39182,11 @@ theorem exactFairBobMeanFilter_eq_jointPrefixOperatorFilter
   apply Finset.sum_congr rfl
   intro y _
   by_cases missing : G.conditionalYGivenX (q.1 seed.coordinate.val) y = 0
-  · simp [missing]
+  · simp only [missing, zero_smul]
   · have edge : G.questionWeight (q.1 seed.coordinate.val) y ≠ 0 := by
       intro zero
       apply missing
-      simp [Game.conditionalYGivenX, zero]
+      simp only [Game.conditionalYGivenX, zero, zero_div]
     have mirror_edge :
         G.conditionalXGivenY y (q.1 seed.coordinate.val) ≠ 0 := by
       intro zero
@@ -39275,7 +39387,7 @@ theorem exactReverseAliceLowQuestionPotential_eq_alignedPrefix
   apply Finset.sum_congr rfl
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
-  · simp [supported]
+  · simp only [supported, zero_mul, Subtype.forall]
   · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
@@ -39338,7 +39450,7 @@ theorem exactReverseBobLowQuestionPotential_eq_alignedPrefix
   apply Finset.sum_congr rfl
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
-  · simp [supported]
+  · simp only [supported, zero_mul, Subtype.forall]
   · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
@@ -39500,7 +39612,7 @@ theorem exactReverseAliceHighQuestionPotential_eq_alignedPrefix
   apply Finset.sum_congr rfl
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
-  · simp [supported]
+  · simp only [supported, zero_mul, Subtype.forall]
   · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
@@ -39564,7 +39676,7 @@ theorem exactReverseBobHighQuestionPotential_eq_alignedPrefix
   apply Finset.sum_congr rfl
   intro q _
   by_cases supported : exactPriorQuestionWeight G n q = 0
-  · simp [supported]
+  · simp only [supported, zero_mul, Subtype.forall]
   · refine congrArg (_ * ·) ?_
     apply Finset.sum_congr rfl
     intro aliceAnswer _
@@ -39657,7 +39769,7 @@ theorem exactReverseAliceFilterOperatorMarkerEntropy_sum_telescope
           rw [Finset.sum_fin_eq_sum_range]
           apply Finset.sum_congr rfl
           intro k hk
-          simp [Finset.mem_range.mp hk]
+          simp only [Finset.mem_range.mp hk, ↓reduceDIte]
     _ = _ := exactReverseAliceAlignedCfcPrefixPotential_telescope
       G n S D side context
 
@@ -39696,7 +39808,7 @@ theorem exactReverseBobFilterOperatorMarkerEntropy_sum_telescope
           rw [Finset.sum_fin_eq_sum_range]
           apply Finset.sum_congr rfl
           intro k hk
-          simp [Finset.mem_range.mp hk]
+          simp only [Finset.mem_range.mp hk, ↓reduceDIte]
     _ = _ := exactReverseBobAlignedCfcPrefixPotential_telescope
       G n S D side context
 
@@ -39902,7 +40014,7 @@ theorem exactFairFullOutcomeBornMass_accepted_sum
           intro y _
           exact (exactFixedSeedGroupedBornMass_eq
             G n S D seed history aliceAnswer bobAnswer x y).symm
-        · simp [accepted, payoff]
+        · simp only [accepted, ↓reduceIte, mul_zero, sum_const_zero, payoff]
     _ = ∑ outcome : ExactOutcome X Y A B n,
         (strategyEventLaw (G.repeat n) S).weight outcome *
           payoff (code outcome) := by
@@ -39919,7 +40031,7 @@ theorem exactFairFullOutcomeBornMass_accepted_sum
         by_cases winning : outcome ∈ FiniteEventLaw.winEvent
           (repeatedCoordinateWin G n) D
         · have accepted := acceptance.mpr winning
-          simp [payoff, code, accepted, winning]
+          simp only [accepted, ↓reduceIte, mul_one, winning, payoff, code]
         · have rejected : ¬ exactHistoryAccepted G n D
               ⟨seed,
                 (exactFixedSeedOutcomeCode
@@ -39933,7 +40045,7 @@ theorem exactFairFullOutcomeBornMass_accepted_sum
                   D seed outcome).2.2.1⟩ := by
             intro accepted
             exact winning (acceptance.mp accepted)
-          simp [payoff, code, rejected, winning]
+          simp only [rejected, ↓reduceIte, mul_zero, winning, payoff, code]
     _ = repeatedPostselectionMass G n S D := by
       change
         (∑ outcome : ExactOutcome X Y A B n,
@@ -39943,7 +40055,7 @@ theorem exactFairFullOutcomeBornMass_accepted_sum
           else 0) =
           (strategyEventLaw (G.repeat n) S).eventMass
             (FiniteEventLaw.winEvent (repeatedCoordinateWin G n) D)
-      simp [FiniteEventLaw.eventMass]
+      simp only [sum_ite_mem, univ_inter, FiniteEventLaw.eventMass]
 
 end
 
@@ -40020,8 +40132,8 @@ theorem exactReverseAliceLowOperatorPotential_neg_le_scalarEntropy
       (exactRevealMass_nonneg G n D
         (exactReverseBobMarkerDecode side context marker)
         history)
-    nlinarith
-  · simp [accepted]
+    linarith
+  · simp only [accepted, ↓reduceIte, neg_zero, Std.le_refl]
 
 theorem exactReverseAliceAlignedCfcPrefixPotential_last_nonpos
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -40140,7 +40252,7 @@ theorem exactReverseBobFilterLowOperatorPotential_neg_le_scalarEntropy
         (exactReverseAliceMarkerDecode side context marker)
         history)
     simpa only [mul_neg] using scaled
-  · simp
+  · simp only [neg_zero, Std.le_refl]
 
 theorem exactReverseBobAlignedCfcPrefixPotential_terminal_nonpos
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -40637,7 +40749,8 @@ theorem exactFairAliceScalarCountingWeight_sum_le
         (∑ history : ExactRevealHistory X Y D seed,
           exactRevealMass G n D seed history) *
         (∑ y : Y, G.marginalY y) := by
-      simp [fullHistoryAnswerCount, Finset.mul_sum,         mul_assoc, mul_comm]
+      simp only [sum_const, card_univ, Fintype.card_pi, univ_eq_attach, prod_const, card_attach,
+        nsmul_eq_mul, Nat.cast_pow, mul_sum, fullHistoryAnswerCount, mul_assoc, mul_comm]
     _ = _ := by
       rw [exactRevealMass_sum, G.marginalY_normalized]
       ring
@@ -40681,7 +40794,8 @@ theorem exactFairBobScalarCountingWeight_sum_le
         (∑ history : ExactRevealHistory X Y D seed,
           exactRevealMass G n D seed history) *
         (∑ x : X, G.marginalX x) := by
-      simp [fullHistoryAnswerCount, Finset.mul_sum,         mul_assoc, mul_comm]
+      simp only [sum_const, card_univ, Fintype.card_pi, univ_eq_attach, prod_const, card_attach,
+        nsmul_eq_mul, Nat.cast_pow, mul_sum, fullHistoryAnswerCount, mul_assoc, mul_comm]
     _ = _ := by
       rw [exactRevealMass_sum, G.marginalX_normalized]
       ring
@@ -40727,7 +40841,8 @@ theorem exactFairAliceScalarBornMass_sum
         apply Finset.sum_congr rfl
         intro y _
         ring
-      · simp [exactFairAliceScalarCountingWeight, accepted]
+      · simp only [exactFairAliceScalarCountingWeight, accepted, ↓reduceIte, zero_mul,
+          sum_const_zero]
     _ = _ := exactFairAliceMeanAcceptedBornMass_sum
       G n S D seed
 
@@ -40772,7 +40887,8 @@ theorem exactFairBobScalarBornMass_sum
         apply Finset.sum_congr rfl
         intro x _
         ring
-      · simp [exactFairBobScalarCountingWeight, accepted]
+      · simp only [exactFairBobScalarCountingWeight, accepted, ↓reduceIte, zero_mul,
+          sum_const_zero]
     _ = _ := exactFairBobMeanAcceptedBornMass_sum
       G n S D seed
 
@@ -40877,7 +40993,7 @@ theorem exactFairAliceSeedScalarEntropy_eq_weighted
     apply Finset.sum_congr rfl
     intro y _
     ring
-  · simp [exactFairAliceScalarCountingWeight, accepted]
+  · simp only [accepted, ↓reduceIte, exactFairAliceScalarCountingWeight, zero_mul, sum_const_zero]
 
 theorem exactFairBobSeedScalarEntropy_eq_weighted
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -40906,7 +41022,7 @@ theorem exactFairBobSeedScalarEntropy_eq_weighted
     apply Finset.sum_congr rfl
     intro x _
     ring
-  · simp [exactFairBobScalarCountingWeight, accepted]
+  · simp only [accepted, ↓reduceIte, exactFairBobScalarCountingWeight, zero_mul, sum_const_zero]
 
 theorem exactFairAliceSeedScalarEntropy_le
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -41092,7 +41208,7 @@ theorem divisor_greedy_remaining_bounds
   have htwo : D.card * 2 < n :=
     lt_of_le_of_lt (Nat.mul_le_mul_left D.card hq) hdq
   have hcard : (Finset.univ \ D).card + D.card = n := by
-    simpa using
+    simpa only [card_univ, Fintype.card_fin] using
       (Finset.card_sdiff_add_card_eq_card
         (Finset.subset_univ D))
   omega
@@ -41227,7 +41343,7 @@ theorem exists_source_rounding_divisor
   have hsmall : C / (q : ℝ) < δ ^ 2 := by
     apply (div_lt_iff₀ hqreal).mpr
     have hcross := (div_lt_iff₀ hsquare).mp hthreshold
-    nlinarith [hC]
+    linarith [hC]
   refine ⟨q, hqnat, ?_⟩
   calc
     8 * K *
@@ -41338,7 +41454,7 @@ theorem postselectionLogCost_nonneg
   have inverse_at_least_one :
       (1 : ℝ) ≤ 1 / repeatedPostselectionMass G n S D := by
     apply (le_div_iff₀ positive).2
-    simpa using at_most_one
+    simpa only [one_mul] using at_most_one
   exact Real.log_nonneg inverse_at_least_one
 
 theorem answerLogCost_nonneg_of_postselection
@@ -41348,7 +41464,7 @@ theorem answerLogCost_nonneg_of_postselection
     0 ≤ answerLogCost (A := A) (B := B) D := by
   classical
   by_cases empty : D.card = 0
-  · simp [answerLogCost, empty]
+  · simp only [answerLogCost, empty, CharP.cast_eq_zero, zero_mul, Std.le_refl]
   have count_positive :=
     answerCount_pos_of_postselection G n S D positive
   rw [fullHistoryAnswerCount_eq, ← mul_pow] at count_positive
@@ -41361,7 +41477,8 @@ theorem answerLogCost_nonneg_of_postselection
     have zero :
         (Fintype.card A : ℝ) * (Fintype.card B : ℝ) = 0 :=
       le_antisymm (le_of_not_gt not_positive) alphabet_nonnegative
-    simp [zero, empty] at count_positive
+    simp only [zero, ne_eq, empty, not_false_eq_true, zero_pow,
+      lt_self_iff_false] at count_positive
   have natural_positive :
       0 < Fintype.card A * Fintype.card B := by
     exact_mod_cast alphabet_positive
@@ -41386,7 +41503,7 @@ theorem exactSourceClassicalInformationRate_le_three_martingaleRate
   have denominator_nonnegative :
       0 ≤ ((Finset.univ \ D).card : ℝ) := by positivity
   by_cases denominator_zero : ((Finset.univ \ D).card : ℝ) = 0
-  · simp [denominator_zero]
+  · simp only [denominator_zero, div_zero, mul_zero, Std.le_refl]
   have denominator_positive :
       0 < ((Finset.univ \ D).card : ℝ) :=
     lt_of_le_of_ne denominator_nonnegative (Ne.symm denominator_zero)
@@ -41470,13 +41587,12 @@ theorem exact_arbitrarily_large_conditioning_of_subexponentialWitness
                 G n actual D postselection_positive]
               ring
       _ ≤ rateTolerance ^ 2 := by
-        simpa [actual, repeatedPostselectionMass,
-          postselectionMass] using cost
+        simpa only [repeatedPostselectionMass, postselectionMass, mul_one, actual] using cost
   have actual_rate :
       martingaleRate G n actual D ≤
         rateTolerance ^ 2 / 8 := by
     apply (le_div_iff₀ (by norm_num : (0 : ℝ) < 8)).2
-    nlinarith
+    linarith
   exact ⟨n, beyond, actual, D, actual_positive,
     postselection_positive, remaining_positive, failure_small,
     actual_rate,
@@ -41522,7 +41638,8 @@ theorem exactReversePartitionInverseCard_le
         exact div_nonneg
           (mul_nonneg (by norm_num) fairPartitionWeight_nonneg)
           (by exact_mod_cast Nat.zero_le (Fintype.card M))
-      simpa using nonnegative
+      simpa only [reversePartitionWeight_empty, card_empty, CharP.cast_eq_zero, div_zero,
+        ge_iff_le] using nonnegative
   calc
     (∑ side : Finset M,
       reversePartitionWeight side / (side.card : ℝ)) ≤
@@ -41630,7 +41747,7 @@ theorem exactFairAcceptedAliceEntropy_le_sourceRate
   have nonnegative : 0 ≤ cost :=
     exactFairSourceScalarCost_nonneg G n S D positive
   have mpositive : 0 < Fintype.card (SourceRemainingCoordinate D) := by
-    simpa using remaining
+    simpa only [Fintype.card_coe, card_pos] using remaining
   unfold exactFairAcceptedAliceEntropy
   rw [exactFairAliceOperatorEntropy_reverse_marked_average
     G n S D mpositive]
@@ -41689,7 +41806,7 @@ theorem exactFairAcceptedAliceEntropy_le_sourceRate
       dsimp [cost]
       rw [martingale_log_cost_eq G n S D positive]
       have cardinal : Fintype.card (SourceRemainingCoordinate D) =
-          (Finset.univ \ D).card := by simp
+          (Finset.univ \ D).card := by simp only [Fintype.card_coe]
       rw [cardinal]
       unfold martingaleRate
       ring
@@ -41709,7 +41826,7 @@ theorem exactFairAcceptedBobEntropy_le_sourceRate
   have nonnegative : 0 ≤ cost :=
     exactFairSourceScalarCost_nonneg G n S D positive
   have mpositive : 0 < Fintype.card (SourceRemainingCoordinate D) := by
-    simpa using remaining
+    simpa only [Fintype.card_coe, card_pos] using remaining
   unfold exactFairAcceptedBobEntropy
   rw [exactFairBobOperatorEntropy_reverse_marked_average
     G n S D mpositive]
@@ -41768,7 +41885,7 @@ theorem exactFairAcceptedBobEntropy_le_sourceRate
       dsimp [cost]
       rw [martingale_log_cost_eq G n S D positive]
       have cardinal : Fintype.card (SourceRemainingCoordinate D) =
-          (Finset.univ \ D).card := by simp
+          (Finset.univ \ D).card := by simp only [Fintype.card_coe]
       rw [cardinal]
       unfold martingaleRate
       ring
@@ -42031,7 +42148,8 @@ theorem dSVDensityRationalHeterogeneousActualPhysicalState_apply_zeroFlag
   simp_rw [dSVUniformDensityCompletePureHistory_zeroFlag_apply,
     mul_ite, mul_zero]
   simp_rw [split_zero]
-  simp
+  simp only [Fin.val_eq_zero_iff, sum_ite_irrel, sum_const_zero, sum_ite_eq', mem_univ,
+    ↓reduceIte]
 
 theorem dSVDensityRationalHeterogeneousActualSpectralStopping_apply
     {β : Type*} [Fintype β] [DecidableEq β]
@@ -42151,7 +42269,8 @@ theorem dSVDensityRationalHeterogeneousActualPhysicalLocalUnitary_apply
   rw [Matrix.mul_apply, Fintype.sum_sigma, Finset.sum_comm]
   simp_rw [restoration,
     dSVDensityRationalHeterogeneousActualSpectralStopping_apply]
-  simp [ite_mul]
+  simp only [RCLike.star_def, mul_ite, ite_mul, zero_mul, mul_zero, sum_ite_eq', mem_univ,
+    ↓reduceIte]
 
 theorem
     dSVDensityRationalHeterogeneousActualPhysicalLocalUnitary_sourceProduct
@@ -42233,8 +42352,8 @@ theorem dSVDensityRationalCompleteStoppedOptionalLocalSchedule_before
     dSVDensityRationalCompleteStoppedOptionalLocalSchedule
       L j.succ i = some false := by
   have attempted : i.val < L := lt_trans earlier j.isLt
-  simp [dSVDensityRationalCompleteStoppedOptionalLocalSchedule,
-    attempted, Fin.succ_ne_zero, earlier]
+  simp only [dSVDensityRationalCompleteStoppedOptionalLocalSchedule, attempted, ↓reduceIte,
+    Fin.succ_ne_zero, Fin.val_succ, Order.lt_add_one_iff, Order.add_one_le_iff, earlier]
 
 theorem dSVDensityRationalCompleteStoppedOptionalLocalSchedule_after
     {L : ℕ} (j : Fin L) (i : Fin (L + 1))
@@ -42243,8 +42362,9 @@ theorem dSVDensityRationalCompleteStoppedOptionalLocalSchedule_after
       L j.succ i = none := by
   have not_before : ¬ i.val < j.val := by omega
   have not_equal : i.val ≠ j.val := by omega
-  simp [dSVDensityRationalCompleteStoppedOptionalLocalSchedule,
-    Fin.succ_ne_zero, not_before, not_equal]
+  simp only [dSVDensityRationalCompleteStoppedOptionalLocalSchedule, Fin.succ_ne_zero, ↓reduceIte,
+    Fin.val_succ, Order.lt_add_one_iff, Order.add_one_le_iff, not_before,
+    Nat.add_right_cancel_iff, not_equal, ite_self]
 
 end
 
@@ -42273,12 +42393,14 @@ theorem
   · subst l
     by_cases atoms : i = j
     · subst j
-      simp [dSVDensityRationalFirstAcceptLocalSpectralMask,
-        Matrix.blockDiagonal'_apply]
-    · simp [dSVDensityRationalFirstAcceptLocalSpectralMask,
-        Matrix.blockDiagonal'_apply, atoms]
-  · simp [dSVDensityRationalFirstAcceptLocalSpectralMask,
-      Matrix.blockDiagonal'_apply, flags]
+      simp only [diagonal_apply_eq, dSVDensityRationalFirstAcceptLocalSpectralMask,
+        blockDiagonal'_apply, ↓reduceDIte, cast_eq]
+    · simp only [ne_eq, Sigma.mk.injEq, heq_eq_eq, atoms, and_false, not_false_eq_true,
+        diagonal_apply_ne, dSVDensityRationalFirstAcceptLocalSpectralMask, blockDiagonal'_apply,
+        ↓reduceDIte, cast_eq]
+  · simp only [ne_eq, Sigma.mk.injEq, flags, heq_eq_eq, false_and, not_false_eq_true,
+      diagonal_apply_ne, dSVDensityRationalFirstAcceptLocalSpectralMask, blockDiagonal'_apply,
+      ↓reduceDIte]
 
 theorem dSVDensityRationalFirstAcceptActualOptionalOutcome_apply
     {d : ℕ} (w : ℝ) (N : ℕ)
@@ -42350,8 +42472,9 @@ theorem
         (U : Matrix β β ℂ)) := by
   classical
   ext output input
-  simp [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyMatrix,
-    Matrix.mul_apply, Matrix.diagonal_apply, mul_ite]
+  simp only [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyMatrix, RCLike.star_def,
+    mul_ite, mul_zero, UnitaryGroup.inv_val, Matrix.mul_apply, star_apply, diagonal_apply,
+    mul_one, sum_ite_eq', mem_univ, ↓reduceIte, ite_mul, zero_mul]
 
 theorem
     dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyConditionMask
@@ -42422,18 +42545,18 @@ theorem
             (width (schedule j)) N ξ true]
           congr 1
           funext q
-          simp [dSVDensityRationalHeterogeneousActualCopyCondition,
+          simp only [dSVDensityRationalHeterogeneousActualCopyCondition, Fin.val_castSucc, j.isLt,
+            ↓reduceDIte, Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ, lt_self_iff_false,
             dSVDensityRationalHeterogeneousActualCopyAccepted,
-            dSVDensityRationalCompletePhysicalStoppingCopyAccepted,
-            j.isLt, Fin.succ_ne_zero]
+            dSVDensityRationalCompletePhysicalStoppingCopyAccepted, Fin.eta]
         · rw [dSVDensityRationalCompleteStoppedOptionalLocalSchedule_after
             j i later]
-          simp [dSVDensityRationalHeterogeneousActualCopyCondition,
-            active, Fin.succ_ne_zero,
-            show ¬ i.val < j.val by omega,
-            show i.val ≠ j.val by omega]
-  · simp [dSVDensityRationalHeterogeneousActualCopyCondition,
-      dSVDensityRationalCompleteStoppedOptionalLocalSchedule, active]
+          simp only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte,
+            Fin.succ_ne_zero, ↓reduceIte, Fin.val_succ, Order.lt_add_one_iff,
+            Order.add_one_le_iff, show ¬i.val < j.val by omega, Nat.add_right_cancel_iff,
+            show i.val ≠ j.val by omega, diagonal_one]
+  · simp only [dSVDensityRationalHeterogeneousActualCopyCondition, active, ↓reduceDIte,
+      ↓reduceIte, diagonal_one, dSVDensityRationalCompleteStoppedOptionalLocalSchedule]
 
 theorem
     dSVDensityRationalHeterogeneousActualPhysicalFlagBornAliceCopy_eq_optionalEffect
@@ -42456,7 +42579,7 @@ theorem
       L flag i with
   | none => simp [dSVDensityRationalCompleteStoppedOptionalLocalEffect]
   | some outcome =>
-      simpa [h, dSVDensityRationalCompleteStoppedOptionalLocalEffect]
+      simpa only [UnitaryGroup.inv_val, dSVDensityRationalCompleteStoppedOptionalLocalEffect]
         using
           (dSVDensityRationalFirstAcceptPhysicalEffect_eq_spectralMask
             (dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth
@@ -42762,7 +42885,8 @@ theorem dSVDensityRationalPublicLogPhasePhysicalAlignedLocalAction_apply
                         (e ((ψ, b), j)) (e ((υ, y), l)) *
                       source (e ((χ, x), k), e ((υ, y), l))) = _
       simp_rw [left, right, resource]
-      simp [mul_ite, ite_mul, mul_assoc, Finset.sum_mul]
+      simp only [mul_ite, ite_mul, zero_mul, mul_zero, ofReal_inv, mul_assoc, sum_ite_irrel,
+        sum_ite_eq, mem_univ, ↓reduceIte, sum_const_zero, sum_mul]
       split_ifs
       · simp_rw [Finset.mul_sum]
         apply Finset.sum_congr rfl
@@ -42858,7 +42982,8 @@ theorem
     dSVDensityRationalPublicMultiscalePhaseResidual
   rw [dSVDensityRationalPublicLogPhasePhysicalAlignedLocalAction_apply]
   rw [← dSVDensityRationalHeterogeneousActualPhysicalState_apply]
-  simp
+  simp only [EmbeddingLike.apply_eq_iff_eq, Fintype.card_pi, Fintype.card_fin, prod_const,
+    card_univ, Nat.cast_pow, ofReal_inv, ite_mul, zero_mul]
 
 end
 
@@ -43060,11 +43185,11 @@ theorem
           history (fun _ _ => (0 : EuclideanSpace ℂ (Fin n × Fin n))) =
         0 := by
     ext q
-    simp [dSVUniformDensityCorrectedMatchedSigmaWeightedResidual]
+    simp only [dSVUniformDensityCorrectedMatchedSigmaWeightedResidual, PiLp.zero_apply, mul_zero]
   have distance :=
     dSVUniformDensityCorrectedMatchedSigmaWeightedResidual_distance_sq
       history work (fun _ _ => (0 : EuclideanSpace ℂ (Fin n × Fin n)))
-  simpa [zero] using distance
+  simpa only [zero, sub_zero] using distance
 
 theorem
     dSVDensityRationalMixedCanonicalPrefixPhysicalAcceptedSigmaState_norm_sq
@@ -43134,8 +43259,8 @@ theorem
   rw [dSVDensityRationalCompleteStoppedOptionalLocalSchedule_before
     j i before]
   rw [dSVDensityRationalCompleteStoppedOptionalOutcome_some_some]
-  simp [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth,
-    lt_trans before j.isLt]
+  simp only [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth,
+    lt_trans before j.isLt, ↓reduceDIte]
 
 theorem
     dSVDensityRationalHeterogeneousActualCommonStopScheduledOutcome_hit
@@ -43149,7 +43274,8 @@ theorem
   unfold dSVDensityRationalHeterogeneousActualCommonStopScheduledOutcome
   rw [dSVDensityRationalCompleteStoppedOptionalLocalSchedule_hit]
   rw [dSVDensityRationalCompleteStoppedOptionalOutcome_some_some]
-  simp [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth]
+  simp only [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth, Fin.val_castSucc,
+    Fin.is_lt, ↓reduceDIte, Fin.eta]
 
 theorem
     dSVDensityRationalHeterogeneousActualCommonStopScheduledOutcome_after
@@ -43210,12 +43336,12 @@ theorem dSVDensityRationalPureMatchedFlagIndicator_sum
   classical
   by_cases same : a = b
   · subst b
-    simp
+    simp only [and_self, sum_ite_eq, mem_univ, ↓reduceIte]
   · have absent (flag : Fin (L + 1)) :
         ¬ (a = flag ∧ b = flag) := by
       rintro ⟨first, second⟩
       exact same (first.trans second.symm)
-    simp [same, absent]
+    simp only [absent, ↓reduceIte, sum_const_zero, same]
 
 theorem dSVDensityRationalPureMatchedFlagBorn_sum_eq
     {A C : Type*} [Fintype A] [Fintype C]
@@ -43322,7 +43448,7 @@ theorem dSVDensityRationalPureFlagBorn_normalized_partition_zero_succ
       (∑ j : Fin L,
         dSVDensityRationalPureBaseExactFlagBornMass
           alice bob z j.succ j.succ) = 1 := by
-  simpa [normalized] using
+  simpa only [normalized, one_pow] using
     dSVDensityRationalPureFlagBorn_partition_zero_succ
       alice bob z
 
@@ -43406,9 +43532,9 @@ theorem
         apply Finset.prod_congr rfl
         intro k member
         have earlier : k < j.val := Finset.mem_range.mp member
-        simp [f, earlier]
+        simp only [earlier, ↓reduceIte, f]
       have selected : f j.val = success := by
-        simp [f]
+        simp only [lt_self_iff_false, ↓reduceIte, f]
       have tail :
           (∏ k ∈ Finset.range (L - j.val),
             f (j.val + 1 + k)) = 1 := by
@@ -43416,7 +43542,7 @@ theorem
         intro k _
         have notEarlier : ¬ j.val + 1 + k < j.val := by omega
         have notEqual : j.val + 1 + k ≠ j.val := by omega
-        simp [f, notEarlier, notEqual]
+        simp only [notEarlier, ↓reduceIte, notEqual, f]
       rw [prefixProduct, selected, tail, mul_one]
     _ = _ := rfl
 
@@ -43446,24 +43572,22 @@ theorem
       j i earlier,
       dSVDensityRationalCompleteStoppedOptionalOutcome_some_some]
     have active : i.val < L := lt_trans earlier j.isLt
-    simp [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth,
-      dSVDensityRationalHeterogeneousPhysicalStageContinue,
-      dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-      active, earlier]
+    simp only [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth, active,
+      ↓reduceDIte, earlier, ↓reduceIte, dSVDensityRationalHeterogeneousPhysicalStageContinue,
+      dSVDensityRationalHeterogeneousPhysicalStageOutcome]
   · have selected : i = j.castSucc := Fin.ext equal
     subst i
     rw [dSVDensityRationalCompleteStoppedOptionalLocalSchedule_hit,
       dSVDensityRationalCompleteStoppedOptionalOutcome_some_some]
-    simp [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth,
+    simp only [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth, Fin.val_castSucc,
+      j.isLt, ↓reduceDIte, Fin.eta, lt_self_iff_false, ↓reduceIte,
       dSVDensityRationalHeterogeneousPhysicalStageSuccess,
-      dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-      j.isLt]
+      dSVDensityRationalHeterogeneousPhysicalStageOutcome]
   · rw [dSVDensityRationalCompleteStoppedOptionalLocalSchedule_after
       j i later,
       dSVDensityRationalCompleteStoppedOptionalOutcome_none_none,
       dSVUniformDensityThresholdSharedState_norm grid dimension]
-    simp [show ¬ i.val < j.val by omega,
-      show i.val ≠ j.val by omega]
+    simp only [one_pow, show ¬i.val < j.val by omega, ↓reduceIte, show i.val ≠ j.val by omega]
 
 theorem
     dSVDensityRationalHeterogeneousActualPhysicalFlagMass_succ_succ_eq_stage
@@ -43505,14 +43629,13 @@ theorem dSVDensityRationalHeterogeneousActualPhysicalNoHitCopyBorn
   by_cases active : i.val < L
   · rw [if_pos active,
       dSVDensityRationalCompleteStoppedOptionalOutcome_some_some]
-    simp [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth,
-      dSVDensityRationalHeterogeneousPhysicalStageContinue,
-      dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-      active]
+    simp only [dSVDensityRationalHeterogeneousActualPhysicalFlagBornCopyWidth, active,
+      ↓reduceDIte, ↓reduceIte, dSVDensityRationalHeterogeneousPhysicalStageContinue,
+      dSVDensityRationalHeterogeneousPhysicalStageOutcome]
   · rw [if_neg active,
       dSVDensityRationalCompleteStoppedOptionalOutcome_none_none,
       dSVUniformDensityThresholdSharedState_norm grid dimension]
-    simp [active]
+    simp only [one_pow, active, ↓reduceIte]
 
 theorem
     dSVDensityRationalHeterogeneousActualPhysicalFlagMass_zero_zero_eq_terminal
@@ -43555,7 +43678,8 @@ theorem
   unfold dSVDensityRationalPureBaseExactFlagBornMass
     dSVDensityRationalHeterogeneousActualPhysicalFlagMass
   simp only [Fintype.sum_sigma]
-  simp [mul_ite, ite_and]
+  simp only [ite_and, mul_ite, mul_one, mul_zero, sum_ite_irrel, sum_const_zero, sum_ite_eq',
+    mem_univ, ↓reduceIte]
 
 theorem
     dSVDensityRationalHeterogeneousActualPhysicalMatchedFlagMass_eq_stoppedSuccess
@@ -43706,13 +43830,14 @@ theorem
     by_cases zero : rank.val = 0
     · rw [dSVCanonicalFailurePrefix_eq_zero_of_rank_zero
         rank zero]
-      simp [zero]
+      simp only [zero, CharP.cast_eq_zero, Real.sqrt_zero, zero_smul]
     · have nonzero : dSVCanonicalFailurePrefix rank ≠ 0 := by
         intro vanished
         have mass := dSVCanonicalFailurePrefix_norm_sq rank
         rw [vanished] at mass
         have cast_zero : (rank.val : ℝ) = 0 := by
-          simpa using mass.symm
+          simpa only [Nat.cast_eq_zero, Fin.val_eq_zero_iff, norm_zero, ne_eq,
+            OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow] using mass.symm
         exact zero (by exact_mod_cast cast_zero)
       change dSVCanonicalFailurePrefix rank =
         Real.sqrt (rank.val : ℝ) •
@@ -43775,7 +43900,7 @@ theorem
         (dSVDensityRationalPhysicalMixedAcceptedIntersectionRank
           w N ξ ζ i j).val
     · have both := accepted.mpr below
-      simp [below, both.1, both.2, mul_assoc]
+      simp only [ofReal_inv, below, and_self, ↓reduceIte, one_mul, mul_assoc, both.1, both.2]
     · have not_both :
         ¬ (dSVDensityRationalProjectiveThresholdBin w N k
             ((dSVSoftBobLeftReducedDensity_posSemidef
@@ -43784,8 +43909,8 @@ theorem
             ((dSVSoftBobLeftReducedDensity_posSemidef
               ζ).isHermitian.eigenvalues j) = true) :=
         fun both => below (accepted.mp both)
-      simp [below, not_both]
-  · simp [same]
+      simp only [ofReal_inv, below, and_false, ↓reduceIte, zero_mul, mul_zero, not_both]
+  · simp only [ofReal_inv, same, false_and, ↓reduceIte, zero_mul, mul_zero]
 
 theorem
     dSVDensityRationalMixedCanonicalPrefixPhysicalRankWeightedAtomError_eq
@@ -43920,7 +44045,7 @@ theorem
       dSVDensityRationalPublicBucketPhysicalCommonRank]
     rcases le_total r.val s.val with ordered | ordered
     · rw [min_eq_left ordered]
-      simp
+      simp only [sub_self, abs_zero, abs_nonneg]
     · rw [min_eq_right ordered]
       rw [abs_sub_comm]
   have cleanup := accurate phase r s
@@ -44076,7 +44201,7 @@ theorem dSVDensityRationalPublicShiftedResidue_sum
         ∑ phase : Fin B, (offset + phase).val := by
       apply Finset.sum_congr rfl
       intro phase _
-      simp [offset, Fin.val_add, Nat.add_mod]
+      simp only [Nat.add_mod, dvd_refl, Nat.mod_mod_of_dvd, Fin.val_add, offset]
     _ = ∑ phase : Fin B, phase.val := by
       apply Fintype.sum_equiv (Equiv.addLeft offset)
       intro phase
@@ -44100,7 +44225,7 @@ theorem dSVDensityRationalPublicShiftedQuotient_sum
         intro phase _
         exact Nat.mod_add_div (a + phase.val) B
       _ = B * a + ∑ phase : Fin B, phase.val := by
-        simp [Finset.sum_add_distrib]
+        simp only [sum_add_distrib, sum_const, card_univ, Fintype.card_fin, smul_eq_mul]
   rw [dSVDensityRationalPublicShiftedResidue_sum
     positive a] at decomposition
   have cancelled :
@@ -44147,7 +44272,7 @@ theorem dSVDensityRationalPublicShiftedBucketMismatch_sum_le
           Nat.div_le_div_right (Nat.add_le_add_right ordered _)
         by_cases same :
             (x + phase.val) / B = (y + phase.val) / B
-        · simp [same]
+        · simp only [same, ↓reduceIte, sub_self, Std.le_refl]
         · simp only [same, if_false]
           have strictly :
               (x + phase.val) / B < (y + phase.val) / B :=
@@ -44164,8 +44289,8 @@ theorem dSVDensityRationalPublicShiftedBucketMismatch_sum_le
           dSVDensityRationalPublicShiftedQuotient_real_sum
             positive x]
   rcases le_total a b with ordered | ordered
-  · simpa [abs_of_nonpos (sub_nonpos.mpr
-        (by exact_mod_cast ordered : (a : ℝ) ≤ b))] using
+  · simpa only [abs_of_nonpos (sub_nonpos.mpr (by exact_mod_cast ordered : (a : ℝ) ≤ b)), neg_sub,
+      ge_iff_le] using
       ordered_bound a b ordered
   · have bound := ordered_bound b a ordered
     have same_sum :
@@ -44185,8 +44310,8 @@ theorem dSVDensityRationalPublicShiftedBucketMismatch_sum_le
           Ne.symm same
         simp only [if_neg same, if_neg reversed]
     rw [same_sum]
-    simpa [abs_of_nonneg (sub_nonneg.mpr
-        (by exact_mod_cast ordered : (b : ℝ) ≤ a))] using bound
+    simpa only [abs_of_nonneg (sub_nonneg.mpr (by exact_mod_cast ordered : (b : ℝ) ≤ a)),
+      ge_iff_le] using bound
 
 theorem dSVDensityRationalPublicShiftedBucketMismatch_average_le
     {B : ℕ} (positive : 0 < B) (a b : ℕ) :
@@ -44244,10 +44369,9 @@ theorem
       |(dSVDensityRationalPublicLogRankFineLabel Q r : ℝ) -
         (dSVDensityRationalPublicLogRankFineLabel Q s : ℝ)| /
           (B : ℝ) := by
-  simpa [dSVDensityRationalPublicLogRankPhaseWeightedCrossing,
-    dSVDensityRationalPublicLogRankPhaseWeight,
-    dSVDensityRationalPublicLogRankBucket,
-    nonzero_r, nonzero_s] using
+  simpa only [dSVDensityRationalPublicLogRankPhaseWeightedCrossing,
+    dSVDensityRationalPublicLogRankPhaseWeight, one_div, dSVDensityRationalPublicLogRankBucket,
+    nonzero_r, ↓reduceIte, nonzero_s, Option.some.injEq, mul_ite, mul_zero, mul_one] using
       (dSVDensityRationalPublicShiftedBucketMismatch_average_le
         positive
         (dSVDensityRationalPublicLogRankFineLabel Q r)
@@ -44293,10 +44417,12 @@ theorem
       (Q : ℝ) / (B : ℝ) * |(r.val : ℝ) - (s.val : ℝ)| +
         min (r.val : ℝ) (s.val : ℝ) / (B : ℝ) := by
   by_cases zero_r : r.val = 0
-  · simp [zero_r]
+  · simp only [zero_r, CharP.cast_eq_zero, Nat.cast_nonneg, inf_of_le_left, zero_mul, zero_sub,
+      abs_neg, Nat.abs_cast, zero_div, add_zero]
     positivity
   by_cases zero_s : s.val = 0
-  · simp [zero_s]
+  · simp only [zero_s, CharP.cast_eq_zero, Nat.cast_nonneg, inf_of_le_right, zero_mul, sub_zero,
+      Nat.abs_cast, zero_div, add_zero]
     positivity
   have positive_real : (0 : ℝ) < (B : ℝ) := by
     exact_mod_cast positive
@@ -44375,7 +44501,7 @@ theorem
             Q phase r)).val :=
     dSVDensityRationalPublicLogRankBucketRepresentative_val_pos
       Q phase r nonzero
-  simpa [max_eq_right one_r, max_eq_right one_representative] using
+  simpa only [gt_iff_lt, max_eq_right one_r, max_eq_right one_representative] using
     (dSVDensityRationalPublicLogRankBucketRepresentative_log_sub_lt
       positive_Q phase r nonzero)
 
@@ -44499,8 +44625,8 @@ theorem
     |(r.val : ℝ) - (representative.val : ℝ)| /
         ((max 1 (min r.val representative.val) : ℕ) : ℝ) <
       Real.exp (((B : ℝ) + 1) / (Q : ℝ)) - 1
-  simpa [min_eq_right ordered, max_eq_right one_representative,
-    abs_of_nonneg (sub_nonneg.mpr real_ordered)] using relative
+  simpa only [abs_of_nonneg (sub_nonneg.mpr real_ordered), min_eq_right ordered,
+    max_eq_right one_representative] using relative
 
 end
 
@@ -44551,7 +44677,7 @@ theorem
     dsimp [m, t]
     rcases le_total (r.val : ℝ) (s.val : ℝ) with ordered | ordered
     · rw [min_eq_left ordered]
-      simp
+      simp only [sub_self, abs_nonneg]
     · rw [min_eq_right ordered, abs_of_nonneg
         (sub_nonneg.mpr ordered)]
   have extra : ((r.val : ℝ) - m) * x ≤ t := by
@@ -44559,7 +44685,7 @@ theorem
       _ ≤ ((r.val : ℝ) - m) * 1 :=
         mul_le_mul_of_nonneg_left probability
           (sub_nonneg.mpr min_le)
-      _ ≤ t := by simpa using difference
+      _ ≤ t := by simpa only [mul_one, tsub_le_iff_right] using difference
   have main :=
     dSVDensityRationalPublicLogRankPhaseWeightedCrossing_min_le
       positive Q r s
@@ -44567,7 +44693,7 @@ theorem
     at main
   change (r.val : ℝ) * x ≤
     ((Q : ℝ) / (B : ℝ) + 1) * t + m / (B : ℝ)
-  nlinarith
+  linarith
 
 theorem
     exists_proofDSVDensityRationalPublicBucketPhysicalQuantitativeMixedPrefixCleanup_sq
@@ -44624,7 +44750,8 @@ theorem
                 (representative phase (bucket phase r)).val) : ℕ) : ℝ)) ≤
         (r.val : ℝ) * radius := by
     by_cases zero : r.val = 0
-    · simp [zero]
+    · simp only [zero, CharP.cast_eq_zero, zero_sub, abs_neg, Nat.abs_cast, zero_le,
+        inf_of_le_left, sup_of_le_left, Nat.cast_one, div_one, zero_mul, Std.le_refl]
     · have actual :=
         dSVDensityRationalPublicLogRankBucketRepresentative_relative_abs_lt
           fine phase r zero
@@ -44663,7 +44790,8 @@ theorem
                       (representative phase (bucket phase r)).val) : ℕ) : ℝ) +
               4 * (if bucket phase r = bucket phase s
                 then (0 : ℝ) else 1)) := by
-                simpa [gap] using actual
+                simpa only [Nat.cast_max, Nat.cast_one, Nat.cast_min, mul_ite, mul_zero, mul_one,
+                  gap] using actual
       _ = 2 * gap + 4 * (r.val : ℝ) * ε ^ 2 +
           16 * ((r.val : ℝ) *
             (|(r.val : ℝ) -
@@ -44678,7 +44806,7 @@ theorem
             (if bucket phase r = bucket phase s
               then (0 : ℝ) else 1) := by
             dsimp [base]
-            nlinarith
+            linarith
   have averaged :
       (∑ phase : Fin B,
         dSVDensityRationalPublicLogRankPhaseWeight B phase *
@@ -44730,7 +44858,7 @@ theorem
                     apply Finset.sum_congr rfl
                     intro phase _
                     ring
-              _ = _ := by rw [total]; simp [bucket]
+              _ = _ := by rw [total]; simp only [mul_one, mul_ite, mul_zero, bucket]
   have crossing :=
     dSVDensityRationalPublicLogRankPhaseWeightedCrossing_alice_le
       phases Q r s
@@ -44747,7 +44875,7 @@ theorem
     at crossing
   dsimp [bucket] at averaged
   dsimp [base] at averaged
-  nlinarith
+  linarith
 
 def dSVDensityRationalHeterogeneousCommonStopSpectralAtomWeight
     {d : ℕ} (N : ℕ)
@@ -44987,7 +45115,7 @@ theorem
             16 * (Real.exp (((B : ℝ) + 1) / (Q : ℝ)) - 1)) *
               alice i +
           8 * (alice i / (B : ℝ)) := by
-        nlinarith [min_bound]
+        linarith [min_bound]
       _ = Kgap * gap i j + Kmass * alice i := by
         dsimp [Kmass]
         ring
@@ -45183,7 +45311,7 @@ theorem
             N width schedule ξ ζ k +
           dSVDensityRationalHeterogeneousPhysicalStageAsynchronous
             N width schedule ξ ζ k) := by
-      simpa using
+      simpa only using
         (Fin.sum_univ_eq_sum_range
           (fun k : ℕ =>
             dSVDensityRationalHeterogeneousPhysicalSurvival
@@ -45305,7 +45433,7 @@ theorem
     _ ≤ Kgap *
         dSVDensityRationalHeterogeneousPhysicalStoppedAsynchronousMass
           N width schedule ξ ζ + Kmass := by
-      nlinarith [mul_nonneg Kmass_nonnegative
+      linarith [mul_nonneg Kmass_nonnegative
         (sub_nonneg.mpr diagonal_budget)]
 
 def dSVDensityRationalHeterogeneousStoppedCommonPrefixFailureCopy
@@ -45395,10 +45523,9 @@ theorem
             N width schedule ξ ζ i.val := by
       apply Finset.prod_congr rfl
       intro i _
-      simp [dSVDensityRationalHeterogeneousStoppedCommonPrefixFailureCopy,
+      simp only [dSVDensityRationalHeterogeneousStoppedCommonPrefixFailureCopy,
         dSVDensityRationalHeterogeneousPhysicalStageContinue,
-        dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-        lt_trans i.isLt j.isLt]
+        dSVDensityRationalHeterogeneousPhysicalStageOutcome, lt_trans i.isLt j.isLt, ↓reduceDIte]
     _ = _ :=
       Fin.prod_univ_eq_prod_range
         (dSVDensityRationalHeterogeneousPhysicalStageContinue
@@ -45474,7 +45601,7 @@ theorem unconditionalPublicBucket_exp_sub_one_le
     (show (1 - u) + u = (1 : ℝ) by ring)
   simp only [smul_eq_mul, mul_zero, zero_add, mul_one,
     Real.exp_zero] at chord
-  nlinarith
+  linarith
 
 def unconditionalPublicBucketLoss
     (B Q : ℕ) (asynchronous precision : ℝ) : ℝ :=
@@ -45511,7 +45638,7 @@ theorem exists_proofUnconditionalPublicBucketBalance
     (div_le_iff₀ positive).mp lower
   have inverse_bound : 1 / (B : ℝ) ≤ t / 2 := by
     apply (div_le_iff₀ B_real_positive).mpr
-    nlinarith
+    linarith
   have ceiling_upper : (B : ℝ) < 2 / t + 1 := by
     exact Nat.ceil_lt_add_one (by positivity : (0 : ℝ) ≤ 2 / t)
   have product_upper : (B : ℝ) * t < 2 + t := by
@@ -45521,7 +45648,7 @@ theorem exists_proofUnconditionalPublicBucketBalance
       _ = 2 + t := by field_simp
   have B_upper : (B : ℝ) ≤ 3 / t := by
     apply (le_div_iff₀ positive).mpr
-    nlinarith
+    linarith
   have ratio_eq : (Q : ℝ) / (B : ℝ) = (B : ℝ) := by
     dsimp [Q]
     push_cast
@@ -45535,9 +45662,9 @@ theorem exists_proofUnconditionalPublicBucketBalance
     have multiply :=
       mul_le_mul_of_nonneg_right product_lower B_real_positive.le
     have Q_real : (Q : ℝ) = (B : ℝ) ^ 2 := by
-      simp [Q]
+      simp only [Nat.cast_pow, Q]
     rw [Q_real]
-    nlinarith
+    linarith
   have width_nonnegative :
       0 ≤ ((B : ℝ) + 1) / (Q : ℝ) := by positivity
   have exponential_bound :
@@ -45550,7 +45677,7 @@ theorem exists_proofUnconditionalPublicBucketBalance
           width_nonnegative (width_bound.trans bounded)
       _ ≤ (Real.exp 1 - 1) * t := by
         have coefficient : 0 ≤ Real.exp 1 - 1 := by
-          nlinarith [Real.add_one_le_exp (1 : ℝ)]
+          linarith [Real.add_one_le_exp (1 : ℝ)]
         exact mul_le_mul_of_nonneg_left width_bound coefficient
   refine ⟨B, Q, B_positive, Q_positive, inverse_bound,
     ratio_bound, width_bound, exponential_bound, ?_⟩
@@ -45568,7 +45695,7 @@ theorem exists_proofUnconditionalPublicBucketBalance
     apply mul_le_mul_of_nonneg_right _ asynchronous_nonnegative
     have t_inverse : (1 : ℝ) ≤ 1 / t := by
       apply (le_div_iff₀ positive).mpr
-      simpa using bounded
+      simpa only [one_mul] using bounded
     have ratio_scaled :=
       mul_le_mul_of_nonneg_left ratio_bound
         (by norm_num : (0 : ℝ) ≤ 8)
@@ -45593,7 +45720,7 @@ theorem exists_proofUnconditionalPublicBucketBalance
     mul_le_mul_of_nonneg_left exponential_bound
       (by norm_num : (0 : ℝ) ≤ 16)
   unfold unconditionalPublicBucketLoss
-  nlinarith
+  linarith
 
 theorem exists_proofUnconditionalStoppedCommonPrefixBalancedHazard
     {d N : ℕ} (grid : 0 < N) (dimension : 0 < d)
@@ -45639,7 +45766,7 @@ theorem unconditionalPrefactorBucketCoefficient_nonneg :
     0 ≤ unconditionalPrefactorBucketCoefficient := by
   have exponential := Real.add_one_le_exp (1 : ℝ)
   unfold unconditionalPrefactorBucketCoefficient
-  nlinarith
+  linarith
 
 theorem unconditionalPrefactor_fourthRoot_sq
     {a : ℝ} (nonnegative : 0 ≤ a) :
@@ -45754,7 +45881,7 @@ theorem unconditionalPrefactor_balancedHazard_sqrt_le
           Real.sqrt a := by rw [coefficient_square, fourth_square]
   have quotient : (34 / Real.sqrt a) * a = 34 * Real.sqrt a := by
     field_simp [ne_of_gt root_positive]
-    nlinarith [root_square]
+    linarith [root_square]
   apply Real.sqrt_le_iff.mpr
   constructor
   · positivity
@@ -45767,7 +45894,7 @@ theorem unconditionalPrefactor_balancedHazard_sqrt_le
         (mul_nonneg (Real.sqrt_nonneg _)
           (Real.rpow_nonneg positive.le _))
         rho_nonnegative
-    nlinarith [product_square]
+    linarith [product_square]
 
 theorem unconditionalPrefactor_smallHazard_twelfthRoot_le
     {eta alpha : ℝ}
@@ -45797,7 +45924,7 @@ theorem unconditionalPrefactor_smallHazard_twelfthRoot_le
     Real.sq_sqrt eta_nonnegative
   have eta_bounded : eta ≤ 1 := by
     have eta_root_bounded : Real.sqrt eta ≤ 1 := by
-      nlinarith [Real.sqrt_nonneg eta, alpha_third_positive]
+      linarith [Real.sqrt_nonneg eta, alpha_third_positive]
     nlinarith [Real.sqrt_nonneg eta]
   have rho_nonnegative : 0 ≤ rho := by
     dsimp [rho]
@@ -45823,7 +45950,7 @@ theorem unconditionalPrefactor_smallHazard_twelfthRoot_le
         (eta ^ (1 / 12 : ℝ) + rho)
   change a ^ (1 / 4 : ℝ) ≤
     4 * eta ^ (1 / 12 : ℝ) + rho at quarter
-  nlinarith [mul_nonneg coefficient_root_nonnegative
+  linarith [mul_nonneg coefficient_root_nonnegative
     (sub_nonneg.mpr quarter),
     mul_nonneg coefficient_root_nonnegative rho_nonnegative,
     mul_nonneg (show 0 ≤ (2 : ℝ) by norm_num)
@@ -45855,11 +45982,11 @@ theorem unconditionalPrefactor_largeVerifier_twelfthRoot_le
         alpha_positive.le alpha_bounded
         (by norm_num : (0 : ℝ) ≤ 1 / 12)
         (by norm_num : (1 / 12 : ℝ) ≤ 1 / 3)
-    nlinarith
+    linarith
   · have eta_large : 1 ≤ eta := (lt_of_not_ge eta_bounded).le
     have eta_root_large : 1 ≤ eta ^ (1 / 12 : ℝ) :=
       Real.one_le_rpow eta_large (by norm_num : (0 : ℝ) ≤ 1 / 12)
-    nlinarith
+    linarith
 
 end
 
@@ -46492,8 +46619,10 @@ theorem exactSourceSharedFlag_mismatch_eq
         rationalPermutationOutput denominator
           (numerator (.inr (i, y)))
           (nonempty (.inr (i, y))) permutation
-    · simp [matched]
-    · simp [matched]
+    · simp only [Fintype.card_coe, one_div, matched, ↓reduceIte, mul_zero, ne_eq,
+        not_true_eq_false, zero_div]
+    · simp only [Fintype.card_coe, one_div, matched, ↓reduceIte, mul_one, ne_eq,
+        not_false_eq_true]
       ring
   unfold exactLocallySampleablePermutationMismatch
   simp only [flaggedQuestionWeight,
@@ -46582,7 +46711,7 @@ theorem reweightedSeed_reverse_source_prefix_information_budget
         answerLogCost (A := A) (B := B) D := by
     have hempty := reweightedSeed_source_equation_twenty_six
       (seedLaw ∅) G n S D positive (projection ∅) default
-    simpa using hempty
+    simpa only [ge_iff_le, card_empty, univ_eq_empty, sum_empty] using hempty
   exact exactRemainingReverse_relativeEntropy_budget
     D remaining
     (fun side k => reweightedSeedPrefixEntropyIncrement
@@ -46637,7 +46766,7 @@ theorem finiteIndependentProductWeight_sum
     (∑ x : ι → V, ∏ i : ι, q i (x i)) =
         ∏ i : ι, ∑ v : V, q i v :=
       (Fintype.prod_sum (fun i : ι => fun v : V => q i v)).symm
-    _ = 1 := by simp [hq]
+    _ = 1 := by simp only [hq, prod_const_one]
 
 theorem finiteCoordinateMarginal_nonneg
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -46666,7 +46795,7 @@ theorem finiteJoint_le_coordinateMarginal
   unfold finiteCoordinateMarginal groupedMass
   exact Finset.single_le_sum
     (fun a _ => hp a)
-    (by simp)
+    (by simp only [mem_filter, mem_univ, and_self])
 
 theorem finiteCoordinateMarginal_absolute_continuity
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -46683,7 +46812,7 @@ theorem finiteCoordinateMarginal_absolute_continuity
   apply hac x
   unfold finiteIndependentProductWeight
   apply Finset.prod_eq_zero (Finset.mem_univ i)
-  simpa [hxi] using hz
+  simpa only [hxi] using hz
 
 theorem finiteJoint_absolute_continuous_product_marginals
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -46730,7 +46859,7 @@ theorem finiteCoordinateMarginal_sum_mul
       apply Finset.sum_congr rfl
       intro x hx
       have hxi : x i = v := (Finset.mem_filter.mp hx).2
-      simp [hxi]
+      simp only [hxi]
 
 theorem finiteProductMarginal_relativeEntropy_le
     {ι V : Type*} [Fintype ι] [Fintype V]
@@ -46766,7 +46895,7 @@ theorem finiteProductMarginal_relativeEntropy_le
           ∑ i : ι,
             p x * Real.log (marginal i (x i) / q i (x i)) := by
     by_cases hpx : p x = 0
-    · simp [hpx]
+    · simp only [hpx, zero_div, Real.log_zero, mul_zero, zero_mul, sum_const_zero, add_zero]
     · have hp_positive : 0 < p x :=
         lt_of_le_of_ne (hp x) (Ne.symm hpx)
       have hq_product :
@@ -46911,7 +47040,7 @@ theorem exactIndependentCoordinateQuestion_marginal
       apply Finset.sum_congr rfl
       intro ω _
       split_ifs <;> simp_all
-    · simp [hc]
+    · simp only [Prod.mk.injEq, hc, false_and, ↓reduceIte, sum_const_zero]
   unfold groupedMass
   rw [Finset.sum_filter, Fintype.sum_prod_type]
   simp_rw [hinner]
@@ -47791,7 +47920,7 @@ theorem exactAliceSourceMarginalInformation_le
   have hcard :
       Fintype.card (SourceRemainingCoordinate D) =
         (Finset.univ \ D).card := by
-    simp
+    simp only [Fintype.card_coe]
   calc
     exactAliceSourceMarginalInformation G n S D base =
       (1 / (Fintype.card (SourceRemainingCoordinate D) : ℝ)) *
@@ -47840,7 +47969,7 @@ theorem exactBobSourceMarginalInformation_le
   have hcard :
       Fintype.card (SourceRemainingCoordinate D) =
         (Finset.univ \ D).card := by
-    simp
+    simp only [Fintype.card_coe]
   calc
     exactBobSourceMarginalInformation G n S D base =
       (1 / (Fintype.card (SourceRemainingCoordinate D) : ℝ)) *
@@ -48107,8 +48236,9 @@ theorem finiteRelativeEntropy_self
   apply Finset.sum_eq_zero
   intro i _
   by_cases hi : mass i = 0
-  · simp [hi]
-  · simp [hi, InformationTheory.klFun]
+  · simp only [hi, div_zero, zero_mul]
+  · simp only [InformationTheory.klFun, ne_eq, hi, not_false_eq_true, div_self, Real.log_one,
+      mul_zero, zero_add, sub_self]
 
 theorem finiteConditionalHistoryRelativeEntropy_eq
     {I R V : Type*} [Fintype I] [Fintype R] [Fintype V]
@@ -48140,7 +48270,7 @@ theorem finiteConditionalHistoryRelativeEntropy_eq
   apply Finset.sum_congr rfl
   intro i _
   by_cases hpi : jointFirstMarginal p i = 0
-  · simp [hpi]
+  · simp only [hpi, zero_mul]
   · have hqi : jointFirstMarginal q i ≠ 0 := by
       intro hz
       exact hpi
@@ -48164,8 +48294,7 @@ theorem finiteConditionalHistoryRelativeEntropy_eq
       have hqzero : q (i, t) = 0 := by
         change q (i, t) / jointFirstMarginal q i = 0 at hz
         exact (div_eq_zero_iff.mp hz).resolve_right hqi
-      simp [jointConditional,
-        absolute_continuity (i, t) hqzero]
+      simp only [jointConditional, absolute_continuity (i, t) hqzero, zero_div]
     have hchain := finite_relative_entropy_joint_chain_rule
       (jointConditional p i) (jointConditional q i)
       hpconditional hqconditional hconditional_absolute
@@ -48183,7 +48312,7 @@ theorem finiteConditionalHistoryRelativeEntropy_eq
     apply Finset.sum_congr rfl
     intro r _
     by_cases hr : jointFirstMarginal (jointConditional p i) r = 0
-    · simp [hr]
+    · simp only [hr, zero_mul]
     · rw [next_reference i r hpi hr]
 
 end
@@ -48405,7 +48534,7 @@ theorem exactAliceSupportedQuestion_marginal_pos
     change G.marginalX x /
       (Fintype.card (SourceRemainingCoordinate D) : ℝ) = 0
     rw [hz]
-    simp
+    simp only [Fintype.card_coe, zero_div]
   exact lt_of_le_of_ne (G.marginalX_nonneg x) (Ne.symm hx)
 
 theorem exactBobSupportedQuestion_marginal_pos
@@ -48445,7 +48574,7 @@ theorem exactBobSupportedQuestion_marginal_pos
     change G.marginalY y /
       (Fintype.card (SourceRemainingCoordinate D) : ℝ) = 0
     rw [hz]
-    simp
+    simp only [Fintype.card_coe, zero_div]
   exact lt_of_le_of_ne (G.marginalY_nonneg y) (Ne.symm hy)
 
 theorem exactAliceInformationPosterior_historyMarginal
@@ -48478,7 +48607,7 @@ theorem exactAliceInformationPosterior_historyMarginal
       exactAliceLocalConditional D base
         (exactLocallySampleableLaw G n S D) i x r
   rw [← Finset.sum_div, hmass]
-  simp [exactAliceLocalConditional, hlocal]
+  simp only [exactAliceLocalConditional, hlocal, ↓reduceIte]
 
 theorem exactBobInformationPosterior_historyMarginal
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -48510,7 +48639,7 @@ theorem exactBobInformationPosterior_historyMarginal
       exactBobLocalConditional D base
         (exactLocallySampleableLaw G n S D) i y r
   rw [← Finset.sum_div, hmass]
-  simp [exactBobLocalConditional, hlocal]
+  simp only [exactBobLocalConditional, hlocal, ↓reduceIte]
 
 theorem exactAliceInformationReference_supported_factor
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -48871,7 +49000,7 @@ theorem exactReverseAliceMaskedProjection_eq_of_history
         by_cases hj : j.val = seed.coordinate
         · have hval : j.val.val = seed.coordinate.val :=
             congrArg Subtype.val hj
-          simpa [hval] using same_question
+          simpa only [hval] using same_question
         · have hleft :
               j.val ∈ exactLeft
                 seed.coordinate seed.partition := by
@@ -48925,17 +49054,15 @@ theorem exactReverseAliceMaskedProjection_eq_of_history
       have hkcut : k.val < seed.leftCut.val := by
         rw [← hmarker]
         exact hk
-      simpa [finitePrefixMask,
-        exactReverseAliceSourceProjection,
-        exactReverseAliceContextAt,
-        side, context, marker, hkcut] using hy
+      simpa only [finitePrefixMask, exactReverseAliceSourceProjection, exactReverseAliceContextAt,
+        dite_eq_ite, ↓reduceDIte, Fin.val_castSucc, exactReverseAliceContext_marked_rank, hkcut,
+        ↓reduceIte] using hy
     · have hkcut : ¬ k.val < seed.leftCut.val := by
         rw [← hmarker]
         exact hk
-      simp [finitePrefixMask,
-        exactReverseAliceSourceProjection,
-        exactReverseAliceContextAt,
-        hkcut]
+      simp only [finitePrefixMask, exactReverseAliceSourceProjection, exactReverseAliceContextAt,
+        dite_eq_ite, ↓reduceDIte, Fin.val_castSucc, exactReverseAliceContext_marked_rank, hkcut,
+        ↓reduceIte]
 
 theorem exactReverseBobMaskedProjection_eq_of_history
     {n : ℕ} (D : Finset (Fin n))
@@ -49040,7 +49167,7 @@ theorem exactReverseBobMaskedProjection_eq_of_history
         by_cases hj : j.val = seed.coordinate
         · have hval : j.val.val = seed.coordinate.val :=
             congrArg Subtype.val hj
-          simpa [hval] using same_question
+          simpa only [hval] using same_question
         · have hright :
               j.val ∈ exactRight
                 seed.coordinate seed.partition := by
@@ -49094,17 +49221,15 @@ theorem exactReverseBobMaskedProjection_eq_of_history
       have hkcut : k.val < seed.rightCut.val := by
         rw [← hmarker]
         exact hk
-      simpa [finitePrefixMask,
-        exactReverseBobSourceProjection,
-        exactReverseBobContextAt,
-        side, context, marker, hkcut] using hx
+      simpa only [finitePrefixMask, exactReverseBobSourceProjection, exactReverseBobContextAt,
+        dite_eq_ite, ↓reduceDIte, Fin.val_castSucc, exactReverseBobContext_marked_rank, hkcut,
+        ↓reduceIte] using hx
     · have hkcut : ¬ k.val < seed.rightCut.val := by
         rw [← hmarker]
         exact hk
-      simp [finitePrefixMask,
-        exactReverseBobSourceProjection,
-        exactReverseBobContextAt,
-        hkcut]
+      simp only [finitePrefixMask, exactReverseBobSourceProjection, exactReverseBobContextAt,
+        dite_eq_ite, ↓reduceDIte, Fin.val_castSucc, exactReverseBobContext_marked_rank, hkcut,
+        ↓reduceIte]
 
 end
 
@@ -49139,12 +49264,12 @@ theorem groupedMass_product_injective_seed
   unfold groupedMass
   rw [Finset.sum_filter, Fintype.sum_prod_type,
     Finset.sum_filter, Finset.mul_sum]
-  simp [injective.eq_iff]
+  simp only [Prod.mk.injEq, injective.eq_iff, mul_ite, mul_zero]
   rw [Finset.sum_eq_single seed]
-  · simp
+  · simp only [true_and]
   · intro other _ different
-    simp [different]
-  · simp
+    simp only [different, false_and, ↓reduceIte, sum_const_zero]
+  · simp only [mem_univ, not_true_eq_false, true_and, IsEmpty.forall_iff]
 
 variable {X Y A B : Type*}
 variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
@@ -49525,7 +49650,7 @@ theorem exactReverseAlice_history_of_marked_context
       let position : Fin side.card :=
         context.sideRank ⟨j.val, hparts.1⟩
       have hlt : position.val < marker.val := by
-        simpa [position] using hparts.2
+        simpa only [Fin.val_fin_lt, Fin.val_castSucc] using hparts.2
       have hltCut : position.val < seed.leftCut.val := by
         calc
           position.val < marker.val := hlt
@@ -49715,7 +49840,7 @@ theorem exactReverseBob_history_of_marked_context
       let position : Fin side.card :=
         context.sideRank ⟨j.val, hparts.1⟩
       have hlt : position.val < marker.val := by
-        simpa [position] using hparts.2
+        simpa only [Fin.val_fin_lt, Fin.val_castSucc] using hparts.2
       have hltCut : position.val < seed.rightCut.val := by
         calc
           position.val < marker.val := hlt
@@ -50134,7 +50259,7 @@ theorem jointFirstMarginal_groupedContextNext
         intro value _
         congr 1
         ext outcome
-        simp [Prod.mk.injEq]
+        simp only [Prod.mk.injEq, mem_filter, mem_univ, true_and]
     _ = ∑ outcome ∈
         (Finset.univ.filter fun outcome : Ω =>
           context outcome = target), mass outcome :=
@@ -50218,7 +50343,7 @@ theorem nestedFirstMarginal_mul_conditional
       intro value _
       exact jointAtom_eq_zero_of_firstMarginal_zero
         mass nonnegative index houter (history, value)
-    simp [houter, hinner]
+    simp only [houter, hinner, div_zero, mul_zero]
   · field_simp [houter]
 
 theorem nestedConditional_eq_flat
@@ -50238,13 +50363,13 @@ theorem nestedConditional_eq_flat
   · have hatom : mass (index, (history, value)) = 0 :=
       jointAtom_eq_zero_of_firstMarginal_zero
         mass nonnegative index houter (history, value)
-    simp [houter, hatom]
+    simp only [hatom, houter, div_zero, zero_div]
   · by_cases hhistory : (∑ v : V, mass (index, (history, v))) = 0
     · have hatom : mass (index, (history, value)) = 0 :=
         (Finset.sum_eq_zero_iff_of_nonneg
           (fun v _ => nonnegative (index, (history, v)))).mp
           hhistory value (Finset.mem_univ value)
-      simp [hatom, hhistory]
+      simp only [hatom, zero_div, hhistory, div_zero]
     · field_simp [houter, hhistory]
 
 theorem finiteNestedNextInformation_eq_atom_sum
@@ -50553,8 +50678,8 @@ theorem exactPermutationOutputUniformPushforward
         by_cases selected :
           rationalPermutationOutput denominator numerator nonempty
             permutation = letter
-        · simp [selected]
-        · simp [selected]
+        · simp only [selected, ↓reduceIte, one_div]
+        · simp only [selected, ↓reduceIte, zero_div]
     _ = (numerator letter : ℝ) / denominator :=
       rationalPermutationOutput_probability denominator numerator
         normalized nonempty letter
@@ -50739,7 +50864,8 @@ theorem exactSourceAliceSampleTuple_groupedMass
   have expectation := exactSourceAliceSampleTuple_expectation
     G n D denominator numerator normalized nonempty
     (fun candidate => if candidate = history then (1 : ℝ) else 0)
-  simpa [groupedMass, Finset.sum_filter, mul_ite] using expectation
+  simpa only [groupedMass, sum_filter, mul_ite, mul_one, mul_zero, sum_ite_eq', mem_univ,
+    ↓reduceIte] using expectation
 
 end
 
@@ -50791,14 +50917,14 @@ theorem exactFiniteFiberLift_groupedMass
           intro outcome member
           have same : projection outcome = point :=
             (Finset.mem_filter.mp member).2
-          simp [exactFiniteFiberLift, same]
+          simp only [exactFiniteFiberLift, same]
     _ = target point * groupedMass projection original point /
           groupedMass projection original point := by
           rw [← Finset.sum_div, ← Finset.mul_sum]
           rfl
     _ = target point := by
           by_cases empty : groupedMass projection original point = 0
-          · simp [empty, supported point empty]
+          · simp only [supported point empty, empty, mul_zero, div_zero]
           · field_simp
 
 theorem exactFiniteFiberLift_expectation
@@ -50857,8 +50983,8 @@ theorem exactFiniteFiberLift_absolute_groupedMass
     unfold groupedMass
     rw [Finset.sum_eq_zero (fun outcome member => by
       have zero := vanishes outcome member
-      simp [exactFiniteFiberLift, zero])]
-    simpa [supported point empty, groupedMass] using
+      simp only [zero, exactFiniteFiberLift, mul_zero, zero_div, sub_self, abs_zero])]
+    simpa only [supported point empty, sub_zero, abs_zero, groupedMass] using
       (congrArg abs empty).symm
   · have pointwise (outcome : Ω)
         (member : outcome ∈
@@ -50939,7 +51065,7 @@ theorem exactFiniteFiberLift_totalVariation
             |original outcome -
               exactFiniteFiberLift projection original target outcome|)
           point := by
-        simpa using
+        simpa only [mul_one] using
           (finiteGroupedExpectation_eq_atom_sum projection
             (fun outcome =>
               |original outcome -
@@ -51022,7 +51148,7 @@ theorem existsCommonSupportPreservingRationalApproximations
         denominator_large
     have crossed :=
       (div_lt_iff₀ gamma_positive).mp reciprocal_bound
-    nlinarith
+    linarith
   refine ⟨denominator, denominator_positive,
     fun index => distributionRoundedNumerator
       base denominator (probability index), ?_, ?_, ?_⟩
@@ -51057,7 +51183,7 @@ theorem existsCommonSupportPreservingRationalApproximations
           · exact (one_div_pos.mpr positive).le
           · exact le_rfl)
         (Finset.mem_univ letter)
-      simpa [genuinely_positive] using single
+      simpa only [one_div, ge_iff_le, genuinely_positive, ↓reduceIte] using single
     have inner_le_cost :
         (∑ candidate : I,
           if 0 < probability index candidate then
@@ -51089,7 +51215,7 @@ theorem existsCommonSupportPreservingRationalApproximations
       have crossed :=
         (div_lt_iff₀ genuinely_positive).mp
           reciprocal_lt_denominator
-      nlinarith
+      linarith
     have positive_floor :
         0 < distributionFloorNumerator
           denominator (probability index) letter := by
@@ -51153,7 +51279,7 @@ theorem exactLocallySampleableLaw_absolute_continuous_roundedJA
           (exactLocallySampleableLaw G n S D)
           coordinate x flag /
           (Fintype.card (SourceRemainingCoordinate D) : ℝ) = 0
-    simp [question_zero]
+    simp only [question_zero, zero_mul, Fintype.card_coe, zero_div]
   · have cast_zero :
         (numerator (.inl (coordinate, x)) flag : ℝ) = 0 :=
       (div_eq_zero_iff.mp numerator_zero).resolve_right
@@ -51184,7 +51310,7 @@ theorem exactLocallySampleableLaw_absolute_continuous_roundedJA
           (exactLocallySampleableLaw G n S D)
           coordinate x flag /
           (Fintype.card (SourceRemainingCoordinate D) : ℝ) = 0
-    simp [conditional_zero]
+    simp only [conditional_zero, mul_zero, Fintype.card_coe, zero_div]
 
 theorem exact_exists_support_preserving_local_shared_permutation
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -51351,9 +51477,8 @@ theorem exactSourceJointEffect_quadratic
         (exactBobCoordinateFilter
           G n S D r.seed r.history r.bobAnswer y b) := by
   classical
-  simpa [exactSourceJointEffect,
-    exactSourceAliceRefinedPOVM,
-    exactSourceBobRefinedPOVM, purificationAlicePOVM] using
+  simpa only [exactSourceJointEffect, exactSourceAliceRefinedPOVM, purificationAlicePOVM,
+    exactSourceBobRefinedPOVM] using
     (exactRefinedPOVM_quadratic
       G n S D r a₀ b₀ x y a b)
 
@@ -51386,7 +51511,7 @@ theorem exactSourceWinningEffect_quadratic
   split_ifs
   · exact exactSourceJointEffect_quadratic
       G n S D r a₀ b₀ x y a b
-  · simp [quadraticExpectation]
+  · simp only [quadraticExpectation, map_zero, _root_.zero_apply, inner_zero_right, zero_re]
 
 theorem exactSourceWinningEffect_quadratic_eq_conditional
     [DecidableEq A] [DecidableEq B]
@@ -51497,11 +51622,10 @@ theorem exactSourceAcceptedCoordinateMass_le_law
   by_cases history : exactLocallySampleableCode D q = t
   · by_cases winning :
       repeatedCoordinateWin G n q.1.coordinate.val q.2 = true
-    · simp [history, winning]
-    · simp [history, winning,
-        exactPostselectedJointLaw_nonneg
-          G n S D positive q]
-  · simp [history]
+    · simp only [history, winning, and_self, ↓reduceIte, Std.le_refl]
+    · simp only [history, winning, Bool.false_eq_true, and_false, ↓reduceIte,
+        exactPostselectedJointLaw_nonneg G n S D positive q]
+  · simp only [history, false_and, ↓reduceIte, Std.le_refl]
 
 def exactSourceConditionalWinningProbability
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -51530,7 +51654,7 @@ theorem exactSourceConditionalWinningProbability_bounds
   constructor
   · exact div_nonneg mass_nonnegative law_nonnegative
   · by_cases zero : exactLocallySampleableLaw G n S D t = 0
-    · simp [zero]
+    · simp only [zero, div_zero, zero_le_one]
     · exact (div_le_one
         (lt_of_le_of_ne law_nonnegative (Ne.symm zero))).mpr mass_le
 
@@ -51551,7 +51675,7 @@ theorem exactSourceConditionalWinningProbability_mul_law
     have accepted_zero :
         exactSourceAcceptedCoordinateMass G n S D t = 0 := by
       linarith
-    simp [zero, accepted_zero]
+    simp only [zero, zero_mul, accepted_zero]
   · unfold exactSourceConditionalWinningProbability
     field_simp [zero]
 
@@ -51571,8 +51695,8 @@ theorem exactSourceAcceptedCoordinateMass_sum
   intro q _
   by_cases winning :
       repeatedCoordinateWin G n q.1.coordinate.val q.2 = true
-  · simp [winning]
-  · simp [winning]
+  · simp only [winning, and_true, sum_ite_eq, mem_univ, ↓reduceIte]
+  · simp only [winning, Bool.false_eq_true, and_false, ↓reduceIte, sum_const_zero]
 
 theorem exactSourceConditionalWinningProbability_expectation
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -51610,17 +51734,17 @@ theorem exactRepeatedConditionedCoordinateWin
               (repeatedCoordinateWin G n) (insert i D) then
             (strategyEventLaw (G.repeat n) S).weight outcome
           else 0 := by
-    simp [FiniteEventLaw.eventMass]
+    simp only [FiniteEventLaw.eventMass, sum_ite_mem, univ_inter]
   rw [accepted_as_indicator]
   rw [Finset.sum_div]
   apply Finset.sum_congr rfl
   intro outcome _
   by_cases winning : repeatedCoordinateWin G n i outcome = true
-  · simp [repeatedConditionedOutcomeLaw,
-      conditionedEventDistribution,
-      repeatedPostselectionMass, postselectionMass,
-      FiniteEventLaw.winEvent, winning, ite_div]
-  · simp [FiniteEventLaw.winEvent, winning]
+  · simp only [winning, ↓reduceIte, repeatedConditionedOutcomeLaw, conditionedEventDistribution,
+      FiniteEventLaw.winEvent, mem_filter, mem_univ, true_and, mem_insert, forall_eq_or_imp,
+      repeatedPostselectionMass, postselectionMass, ite_div, zero_div]
+  · simp only [winning, Bool.false_eq_true, ↓reduceIte, FiniteEventLaw.winEvent, mem_insert,
+      forall_eq_or_imp, mem_filter, mem_univ, false_and, and_false, zero_div]
 
 theorem exactSourceAcceptedCoordinateMass_sum_eq_remaining_average
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -51737,7 +51861,7 @@ theorem exactSource_failure_sum_lt_of_uniform
   rw [← Finset.sum_div] at failure
   have first := (div_lt_iff₀ cardinality).mp failure
   have second := (div_lt_iff₀ positive).mp first
-  nlinarith
+  linarith
 
 theorem exactSourceConditionalWinningProbability_gt_of_uniform_failure
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -51889,8 +52013,7 @@ theorem exactSourceAliceFlagCoupling_sum
   have expectation := exactSourceAliceFlagCoupling_expectation
     G n S D remaining positive base denominator denominator_positive
     numerator normalized preserves nonempty (fun _ => (1 : ℝ))
-  simpa [exactLocallySampleableLaw_sum
-    G n S D remaining positive] using expectation
+  simpa only [mul_one, exactLocallySampleableLaw_sum G n S D remaining positive] using expectation
 
 theorem exactSourceAliceFlagCoupling_totalVariation
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -52019,13 +52142,12 @@ theorem exactSourceAcceptedCoordinateMass_eq_seeded_fair_born
               G n D (history.seed, outcome)).mp
             rw [same_history]
             exact accepted
-          simp [code, winning, exactPostselectedJointLaw,
-            repeatedConditionedOutcomeLaw,
-            conditionedEventDistribution,
-            repeatedPostselectionMass, postselectionMass, conditioned]
+          simp only [code, winning, and_self, ↓reduceIte, exactPostselectedJointLaw,
+            repeatedConditionedOutcomeLaw, conditionedEventDistribution, conditioned,
+            repeatedPostselectionMass, postselectionMass]
           ring
-        · simp [code, winning]
-      · simp [code]
+        · simp only [code, winning, Bool.false_eq_true, and_false, ↓reduceIte, mul_zero, zero_div]
+      · simp only [code, false_and, ↓reduceIte, mul_zero, zero_div]
     · intro seed _ distinct
       apply Finset.sum_eq_zero
       intro outcome _
@@ -52037,15 +52159,15 @@ theorem exactSourceAcceptedCoordinateMass_eq_seeded_fair_born
           (fun t : ExactLocallySampleableTuple X Y A B D =>
             t.2.2.2.seed) code
         exact distinct same
-      simp [not_code]
-    · simp
+      simp only [not_code, false_and, ↓reduceIte]
+    · simp only [mem_univ, not_true_eq_false, IsEmpty.forall_iff]
   · rw [if_neg accepted]
     have law_zero :=
       exactLocallySampleableLaw_zero_of_not_accepted
         G n S D history.seed.coordinate x y history accepted
     exact le_antisymm
       (by
-        simpa [law_zero] using
+        simpa only [law_zero] using
           exactSourceAcceptedCoordinateMass_le_law
             G n S D positive
             (history.seed.coordinate, x, y, history))
@@ -52086,7 +52208,7 @@ theorem exactSourceConditionalWinningProbability_eq_fine_born_ratio
     G n S D positive history x y, if_pos accepted, posterior]
   by_cases mass_zero :
       exactFairFullOutcomeBornMass G n S D history x y = 0
-  · simp [mass_zero]
+  · simp only [mass_zero, mul_zero, zero_div, div_zero]
   · field_simp [positive.ne', seed_positive.ne', mass_zero]
 
 end
@@ -52167,8 +52289,8 @@ theorem exactFineCoordinateWinningBorn_collapse
           apply Finset.sum_congr rfl
           intro b _
           by_cases wins : G.predicate x y a b = true
-          · simp [f, wins]
-          · simp [f, wins]
+          · simp only [wins, ↓reduceIte, sum_ite_irrel, sum_const_zero, f]
+          · simp only [wins, Bool.false_eq_true, ↓reduceIte, sum_const_zero, f]
     _ = ∑ aa : Fin n → A, ∑ bb : Fin n → B,
       ∑ a : A, ∑ b : B, f a b aa bb :=
         finite_sum_four_swap f
@@ -52203,13 +52325,13 @@ theorem exactFineCoordinateWinningBorn_collapse
                 · rw [if_neg wins,
                     if_neg (fun h => wins h.2.2)]
               · intro b _ different
-                simp [f, Ne.symm different]
-              · simp
+                simp only [and_true, Ne.symm different, and_false, ↓reduceIte, ite_self, f]
+              · simp only [mem_univ, not_true_eq_false, IsEmpty.forall_iff]
             · intro a _ different
-              simp [f, Ne.symm different]
-            · simp
-          · simp [f, bob_matches]
-        · simp [f, alice_matches]
+              simp only [Ne.symm different, and_false, ↓reduceIte, ite_self, sum_const_zero, f]
+            · simp only [mem_univ, not_true_eq_false, IsEmpty.forall_iff]
+          · simp only [bob_matches, false_and, ↓reduceIte, ite_self, sum_const_zero, and_false, f]
+        · simp only [alice_matches, false_and, ↓reduceIte, ite_self, sum_const_zero, f]
 
 def exactFairCoordinateRefinedWinningBornMass
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -52308,7 +52430,7 @@ theorem exactFairWinningOutcomeBornMass_eq_refined
                 (aa history.seed.coordinate.val)
                 (bb history.seed.coordinate.val) = true) := by
             rw [fiber]
-            simp [actual.1, actual.2.1, actual.2.2,
+            simp only [actual.1, actual.2.1, actual.2.2, Subtype.forall, true_and,
               repeatedCoordinateWin, and_assoc]
           by_cases wins :
               (∀ (j : Fin n) (member : j ∈ D),
@@ -52330,7 +52452,7 @@ theorem exactFairWinningOutcomeBornMass_eq_refined
               intro selected
               exact wins (event.mp selected)
             rw [if_neg rejected, if_neg wins]
-            simp
+            simp only [Game.repeat_questionWeight, mul_zero]
       _ = (G.repeat n).questionWeight xs ys *
         (∑ aa : Fin n → A, ∑ bb : Fin n → B,
           if
@@ -52361,7 +52483,7 @@ theorem exactFairWinningOutcomeBornMass_eq_refined
       exact compatible
         (compatibility.mpr
           ⟨conditions.1, conditions.2.1, conditions.2.2.1⟩)
-    simp [no_code]
+    simp only [no_code, false_and, ↓reduceIte]
 
 end
 
@@ -52465,7 +52587,7 @@ theorem exactFairWinningOutcomeBornMass_eq_fiber_conditional
               rw [if_pos wins]
               unfold exactConditionalQuestionWeight
               field_simp [supported]
-            · simp [summand, wins]
+            · simp only [wins, Bool.false_eq_true, ↓reduceIte, sum_const_zero, mul_zero, summand]
 
 theorem exactSourceConditionalWinningProbability_eq_normalized_verifier
     [DecidableEq A] [DecidableEq B]
@@ -52580,7 +52702,7 @@ theorem exactLocallySampleableLaw_fiber_ne_zero_of_ne_zero
       exactRevealMass G n D
           t.2.2.2.seed t.2.2.2.history *
         G.questionWeight t.2.1 t.2.2.1 = 0 := by
-    simpa [exactFiberQuestionMass_eq_jointQuestionMass,
+    simpa only [mul_eq_zero, exactFiberQuestionMass_eq_jointQuestionMass,
       exactJointQuestionMass_eq_reveal_mul_question] using zero
   apply supported
   have source :=
@@ -52590,7 +52712,7 @@ theorem exactLocallySampleableLaw_fiber_ne_zero_of_ne_zero
       t =
         (t.2.2.2.seed.coordinate, t.2.1, t.2.2.1, t.2.2.2) := by
     rcases t with ⟨i, x, y, r⟩
-    simpa using coordinate
+    simpa only [Prod.mk.injEq, and_true] using coordinate
   rw [tuple, source, if_pos accepted]
   rw [show
     exactSeedWeight t.2.2.2.seed *
@@ -52601,7 +52723,7 @@ theorem exactLocallySampleableLaw_fiber_ne_zero_of_ne_zero
         (exactRevealMass G n D
           t.2.2.2.seed t.2.2.2.history *
           G.questionWeight t.2.1 t.2.2.1) by ring]
-  simp [reveal_zero]
+  simp only [reveal_zero, mul_zero, zero_mul, zero_div]
 
 theorem exactLocallySampleableLaw_psi_ne_zero_of_ne_zero
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -52626,9 +52748,10 @@ theorem exactLocallySampleableLaw_psi_ne_zero_of_ne_zero
       t =
         (t.2.2.2.seed.coordinate, t.2.1, t.2.2.1, t.2.2.2) := by
     rcases t with ⟨i, x, y, r⟩
-    simpa using coordinate
+    simpa only [Prod.mk.injEq, and_true] using coordinate
   rw [tuple, source, if_pos accepted, zero]
-  simp
+  simp only [norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero,
+    zero_div]
 
 def dependentBlockPOVM
     {R C : Type*} [Fintype R] [DecidableEq R] [Fintype C]
@@ -52649,10 +52772,10 @@ def dependentBlockPOVM
       have completed := congrArg
         (fun M : Matrix (ι r) (ι r) ℂ => M u v)
         (P r).complete
-      simpa [Matrix.sum_apply, Matrix.blockDiagonal'_apply,
-        Matrix.one_apply] using completed
-    · simp [Matrix.sum_apply, Matrix.blockDiagonal'_apply,
-        same]
+      simpa only [Matrix.sum_apply, blockDiagonal'_apply, ↓reduceDIte, cast_eq, Matrix.one_apply,
+        Sigma.mk.injEq, heq_eq_eq, true_and] using completed
+    · simp only [Matrix.sum_apply, blockDiagonal'_apply, same, ↓reduceDIte, sum_const_zero, ne_eq,
+        Sigma.mk.injEq, false_and, not_false_eq_true, one_apply_ne]
 
 def reindexedPOVM
     {C d e : Type*} [Fintype C]
@@ -52666,7 +52789,8 @@ def reindexedPOVM
     have completed := congrArg
       (fun M : Matrix d d ℂ => M (basis.symm i) (basis.symm j))
       P.complete
-    simpa [Matrix.sum_apply, Matrix.one_apply] using completed
+    simpa only [Matrix.sum_apply, submatrix_apply, Matrix.one_apply,
+      EmbeddingLike.apply_eq_iff_eq] using completed
 
 def twoBlockPOVM
     {C d e : Type} [Fintype C] [DecidableEq C]
@@ -52697,7 +52821,7 @@ def deterministicOutcomePOVM
     · exact Matrix.PosSemidef.zero
   complete := by
     classical
-    simp
+    simp only [sum_ite_eq', mem_univ, ↓reduceIte]
 
 def pOVMChangeDecidableEq
     {C d : Type*} [Fintype C] [Fintype d]
@@ -52716,8 +52840,8 @@ def pOVMChangeDecidableEq
     simp only [Matrix.sum_apply, Matrix.one_apply] at completed ⊢
     by_cases same : i = j
     · subst j
-      simpa using completed
-    · simpa [same] using completed
+      simpa only [↓reduceIte] using completed
+    · simpa only [same, ↓reduceIte] using completed
 
 def exactSourceAlicePaddedPOVM
     [DecidableEq A]
@@ -52838,9 +52962,9 @@ attribute [local instance] Classical.propDecidable
     (twoBlockPOVM P Q).effect c
       (.inl i) (.inl j) = P.effect c i j := by
   classical
-  simp [twoBlockPOVM, reindexedPOVM,
-    dependentBlockPOVM, Equiv.sumEquivSigmaBool,
-    Matrix.blockDiagonal'_apply]
+  simp only [twoBlockPOVM, reindexedPOVM, dependentBlockPOVM, Equiv.sumEquivSigmaBool, cond_false,
+    cond_true, Equiv.symm_mk, Equiv.coe_fn_mk, submatrix_apply, Sum.elim_inl,
+    blockDiagonal'_apply, ↓reduceDIte, cast_eq]
 
 @[simp] theorem twoBlockPOVM_effect_inr
     {C d e : Type} [Fintype C] [DecidableEq C]
@@ -52850,9 +52974,9 @@ attribute [local instance] Classical.propDecidable
     (twoBlockPOVM P Q).effect c
       (.inr i) (.inr j) = Q.effect c i j := by
   classical
-  simp [twoBlockPOVM, reindexedPOVM,
-    dependentBlockPOVM, Equiv.sumEquivSigmaBool,
-    Matrix.blockDiagonal'_apply]
+  simp only [twoBlockPOVM, reindexedPOVM, dependentBlockPOVM, Equiv.sumEquivSigmaBool, cond_false,
+    cond_true, Equiv.symm_mk, Equiv.coe_fn_mk, submatrix_apply, Sum.elim_inr,
+    blockDiagonal'_apply, ↓reduceDIte, cast_eq]
 
 @[simp] theorem dependentBlockPOVM_effect_same
     {R C : Type*} [Fintype R] [DecidableEq R] [Fintype C]
@@ -52863,8 +52987,7 @@ attribute [local instance] Classical.propDecidable
     (dependentBlockPOVM P).effect c
       ⟨r, i⟩ ⟨r, j⟩ = (P r).effect c i j := by
   classical
-  simp [dependentBlockPOVM,
-    Matrix.blockDiagonal'_apply]
+  simp only [dependentBlockPOVM, blockDiagonal'_apply, ↓reduceDIte, cast_eq]
 
 variable {X Y A B : Type}
 variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
@@ -52880,9 +53003,8 @@ variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
       (.inr ⟨r, .inr (.inl j)⟩) =
       (exactSourceAliceRefinedPOVM G n S D r a₀ x).effect a i j := by
   classical
-  simp [exactSourceGlobalAlicePOVM,
-    pOVMChangeDecidableEq,
-    exactSourceAlicePaddedPOVM]
+  simp only [exactSourceGlobalAlicePOVM, pOVMChangeDecidableEq, exactSourceAlicePaddedPOVM,
+    twoBlockPOVM_effect_inr, dependentBlockPOVM_effect_same, twoBlockPOVM_effect_inl]
 
 @[simp] theorem exactSourceGlobalBobPOVM_effect
     [DecidableEq B]
@@ -52895,9 +53017,8 @@ variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
       (.inr ⟨r, .inr (.inr j)⟩) =
       (exactSourceBobRefinedPOVM G n S D r b₀ y).effect b i j := by
   classical
-  simp [exactSourceGlobalBobPOVM,
-    pOVMChangeDecidableEq,
-    exactSourceBobPaddedPOVM]
+  simp only [exactSourceGlobalBobPOVM, pOVMChangeDecidableEq, exactSourceBobPaddedPOVM,
+    twoBlockPOVM_effect_inr, dependentBlockPOVM_effect_same]
 
 theorem matrixQuadraticExpectation_expand
     {d : Type*} [Fintype d] [DecidableEq d]
@@ -52905,8 +53026,9 @@ theorem matrixQuadraticExpectation_expand
     quadraticExpectation
       (Matrix.toEuclideanCLM (n := d) (𝕜 := ℂ) M) z =
       (∑ i : d, (∑ j : d, M i j * z j) * star (z i)).re := by
-  simp [quadraticExpectation, EuclideanSpace.inner_eq_star_dotProduct,
-    Matrix.mulVec, dotProduct]
+  simp only [quadraticExpectation, EuclideanSpace.inner_eq_star_dotProduct, dotProduct,
+    ofLp_toEuclideanCLM, mulVec, Pi.star_apply, RCLike.star_def, re_sum, mul_re, sum_sub_distrib,
+    conj_re, im_sum, mul_im, conj_im, mul_neg, sub_neg_eq_add]
 
 theorem finiteSum_injective_support
     {d e K : Type*} [Fintype d] [Fintype e] [AddCommMonoid K]
@@ -52950,7 +53072,7 @@ theorem matrixQuadraticExpectation_injective
     (fun i : e => (∑ j : e, M i j * v j) * star (v i))
     (by
       intro i outside
-      simp [supported i outside])]
+      simp only [supported i outside, star_zero, mul_zero])]
   apply Finset.sum_congr rfl
   intro i _
   rw [included i]
@@ -52959,7 +53081,7 @@ theorem matrixQuadraticExpectation_injective
     (fun j : e => M (f i) j * v j)
     (by
       intro j outside
-      simp [supported j outside])]
+      simp only [supported j outside, mul_zero])]
   apply Finset.sum_congr rfl
   intro j _
   rw [compressed i j, included j]
@@ -53189,8 +53311,8 @@ variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
       (finProdFinEquiv ((Fintype.equivFin d) j, l)) =
       P.effect c i j * (if k = l then 1 else 0) := by
   classical
-  simp [reindexedPOVM, purificationAlicePOVM,
-    Matrix.kroneckerMap_apply, Matrix.one_apply]
+  simp only [reindexedPOVM, purificationAlicePOVM, submatrix_apply, Equiv.symm_apply_apply,
+    kroneckerMap_apply, Matrix.one_apply, mul_ite, mul_one, mul_zero]
 
 end
 
@@ -53220,9 +53342,9 @@ variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
       (exactSourceGlobalBobPOVM G n S D b₀ y).effect b i j *
         (if k = l then 1 else 0) := by
   classical
-  simp [exactSourceGlobalCatalystBobPOVM,
-    reindexedPOVM, purificationAlicePOVM,
-    Matrix.kroneckerMap_apply, Matrix.one_apply]
+  simp only [exactSourceGlobalCatalystBobPOVM, reindexedPOVM, purificationAlicePOVM,
+    submatrix_apply, Equiv.symm_apply_apply, kroneckerMap_apply, Matrix.one_apply, mul_ite,
+    mul_one, mul_zero]
 
 end
 
@@ -53422,7 +53544,7 @@ theorem exactStrategyQuestionCodeGroupedMass
       _ = (G.repeat n).questionWeight xs ys := by
         rw [S.outcomeProbability_normalized xs ys]
         ring
-  · simp [compatible]
+  · simp only [compatible, ↓reduceIte, sum_const_zero]
 
 theorem exactRepeatedQuestionWeight_splitAt_bob
     (G : Game X Y A B) (n : ℕ)
@@ -53442,7 +53564,8 @@ theorem exactRepeatedQuestionWeight_splitAt_bob
       G.questionWeight (xs j)
         ((Equiv.funSplitAt i Y).symm (y, tail) j))
     (Finset.mem_univ i)]
-  simp [Equiv.funSplitAt, Equiv.piSplitAt]
+  simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+    Equiv.coe_fn_mk, ↓reduceDIte]
 
 theorem exactRepeatedQuestionTail_splitAt_bob
     (G : Game X Y A B) (n : ℕ)
@@ -53458,7 +53581,8 @@ theorem exactRepeatedQuestionTail_splitAt_bob
   apply Finset.prod_congr rfl
   intro j hj
   have different : j ≠ i := (Finset.mem_erase.mp hj).1
-  simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+  simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+    Equiv.coe_fn_mk, different, ↓reduceDIte]
 
 end
 
@@ -53549,7 +53673,8 @@ theorem exactStrategyStableBobQuestionCode_joint_factor
   · have hx : xs coordinate = question :=
       determines xs (split.symm (next, tail)) compatible
     have marked (y : Y) : split.symm (y, tail) coordinate = y := by
-      simp [split, Equiv.funSplitAt, Equiv.piSplitAt]
+      simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+        Equiv.coe_fn_mk, ↓reduceDIte, split]
     simp_rw [same_code, marked]
     simp only [compatible, Prod.mk.injEq, true_and, ↓reduceIte]
     simp only [Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
@@ -53578,7 +53703,7 @@ theorem exactStrategyStableBobQuestionCode_joint_factor
     rw [← G.marginalX_mul_conditionalYGivenX question next]
     ring
   · simp_rw [same_code]
-    simp [compatible]
+    simp only [ne_eq, Prod.mk.injEq, compatible, false_and, ↓reduceIte, sum_const_zero, mul_zero]
 
 theorem exactRepeatedQuestionWeight_splitAt_alice
     (G : Game X Y A B) (n : ℕ)
@@ -53600,7 +53725,8 @@ theorem exactRepeatedQuestionWeight_splitAt_alice
         ((Equiv.funSplitAt coordinate X).symm (x, tail) j)
         (ys j))
     (Finset.mem_univ coordinate)]
-  simp [Equiv.funSplitAt, Equiv.piSplitAt]
+  simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+    Equiv.coe_fn_mk, ↓reduceDIte]
 
 theorem exactRepeatedQuestionTail_splitAt_alice
     (G : Game X Y A B) (n : ℕ)
@@ -53618,7 +53744,8 @@ theorem exactRepeatedQuestionTail_splitAt_alice
   apply Finset.prod_congr rfl
   intro j hj
   have different : j ≠ coordinate := (Finset.mem_erase.mp hj).1
-  simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+  simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+    Equiv.coe_fn_mk, different, ↓reduceDIte]
 
 theorem exactStrategyStableAliceQuestionCode_joint_factor
     {C : Type*} [Fintype C] [DecidableEq C]
@@ -53696,7 +53823,8 @@ theorem exactStrategyStableAliceQuestionCode_joint_factor
   · have hy : ys coordinate = question :=
       determines (split.symm (next, tail)) ys compatible
     have marked (x : X) : split.symm (x, tail) coordinate = x := by
-      simp [split, Equiv.funSplitAt, Equiv.piSplitAt]
+      simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+        Equiv.coe_fn_mk, ↓reduceDIte, split]
     simp_rw [same_code, marked]
     simp only [compatible, Prod.mk.injEq, true_and, ↓reduceIte]
     simp only [Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
@@ -53725,7 +53853,7 @@ theorem exactStrategyStableAliceQuestionCode_joint_factor
     rw [← G.marginalY_mul_conditionalXGivenY next question]
     ring
   · simp_rw [same_code]
-    simp [compatible]
+    simp only [ne_eq, Prod.mk.injEq, compatible, false_and, ↓reduceIte, sum_const_zero, mul_zero]
 
 end
 
@@ -54022,7 +54150,7 @@ theorem jointConditional_product_context_seed
             unfold groupedMass
             apply Finset.sum_congr
             · ext q
-              simp [and_assoc]
+              simp only [Prod.mk.injEq, and_assoc, mem_filter, mem_univ, true_and]
             · intro q _
               rfl
       _ = seedWeight seed *
@@ -54066,7 +54194,7 @@ theorem exactAliceSourceContextNextPosterior_eq_groupedMass
   unfold groupedMass
   apply Finset.sum_congr
   · ext point
-    simp [exactAliceSourceAtomCode, and_assoc]
+    simp only [exactAliceSourceAtomCode, Prod.mk.injEq, and_assoc, mem_filter, mem_univ, true_and]
   · intro point _
     rfl
 
@@ -54092,7 +54220,7 @@ theorem exactBobSourceContextNextPosterior_eq_groupedMass
   unfold groupedMass
   apply Finset.sum_congr
   · ext point
-    simp [exactBobSourceAtomCode, and_assoc]
+    simp only [exactBobSourceAtomCode, Prod.mk.injEq, and_assoc, mem_filter, mem_univ, true_and]
   · intro point _
     rfl
 
@@ -54506,7 +54634,7 @@ theorem exactReverseAliceSideWeightedPrefix_sum
         rw [Finset.sum_comm]
         apply Finset.sum_congr rfl
         intro seed _
-        simp
+        simp only [ite_mul, zero_mul, sum_ite_eq, mem_univ, ↓reduceIte]
 
 theorem exactReverseBobSideWeightedPrefix_sum
     {M : Type*} [Fintype M] [DecidableEq M]
@@ -54567,7 +54695,7 @@ theorem exactReverseBobSideWeightedPrefix_sum
         rw [Finset.sum_comm]
         apply Finset.sum_congr rfl
         intro seed _
-        simp
+        simp only [ite_mul, zero_mul, sum_ite_eq, mem_univ, ↓reduceIte]
 
 end
 
@@ -54616,7 +54744,7 @@ theorem groupedMass_product_stable_context_fiber
   apply Finset.sum_congr rfl
   intro seed _
   by_cases same : index seed = extract target
-  · simp [same, Prod.mk.injEq, Finset.mul_sum, mul_ite]
+  · simp only [same, Prod.mk.injEq, ↓reduceIte, mul_sum, mul_ite, mul_zero]
   · have different (outcome : Ω) :
         context (index seed) outcome ≠ target := by
         intro equal
@@ -54625,7 +54753,7 @@ theorem groupedMass_product_stable_context_fiber
           index seed = extract (context (index seed) outcome) :=
             (extract_context (index seed) outcome).symm
           _ = extract target := congrArg extract equal
-    simp [same, different, Prod.mk.injEq]
+    simp only [Prod.mk.injEq, different, false_and, ↓reduceIte, sum_const_zero, same, zero_mul]
 
 theorem jointConditional_product_stable_context_seed
     {K Ω I C V : Type*}
@@ -55099,7 +55227,8 @@ theorem exactReverseAliceMaskedQuestionRegister_stable
     exact (Finset.mem_sdiff.mp marked.property).2
   have outsideOther : marked ∉ context.otherSide := by
     rw [context.otherSide_eq_complement]
-    simp [marked, (context.sideRank.symm marker).property]
+    simp only [univ_eq_attach, mem_sdiff, mem_attach, (context.sideRank.symm marker).property,
+      not_true_eq_false, and_false, not_false_eq_true, marked]
   change
     exactReverseAliceMaskedQuestionRegister
         D side default marker flag seed xs
@@ -55121,7 +55250,8 @@ theorem exactReverseAliceMaskedQuestionRegister_stable
           have different : j.val ≠ coordinate := by
             intro same
             exact outsideD (same ▸ j.property)
-          simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+          simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+            Equiv.coe_fn_mk, different, ↓reduceDIte]
         apply Prod.ext
         · rfl
         apply Prod.ext
@@ -55133,7 +55263,8 @@ theorem exactReverseAliceMaskedQuestionRegister_stable
               apply Subtype.ext
               exact same
             exact actual ▸ j.property
-          simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+          simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+            Equiv.coe_fn_mk, different, ↓reduceDIte]
         · rfl
     · rfl
   · funext position
@@ -55151,9 +55282,9 @@ theorem exactReverseAliceMaskedQuestionRegister_stable
           context.sideRank.symm.injective sameMarked
         exact (Nat.ne_of_lt before)
           (congrArg Fin.val samePosition)
-      simp [before, context, Equiv.funSplitAt,
-        Equiv.piSplitAt, different]
-    · simp [before]
+      simp only [Fin.val_castSucc, before, ↓reduceIte, ne_eq, Equiv.funSplitAt, Equiv.piSplitAt,
+        eq_rec_constant, Equiv.symm_mk, Equiv.coe_fn_mk, different, ↓reduceDIte, context]
+    · simp only [Fin.val_castSucc, before, ↓reduceIte]
 
 theorem exactConditionedReverseAliceNextPrior_flagged_mixture
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -55452,9 +55583,9 @@ theorem exactReverseAliceMarkedPriorConditional_eq_game
         exactReverseLeftSide_coordinate_mem seed⟩)
     (exactReverseAliceMarkedHistoryContext
       G n S D default seed reference) supported
-  simpa [exactReverseAliceMarkedHistoryContext,
-    finitePrefixMask,
-    exactReverseAliceSourceProjection] using actual
+  simpa only [exactReverseAliceMarkedHistoryContext, finitePrefixMask,
+    exactReverseAliceSourceProjection, exactReverseAliceContextAt_actual, Fin.val_castSucc,
+    exactReverseAliceContext_marked_rank, Equiv.symm_apply_apply] using actual
 
 end
 
@@ -55542,10 +55673,8 @@ theorem exactConditionedReverseAliceNextJoint_marked_mixture
   unfold groupedMass
   apply Finset.sum_congr
   · ext point
-    simp [exactPrefixNextCode,
-      exactReverseAliceMaskedOutcomeContext,
-      exactReverseAliceContextOutcomeProjection,
-      exactReverseAliceSourceProjection,
+    simp only [exactPrefixNextCode, exactReverseAliceSourceProjection, mem_filter, mem_univ,
+      true_and, exactReverseAliceMaskedOutcomeContext, exactReverseAliceContextOutcomeProjection,
       projection]
   · intro point _
     exact reweightedSeedPosterior_eq_product
@@ -55589,9 +55718,8 @@ theorem exactReverseAliceMaskedOutcomeContext_actual
         outcome =
       exactReverseAliceMarkedHistoryContext
         G n S D default seed outcome := by
-  simp [exactReverseAliceMaskedOutcomeContext,
-    exactReverseAliceContextOutcomeProjection,
-    exactReverseAliceMarkedHistoryContext,
+  simp only [exactReverseAliceMaskedOutcomeContext, exactReverseAliceContextOutcomeProjection,
+    exactReverseAliceContextAt_actual, exactReverseAliceMarkedHistoryContext,
     exactReverseAliceSourceProjection]
 
 theorem exactReverseAliceSideMarkedPosteriorConditional_eq_fixedSeedFiber
@@ -55733,7 +55861,8 @@ theorem exactReverseAliceSideMarkedPosteriorConditional_eq_fixedSeedFiber
           apply Prod.ext
           · exact exactReverseAliceMaskedOutcomeContext_actual
               G n S D default seed outcome
-          · simp [next, index, side, marker]
+          · simp only [exactReverseAliceContextAt_actual, Equiv.symm_apply_apply, next, side,
+              marker, index]
 
 theorem exactReverseAliceSideMarkedPosteriorConditional_eq_sourcePosterior
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -56203,7 +56332,7 @@ theorem exactReverseAliceMarkedContextInformation_eq_source
   intro outcome _
   by_cases zero :
       repeatedConditionedOutcomeLaw G n S D outcome = 0
-  · simp [zero]
+  · simp only [zero, zero_mul]
   · have actual_context :
         exactReverseAliceMaskedOutcomeContext
             G n S D (exactReverseLeftSide seed) default
@@ -56317,7 +56446,8 @@ theorem exactReverseBobMaskedQuestionRegister_stable
     exact (Finset.mem_sdiff.mp marked.property).2
   have outsideOther : marked ∉ context.otherSide := by
     rw [context.otherSide_eq_complement]
-    simp [marked, (context.sideRank.symm marker).property]
+    simp only [univ_eq_attach, mem_sdiff, mem_attach, (context.sideRank.symm marker).property,
+      not_true_eq_false, and_false, not_false_eq_true, marked]
   change
     exactReverseBobMaskedQuestionRegister
         D side default marker flag seed
@@ -56337,7 +56467,8 @@ theorem exactReverseBobMaskedQuestionRegister_stable
           have different : j.val ≠ coordinate := by
             intro same
             exact outsideD (same ▸ j.property)
-          simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+          simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+            Equiv.coe_fn_mk, different, ↓reduceDIte]
         apply Prod.ext
         · rfl
         apply Prod.ext
@@ -56351,7 +56482,8 @@ theorem exactReverseBobMaskedQuestionRegister_stable
               apply Subtype.ext
               exact same
             exact actual ▸ j.property
-          simp [Equiv.funSplitAt, Equiv.piSplitAt, different]
+          simp only [ne_eq, Equiv.funSplitAt, Equiv.piSplitAt, eq_rec_constant, Equiv.symm_mk,
+            Equiv.coe_fn_mk, different, ↓reduceDIte]
         · rfl
     · rfl
   · funext position
@@ -56369,9 +56501,9 @@ theorem exactReverseBobMaskedQuestionRegister_stable
           context.sideRank.symm.injective sameMarked
         exact (Nat.ne_of_lt before)
           (congrArg Fin.val samePosition)
-      simp [before, context, Equiv.funSplitAt,
-        Equiv.piSplitAt, different]
-    · simp [before]
+      simp only [Fin.val_castSucc, before, ↓reduceIte, ne_eq, Equiv.funSplitAt, Equiv.piSplitAt,
+        eq_rec_constant, Equiv.symm_mk, Equiv.coe_fn_mk, different, ↓reduceDIte, context]
+    · simp only [Fin.val_castSucc, before, ↓reduceIte]
 
 theorem exactConditionedReverseBobNextPrior_flagged_mixture
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -56670,9 +56802,9 @@ theorem exactReverseBobMarkedPriorConditional_eq_game
         exactReverseRightSide_coordinate_mem seed⟩)
     (exactReverseBobMarkedHistoryContext
       G n S D default seed reference) supported
-  simpa [exactReverseBobMarkedHistoryContext,
-    finitePrefixMask,
-    exactReverseBobSourceProjection] using actual
+  simpa only [exactReverseBobMarkedHistoryContext, finitePrefixMask,
+    exactReverseBobSourceProjection, exactReverseBobContextAt_actual, Fin.val_castSucc,
+    exactReverseBobContext_marked_rank, Equiv.symm_apply_apply] using actual
 
 end
 
@@ -56760,10 +56892,8 @@ theorem exactConditionedReverseBobNextJoint_marked_mixture
   unfold groupedMass
   apply Finset.sum_congr
   · ext point
-    simp [exactPrefixNextCode,
-      exactReverseBobMaskedOutcomeContext,
-      exactReverseBobContextOutcomeProjection,
-      exactReverseBobSourceProjection,
+    simp only [exactPrefixNextCode, exactReverseBobSourceProjection, mem_filter, mem_univ,
+      true_and, exactReverseBobMaskedOutcomeContext, exactReverseBobContextOutcomeProjection,
       projection]
   · intro point _
     exact reweightedSeedPosterior_eq_product
@@ -56804,9 +56934,8 @@ theorem exactReverseBobMaskedOutcomeContext_actual
         outcome =
       exactReverseBobMarkedHistoryContext
         G n S D default seed outcome := by
-  simp [exactReverseBobMaskedOutcomeContext,
-    exactReverseBobContextOutcomeProjection,
-    exactReverseBobMarkedHistoryContext,
+  simp only [exactReverseBobMaskedOutcomeContext, exactReverseBobContextOutcomeProjection,
+    exactReverseBobContextAt_actual, exactReverseBobMarkedHistoryContext,
     exactReverseBobSourceProjection]
 
 theorem exactConditionedReverseBobNextJoint_marked_conditional_eq_fixedOutcome
@@ -56953,7 +57082,8 @@ theorem exactConditionedReverseBobNextJoint_marked_conditional_eq_fixedOutcome
           apply Prod.ext
           · exact exactReverseBobMaskedOutcomeContext_actual
               G n S D default seed outcome
-          · simp [next, index, side, marker]
+          · simp only [exactReverseBobContextAt_actual, Equiv.symm_apply_apply, next, side,
+              marker, index]
 
 theorem exactConditionedReverseBobNextJoint_marked_conditional_eq_sourcePosterior
     (G : Game X Y A B) (n : ℕ) (S : Strategy (G.repeat n))
@@ -57332,7 +57462,7 @@ theorem exactReverseBobConditionalHistoryIdentification_proved
   by_cases zero :
       repeatedConditionedOutcomeLaw
         G n S D outcome = 0
-  · simp [exactPostselectedJointLaw, zero]
+  · simp only [exactPostselectedJointLaw, zero, mul_zero, zero_mul]
   · rw [exactReverseBobActualMarkedEntropy_eq_source
       G n S D remaining positive default seed outcome zero]
     unfold exactPostselectedJointLaw
@@ -57525,7 +57655,7 @@ theorem exact_source_equation_twenty_seven_support_preserving
           G n D denominator numerator)
         (exactLocallySampleableLaw G n S D)]
     _ ≤ 4 * (kappa + gamma) := by
-      nlinarith
+      linarith
 
 theorem
     exact_source_equation_twenty_seven_support_preserving_of_information
@@ -57704,15 +57834,16 @@ theorem exact_standardQuantumParallelRepetition_of_source_rounding
     dsimp [rate]
     apply (div_le_iff₀ (by positivity : (0 : ℝ) < (k : ℝ) + 1)).2
     have nonnegative : (0 : ℝ) ≤ (k : ℝ) := by positivity
-    nlinarith
+    linarith
   have rate_tendsto : Tendsto rate atTop (𝓝 0) := by
     exact tendsto_one_div_add_atTop_nhds_zero_nat
   have martingale_tendsto :
       Tendsto (fun k => rate k ^ 2 / 8) atTop (𝓝 0) := by
-    simpa using (rate_tendsto.pow 2).div_const (8 : ℝ)
+    simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      zero_div] using (rate_tendsto.pow 2).div_const (8 : ℝ)
   have sampling_tendsto :
       Tendsto (fun k => rate k / 2 + rate k) atTop (𝓝 0) := by
-    simpa using (rate_tendsto.div_const (2 : ℝ)).add rate_tendsto
+    simpa only [zero_div, add_zero] using (rate_tendsto.div_const (2 : ℝ)).add rate_tendsto
   have eventually_small :
       ∀ᶠ k : ℕ in atTop,
         totalSamplingLoss K₀ (rate k)
@@ -57738,7 +57869,7 @@ theorem exact_standardQuantumParallelRepetition_of_source_rounding
     construct n S D remaining_positive postselection_positive
       (rate k) (rate k)
       (rate_positive k) (rate_at_most_one k)
-      (rate_positive k) (by simpa [gapValue] using failure_gap)
+      (rate_positive k) (by simpa only [gapValue] using failure_gap)
   have martingale_nonnegative :=
     martingaleRate_nonneg G n S D
       remaining_positive postselection_positive
@@ -57755,7 +57886,7 @@ theorem exact_standardQuantumParallelRepetition_of_source_rounding
   exact source_equation_twenty_nine_contradiction G rounded
     K₀ (rate k) (martingaleRate G n S D)
     (exactSourcePinskerRate G n S D + rate k)
-    rounded_bound (by simpa [gapValue] using exact_loss_small)
+    rounded_bound (by simpa only [gapValue] using exact_loss_small)
 
 end
 
@@ -57783,12 +57914,12 @@ def unitaryConjugatePOVM
     have positive :=
       (P.positive c).mul_mul_conjTranspose_same
         ((U : Matrix d d ℂ)ᴴ)
-    simpa using positive
+    simpa only [conjTranspose_conjTranspose] using positive
   complete := by
     classical
     have unitary :
         (U : Matrix d d ℂ)ᴴ * (U : Matrix d d ℂ) = 1 := by
-      simpa [Matrix.star_eq_conjTranspose] using
+      simpa only [star_eq_conjTranspose] using
         (Matrix.mem_unitaryGroup_iff').mp U.property
     calc
       (∑ c : C,
@@ -57796,7 +57927,7 @@ def unitaryConjugatePOVM
           (U : Matrix d d ℂ)ᴴ *
             (∑ c : C, P.effect c) *
             (U : Matrix d d ℂ) := by
-              simp [Finset.mul_sum, Finset.sum_mul]
+              simp only [mul_sum, sum_mul]
       _ = 1 := by rw [P.complete, Matrix.mul_one, unitary]
 
 end
@@ -57843,7 +57974,7 @@ theorem residualIdentity_quadratic
             push_cast
             apply Finset.sum_congr rfl
             intro j _
-            simpa [Complex.normSq_eq_norm_sq] using
+            simpa only [RCLike.star_def, normSq_eq_norm_sq, ofReal_pow] using
               Complex.mul_conj (κ j)
       _ = 1 := by rw [residual_square]; norm_num
   congr 1
@@ -57870,7 +58001,8 @@ theorem residualIdentity_quadratic
             intro k _
             congr 1
             rw [Fintype.sum_prod_type]
-            simp [mul_ite, ite_mul, Finset.sum_mul, mul_assoc]
+            simp only [mul_ite, mul_one, mul_zero, ite_mul, zero_mul, sum_ite_eq, mem_univ,
+              ↓reduceIte, sum_mul, mul_assoc]
     _ = ∑ i : s,
       ((∑ j : s, M i j * z j) * star (z i)) *
         (∑ k : t, κ k * star (κ k)) := by
@@ -57883,7 +58015,7 @@ theorem residualIdentity_quadratic
           ring
     _ = ∑ i : s, (∑ j : s, M i j * z j) * star (z i) := by
           rw [residual_complex]
-          simp
+          simp only [RCLike.star_def, mul_one]
 
 variable {X Y A B : Type}
 variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
@@ -58004,37 +58136,37 @@ theorem exactSourceGlobalCatalystWinningEffect_compression
       apply Finset.sum_congr rfl
       intro b _
       split_ifs with winning
-      · simp [Matrix.kroneckerMap_apply,
-                    exactSourceGlobalCatalystAlicePOVM_effect_global,
+      · simp only [Equiv.coe_trans, Equiv.prodCongr_apply, Equiv.coe_refl, Prod.map_apply,
+          Function.comp_apply, id_eq, kroneckerMap_apply,
+          exactSourceGlobalCatalystAlicePOVM_effect_global, ↓reduceIte, mul_one,
           exactSourceGlobalCatalystBobPOVM_effect]
       · rfl
-    · simp [exactSourceGlobalCatalystWinningEffect,
-        exactSourceGlobalWinningEffect,
-        exactSourceGlobalCatalystBasisEquiv,
-        Matrix.sum_apply, Matrix.kroneckerMap_apply,                         bob_residual]
+    · simp only [exactSourceGlobalCatalystWinningEffect, exactSourceGlobalCatalystBasisEquiv,
+        Equiv.trans_apply, Equiv.prodProdProdComm_apply, Equiv.prodCongr_apply, Equiv.coe_trans,
+        Equiv.coe_refl, Prod.map_apply, Function.comp_apply, id_eq, Matrix.sum_apply,
+        exactSourceGlobalWinningEffect, kroneckerMap_apply, ne_eq, Prod.mk.injEq, bob_residual,
+        and_false, not_false_eq_true, one_apply_ne, mul_zero]
       apply Finset.sum_eq_zero
       intro a _
       apply Finset.sum_eq_zero
       intro b _
       split_ifs with winning
-      · simp [Matrix.kroneckerMap_apply,
-          exactSourceGlobalCatalystAlicePOVM_effect_global,
-          exactSourceGlobalCatalystBobPOVM_effect,
-          bob_residual]
+      · simp only [kroneckerMap_apply, exactSourceGlobalCatalystAlicePOVM_effect_global,
+          ↓reduceIte, mul_one, exactSourceGlobalCatalystBobPOVM_effect, bob_residual, mul_zero]
       · rfl
-  · simp [exactSourceGlobalCatalystWinningEffect,
-      exactSourceGlobalWinningEffect,
-      exactSourceGlobalCatalystBasisEquiv,
-      Matrix.sum_apply, Matrix.kroneckerMap_apply,                   alice_residual]
+  · simp only [exactSourceGlobalCatalystWinningEffect, exactSourceGlobalCatalystBasisEquiv,
+      Equiv.trans_apply, Equiv.prodProdProdComm_apply, Equiv.prodCongr_apply, Equiv.coe_trans,
+      Equiv.coe_refl, Prod.map_apply, Function.comp_apply, id_eq, Matrix.sum_apply,
+      exactSourceGlobalWinningEffect, kroneckerMap_apply, ne_eq, Prod.mk.injEq, alice_residual,
+      false_and, not_false_eq_true, one_apply_ne, mul_zero]
     apply Finset.sum_eq_zero
     intro a _
     apply Finset.sum_eq_zero
     intro b _
     split_ifs with winning
-    · simp [Matrix.kroneckerMap_apply,
-        exactSourceGlobalCatalystAlicePOVM_effect_global,
-        exactSourceGlobalCatalystBobPOVM_effect,
-        alice_residual]
+    · simp only [kroneckerMap_apply, exactSourceGlobalCatalystAlicePOVM_effect_global,
+        alice_residual, ↓reduceIte, mul_zero, exactSourceGlobalCatalystBobPOVM_effect, mul_ite,
+        mul_one, zero_mul, ite_self]
     · rfl
 
 theorem exactSourceGlobalCatalystWinningEffect_tensor_quadratic
@@ -58132,15 +58264,13 @@ theorem exactSourceGlobalCatalystWinningEffect_tensor_quadratic
               (Equiv.symm_apply_apply finProdFinEquiv
                 ((Fintype.equivFin
                   (ExactGlobalHistoryLocalIndex G n S D)) ib, kb))
-          simp [basis, tensor, source, residual,
-            exactSourceGlobalCatalystBasisEquiv,
-            tensorEmbezzlementTarget,
-            exactGlobalHistoryFinPsi,
-            exactGlobalHistoryFinReindex,
-            LinearIsometryEquiv.piLpCongrLeft_apply,
-            Equiv.piCongrLeft'_apply,
-            alice_system, alice_residual,
-            bob_system, bob_residual]
+          simp only [exactSourceGlobalCatalystBasisEquiv, Equiv.trans_apply,
+            tensorEmbezzlementTarget, exactGlobalHistoryFinPsi, exactGlobalHistoryFinReindex,
+            LinearIsometryEquiv.piLpCongrLeft_apply, finProdFinEquiv_symm_apply,
+            Equiv.piCongrLeft'_apply, Equiv.prodCongr_symm, Equiv.prodCongr_apply, Prod.map_apply,
+            Equiv.prodProdProdComm_apply, Equiv.coe_trans, Equiv.coe_refl, Function.comp_apply,
+            id_eq, alice_system, Equiv.symm_apply_apply, bob_system, alice_residual, bob_residual,
+            basis, source, residual, tensor]
         · intro j outside
           exact False.elim
             (outside (basis.symm j) (basis.apply_symm_apply j))
@@ -58226,7 +58356,7 @@ theorem exactSourceGlobalCatalystWinningEffect_law_supported_verifier
       t = (t.2.2.2.seed.coordinate,
         t.2.1, t.2.2.1, t.2.2.2) := by
     rcases t with ⟨i, x, y, r⟩
-    simpa using coordinate
+    simpa only [Prod.mk.injEq, and_true] using coordinate
   conv_lhs => rw [tuple]
   exact
     exactSourceConditionalWinningProbability_eq_normalized_verifier
@@ -58289,12 +58419,15 @@ theorem unconditionalMatchedVerifierEffect_tensor_complement
   · subst j
     by_cases same_work : k = l
     · subst l
-      simp [Matrix.kroneckerMap_apply]
-    · simp [Matrix.kroneckerMap_apply, same_work]
+      simp only [Matrix.sub_apply, one_apply_eq, kroneckerMap_apply, mul_one]
+    · simp only [Matrix.sub_apply, ne_eq, Prod.mk.injEq, same_work, and_false, not_false_eq_true,
+        one_apply_ne, kroneckerMap_apply, mul_zero, sub_self, one_apply_eq]
   · by_cases same_work : k = l
     · subst l
-      simp [Matrix.kroneckerMap_apply, same_target]
-    · simp [Matrix.kroneckerMap_apply, same_target, same_work]
+      simp only [Matrix.sub_apply, ne_eq, Prod.mk.injEq, same_target, and_true, not_false_eq_true,
+        one_apply_ne, kroneckerMap_apply, one_apply_eq, mul_one, zero_sub]
+    · simp only [Matrix.sub_apply, ne_eq, Prod.mk.injEq, same_target, same_work, and_self,
+        not_false_eq_true, one_apply_ne, kroneckerMap_apply, mul_zero, sub_self, zero_sub]
 
 theorem unconditionalMatchedVerifierEffect_tensor_posSemidef
     {s t : Type*} [Fintype s] [Fintype t]
@@ -58355,7 +58488,7 @@ theorem unconditionalMatchedVerifierEffect_tensor_quadratic
             push_cast
             apply Finset.sum_congr rfl
             intro k _
-            simpa [Complex.normSq_eq_norm_sq] using
+            simpa only [RCLike.star_def, normSq_eq_norm_sq, ofReal_pow] using
               Complex.mul_conj (work k)
       _ = (↑(‖work‖ ^ 2) : ℂ) := by
             rw [← EuclideanSpace.norm_sq_eq]
@@ -58393,7 +58526,8 @@ theorem unconditionalMatchedVerifierEffect_tensor_quadratic
               intro k _
               congr 1
               rw [Fintype.sum_prod_type]
-              simp [mul_ite, ite_mul, Finset.sum_mul, mul_assoc]
+              simp only [mul_ite, mul_one, mul_zero, ite_mul, zero_mul, sum_ite_eq, mem_univ,
+                ↓reduceIte, sum_mul, mul_assoc]
       _ = ∑ i : s,
         ((∑ j : s, effect i j * target j) * star (target i)) *
           (∑ k : t, work k * star (work k)) := by
@@ -58742,7 +58876,8 @@ def unconditionalConjugatePureVector
 theorem unconditionalConjugatePureVector_norm_sq
     {ι : Type*} [Fintype ι] (z : EuclideanSpace ℂ ι) :
     ‖unconditionalConjugatePureVector z‖ ^ 2 = ‖z‖ ^ 2 := by
-  simp [EuclideanSpace.norm_sq_eq]
+  simp only [EuclideanSpace.norm_sq_eq, unconditionalConjugatePureVector_apply, RCLike.star_def,
+    RCLike.norm_conj]
 
 theorem unconditionalConjugatePureVector_norm
     {ι : Type*} [Fintype ι] (z : EuclideanSpace ℂ ι) :
@@ -59061,7 +59196,7 @@ theorem unconditionalConjugateBobBasisOverlapCancellation
       Matrix (Fin d) (Fin d) ℂ) =
       ((U⁻¹ : Matrix.unitaryGroup (Fin d) ℂ) :
         Matrix (Fin d) (Fin d) ℂ)
-  simp
+  simp only [mul_inv_cancel_right, UnitaryGroup.inv_val]
 
 theorem unconditionalConjugateBobBasisOverlap_sum
     {d : ℕ} (U V : Matrix.unitaryGroup (Fin d) ℂ)
@@ -59073,8 +59208,8 @@ theorem unconditionalConjugateBobBasisOverlap_sum
   have identity := congrArg
     (fun M : Matrix (Fin d) (Fin d) ℂ => M i b)
     (unconditionalConjugateBobBasisOverlapCancellation U V)
-  simpa [Matrix.mul_apply, Matrix.transpose_apply,
-    conjugateUnitary_apply] using identity
+  simpa only [unitaryBasisOverlap_apply, Matrix.mul_apply, conjTranspose_apply, RCLike.star_def,
+    transpose_apply, conjugateUnitary_apply] using identity
 
 theorem unconditionalRationalMixedConjugateBobSpectral_sum
     {d : ℕ} (ξ ζ : BipartiteUnitVector d)
@@ -59109,7 +59244,7 @@ theorem unconditionalConjugateCanonicalAcceptedTarget_apply
             Matrix (Fin d) (Fin d) ℂ) b i) := by
   unfold dSVDensityRationalCanonicalAcceptedTarget
   rw [schmidtVector_apply]
-  simp
+  simp only [star_sum, star_mul', RCLike.star_def, conj_ofReal]
 
 theorem unconditionalMixedConjugateCanonicalAcceptedTarget_sum
     {d N : ℕ} {w : ℝ}
@@ -59209,8 +59344,8 @@ def unconditionalMixedConjugateSigmaAtomLift
       star (Matrix.reindex e e M) =
         Matrix.reindex e e (star M) := by
     ext i j
-    simp [Matrix.star_eq_conjTranspose,
-      Matrix.reindex_apply, Matrix.conjTranspose_apply]
+    simp only [reindex_apply, star_apply, submatrix_apply, RCLike.star_def, star_eq_conjTranspose,
+      conjTranspose_apply]
   rw [compatible]
   change
     (Matrix.reindexRingEquiv ℂ e) (star M) *
@@ -59268,11 +59403,10 @@ theorem unconditionalMixedConjugateSigmaLocalAction_apply
         (V : Matrix (Fin d) (Fin d) ℂ) j l *
         z (⟨(φ, k), a⟩, ⟨(ψ, l), b⟩) := by
   classical
-  simp [unconditionalMixedConjugateSigmaLocalAction,
-    Matrix.mulVec, dotProduct, Matrix.kroneckerMap_apply,
-    Fintype.sum_prod_type, Fintype.sum_sigma,
-    unconditionalMixedConjugateSigmaAtomLift_apply,
-    mul_assoc, ite_and]
+  simp only [unconditionalMixedConjugateSigmaLocalAction, mulVec, dotProduct, kroneckerMap_apply,
+    mul_assoc, Fintype.sum_prod_type, Fintype.sum_sigma,
+    unconditionalMixedConjugateSigmaAtomLift_apply, ite_and, ite_mul, zero_mul, mul_ite, mul_zero,
+    sum_ite_irrel, sum_ite_eq, mem_univ, ↓reduceIte, sum_const_zero]
 
 def unconditionalMixedConjugateAcceptedPhaseHarmonicTarget
     {d N B : ℕ} (w : ℝ) (n : ℕ)
@@ -59365,7 +59499,8 @@ theorem unconditionalSelectedCopy_coherentPhaseSigma_norm_sq
             intro φ _
             apply Finset.sum_congr rfl
             intro i _
-            simp
+            simp only [ite_mul, zero_mul, sum_ite_irrel, sum_const_zero, sum_ite_eq, mem_univ,
+              ↓reduceIte]
     _ = _ := by
       calc
         (∑ φ : Fin B, ∑ i : H, ∑ j : H,
@@ -59426,7 +59561,7 @@ theorem unconditionalSelectedCopy_mixedConjugateLocalAction_norm
       ((Σ _ : Fin B × Fin d, Fin m) ×
        (Σ _ : Fin B × Fin d, Fin m))) :
     ‖unconditionalMixedConjugateSigmaLocalAction B U V z‖ = ‖z‖ := by
-  simpa [unconditionalMixedConjugateSigmaLocalAction] using
+  simpa only [unconditionalMixedConjugateSigmaLocalAction] using
     dSVUniformDensityMixedProtocolLocalAction_norm
       (unconditionalMixedConjugateSigmaAtomLift (m := m) B U)
       (unconditionalMixedConjugateSigmaAtomLift (m := m) B V) z
@@ -59461,10 +59596,10 @@ theorem unconditionalSelectedCopyIdealStage_norm_sq
             (N := N) (B := B) (m := m) w ξ ζ‖ ^ 2 =
         dSVDensityRationalLeftProjectiveDiagonalMass w N ξ := by
     apply mul_left_cancel₀ (ne_of_gt width)
-    simpa [unconditionalSelectedCopyIdealStage, mul_assoc] using squared
+    simpa only [unconditionalSelectedCopyIdealStage, mul_eq_mul_left_iff, mul_assoc] using squared
   rw [dSVDensityRationalPhysicalDiagonalBornSuccess_eq]
   apply (eq_div_iff (ne_of_gt dimension_real)).2
-  simpa [mul_comm] using cancelled
+  simpa only [mul_comm] using cancelled
 
 theorem unconditionalSelectedCopyCleanedStage_norm_sq
     {d N B m : ℕ} {w : ℝ}
@@ -59508,9 +59643,8 @@ theorem unconditionalSelectedCopyCleanedMatchedBranch_norm_sq
       phases grid harmonic (width_positive (schedule j)),
     unconditionalSelectedCopyRetainedWork_norm_sq,
     rest_unit]
-  simp [dSVDensityRationalHeterogeneousPhysicalStageSuccess,
-    dSVDensityRationalHeterogeneousPhysicalStageOutcome,
-    j.isLt, mul_comm]
+  simp only [one_pow, mul_comm, one_mul, dSVDensityRationalHeterogeneousPhysicalStageSuccess,
+    dSVDensityRationalHeterogeneousPhysicalStageOutcome, j.isLt, ↓reduceDIte, Fin.eta]
 
 theorem unconditionalSelectedCopyIdealMatchedBranch_norm_sq
     {S N d L B m : ℕ} {τ : Type*} [Fintype τ]
@@ -59584,12 +59718,10 @@ theorem unconditionalMixedConjugateSelectedBranch_tensorAction
             (ofLp stage)))) work := by
   classical
   ext ⟨⟨a, b⟩, t⟩
-  simp [unconditionalMixedConjugateSelectedBranchLocalAction,
-    unconditionalMixedConjugateSelectedBranchUnitary,
-    unconditionalMatchedVerifierTensor,
-    Matrix.mulVec, dotProduct, Matrix.kroneckerMap_apply,
-    Matrix.one_apply,
-    Fintype.sum_prod_type, Finset.sum_mul, mul_assoc]
+  simp only [unconditionalMixedConjugateSelectedBranchLocalAction,
+    unconditionalMixedConjugateSelectedBranchUnitary, unconditionalMatchedVerifierTensor, mulVec,
+    dotProduct, kroneckerMap_apply, Matrix.one_apply, mul_ite, mul_one, mul_zero, ite_mul,
+    mul_assoc, zero_mul, Fintype.sum_prod_type, sum_ite_eq, mem_univ, ↓reduceIte, sum_mul]
 
 theorem unconditionalMixedConjugateSelectedBranch_tensor_smul
     {s τ : Type*} [Fintype s] [Fintype τ]
@@ -59648,12 +59780,11 @@ theorem unconditionalPhysicalAcceptedCoherentStage_eq_phaseSigma
       ePRState B (φ, ψ) *
         dSVDensityRationalMixedCanonicalPrefixPhysicalAcceptedSigmaState
           w m ξ ζ (⟨i, a⟩, ⟨j, b⟩) := by
-  simp [dSVDensityRationalPublicBucketPhysicalCoherentMixedState,
+  simp only [dSVDensityRationalPublicBucketPhysicalCoherentMixedState,
     dSVDensityRationalPublicBucketCoherentPhaseSigmaState,
-    dSVDensityRationalPublicBucketCoherentPhaseHistory,
-    dSVDensityRationalMixedCanonicalPrefixPhysicalAcceptedSigmaState,
     dSVUniformDensityCorrectedMatchedSigmaWeightedResidual,
-    mul_assoc]
+    dSVDensityRationalPublicBucketCoherentPhaseHistory, mul_assoc,
+    dSVDensityRationalMixedCanonicalPrefixPhysicalAcceptedSigmaState]
 
 theorem unconditionalPhysicalAcceptedCoherentStage_apply
     {d N B m : ℕ} {w : ℝ}
@@ -59782,7 +59913,7 @@ theorem actualStoppingGlobalWinningEffect_same
   apply Finset.sum_congr rfl
   intro b _
   split_ifs
-  · simp [dependentBlockPOVM_effect_same]
+  · simp only [kroneckerMap_apply, dependentBlockPOVM_effect_same]
   · rfl
 
 theorem actualStoppingGlobalWinningEffect_cross_eq_zero
@@ -59803,8 +59934,8 @@ theorem actualStoppingGlobalWinningEffect_cross_eq_zero
     apply Finset.sum_eq_zero
     intro b _
     split_ifs
-    · simp [dependentBlockPOVM,
-        Matrix.blockDiagonal'_apply, left]
+    · simp only [dependentBlockPOVM, kroneckerMap_apply, blockDiagonal'_apply, left, ↓reduceDIte,
+        mul_dite, zero_mul, mul_zero, dite_eq_ite, ite_self]
     · rfl
   · unfold actualStoppingGlobalWinningEffect
     simp only [Matrix.sum_apply]
@@ -59813,8 +59944,8 @@ theorem actualStoppingGlobalWinningEffect_cross_eq_zero
     apply Finset.sum_eq_zero
     intro b _
     split_ifs
-    · simp [dependentBlockPOVM,
-        Matrix.blockDiagonal'_apply, right]
+    · simp only [dependentBlockPOVM, kroneckerMap_apply, blockDiagonal'_apply, right, ↓reduceDIte,
+        mul_zero]
     · rfl
 
 theorem actualStoppingGlobalBorn_eq_sum
@@ -59855,8 +59986,8 @@ theorem actualStoppingGlobalBorn_eq_sum
         rw [actualStoppingGlobalWinningEffect_cross_eq_zero
           G PA PB r s r s' x y i j i' j'
             (Or.inr (Ne.symm unequal))]
-        simp
-      · simp
+        simp only [zero_mul]
+      · simp only [mem_univ, not_true_eq_false, IsEmpty.forall_iff]
     · intro r' _ unequal
       apply Finset.sum_eq_zero
       intro i' _
@@ -59867,8 +59998,8 @@ theorem actualStoppingGlobalBorn_eq_sum
       rw [actualStoppingGlobalWinningEffect_cross_eq_zero
         G PA PB r s r' s' x y i j i' j'
           (Or.inl (Ne.symm unequal))]
-      simp
-    · simp
+      simp only [zero_mul]
+    · simp only [mem_univ, not_true_eq_false, IsEmpty.forall_iff]
   rw [matrixQuadraticExpectation_expand]
   simp_rw [matrixQuadraticExpectation_expand]
   simp only [Fintype.sum_prod_type, Fintype.sum_sigma,
@@ -60017,7 +60148,7 @@ theorem actualStoppingQuestionLocalWinningEffect_quadratic
       (((dependentBlockPOVM (fun r => PA r x)).effect a) ⊗ₖ
        ((dependentBlockPOVM (fun r => PB r y)).effect b))
       z).symm
-  · simp [quadraticExpectation]
+  · simp only [quadraticExpectation, map_zero, _root_.zero_apply, inner_zero_right, zero_re]
 
 theorem actualStoppingQuestionLocalWinningProbability_eq_sum
     (G : Game X Y A B)
@@ -60333,17 +60464,18 @@ theorem
         dSVDensityRationalHeterogeneousActualPhysicalState
           N width schedule ξ ζ (a, b) *
         embezzlementState m (i, j) := by
-  simp [dSVDensityRationalHeterogeneousOriginalSameStopSigmaSource,
+  simp only [dSVDensityRationalHeterogeneousOriginalSameStopSigmaSource,
     dSVDensityRationalHeterogeneousOriginalSameStopStateEquiv,
     dSVDensityRationalPublicMultiscaleOriginalSigmaTargetFirstEquiv,
     dSVDensityRationalPublicBucketCoherentPhaseSigmaProductEquiv,
-    LinearIsometryEquiv.piLpCongrLeft_apply,
-    Equiv.piCongrLeft',
     dSVDensityRationalHeterogeneousPureStoppedSigmaState,
     dSVDensityRationalPublicMultiscaleBucketCoherentSigmaState,
     dSVDensityRationalPublicBucketCoherentPhaseSigmaState,
     dSVUniformDensityCorrectedMatchedSigmaWeightedResidual,
-    dSVDensityRationalPublicBucketCoherentPhaseHistory]
+    dSVDensityRationalPublicBucketCoherentPhaseHistory, LinearIsometryEquiv.piLpCongrLeft_apply,
+    Equiv.piCongrLeft', Equiv.prodCongr_symm, Equiv.symm_trans, Equiv.prodCongr_apply,
+    Equiv.coe_trans, eq_rec_constant, Equiv.coe_fn_mk, Prod.map_apply, Function.comp_apply,
+    Equiv.symm_apply_apply, Equiv.sigmaEquivProd_symm_apply]
 
 theorem
     dSVDensityRationalHeterogeneousOriginalSameStopSigmaSource_eq_stopped
@@ -60381,7 +60513,8 @@ theorem
         (((Fintype.equivFin
           (DSVDensityRationalPublicMultiscalePhase S B)) ψ', b), j))
   rw [dSVDensityRationalHeterogeneousTargetFirstSpectralPhysicalSource_apply]
-  simp [ePRState]
+  simp only [ePRState, Fintype.card_pi, Fintype.card_fin, prod_const, card_univ, Nat.cast_pow,
+    ofReal_inv, EmbeddingLike.apply_eq_iff_eq, ite_mul, zero_mul]
 
 theorem dSVDensityRationalHeterogeneousOriginalStoppedState_apply
     (S B N d L m : ℕ)
@@ -60429,9 +60562,9 @@ def directDSVRemainingCopyEquiv
     rcases z with ⟨before, after⟩
     apply Prod.ext
     · funext i
-      simp
+      simp only [Fin.is_lt, ↓reduceDIte, Fin.eta]
     · funext i
-      simp
+      simp only [add_lt_iff_neg_left, not_lt_zero, ↓reduceDIte, add_tsub_cancel_left, Fin.eta]
   right_inv z := by
     funext i
     dsimp
@@ -60456,7 +60589,8 @@ def directDSVSelectedCopyLocalHistoryEquiv
     (after : Fin (L - j.val) → β) :
     directDSVSelectedCopyLocalHistoryEquiv j
         (selected, (before, after)) j.castSucc = selected := by
-  simp [directDSVSelectedCopyLocalHistoryEquiv]
+  simp only [directDSVSelectedCopyLocalHistoryEquiv, Equiv.trans_apply, Equiv.prodCongr_apply,
+    Equiv.coe_refl, Prod.map_apply, id_eq, Fin.insertNthEquiv_apply, Fin.insertNth_apply_same]
 
 @[simp] theorem directDSVSelectedCopyLocalHistoryEquiv_before
     {L : ℕ} {β : Type*} (j : Fin L)
@@ -60511,7 +60645,7 @@ def directDSVSelectedCopyLocalHistoryEquiv
       then before ⟨k.val, h⟩
       else after ⟨k.val - j.val, by omega⟩) = after i
   have not_before : ¬ j.val + i.val < j.val := by omega
-  simp [k, not_before]
+  simp only [not_before, ↓reduceDIte, add_tsub_cancel_left, Fin.eta, k]
 
 theorem directDSVRemainingCopyProductSplit
     {M : Type*} [CommMonoid M]
@@ -60771,12 +60905,11 @@ theorem unconditionalSourcePhysicalStoppingBranch_sigmaContinuation
           (ofLp (actualStoppingBranchVector z r s)))) := by
   classical
   ext ⟨i, j⟩
-  simp [actualStoppingBranchVector,
-    dSVUniformDensityPhysicalAsyncSigmaContinuation,
-    coherentSharedRandomControlledUnitary,
-    Matrix.mulVec, dotProduct, Matrix.kroneckerMap_apply,
-    Matrix.blockDiagonal'_apply,
-    Fintype.sum_prod_type, Fintype.sum_sigma]
+  simp only [actualStoppingBranchVector, dSVUniformDensityPhysicalAsyncSigmaContinuation,
+    coherentSharedRandomControlledUnitary, mulVec, dotProduct, kroneckerMap_apply,
+    blockDiagonal'_apply, cast_eq, dite_eq_ite, mul_ite, ite_mul, zero_mul, mul_zero,
+    Fintype.sum_prod_type, Fintype.sum_sigma, sum_ite_irrel, sum_const_zero, sum_ite_eq, mem_univ,
+    ↓reduceIte]
 
 def unconditionalSourceFixedPureStoppedSigmaReindexedUnitary
     {ι κ : Type*} [Fintype ι] [DecidableEq ι]
@@ -60790,8 +60923,8 @@ def unconditionalSourceFixedPureStoppedSigmaReindexedUnitary
   have compatible :
       star (Matrix.reindex e e M) = Matrix.reindex e e (star M) := by
     ext i j
-    simp [Matrix.star_eq_conjTranspose, Matrix.reindex_apply,
-      Matrix.conjTranspose_apply]
+    simp only [reindex_apply, star_apply, submatrix_apply, RCLike.star_def, star_eq_conjTranspose,
+      conjTranspose_apply]
   rw [compatible]
   change
     (Matrix.reindexRingEquiv ℂ e) (star M) *
@@ -60815,8 +60948,8 @@ theorem unconditionalSelectedMultiscalePhase_card
     Fintype.card
         (DSVDensityRationalPublicMultiscalePhase (S + 1) B) =
       B * Fintype.card (Fin S → Fin B) := by
-  simp [DSVDensityRationalPublicMultiscalePhase,
-    pow_succ, Nat.mul_comm]
+  simp only [DSVDensityRationalPublicMultiscalePhase, Fintype.card_pi, Fintype.card_fin,
+    prod_const, card_univ, pow_succ, Nat.mul_comm]
 
 theorem unconditionalSelectedMultiscalePhase_EPR_apply
     {S B : ℕ} (scale : Fin (S + 1))
@@ -60850,7 +60983,8 @@ theorem unconditionalSelectedMultiscalePhase_EPR_apply
             (congrArg Prod.snd
               ((unconditionalSelectedMultiscalePhaseIndexEquiv
                 scale).injective equal))
-      simp [ePRState, different, residual]
+      simp only [ePRState, Fintype.card_pi, Fintype.card_fin, prod_const, card_univ, Nat.cast_pow,
+        ofReal_inv, different, ↓reduceIte, residual, mul_zero]
   · have different :
         unconditionalSelectedMultiscalePhaseIndexEquiv
             scale (p, r) ≠
@@ -60861,7 +60995,8 @@ theorem unconditionalSelectedMultiscalePhase_EPR_apply
           (congrArg Prod.fst
             ((unconditionalSelectedMultiscalePhaseIndexEquiv
               scale).injective equal))
-    simp [ePRState, different, selected]
+    simp only [ePRState, Fintype.card_pi, Fintype.card_fin, prod_const, card_univ, Nat.cast_pow,
+      ofReal_inv, different, ↓reduceIte, selected, mul_ite, zero_mul, mul_zero, ite_self]
 
 def unconditionalActualMultiscalePhaseIndexEquiv
     {S B : ℕ} (scale : Fin S) :
@@ -60908,8 +61043,8 @@ def unconditionalSourcePhysicalCleanedReindexedUnitary
       star (Matrix.reindex e e M) =
         Matrix.reindex e e (star M) := by
     ext i j
-    simp [Matrix.star_eq_conjTranspose,
-      Matrix.reindex_apply, Matrix.conjTranspose_apply]
+    simp only [reindex_apply, star_apply, submatrix_apply, RCLike.star_def, star_eq_conjTranspose,
+      conjTranspose_apply]
   rw [compatible]
   change
     (Matrix.reindexRingEquiv ℂ e) (star M) *
@@ -61005,7 +61140,8 @@ theorem
             S B N d L m),
         (U : Matrix _ _ ℂ) (e.symm a) q.1 *
           (V : Matrix _ _ ℂ) (e.symm b) q.2 * z q
-  simpa using
+  simpa only [Equiv.prodCongr_apply, Prod.map_fst, Equiv.symm_apply_apply, Prod.map_snd,
+    Prod.mk.eta] using
     (Equiv.sum_comp (Equiv.prodCongr e e)
       (fun q :
         (Σ _ : Fin (L + 1),
@@ -61110,14 +61246,14 @@ def unconditionalSourcePhysicalCleanedSelectedHistoryEquiv
     intro q
     rcases q with ⟨selected, before, later⟩
     apply Prod.ext
-    · simp
+    · simp only [Fin.val_castSucc, lt_self_iff_false, ↓reduceDIte]
     · apply Prod.ext
       · funext i
-        simp
+        simp only [Fin.is_lt, ↓reduceDIte, Fin.eta]
       · funext i
         have not_before : ¬ j.val + 1 + i.val < j.val := by omega
         have not_hit : ¬ j.val + 1 + i.val = j.val := by omega
-        simp [not_before, not_hit]
+        simp only [not_before, ↓reduceDIte, not_hit, add_tsub_cancel_left, Fin.eta]
 
 @[simp] theorem unconditionalSourcePhysicalCleanedSelectedHistoryEquiv_hit
     {L : ℕ} (j : Fin L) (β : Type*) (f : Fin (L + 1) → β) :
@@ -61168,7 +61304,9 @@ def unconditionalSourcePhysicalCleanedFullLocalIndexEquiv
         Σ _ : P × (Fin (L + 1) →
           DSVUniformDensityThresholdLocalIndex N d), Fin m) =
           ⟨(phase, history), work⟩
-    simp
+    simp only [Prod.mk.eta, Equiv.symm_apply_apply,
+      unconditionalSourcePhysicalCleanedSelectedHistoryEquiv_hit, Sigma.mk.injEq, Prod.mk.injEq,
+      true_and, heq_eq_eq, and_true]
     exact
       (unconditionalSourcePhysicalCleanedSelectedHistoryEquiv j
         (DSVUniformDensityThresholdLocalIndex N d)).symm_apply_apply
@@ -61176,7 +61314,8 @@ def unconditionalSourcePhysicalCleanedFullLocalIndexEquiv
   right_inv := by
     rintro ⟨⟨⟨phase, spectral⟩, packed⟩,
       ⟨before, ⟨later, remainder⟩⟩⟩
-    simp
+    simp only [Equiv.apply_symm_apply, finProdFinEquiv_symm_apply, Prod.mk.injEq, Sigma.mk.injEq,
+      heq_eq_eq, true_and, and_true]
     exact finProdFinEquiv.apply_symm_apply packed
 
 def unconditionalSourcePhysicalCleanedFullBilateralRegroup
@@ -61214,11 +61353,11 @@ def unconditionalSourcePhysicalCleanedFullBilateralRegroup
   left_inv := by
     rintro ⟨⟨selectedA, beforeA, laterA, phaseA⟩,
       ⟨selectedB, beforeB, laterB, phaseB⟩⟩
-    simp
+    simp only
   right_inv := by
     rintro ⟨⟨selectedA, selectedB⟩,
       ⟨before, ⟨⟨laterA, laterB⟩, ⟨phaseA, phaseB⟩⟩⟩⟩
-    simp
+    simp only [Prod.mk.eta]
 
 def unconditionalSourcePhysicalCleanedFullBilateralStateIsometry
     {P R : Type*} [Fintype P] [Fintype R]
@@ -61304,10 +61443,10 @@ def unconditionalActualCleanedSelectedStagePhysicalIndexEquiv
     ⟨q.1.1, (⟨work.1, q.1.2⟩, work.2)⟩
   left_inv := by
     rintro ⟨phase, ⟨⟨threshold, spectral⟩, harmonic⟩⟩
-    simp
+    simp only [Equiv.symm_apply_apply]
   right_inv := by
     rintro ⟨⟨phase, spectral⟩, work⟩
-    simp
+    simp only [finProdFinEquiv_symm_apply, Sigma.mk.injEq, heq_eq_eq, true_and]
     exact finProdFinEquiv.apply_symm_apply work
 
 def unconditionalActualCleanedSelectedStageSpectralUnitary
@@ -61398,7 +61537,7 @@ def unconditionalActualCleanedSelectedFiniteStageDecoder
         phaseSplit Q width schedule ξ spectral A j.succ =
       unconditionalActualCleanedSelectedFullStageUnitary
         phaseSplit Q width schedule ξ spectral A j := by
-  simp [unconditionalActualCleanedSelectedFiniteStageDecoder]
+  simp only [unconditionalActualCleanedSelectedFiniteStageDecoder, Fin.cases_succ]
 
 theorem unconditionalActualCleanedSelectedMatchedStoppingBranch
     {S B N d L m : ℕ} {R : Type}
@@ -61495,10 +61634,10 @@ def unconditionalSourceFlagControlledStagePhysicalIndexEquiv
     ⟨q.1.1, (⟨work.1, q.1.2⟩, work.2)⟩
   left_inv := by
     rintro ⟨phase, ⟨⟨threshold, spectral⟩, harmonic⟩⟩
-    simp
+    simp only [Equiv.symm_apply_apply]
   right_inv := by
     rintro ⟨⟨phase, spectral⟩, work⟩
-    simp
+    simp only [finProdFinEquiv_symm_apply, Sigma.mk.injEq, heq_eq_eq, true_and]
     exact finProdFinEquiv.apply_symm_apply work
 
 def unconditionalSourceFlagControlledStageSpectralUnitary
@@ -61636,14 +61775,13 @@ theorem unconditionalActualPhysicalMixedAcceptedSpectralGauge_apply
   have harmonic_b : (finProdFinEquiv (l, b)).modNat = b := by
     change (finProdFinEquiv.symm (finProdFinEquiv (l, b))).2 = b
     rw [Equiv.symm_apply_apply]
-  simp [unconditionalActualCleanedSelectedStageSpectralUnitary,
+  simp only [unconditionalActualCleanedSelectedStageSpectralUnitary,
     unconditionalSourceFixedPureStoppedSigmaReindexedUnitary,
-    unconditionalActualCleanedSelectedStagePhysicalIndexEquiv,
-    coherentSharedRandomControlledUnitary,
-    unconditionalActualCleanedSelectedTensorUnitary,
-    Matrix.blockDiagonal'_apply, Matrix.kroneckerMap_apply,
-    Matrix.one_apply, threshold_a, harmonic_a,
-    threshold_b, harmonic_b]
+    unconditionalActualCleanedSelectedStagePhysicalIndexEquiv, finProdFinEquiv_symm_apply,
+    coherentSharedRandomControlledUnitary, unconditionalActualCleanedSelectedTensorUnitary,
+    OneMemClass.coe_one, reindex_apply, Equiv.symm_mk, Equiv.coe_fn_mk, submatrix_apply,
+    threshold_a, harmonic_a, threshold_b, harmonic_b, blockDiagonal'_apply, cast_eq,
+    kroneckerMap_apply, Matrix.one_apply, mul_ite, mul_one, mul_zero, dite_eq_ite]
 
 theorem
     unconditionalActualPhysicalMixedAcceptedSpectralGauge_sum
@@ -61705,10 +61843,10 @@ theorem unconditionalActualPhysicalMixedAcceptedSpectralGauge_stage
     unconditionalActualPhysicalMixedAcceptedRawStage,
     Equiv.symm_apply_apply, ite_mul, mul_ite, zero_mul, mul_zero,
     mul_one]
-  simp [dSVDensityRationalCanonicalPrefixSpectralOutcome, ePRState,
-    Matrix.mulVec, dotProduct, Matrix.kroneckerMap_apply,
-    Fintype.sum_prod_type, Finset.mul_sum,
-    mul_assoc, mul_left_comm, mul_comm]
+  simp only [UnitaryGroup.inv_val, star_apply, RCLike.star_def, ePRState, ofReal_inv, ite_mul,
+    zero_mul, mul_comm, mul_ite, mul_left_comm, mul_assoc, sum_ite_irrel, sum_ite_eq, mem_univ,
+    ↓reduceIte, sum_const_zero, dSVDensityRationalCanonicalPrefixSpectralOutcome, mulVec,
+    dotProduct, kroneckerMap_apply, Fintype.sum_prod_type, mul_sum]
   let alice : Matrix
       (DSVUniformDensityThresholdLocalIndex N d)
       (DSVUniformDensityThresholdLocalIndex N d) ℂ :=
@@ -61936,7 +62074,7 @@ def directDSVActualReindexedRetainedPOVM
         if (e i).2 = (e j).2 then 1 else 0 := by
   change
     (P.effect a ⊗ₖ (1 : Matrix t t ℂ)) (e i) (e j) = _
-  simp [Matrix.kroneckerMap_apply, Matrix.one_apply]
+  simp only [kroneckerMap_apply, Matrix.one_apply, mul_ite, mul_one, mul_zero]
 
 def directDSVActualBilateralRetainedIndexEquiv
     {s t u v ι κ : Type*}
@@ -62083,13 +62221,13 @@ theorem unconditionalSelectedBranchLocalAction_mul
       (unconditionalMixedConjugateSelectedBranchLocalAction
         U₂ V₂ z) := by
   classical
-  simp [unconditionalMixedConjugateSelectedBranchLocalAction,
-    unconditionalMixedConjugateSelectedBranchUnitary,
-    Matrix.mulVec_mulVec, Matrix.mul_kronecker_mul]
+  simp only [unconditionalMixedConjugateSelectedBranchLocalAction,
+    unconditionalMixedConjugateSelectedBranchUnitary, Submonoid.coe_mul, mul_kronecker_mul,
+    mulVec_mulVec, toLp.injEq]
   apply congrArg
     (fun (W : Matrix ((s × s) × t) ((s × s) × t) ℂ) =>
       W.mulVec (ofLp z))
-  simpa using
+  simpa only [mul_one] using
     (Matrix.mul_kronecker_mul
       ((U₁ : Matrix s s ℂ) ⊗ₖ (V₁ : Matrix s s ℂ))
       ((U₂ : Matrix s s ℂ) ⊗ₖ (V₂ : Matrix s s ℂ))
@@ -62140,7 +62278,8 @@ theorem unconditionalRegroupedSelectedRetainedReindexAction
       (∑ p : κ × κ, f p) =
         ∑ p : (ι × τ) × (ι × τ),
           f (e.symm p.1, e.symm p.2) := by
-    simpa using
+    simpa only [Equiv.prodCongr_apply, Prod.map_fst, Equiv.symm_apply_apply, Prod.map_snd,
+      Prod.mk.eta] using
       (Equiv.sum_comp (Equiv.prodCongr e e)
         (fun p : (ι × τ) × (ι × τ) =>
           f (e.symm p.1, e.symm p.2)))
@@ -62159,15 +62298,20 @@ theorem unconditionalRegroupedSelectedRetainedReindexAction
             (fun _ : τ => V)) : Matrix κ κ ℂ)
           (e.symm (j, (workEquiv.symm c).2)) p.2 * z p) = _
   rw [reindex]
-  simp [unconditionalSourceFixedPureStoppedSigmaReindexedUnitary,
-    coherentSharedRandomControlledUnitary,
-    unconditionalSelectedRetainedBilateralRegroup,
+  simp only [unconditionalSourceFixedPureStoppedSigmaReindexedUnitary,
+    coherentSharedRandomControlledUnitary, reindex_apply, Equiv.symm_trans, Equiv.symm_symm,
+    Equiv.prodComm_symm, Equiv.coe_trans, Equiv.coe_prodComm, submatrix_apply,
+    Function.comp_apply, Equiv.apply_symm_apply, Prod.swap_prod_mk,
+    Equiv.sigmaEquivProd_symm_apply, Prod.fst_swap, Prod.snd_swap, blockDiagonal'_apply, cast_eq,
+    dite_eq_ite, mul_ite, ite_mul, zero_mul, mul_zero, mul_assoc, Fintype.sum_prod_type,
+    sum_ite_eq, mem_univ, ↓reduceIte, sum_ite_irrel, sum_const_zero,
     unconditionalMixedConjugateSelectedBranchLocalAction,
     unconditionalMixedConjugateSelectedBranchUnitary,
-    Matrix.mulVec, dotProduct,
-    Matrix.blockDiagonal'_apply, Matrix.one_apply,
-    Matrix.kroneckerMap_apply, LinearIsometryEquiv.piLpCongrLeft_apply,
-    Equiv.piCongrLeft', Fintype.sum_prod_type, mul_assoc]
+    unconditionalSelectedRetainedBilateralRegroup, LinearIsometryEquiv.piLpCongrLeft_apply,
+    Equiv.piCongrLeft', Equiv.prodCongr_symm, Equiv.refl_symm, Equiv.symm_mk, Equiv.trans_apply,
+    Equiv.coe_fn_mk, Equiv.prodCongr_apply, Equiv.coe_refl, Prod.map_fst, id_eq, Prod.map_snd,
+    Prod.map_apply, eq_rec_constant, mulVec, dotProduct, kroneckerMap_apply, Matrix.one_apply,
+    mul_one]
 
 end
 
@@ -62201,10 +62345,10 @@ def unconditionalActualFixedSourceRetainedHistoryPairEquiv
   left_inv := by
     rintro ⟨⟨beforeA, afterA, phaseA⟩,
       ⟨beforeB, afterB, phaseB⟩⟩
-    simp
+    simp only
   right_inv := by
     rintro ⟨before, ⟨⟨afterA, afterB⟩, ⟨phaseA, phaseB⟩⟩⟩
-    simp
+    simp only [Prod.mk.eta]
 
 theorem unconditionalActualFixedSourceFullBilateralRegroup_eq
     {B N d L m : ℕ} {R : Type} (j : Fin L) :
@@ -62864,7 +63008,7 @@ theorem unconditionalConjugatePureVector_sub_norm
           unconditionalConjugatePureVector y =
         unconditionalConjugatePureVector (x - y) := by
     ext i
-    simp [unconditionalConjugatePureVector, star_sub]
+    simp only [unconditionalConjugatePureVector, RCLike.star_def, PiLp.sub_apply, star_sub]
   rw [conjugate_sub, unconditionalConjugatePureVector_norm]
 
 theorem unconditionalClippedConjugateUnitTarget_distance_sq_le
@@ -63258,7 +63402,7 @@ theorem unconditionalConjugateCanonicalRaw_eq_norm_smul_unit
         (dSVDensityRationalCanonicalAcceptedUnitTarget
           width grid fine gamma).val i at coefficient
   rw [coefficient]
-  simp
+  simp only [star_mul', RCLike.star_def, conj_ofReal]
 
 theorem unconditionalPhaseCanonicalRaw_eq_norm_smul_unit
     {d N B m : ℕ} {w : ℝ}
@@ -63748,13 +63892,14 @@ theorem unconditionalActualSelectedBranchLocalAction_norm
     (unconditionalMixedConjugateSelectedBranchUnitary
       (τ := τ) U V : Matrix ((ι × ι) × τ) ((ι × ι) × τ) ℂ)
   have gram : M.conjTranspose * M = 1 := by
-    simpa [M, Matrix.star_eq_conjTranspose] using
+    simpa only [star_eq_conjTranspose] using
       (Matrix.mem_unitaryGroup_iff'.mp
         (unconditionalMixedConjugateSelectedBranchUnitary
           (τ := τ) U V).property)
   have squared : ‖toLp 2 (M.mulVec (ofLp z))‖ ^ 2 = ‖z‖ ^ 2 := by
     rw [rectangular_matrix_mulVec_norm_sq, gram]
-    simp [quadraticExpectation, ← Complex.ofReal_pow]
+    simp only [quadraticExpectation, map_one, one_apply_eq_self, inner_self_eq_norm_sq_to_K,
+      coe_algebraMap, ← ofReal_pow, ofReal_re]
   change ‖toLp 2 (M.mulVec (ofLp z))‖ = ‖z‖
   nlinarith [norm_nonneg (toLp 2 (M.mulVec (ofLp z))), norm_nonneg z]
 
@@ -63769,8 +63914,8 @@ theorem unconditionalActualSelectedBranchLocalAction_sub
         U V (x - y) := by
   classical
   ext i
-  simp [unconditionalMixedConjugateSelectedBranchLocalAction,
-    Matrix.mulVec, dotProduct, Finset.sum_sub_distrib, mul_sub]
+  simp only [unconditionalMixedConjugateSelectedBranchLocalAction, PiLp.sub_apply, mulVec,
+    dotProduct, ofLp_sub, Pi.sub_apply, mul_sub, sum_sub_distrib]
 
 theorem unconditionalActualC485CleanDeviation_sq
     {S B N d L m : ℕ}
@@ -64104,8 +64249,10 @@ def integratorActualC485WinningEffect
 
 theorem unconditionalActualFairSourceEmbezzlementOne_apply :
     embezzlementState 1 (0, 0) = 1 := by
-  simp [embezzlementState, rawEmbezzlementState,
-    EuclideanSpace.norm_eq, Fintype.sum_prod_type]
+  simp only [Fin.isValue, embezzlementState, rawEmbezzlementState, Fin.val_eq_zero,
+    CharP.cast_eq_zero, zero_add, Real.sqrt_one, inv_one, ofReal_one, EuclideanSpace.norm_eq,
+    Fintype.sum_prod_type, univ_unique, Fin.default_eq_zero, sum_singleton, ↓reduceIte, norm_one,
+    one_pow, one_smul]
 
 theorem unconditionalActualFairSourceTensorEmbezzlementOne_reindex
     {d : ℕ} (ξ : BipartiteUnitVector d) :
@@ -64120,12 +64267,12 @@ theorem unconditionalActualFairSourceTensorEmbezzlementOne_reindex
       (((finCongr (Nat.mul_one d)).symm i).divNat : Fin d) = i := by
     apply Fin.ext
     change i.val / 1 = i.val
-    simp
+    simp only [Nat.div_one]
   have second :
       (((finCongr (Nat.mul_one d)).symm j).divNat : Fin d) = j := by
     apply Fin.ext
     change j.val / 1 = j.val
-    simp
+    simp only [Nat.div_one]
   have first_work :
       (((finCongr (Nat.mul_one d)).symm i).modNat : Fin 1) = 0 :=
     Subsingleton.elim _ _
@@ -64166,7 +64313,9 @@ theorem
       z ((finCongr (Nat.mul_one d)) i,
          (finCongr (Nat.mul_one d)) j))
     (unconditionalActualFairSourceTensorEmbezzlementOne_reindex ξ)
-  simpa [LinearIsometryEquiv.piLpCongrLeft_apply] using recovered.symm
+  simpa only [finCongr_apply, LinearIsometryEquiv.piLpCongrLeft_apply, Equiv.piCongrLeft'_apply,
+    Equiv.prodCongr_symm, finCongr_symm, Equiv.prodCongr_apply, Prod.map_apply, Fin.cast_cast,
+    Fin.cast_eq_self] using recovered.symm
 
 theorem unconditionalActualFairSourceWinningEffect_reindex
     {X Y A B : Type}
@@ -64379,15 +64528,15 @@ theorem unconditionalActualFairSourcePhaseHarmonicStage_sourceProduct
           P (N * m)) := by
   classical
   ext ⟨⟨i, j⟩, ⟨⟨p, a⟩, ⟨q, b⟩⟩⟩
-  simp [LinearIsometryEquiv.piLpCongrLeft_apply,
-    directDSVActualBilateralRetainedIndexEquiv,
-    physical8SelectedGlobalTargetWorkEquiv,
+  simp only [directDSVActualBilateralRetainedIndexEquiv, physical8SelectedGlobalTargetWorkEquiv,
     dSVDensityRationalPublicBucketCoherentPhaseSigmaState,
     dSVUniformDensityCorrectedMatchedSigmaWeightedResidual,
-    dSVDensityRationalPublicBucketCoherentPhaseHistory,
-    unconditionalMatchedVerifierTensor,
-    unconditionalActualFairSourcePhaseHarmonicWork,
-    mul_assoc, mul_left_comm, mul_comm]
+    dSVDensityRationalPublicBucketCoherentPhaseHistory, unconditionalConjugatePureVector_apply,
+    RCLike.star_def, mul_comm, mul_left_comm, LinearIsometryEquiv.piLpCongrLeft_apply,
+    Equiv.piCongrLeft'_apply, Equiv.symm_trans, Equiv.prodProdProdComm_symm, Equiv.prodCongr_symm,
+    Equiv.symm_mk, Equiv.trans_apply, Equiv.prodProdProdComm_apply, Equiv.prodCongr_apply,
+    Equiv.coe_fn_mk, Prod.map_apply, unconditionalMatchedVerifierTensor,
+    unconditionalActualFairSourcePhaseHarmonicWork, mul_assoc]
 
 theorem unconditionalActualFairSourceSelectedBorn_of_base
     {X Y A B : Type}
@@ -64657,19 +64806,23 @@ theorem unconditionalPhysicalOneScaleActualGlobalFiberPOVM_nested
   by_cases selected :
       (inner (outer i).1).2 = (inner (outer k).1).2
   · by_cases retained : (outer i).2 = (outer k).2
-    · simp [directDSVActualReindexedRetainedPOVM_effect,
-        physical8OneScaleActualGlobalFiberEquiv,
-        Equiv.prodAssoc_apply, outer, inner, selected, retained]
-    · simp [directDSVActualReindexedRetainedPOVM_effect,
-        physical8OneScaleActualGlobalFiberEquiv,
-        Equiv.prodAssoc_apply, outer, inner, selected, retained]
+    · simp only [physical8OneScaleActualGlobalFiberEquiv,
+        directDSVActualReindexedRetainedPOVM_effect, Equiv.trans_apply, Equiv.prodCongr_apply,
+        Equiv.coe_refl, Equiv.prodAssoc_apply, Prod.map_fst, selected, Prod.map_snd, retained,
+        id_eq, ↓reduceIte, mul_one, inner, outer]
+    · simp only [physical8OneScaleActualGlobalFiberEquiv,
+        directDSVActualReindexedRetainedPOVM_effect, Equiv.trans_apply, Equiv.prodCongr_apply,
+        Equiv.coe_refl, Equiv.prodAssoc_apply, Prod.map_fst, selected, Prod.map_snd, id_eq,
+        Prod.mk.injEq, retained, and_false, ↓reduceIte, mul_zero, mul_one, inner, outer]
   · by_cases retained : (outer i).2 = (outer k).2
-    · simp [directDSVActualReindexedRetainedPOVM_effect,
-        physical8OneScaleActualGlobalFiberEquiv,
-        Equiv.prodAssoc_apply, outer, inner, selected, retained]
-    · simp [directDSVActualReindexedRetainedPOVM_effect,
-        physical8OneScaleActualGlobalFiberEquiv,
-        Equiv.prodAssoc_apply, outer, inner, selected, retained]
+    · simp only [physical8OneScaleActualGlobalFiberEquiv,
+        directDSVActualReindexedRetainedPOVM_effect, Equiv.trans_apply, Equiv.prodCongr_apply,
+        Equiv.coe_refl, Equiv.prodAssoc_apply, Prod.map_fst, Prod.map_snd, retained, id_eq,
+        Prod.mk.injEq, selected, and_true, ↓reduceIte, mul_zero, mul_one, outer, inner]
+    · simp only [physical8OneScaleActualGlobalFiberEquiv,
+        directDSVActualReindexedRetainedPOVM_effect, Equiv.trans_apply, Equiv.prodCongr_apply,
+        Equiv.coe_refl, Equiv.prodAssoc_apply, Prod.map_fst, Prod.map_snd, id_eq, Prod.mk.injEq,
+        selected, retained, and_self, ↓reduceIte, mul_zero, outer, inner]
 
 theorem unconditionalPhysicalOneScaleOriginalFlagPOVM_succ_nested
     {C Z : Type*} [Fintype C] [DecidableEq C]
@@ -64794,7 +64947,7 @@ theorem unconditionalActualFairSourceSelectedRetainedWinningEffectGauge
     unconditionalSelectedGaugeRetainedPOVMNaturality]
   unfold directDSVActualLocalPOVMWinningEffect
   simp_rw [unitaryConjugatePOVM_jointEffect]
-  simp [Finset.mul_sum, Finset.sum_mul]
+  simp only [mul_sum, mul_ite, mul_zero, sum_mul, ite_mul, zero_mul]
 
 theorem unconditionalActualFairSourceSelectedRetainedWinningBornGauge
     {X Y A B τ : Type}
@@ -64864,9 +65017,9 @@ theorem unconditionalActualFairSourceSelectedRetainedWinningBornGauge
             (K ⊗ₖ (1 : Matrix τ τ ℂ)) := by
               rw [← Matrix.mul_kronecker_mul,
                 ← Matrix.mul_kronecker_mul]
-              simp
+              simp only [mul_one]
       _ = Wᴴ * (E ⊗ₖ (1 : Matrix τ τ ℂ)) * W := by
-        simp [W, Matrix.conjTranspose_kronecker]
+        simp only [conjTranspose_kronecker, conjTranspose_one, W]
   change
     quadraticExpectation
         (Matrix.toEuclideanCLM
@@ -64918,10 +65071,14 @@ theorem unconditionalActualC485RetainedPureWorkReindexBorn
     ext ⟨i, a⟩ ⟨j, b⟩
     by_cases same : a = b
     · subst b
-      simp [whole, Matrix.reindex_apply, Matrix.kroneckerMap_apply]
+      simp only [Equiv.prodCongr_symm, Equiv.refl_symm, reindex_apply, Equiv.symm_symm,
+        Equiv.prodCongr_apply, Equiv.coe_refl, submatrix_apply, Prod.map_apply, id_eq,
+        kroneckerMap_apply, one_apply_eq, mul_one, whole]
     · have different : e a ≠ e b := fun h => same (e.injective h)
-      simp [whole, Matrix.reindex_apply, Matrix.kroneckerMap_apply,
-        same, different]
+      simp only [Equiv.prodCongr_symm, Equiv.refl_symm, reindex_apply, Equiv.symm_symm,
+        Equiv.prodCongr_apply, Equiv.coe_refl, submatrix_apply, Prod.map_apply, id_eq,
+        kroneckerMap_apply, ne_eq, different, not_false_eq_true, one_apply_ne, mul_zero, same,
+        whole]
   rw [← actual_identity]
   exact directDSVActualReindexedWinningEffect_quadratic
     whole (winning ⊗ₖ (1 : Matrix v v ℂ)) z
@@ -65024,11 +65181,11 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
     weight_nonnegative p.1
   have pair_actual_mass :
       (∑ p : I × K, pairWeight p * ‖actual p‖ ^ 2) ≤ 1 := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum]
+    simpa only [Fintype.sum_prod_type, mul_sum]
       using actual_mass
   have pair_canonical_mass :
       (∑ p : I × K, pairWeight p * ‖canonical p‖ ^ 2) ≤ 1 := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum]
+    simpa only [Fintype.sum_prod_type, mul_sum]
       using canonical_mass
   have source_mass :
       (∑ i : I, weight i *
@@ -65036,17 +65193,17 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
     simpa only [same_work_mass] using canonical_mass
   have pair_source_mass :
       (∑ p : I × K, pairWeight p * ‖source p‖ ^ 2) ≤ 1 := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum]
+    simpa only [Fintype.sum_prod_type, mul_sum]
       using source_mass
   have pair_clean_deviation :
       (∑ p : I × K,
         pairWeight p * ‖actual p - canonical p‖ ^ 2) ≤ Δclean := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum]
+    simpa only [Fintype.sum_prod_type, mul_sum]
       using clean_deviation
   have pair_clip_deviation :
       (∑ p : I × K,
         pairWeight p * ‖canonical p - source p‖ ^ 2) ≤ Δclip := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum]
+    simpa only [Fintype.sum_prod_type, mul_sum]
       using clip_deviation
   have clean_verifier_gap :
       |(∑ i : I, weight i *
@@ -65056,7 +65213,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
           ∑ k : K,
             quadraticExpectation (effect (i, k)) (canonical (i, k)))| ≤
         2 * Real.sqrt Δclean := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum] using
+    simpa only [mul_sum, Fintype.sum_prod_type] using
       (unconditionalMatchedVerifierAggregate_dependent_le
         pairWeight pair_nonnegative effect contraction actual canonical
         pair_actual_mass pair_canonical_mass Δclean pair_clean_deviation)
@@ -65068,7 +65225,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
           ∑ k : K,
             quadraticExpectation (effect (i, k)) (source (i, k)))| ≤
         2 * Real.sqrt Δclip := by
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum] using
+    simpa only [mul_sum, Fintype.sum_prod_type] using
       (unconditionalMatchedVerifierAggregate_dependent_le
         pairWeight pair_nonnegative effect contraction canonical source
         pair_canonical_mass pair_source_mass Δclip pair_clip_deviation)
@@ -65091,8 +65248,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
         (fun _ => ContinuousLinearMap.norm_id_le)
         actual canonical pair_actual_mass pair_canonical_mass
         Δclean pair_clean_deviation
-    simpa [pairWeight, Fintype.sum_prod_type, Finset.mul_sum,
-      identity_expectation] using bounded
+    simpa only [mul_sum, ge_iff_le, identity_expectation, Fintype.sum_prod_type] using bounded
   have source_row_mass (i : I) :
       (∑ k : K, ‖source (i, k)‖ ^ 2) ≤ 1 := by
     simpa only [same_work_mass] using canonical_row_mass i
@@ -65112,7 +65268,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
       apply Finset.sum_congr rfl
       intro i _
       by_cases zero : weight i = 0
-      · simp [zero]
+      · simp only [zero, zero_mul]
       · congr 1
         simp_rw [supported_born i zero]
         rw [Finset.sum_mul]
@@ -65151,7 +65307,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
         have loss := mul_nonneg
           (sub_nonneg.mpr (source_row_mass i))
           (sub_nonneg.mpr (win_bounded i))
-        nlinarith
+        linarith
   have clean_verifier_signed :
       (∑ i : I, weight i *
         ∑ k : K,
@@ -65161,7 +65317,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
           quadraticExpectation (effect (i, k)) (actual (i, k))) ≤
         2 * Real.sqrt Δclean := by
     exact (le_abs_self _).trans (by
-      simpa [abs_sub_comm] using clean_verifier_gap)
+      simpa only [abs_sub_comm] using clean_verifier_gap)
   have clip_verifier_signed :
       (∑ i : I, weight i *
         ∑ k : K,
@@ -65171,7 +65327,7 @@ theorem unconditionalWeightedClippedMatchedVerifierAndMassLoss
           quadraticExpectation (effect (i, k)) (canonical (i, k))) ≤
         2 * Real.sqrt Δclip := by
     exact (le_abs_self _).trans (by
-      simpa [abs_sub_comm] using clip_verifier_gap)
+      simpa only [abs_sub_comm] using clip_verifier_gap)
   have clean_mass_signed :
       (∑ i : I, weight i *
         ∑ k : K, ‖actual (i, k)‖ ^ 2) -
@@ -65388,7 +65544,7 @@ theorem unconditionalFairPhysicalFlaggedStoppingTransfer
       (∑ outcome, q outcome * flagPhysical outcome) =
         ∑ h : ExactLocallySampleableTuple X Y A B D,
           exactLocallySampleableLaw G n S D h * physical h := by
-    simpa [q, flagPhysical, history] using
+    simpa only using
       (exactSourceAliceFlagCoupling_expectation
         G n S D remaining positive base denominator denominator_positive
         numerator rational_normalized support_preserving nonempty physical)
@@ -65401,7 +65557,7 @@ theorem unconditionalFairPhysicalFlaggedStoppingTransfer
       flagPhysical outcome ≤ 1 :=
     history_born_bounded (history outcome)
   have variation : QuantumParallelRepetition.Pinsker.finiteTotalVariation p q ≤ lam := by
-    simpa [p, q, weight] using total_variation
+    simpa only using total_variation
   have transferred := winning_expectation_transfer
     p q flagPhysical p_normalized q_normalized
     flagPhysical_nonnegative flagPhysical_bounded
@@ -65415,7 +65571,7 @@ theorem unconditionalFairPhysicalFlaggedStoppingTransfer
   have mismatch' :
       (∑ outcome, p outcome * if matched outcome then 0 else 1) ≤
         4 * lam := by
-    simpa [p, weight] using mismatch
+    simpa only [mul_ite, mul_zero, mul_one] using mismatch
   have physical_transfer :
       1 - epsilon / 2 - 5 * lam -
           (bad + 4 * Real.sqrt deviation + 2 * Real.sqrt clipping) ≤
@@ -65993,13 +66149,14 @@ theorem unconditionalActualFairSelectedLocalAction_norm_sq
     (unconditionalMixedConjugateSelectedBranchUnitary
       (τ := τ) U V : Matrix _ _ ℂ)
   have gram : M.conjTranspose * M = 1 := by
-    simpa [M, Matrix.star_eq_conjTranspose] using
+    simpa only [star_eq_conjTranspose] using
       (Matrix.mem_unitaryGroup_iff'.mp
         (unconditionalMixedConjugateSelectedBranchUnitary
           (τ := τ) U V).property)
   change ‖toLp 2 (M.mulVec (ofLp z))‖ ^ 2 = ‖z‖ ^ 2
   rw [rectangular_matrix_mulVec_norm_sq, gram]
-  simp [quadraticExpectation, ← Complex.ofReal_pow]
+  simp only [quadraticExpectation, map_one, one_apply_eq_self, inner_self_eq_norm_sq_to_K,
+    coe_algebraMap, ← ofReal_pow, ofReal_re]
 
 theorem unconditionalActualFairCleanedVector_norm_sq
     {S B N d L m : Nat}
@@ -66048,7 +66205,7 @@ theorem unconditionalActualFairCleanedRow_eq_stoppedSuccess
   simp_rw [unconditionalActualFairCleanedVector_norm_sq
     phases grid dimension harmonic width width_positive schedule ξ ζ Q A C]
   unfold dSVDensityRationalHeterogeneousPhysicalStoppedSuccessMass
-  simpa using
+  simpa only using
     (Fin.sum_univ_eq_sum_range
       (fun k : Nat =>
         dSVDensityRationalHeterogeneousPhysicalSurvival
@@ -66109,7 +66266,7 @@ theorem unconditionalActualFairWeightedCleanedMass_le_one
           phases grid dimension harmonic width width_positive
           schedule (ξ h) (ζ h) Q A C)
         (weight_nonnegative h)
-    _ = 1 := by simpa using weight_normalized
+    _ = 1 := by simpa only [mul_one] using weight_normalized
 
 theorem unconditionalActualFairWeightedStoppedSuccess
     {I : Type} [Fintype I]
@@ -66257,7 +66414,7 @@ theorem unconditionalActualFairWeightedCanonicalMass_le_one
           phases grid dimension harmonic width width_positive
           schedule (ξ h) (ζ h) fine)
         (weight_nonnegative h)
-    _ = 1 := by simpa using weight_normalized
+    _ = 1 := by simpa only [mul_one] using weight_normalized
 
 end
 
@@ -66476,7 +66633,7 @@ theorem unconditionalSourcePhysicalSameGridWeightedStoppingLedger
       linarith
     apply (le_div_iff₀ denominator).mpr
     dsimp [width]
-    nlinarith [grid_budget, bounded]
+    linarith [grid_budget, bounded]
   have asynchronous (i : ι) :
       dSVDensityRationalHeterogeneousPhysicalStoppedAsynchronousMass
           N width schedule (ξ i) (ζ i) ≤
@@ -66570,7 +66727,7 @@ private theorem unconditionalSmallSource_eta_scaled_root
     (eta : ℝ) (eta_nonnegative : 0 ≤ eta) :
     eta ^ (1 / 12 : ℝ) ≤ (32 * eta) ^ (1 / 12 : ℝ) := by
   apply Real.rpow_le_rpow eta_nonnegative
-  · nlinarith
+  · linarith
   · norm_num
 
 private theorem unconditionalSmallSource_root_estimates
@@ -66621,7 +66778,7 @@ private theorem unconditionalSmallSource_root_estimates
     dsimp [R]
     linarith
   have delta_sq_bound : δ ^ 2 ≤ R := by
-    nlinarith [mul_nonneg delta_nonnegative
+    linarith [mul_nonneg delta_nonnegative
       (sub_nonneg.mpr delta_bounded)]
   have delta_sqrt_eq : Real.sqrt δ = alpha ^ (1 / 6 : ℝ) := by
     dsimp [δ]
@@ -66663,7 +66820,7 @@ private theorem unconditionalSmallSource_clipping_sqrt_le
   have clip_bound : clipping ≤ 16 * eta + 12 * δ := by
     change clipping ≤ 16 * eta + 8 * (3 * δ / 2)
       at actual_clipping
-    nlinarith
+    linarith
   have clip_base_nonnegative : 0 ≤ 16 * eta + 12 * δ := by
     positivity
   have clip_sqrt_base :
@@ -66729,7 +66886,7 @@ private theorem unconditionalSmallSource_deviation_sqrt_le
       Real.sqrt_le_sqrt actual_deviation
     _ ≤ k * (eta ^ (1 / 12 : ℝ) +
         alpha ^ (1 / 12 : ℝ)) := by
-      simpa [k] using envelope
+      simpa only [one_div, k] using envelope
     _ ≤ k * R := by
       apply mul_le_mul_of_nonneg_left _ k_nonnegative
       dsimp [R]
@@ -66791,7 +66948,7 @@ theorem unconditionalSmallSourcePhysicalLoss
   change Real.sqrt deviation ≤ k * R at deviation_sqrt_le
   have source_loss :
       64 * Real.sqrt eta + δ + δ ^ 2 ≤ 66 * R := by
-    nlinarith
+    linarith
   change
     (64 * Real.sqrt eta + δ + δ ^ 2) +
       4 * Real.sqrt deviation + 4 * Real.sqrt clipping ≤ K * R
@@ -66801,10 +66958,10 @@ theorem unconditionalSmallSourcePhysicalLoss
       66 * R + 4 * (k * R) + 4 * (8 * R) := by
         linarith
     _ ≤ (1024 + 8 * k) * R := by
-      nlinarith [mul_nonneg k_nonnegative R_nonnegative]
+      linarith [mul_nonneg k_nonnegative R_nonnegative]
     _ ≤ K * R := by
       apply mul_le_mul_of_nonneg_right _ R_nonnegative
-      simpa [k] using constant
+      simpa only [k] using constant
 
 theorem unconditionalSmallSourcePhysicalRoundedLower
     (K eta alpha deviation clipping epsilon lam actual : ℝ)
@@ -66855,7 +67012,7 @@ theorem unconditionalSmallSourcePhysicalRoundedLower
     unfold universalErrorCeiling
     have root_nonnegative :=
       Real.rpow_nonneg (by norm_num : (0 : ℝ) ≤ 2) (1 / 6 : ℝ)
-    nlinarith [mul_nonneg K_nonnegative
+    linarith [mul_nonneg K_nonnegative
       (show 0 ≤ 1 + (2 : ℝ) ^ (1 / 6 : ℝ) by positivity)]
   have transfer_nonnegative : 0 ≤ universalErrorCeiling K * lam :=
     mul_nonneg ceiling_nonnegative lam_nonnegative
@@ -66872,7 +67029,7 @@ theorem unconditionalSmallSourcePhysicalRoundedLower
       (5 * lam +
         2 * (K * R + Real.sqrt (8 * eta) +
           universalErrorCeiling K * lam)) ≤ actual
-  nlinarith
+  linarith
 
 end
 
@@ -66907,7 +67064,7 @@ theorem pdfGreedyCeilingHorizon_pow_le_exp
     exact Nat.le_ceil (d * (n : ℝ) / τ)
   have exponent : -τ * (T : ℝ) ≤ -d * (n : ℝ) := by
     have cleared := (div_le_iff₀ threshold).mp ceiling
-    nlinarith
+    linarith
   change (1 - τ) ^ T ≤ Real.exp (-d * (n : ℝ))
   calc
     (1 - τ) ^ T ≤ Real.exp (-τ) ^ T := by
@@ -66964,10 +67121,10 @@ theorem pdfQuantitativeGreedyConditioning
     apply (div_le_iff₀ threshold).mpr
     have actual := mul_le_mul_of_nonneg_right rate_small
       (Nat.cast_nonneg n : (0 : ℝ) ≤ n)
-    nlinarith
+    linarith
   have selected_le : D.card ≤ n := by
     have actual := Finset.card_le_card (Finset.subset_univ D)
-    simpa using actual
+    simpa only [ge_iff_le, card_univ, Fintype.card_fin] using actual
   have remaining_real :
       ((Finset.univ \ D).card : ℝ) =
         (n : ℝ) - (D.card : ℝ) := by
@@ -66975,7 +67132,7 @@ theorem pdfQuantitativeGreedyConditioning
   have more_than_half :
       (n : ℝ) / 2 < ((Finset.univ \ D).card : ℝ) := by
     rw [remaining_real]
-    nlinarith
+    linarith
   exact ⟨D, strict_card, more_than_half,
     realized.trans floor, floor, positive, remaining, failure⟩
 
@@ -67023,7 +67180,7 @@ theorem pdfGapBase_le_gap
     {B ε : ℝ}
     (constant : 1 ≤ B) (gap : 0 < ε) :
     0 < ε / (4 * B) ∧ ε / (4 * B) ≤ ε := by
-  have denominator : 0 < 4 * B := by nlinarith
+  have denominator : 0 < 4 * B := by linarith
   constructor
   · exact div_pos gap denominator
   · apply (div_le_iff₀ denominator).2
@@ -67077,7 +67234,7 @@ theorem pdfConditioningTolerance_bounds
     0 < pdfConditioningTolerance ε ∧
       pdfConditioningTolerance ε ≤ 1 / 4 := by
   unfold pdfConditioningTolerance
-  constructor <;> nlinarith
+  constructor <;> linarith
 
 theorem pdfGapRate_le_half_conditioningTolerance
     {B ε ell : ℝ}
@@ -67112,7 +67269,7 @@ theorem pdfAlphabetEntropyFactor_le_one
     (ε + 4 * ell) / (4 * (ε + ell)) ≤ 1 := by
   have denominator : 0 < 4 * (ε + ell) := by positivity
   apply (div_le_iff₀ denominator).2
-  nlinarith
+  linarith
 
 theorem pdfGapRate_entropy_le_twelfth_power
     {B ε ell : ℝ}
@@ -67136,11 +67293,11 @@ theorem pdfCatalystAccuracy_bounds
     (constant : 1 ≤ K) (gap : 0 < ε) (unit : ε ≤ 1) :
     0 < pdfCatalystAccuracy K ε ∧
       pdfCatalystAccuracy K ε ≤ 1 := by
-  have denominator : 0 < 16 * K := by nlinarith
+  have denominator : 0 < 16 * K := by linarith
   have ratio : 0 < ε / (16 * K) := div_pos gap denominator
   have bounded : ε / (16 * K) ≤ 1 := by
     apply (div_le_iff₀ denominator).2
-    nlinarith
+    linarith
   unfold pdfCatalystAccuracy
   exact ⟨pow_pos ratio 12, pow_le_one₀ ratio.le bounded⟩
 
@@ -67154,7 +67311,7 @@ theorem pdfQuantitativeEntropyRate_lt
     (t + (k : ℝ) * ell) / (m : ℝ) <
       2 * d * (1 + ell / τ) := by
   have length_real : (0 : ℝ) < (n : ℝ) := by exact_mod_cast length
-  have mpositive : (0 : ℝ) < (m : ℝ) := by nlinarith
+  have mpositive : (0 : ℝ) < (m : ℝ) := by linarith
   have ratio_nonnegative : 0 ≤ ell / τ :=
     div_nonneg alphabet tolerance.le
   have factor : 0 < d * (1 + ell / τ) := by
@@ -67170,9 +67327,9 @@ theorem pdfQuantitativeEntropyRate_lt
         add_lt_add_of_lt_of_le postselection alphabet_bound
       _ = d * (n : ℝ) * (1 + ell / τ) := by ring
   apply (div_lt_iff₀ mpositive).2
-  have horizon : (n : ℝ) < 2 * (m : ℝ) := by nlinarith
+  have horizon : (n : ℝ) < 2 * (m : ℝ) := by linarith
   have scaled := mul_lt_mul_of_pos_left horizon factor
-  nlinarith
+  linarith
 
 theorem pdfQuantitativeEntropyRate_lt_twelfth_power
     {B ε ell : ℝ} {n m k : ℕ} {t : ℝ}
@@ -67211,10 +67368,10 @@ theorem pdfCatalystAccuracy_twelfth_root
     {K ε : ℝ} (constant : 1 ≤ K) (gap : 0 < ε) :
     (pdfCatalystAccuracy K ε) ^ (1 / 12 : ℝ) =
       ε / (16 * K) := by
-  have denominator : 0 < 16 * K := by nlinarith
+  have denominator : 0 < 16 * K := by linarith
   have base : 0 ≤ ε / (16 * K) := (div_pos gap denominator).le
   unfold pdfCatalystAccuracy
-  simpa [one_div] using
+  simpa only [one_div, Nat.cast_ofNat] using
     (Real.pow_rpow_inv_natCast base (by norm_num : (12 : ℕ) ≠ 0))
 
 theorem pdfGapBase_twelfth_root
@@ -67223,7 +67380,7 @@ theorem pdfGapBase_twelfth_root
       ε / (4 * B) := by
   have base : 0 ≤ ε / (4 * B) :=
     (pdfGapBase_le_gap constant gap).1.le
-  simpa [one_div] using
+  simpa only [one_div, Nat.cast_ofNat] using
     (Real.pow_rpow_inv_natCast base (by norm_num : (12 : ℕ) ≠ 0))
 
 theorem pdfEntropyRoot_lt_gapBase
@@ -67296,7 +67453,7 @@ theorem pdfRoundingCoefficient_two_le
   have eight : 1 ≤ Real.sqrt (8 : ℝ) :=
     Real.one_le_sqrt.mpr (by norm_num)
   unfold pdfRoundingCoefficient
-  nlinarith
+  linarith
 
 theorem pdfRoundingCoefficient_one_le
     {K : ℝ} (constant : 1 ≤ K) :
@@ -67358,7 +67515,7 @@ theorem pdfQuantitativeRoundingLoss
     positivity
   have classical_coefficient :
       0 ≤ 5 + 2 * universalErrorCeiling K := by
-    nlinarith
+    linarith
   have pinsker_bound :=
     pdfPinskerRoot_le_twelfthRoot nonnegative bounded pinsker
   have weighted_pinsker :
@@ -67476,7 +67633,8 @@ def pdfConstantDensity : DensityMatrix (PUnit × PUnit) where
   matrix := 1
   positive := Matrix.PosSemidef.one
   trace_one := by
-    simp [Matrix.trace]
+    simp only [trace, diag_apply, one_apply_eq, sum_const, card_univ, Fintype.card_prod,
+      Fintype.card_unique, mul_one, one_smul]
 
 def pdfConstantPOVM
     {C : Type*} [Fintype C] (answer : C) : POVM C PUnit := by
@@ -67534,7 +67692,8 @@ theorem pdfConstantStrategy_winProbability
   unfold Strategy.winProbability
   simp_rw [pdfConstantStrategy_outcomeProbability]
   simp_rw [accepted_outcome]
-  simp [mul_ite]
+  simp only [sum_ite_irrel, sum_ite_eq', mem_univ, ↓reduceIte, sum_const_zero, mul_ite, mul_one,
+    mul_zero]
 
 theorem pdfQuestionWeight_le_constantStrategy
     (G : Game X Y A B)
@@ -67547,7 +67706,7 @@ theorem pdfQuestionWeight_le_constantStrategy
   calc
     G.questionWeight x y =
         if G.predicate x y a b = true then G.questionWeight x y else 0 := by
-          simp [accepted]
+          simp only [accepted, ↓reduceIte]
     _ ≤ ∑ y' : Y,
         if G.predicate x y' a b = true then G.questionWeight x y' else 0 := by
           exact Finset.single_le_sum
@@ -67611,7 +67770,8 @@ theorem pdfRepeatedEntangledValue_eq_zero_of_entangledValue_eq_zero
       exact pdfPredicate_not_accepted_of_entangledValue_eq_zero
         G zero (xs i) (ys i) (as i) (bs i) supported
         ((Game.repeat_predicate_eq_true G n xs ys as bs).mp accepted i)
-    simp [never]
+    simp only [Game.repeat_questionWeight, never, Bool.false_eq_true, ↓reduceIte, sum_const_zero,
+      mul_zero]
 
 end
 
@@ -67631,7 +67791,7 @@ theorem pdfAlphabetEntropy_nonneg
   have bob_real : (1 : ℝ) ≤ (Fintype.card B : ℝ) := by
     exact_mod_cast bob_card
   apply Real.log_nonneg
-  nlinarith [mul_nonneg (sub_nonneg.mpr alice_real)
+  linarith [mul_nonneg (sub_nonneg.mpr alice_real)
     (sub_nonneg.mpr bob_real)]
 
 theorem pdfGap_le_one
@@ -67670,7 +67830,7 @@ theorem pdfPinskerRate_le_sqrt_martingaleRate
   have information :=
     exactSourceClassicalInformationRate_le_three_martingaleRate
       G n S D positive
-  nlinarith
+  linarith
 
 theorem pdfActualMartingaleRate_lt_twelfth_power
     {X Y A B : Type}
@@ -67701,7 +67861,7 @@ theorem pdfActualMartingaleRate_lt_twelfth_power
       G n S D (pdfGapRate Bqs ε ell) above
   have actual := pdfQuantitativeEntropyRate_lt_twelfth_power
     constant gap unit alphabet length remaining postselection conditioned
-  simpa [martingaleRate, answerLogCost, alphabet_eq]
+  simpa only [martingaleRate, answerLogCost, gt_iff_lt, alphabet_eq]
     using actual
 
 theorem pdfFullQuantitativeSamplingLoss
@@ -67884,13 +68044,13 @@ theorem pdf_distributionUniformExponential_of_uniform_source_rounding
         constant gap unit entropy
         (show martingaleRate G n S D <
           (ε / (4 * pdfRoundingCoefficient K)) ^ (12 : ℕ) by
-            simpa [Bqs] using small)
+            simpa only [Bqs] using small)
         pinsker
       change totalSamplingLoss K alpha
           (martingaleRate G n S D)
           (exactSourcePinskerRate G n S D + gamma) <
         (1 - entangledValue G) / 2
-      simpa [alpha, gamma, ε] using actual_loss
+      simpa only using actual_loss
     simpa [d, pdfGapRate, ε, ell, div_eq_mul_inv,
       mul_assoc] using exponential
 
@@ -67913,7 +68073,7 @@ def unconditionalSourcePhysicalRoundingUniversalConstant : ℝ :=
 theorem unconditionalSourcePhysicalRoundingUniversalConstant_ge :
     128 ≤ unconditionalSourcePhysicalRoundingUniversalConstant := by
   unfold unconditionalSourcePhysicalRoundingUniversalConstant
-  nlinarith [Real.sqrt_nonneg
+  linarith [Real.sqrt_nonneg
     (34 + unconditionalPrefactorBucketCoefficient)]
 
 theorem unconditionalSourcePhysicalRounding_exists_sourceSampler
@@ -67977,7 +68137,7 @@ theorem unconditionalSourcePhysicalRounding_fairTargetEnergy
       32 * martingaleRate G n S D := by
   have distance := exactSourceStateDistanceBound_of_positive
     G n S D remaining positive
-  simpa [exactSourceTupleGamma, exactSourceTuplePhi] using
+  simpa only [ge_iff_le, exactSourceTupleGamma, exactSourceTuplePhi] using
     (exactSourceEquationTwentyOne_of_fifteen
       G n S D positive (martingaleRate G n S D) distance)
 
@@ -68066,7 +68226,7 @@ theorem unconditionalSourcePhysicalRounding_exists_fairStoppingHazard
   have t_positive : 0 < t := by
     dsimp [t]
     apply Real.sqrt_pos.2
-    nlinarith [Real.sqrt_nonneg eta]
+    linarith [Real.sqrt_nonneg eta]
   have t_bounded : t ≤ 1 := by
     dsimp [t]
     have bound : 64 * Real.sqrt eta + delta ≤ 1 := by
@@ -68098,14 +68258,14 @@ theorem unconditionalSourcePhysicalRounding_exists_fairStoppingHazard
   have energy :
       (∑ h : ExactLocallySampleableTuple X Y A B D,
         law h * ‖(gamma h).val - (phi h).val‖ ^ 2) ≤ 32 * eta := by
-    simpa [law, gamma, phi, eta] using
+    simpa only using
       unconditionalSourcePhysicalRounding_fairTargetEnergy
         G n S D remaining positive
   obtain ⟨L, B', Q, m, horizon, phases, resolution, harmonic,
       UA, UB, _pointwise, _tail, asynchronous, terminal, hazard⟩ :=
     unconditionalSourcePhysicalSameGridWeightedStoppingLedger
       dimension grid w delta width_large delta_positive delta_bounded
-      (by simpa [delta] using budget)
+      (by simpa only [one_div, delta] using budget)
       t t_positive t_bounded rho rho_positive
       law (exactLocallySampleableLaw_nonneg G n S D positive)
       (exactLocallySampleableLaw_sum G n S D remaining positive)
@@ -68151,7 +68311,7 @@ theorem unconditionalSourcePhysicalRounding_largeVerifierBound
   have root_scaled : eta ^ (1 / 12 : ℝ) ≤
       (32 * eta) ^ (1 / 12 : ℝ) := by
     apply Real.rpow_le_rpow eta_nonnegative
-    · nlinarith
+    · linarith
     · norm_num
   have root_sum_nonnegative :
       0 ≤ eta ^ (1 / 12 : ℝ) + alpha ^ (1 / 12 : ℝ) :=
@@ -68181,7 +68341,7 @@ theorem unconditionalSourcePhysicalRounding_largeVerifierBound
   have sqrt_error : 0 ≤ Real.sqrt (8 * eta) :=
     Real.sqrt_nonneg _
   unfold roundedWinningLowerBound totalSamplingLoss
-  nlinarith
+  linarith
 
 theorem unconditionalSourcePhysicalRounding_exists_large
     {X Y A B : Type}
@@ -68342,7 +68502,7 @@ theorem
     G n S D remaining positive alpha gamma deviation clipping
     alpha_positive alpha_bounded gamma_positive small
     actual_deviation actual_clipping rounded
-  nlinarith [Real.sqrt_nonneg clipping,
+  linarith [Real.sqrt_nonneg clipping,
     Real.sqrt_nonneg (8 * martingaleRate G n S D)]
 
 theorem unconditionalSourceOneGameRounding_uniform_of_small

@@ -307,10 +307,10 @@ noncomputable def unitaryLinearIsometryEquiv
   invFun := ((U⁻¹ : unitary (H →L[ℂ] H)) : H →L[ℂ] H)
   left_inv x := by
     change (↑(U⁻¹ * U) : H →L[ℂ] H) x = x
-    simp
+    simp only [inv_mul_cancel, OneMemClass.coe_one, one_apply_eq_self]
   right_inv x := by
     change (↑(U * U⁻¹) : H →L[ℂ] H) x = x
-    simp
+    simp only [mul_inv_cancel, OneMemClass.coe_one, one_apply_eq_self]
   map_add' x y := map_add (U : H →L[ℂ] H) x y
   map_smul' c x := map_smul (U : H →L[ℂ] H) c x
   norm_map' := ContinuousLinearMap.norm_map_of_mem_unitary U.property
@@ -353,7 +353,7 @@ noncomputable def correction (g : G) (q : G ⧸ S) : S :=
           exact congrArg (fun r : G ⧸ S ↦ g • r) (Quotient.out_eq q).symm
         _ = QuotientGroup.mk (g * Quotient.out q) := rfl
     exact (by
-      simpa [mul_assoc] using
+      simpa only [mul_assoc] using
         (QuotientGroup.leftRel_apply (s := S)).mp hrel)⟩
 
 @[simp]
@@ -366,13 +366,13 @@ theorem correction_mul (g h : G) (q : G ⧸ S) :
     correction S (g * h) q =
       correction S g (h • q) * correction S h q := by
   apply Subtype.ext
-  simp [correction, mul_assoc, mul_smul]
+  simp only [correction, mul_smul, mul_assoc, MulMemClass.mk_mul_mk, mul_inv_cancel_left]
 
 @[simp]
 theorem correction_one (q : G ⧸ S) :
     correction S 1 q = 1 := by
   apply Subtype.ext
-  simp [correction]
+  simp only [correction, one_smul, mul_one, inv_mul_cancel, OneMemClass.coe_one]
 
 @[simp]
 theorem subgroup_smul_baseCoset (s : S) :
@@ -381,7 +381,7 @@ theorem subgroup_smul_baseCoset (s : S) :
   apply Quotient.sound
   change QuotientGroup.leftRel S ((s : G) * 1) 1
   rw [QuotientGroup.leftRel_apply]
-  simp
+  simp only [mul_one, inv_mem_iff, SetLike.coe_mem]
 
 theorem quotientOut_baseCoset_mem :
     Quotient.out (QuotientGroup.mk 1 : G ⧸ S) ∈ S := by
@@ -390,7 +390,7 @@ theorem quotientOut_baseCoset_mem :
     apply Quotient.exact'
     exact Quotient.out_eq q₀
   have hinv : (Quotient.out q₀)⁻¹ ∈ S := by
-    simpa [QuotientGroup.leftRel_apply] using hrel
+    simpa only [inv_mem_iff, QuotientGroup.leftRel_apply, mul_one] using hrel
   exact S.inv_mem_iff.mp hinv
 
 section Induced
@@ -445,13 +445,14 @@ noncomputable def inducedRepresentation
   map_one' := by
     apply Subtype.ext
     ext ξ q
-    simp
+    simp only [inducedUnitary_apply, inv_one, one_smul, correction_one, map_one,
+      OneMemClass.coe_one, one_apply_eq_self]
   map_mul' g h := by
     apply Subtype.ext
     ext ξ q
     simp only [inducedUnitary_apply, Submonoid.coe_mul, mul_apply_eq_comp]
     rw [correction_mul]
-    simp [map_mul, mul_smul]
+    simp only [mul_inv_rev, mul_smul, smul_inv_smul, map_mul, Submonoid.coe_mul, mul_apply_eq_comp]
 
 @[simp]
 theorem inducedRepresentation_apply
@@ -472,12 +473,13 @@ theorem inducedSpace_norm_le_sum_norm_apply
   have hξ :
       ξ = ∑ q : G ⧸ S, PiLp.single 2 q (ξ q) := by
     ext q
-    simp
+    simp only [WithLp.ofLp_sum, PiLp.ofLp_single, Finset.sum_apply, Finset.sum_pi_single,
+      Finset.mem_univ, ↓reduceIte]
   calc
     ‖ξ‖ = ‖∑ q : G ⧸ S, PiLp.single 2 q (ξ q)‖ :=
       congrArg norm hξ
     _ ≤ ∑ q : G ⧸ S, ‖ξ q‖ := by
-      simpa using
+      simpa only [PiLp.norm_single] using
         (norm_sum_le Finset.univ
           (fun q : G ⧸ S ↦ PiLp.single 2 q (ξ q)))
 
@@ -556,7 +558,7 @@ theorem inducedRepresentation_hasAlmostInvariantUnitVectors
     _ < ε := by
       dsimp [δ]
       rw [show n * (ε / (n + 1)) = (n * ε) / (n + 1) by ring]
-      exact (div_lt_iff₀ hden).2 (by nlinarith)
+      exact (div_lt_iff₀ hden).2 (by linarith)
 
 theorem inducedInvariant_baseCoset_ne_zero
     (π : UnitaryRepresentation S H)
@@ -608,7 +610,8 @@ theorem correction_conjugate_at_baseCoset
   apply Subtype.ext
   rw [correction_coe]
   rw [subgroup_smul_baseCoset]
-  simp [mul_assoc]
+  simp only [mul_assoc, Subgroup.coe_mul, InvMemClass.coe_inv, inv_mul_cancel_left, inv_mul_cancel,
+    mul_one]
 
 theorem inducedInvariant_baseCoset_isInvariant
     (π : UnitaryRepresentation S H)
@@ -664,14 +667,14 @@ abbrev V := Fin 4 → R
 def e : V := fun i ↦ if i = 0 then 1 else 0
 
 @[simp] theorem e_zero : e 0 = 1 := by
-  simp [e]
+  simp only [e, Fin.isValue, ↓reduceIte]
 
 @[simp] theorem e_apply (i : Fin 4) : e i = if i = 0 then 1 else 0 := rfl
 
 theorem e_ne_zero : e ≠ 0 := by
   intro h
   have := congrFun h (0 : Fin 4)
-  simp [e] at this
+  simp only [e, Fin.isValue, ↓reduceIte, Pi.zero_apply, one_ne_zero] at this
 
 abbrev T := TensorProduct F V V
 
@@ -682,7 +685,7 @@ def B : Submodule F T := Submodule.span F (Set.range square)
 abbrev D := V × B
 
 @[simp] theorem square_zero : square 0 = 0 := by
-  simp [square]
+  simp only [square, TensorProduct.tmul_zero]
 
 theorem square_add (u v : V) :
     square (u + v) = square u + square v +
@@ -702,7 +705,7 @@ theorem symmetric_tmul_mem (u v : V) :
   have h := B.sub_mem (B.sub_mem (square_mem (u + v)) (square_mem u))
     (square_mem v)
   rw [square_add] at h
-  simpa [add_sub_assoc, add_comm, add_left_comm, add_assoc] using h
+  simpa only [add_assoc, add_sub_cancel_left] using h
 
 def polarization (u v : V) : B :=
   ⟨u ⊗ₜ[F] v + v ⊗ₜ[F] u, symmetric_tmul_mem u v⟩
@@ -797,7 +800,8 @@ noncomputable def shiftedQuotientCoeffEquiv (n : ℕ) :
 theorem truncatedVector_card (n : ℕ) :
     Nat.card (TruncatedVector n) = 2 ^ (4 * n) := by
   rw [Nat.card_congr (truncatedVectorEquiv n).toEquiv]
-  simp [← pow_mul, Nat.mul_comm]
+  simp only [Nat.card_eq_fintype_card, Fintype.card_pi, ZMod.card, Finset.prod_const,
+    Finset.card_univ, Fintype.card_fin, ← pow_mul, Nat.mul_comm]
 
 theorem shiftedQuotient_card (n : ℕ) :
     Nat.card (ShiftedQuotient n) = 2 ^ (4 * n) := by
@@ -857,11 +861,12 @@ def modThreeAtZero : IntegralPolynomial →+* ZMod 3 :=
 
 @[simp] theorem modThreeAtZero_C (z : ℤ) :
     modThreeAtZero (Polynomial.C z) = (z : ZMod 3) := by
-  simp [modThreeAtZero]
+  simp only [modThreeAtZero, eq_intCast, map_intCast]
 
 @[simp] theorem modThreeAtZero_X :
     modThreeAtZero (Polynomial.X : IntegralPolynomial) = 0 := by
-  simp [modThreeAtZero]
+  simp only [modThreeAtZero, RingHom.coe_comp, Int.coe_castRingHom, Polynomial.coe_evalRingHom,
+    Function.comp_apply, Polynomial.eval_X, Int.cast_zero]
 
 def modThreeGroupHom : IntegralSpecialLinearGroup →* TernarySpecialLinearGroup :=
   Matrix.SpecialLinearGroup.map modThreeAtZero
@@ -896,11 +901,11 @@ def modTwoPolynomial : IntegralPolynomial →+* BinaryPolynomial :=
 
 @[simp] theorem modTwoPolynomial_C (z : ℤ) :
     modTwoPolynomial (Polynomial.C z) = Polynomial.C (z : ZMod 2) := by
-  simp [modTwoPolynomial]
+  simp only [modTwoPolynomial, eq_intCast, map_intCast]
 
 @[simp] theorem modTwoPolynomial_X :
     modTwoPolynomial (Polynomial.X : IntegralPolynomial) = Polynomial.X := by
-  simp [modTwoPolynomial]
+  simp only [modTwoPolynomial, Polynomial.coe_mapRingHom, Polynomial.map_X]
 
 def modTwoGroupHom : IntegralSpecialLinearGroup →* Q :=
   Matrix.SpecialLinearGroup.map modTwoPolynomial
@@ -927,8 +932,10 @@ theorem specialLinear_map_transvection_baseChange
       Matrix.SpecialLinearGroup.transvection hij (f a) := by
   apply Matrix.SpecialLinearGroup.ext
   intro k l
-  simp [Matrix.SpecialLinearGroup.map,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.single_apply, Matrix.one_apply]
+  simp only [Matrix.SpecialLinearGroup.map, RingHom.mapMatrix_apply, MonoidHom.coe_mk,
+    OneHom.coe_mk, Matrix.SpecialLinearGroup.transvection_coe, Matrix.map_apply, Matrix.add_apply,
+    Matrix.one_apply, Matrix.single_apply, map_add, MonoidWithZeroHom.map_ite_one_zero,
+    add_right_inj]
   split <;> simp
 
 theorem integralTransvection_mem_KSubgroup
@@ -947,7 +954,8 @@ theorem integralTransvection_mem_KSubgroup
   have hthree : modThreeAtZero (3 : IntegralPolynomial) = 0 := by
     rw [map_ofNat modThreeAtZero 3]
     exact ZMod.natCast_self 3
-  simp [hthree]
+  simp only [hthree, modThreeAtZero_apply, zero_mul,
+    Matrix.SpecialLinearGroup.transvection_coeff_zero]
 
 def liftedIntegralTransvection {i j : Index} (hij : i ≠ j)
     (a : IntegralPolynomial) : K :=
@@ -1022,7 +1030,8 @@ theorem polynomial_matrix_eq_one_of_pow_eq_one_of_eval_zero_eq_one
   have hSeval : (Polynomial.evalRingHom (0 : ℤ)).mapMatrix S =
       (m : ℤ) • (1 : Matrix n n ℤ) := by
     dsimp [S]
-    simp [map_sum, map_pow, heval]
+    simp only [map_sum, map_pow, heval, one_pow, sum_const, card_range, nsmul_eq_mul, mul_one,
+      zsmul_eq_mul, Int.cast_natCast]
   have hdet_eval : (Polynomial.evalRingHom (0 : ℤ)) S.det =
       (m : ℤ) ^ Fintype.card n := by
     rw [RingHom.map_det, hSeval, Matrix.det_smul, Matrix.det_one, mul_one]
@@ -1093,13 +1102,14 @@ theorem integralSpecialLinear_eq_one_of_pow_eq_one_of_constantTerm_eq_one
     (hconst : constantTermGroupHom g = 1) :
     g = 1 := by
   have hmatrixpow : (g : Matrix Index Index (Polynomial ℤ)) ^ m = 1 := by
-    simpa using congrArg
+    simpa only [Matrix.SpecialLinearGroup.coe_pow, Matrix.SpecialLinearGroup.coe_one] using congrArg
       (fun h : IntegralSpecialLinearGroup =>
         (h : Matrix Index Index (Polynomial ℤ))) hpow
   have hmatrixconst :
       (Polynomial.evalRingHom (0 : ℤ)).mapMatrix
         (g : Matrix Index Index (Polynomial ℤ)) = 1 := by
-    simpa [constantTermGroupHom] using congrArg
+    simpa only [RingHom.mapMatrix_apply, coe_evalRingHom, constantTermGroupHom,
+      Matrix.SpecialLinearGroup.map_apply_coe, Matrix.SpecialLinearGroup.coe_one] using congrArg
       (fun h : IntegerSpecialLinearGroup => (h : Matrix Index Index ℤ)) hconst
   have hmatrix := polynomial_matrix_eq_one_of_pow_eq_one_of_eval_zero_eq_one
     (g : Matrix Index Index (Polynomial ℤ)) m hm hmatrixpow hmatrixconst
@@ -1121,11 +1131,11 @@ theorem K_eq_one_of_pow_eq_one_of_levelThree_torsionFree
       (constantTermToLevelThree.isOfFinOrder hfinite)
   have hconst :
       constantTermGroupHom (g : IntegralSpecialLinearGroup) = 1 := by
-    simpa using congrArg
+    simpa only [constantTermToLevelThree_apply_coe, OneMemClass.coe_one] using congrArg
       (fun h : levelThreeIntegerSubgroup =>
         (h : IntegerSpecialLinearGroup)) hconstant
   have hpow' : (g : IntegralSpecialLinearGroup) ^ m = 1 := by
-    simpa using congrArg
+    simpa only [SubmonoidClass.coe_pow, OneMemClass.coe_one] using congrArg
       (fun h : K => (h : IntegralSpecialLinearGroup)) hpow
   have hpolynomial : (g : IntegralSpecialLinearGroup) = 1 :=
     integralSpecialLinear_eq_one_of_pow_eq_one_of_constantTerm_eq_one
@@ -1163,7 +1173,7 @@ theorem fg_of_finiteIndex_subgroup (H : Subgroup G) [H.FiniteIndex]
     have hg : (g * (r : G)⁻¹) * (r : G) ∈ H ⊔ Subgroup.closure R :=
       (H ⊔ Subgroup.closure R).mul_mem
         (Subgroup.mem_sup_left hh) (Subgroup.mem_sup_right hr)
-    simpa using hg
+    simpa only [inv_mul_cancel_right] using hg
   exact Group.fg_def.2 (htop ▸ hHfg.sup hRfg)
 
 end
@@ -1185,10 +1195,10 @@ noncomputable def finiteGeneratedCosetEquiv
   invFun x := ⟨x.1, g⁻¹ • x.2⟩
   left_inv x := by
     rcases x with ⟨F, q⟩
-    simp
+    simp only [inv_smul_smul]
   right_inv x := by
     rcases x with ⟨F, q⟩
-    simp
+    simp only [smul_inv_smul]
 
 noncomputable def finiteGeneratedCosetRepresentation
     (G : CountableDiscreteGroup.{u}) :
@@ -1203,7 +1213,7 @@ noncomputable def finiteGeneratedCosetRepresentation
     ext x
     rcases x with ⟨F, q⟩
     change ξ ⟨F, (1 : G)⁻¹ • q⟩ = ξ ⟨F, q⟩
-    simp
+    simp only [inv_one, one_smul]
   map_mul' g h := by
     apply Subtype.ext
     apply ContinuousLinearMap.ext
@@ -1212,7 +1222,7 @@ noncomputable def finiteGeneratedCosetRepresentation
     rcases x with ⟨F, q⟩
     change ξ ⟨F, (g * h)⁻¹ • q⟩ =
       ξ ⟨F, h⁻¹ • g⁻¹ • q⟩
-    simp [mul_smul]
+    simp only [mul_inv_rev, mul_smul]
 
 @[simp]
 theorem finiteGeneratedCosetRepresentation_apply
@@ -1233,13 +1243,13 @@ theorem finiteGeneratedCoset_l2Reindex_single
   simp only [l2Reindex_apply, lp.single_apply]
   by_cases h : e.symm j = i
   · have hj : j = e i := by
-      simpa using congrArg e h
-    simp [hj]
+      simpa only [Equiv.apply_symm_apply] using congrArg e h
+    simp only [hj, Equiv.symm_apply_apply, Pi.single_eq_same]
   · have hj : j ≠ e i := by
       intro hj
       apply h
-      simp [hj]
-    simp [h, hj]
+      simp only [hj, Equiv.symm_apply_apply]
+    simp only [ne_eq, h, not_false_eq_true, Pi.single_eq_of_ne, hj]
 
 noncomputable def finiteGeneratedCosetBasepoint
     (G : CountableDiscreteGroup.{u}) (F : Finset G) :
@@ -1260,7 +1270,7 @@ theorem finiteGeneratedCosetEquiv_basepoint
       (⟨F, q⟩ : finiteGeneratedCosetIndex G))
   rw [MulAction.Quotient.smul_mk]
   apply QuotientGroup.eq.mpr
-  simpa using
+  simpa only [smul_eq_mul, mul_one, inv_mem_iff, SetLike.mem_coe] using
     (Subgroup.subset_closure (show g ∈ (F : Set G) from hg))
 
 noncomputable def finiteGeneratedCosetBasis
@@ -1273,7 +1283,7 @@ theorem finiteGeneratedCosetBasis_norm
     (G : CountableDiscreteGroup.{u}) (F : Finset G) :
     ‖finiteGeneratedCosetBasis G F‖ = 1 := by
   classical
-  simp [finiteGeneratedCosetBasis]
+  simp only [finiteGeneratedCosetBasis, Nat.ofNat_pos, lp.norm_single, norm_one]
 
 theorem finiteGeneratedCosetRepresentation_fixes_basis
     (G : CountableDiscreteGroup.{u}) (F : Finset G)
@@ -1299,7 +1309,7 @@ theorem finiteGeneratedCosetRepresentation_hasAlmostInvariantUnitVectors
     finiteGeneratedCosetBasis_norm G F, ?_⟩
   intro g hg
   rw [finiteGeneratedCosetRepresentation_fixes_basis G F g hg]
-  simpa using hε
+  simpa only [sub_self, norm_zero] using hε
 
 theorem finiteGeneratedCosetInvariant_constant
     (G : CountableDiscreteGroup.{u})
@@ -1314,7 +1324,7 @@ theorem finiteGeneratedCosetInvariant_constant
   have h := congrArg
     (fun η : GroupL2 (finiteGeneratedCosetIndex G) ↦ η ⟨F, r⟩)
     (hξ g)
-  simpa [finiteGeneratedCosetRepresentation_apply, hmove] using h
+  simpa only [finiteGeneratedCosetRepresentation_apply, hmove] using h
 
 theorem finiteGeneratedCoset_component_summable
     (G : CountableDiscreteGroup.{u})
@@ -1328,8 +1338,9 @@ theorem finiteGeneratedCoset_component_summable
       (fun q : G ⧸ Subgroup.closure (F : Set G) ↦
         (⟨F, q⟩ : finiteGeneratedCosetIndex G)) := by
     intro q r hqr
-    simpa using hqr
-  simpa [Function.comp_def] using hsum.comp_injective hinj
+    simpa only [Sigma.mk.injEq, heq_eq_eq, true_and] using hqr
+  simpa only [Real.rpow_ofNat, ENNReal.toReal_ofNat,
+    Function.comp_def] using hsum.comp_injective hinj
 
 theorem finiteGeneratedCosetInvariant_eq_zero
     (G : CountableDiscreteGroup.{u})
@@ -1496,7 +1507,7 @@ theorem integralPolynomial_subring_eq_top_of_X_mem
     | monomial n z =>
         rw [← Polynomial.C_mul_X_pow_eq_monomial]
         apply S.mul_mem
-        · simp
+        · simp only [eq_intCast, intCast_mem]
         · exact S.pow_mem hX n
   exact top_unique fun p _ => hall p
 
@@ -1511,7 +1522,7 @@ theorem integral_transvection_mem_of_one_and_X
   let S := transvectionCoefficientSubring 4 (by decide) H hone
   have hSX : (Polynomial.X : IntegralPolynomial) ∈ S := hX
   have hS : S = ⊤ := integralPolynomial_subring_eq_top_of_X_mem S hSX
-  have hp : p ∈ S := by simp [hS]
+  have hp : p ∈ S := by simp only [hS, Subring.mem_top]
   exact hp i j hij
 
 def integralElementarySubgroup : Subgroup IntegralSpecialLinearGroup :=
@@ -1614,7 +1625,8 @@ def suslinConstantSection : IntegerSpecialLinearGroup →* IntegralSpecialLinear
     suslinEvaluation (suslinConstantSection g) = g := by
   apply Matrix.SpecialLinearGroup.ext
   intro i j
-  simp
+  simp only [suslinEvaluation_entry, suslinConstantSection_entry, eq_intCast,
+    Polynomial.eval_intCast, Int.cast_eq]
 
 theorem suslinEvaluation_surjective :
     Function.Surjective suslinEvaluation :=
@@ -1654,7 +1666,7 @@ theorem suslinEvaluation_map_elementary :
   · rintro ⟨i, j, h, a, rfl⟩
     refine ⟨Matrix.SpecialLinearGroup.transvection h
       (Polynomial.C a), ⟨i, j, h, Polynomial.C a, rfl⟩, ?_⟩
-    simpa [suslinEvaluation] using
+    simpa only [suslinEvaluation, eq_intCast, map_intCast, Int.cast_eq] using
       specialLinear_map_transvection_baseChange
         (Polynomial.evalRingHom (0 : ℤ)) h (Polynomial.C a)
 
@@ -1687,8 +1699,8 @@ theorem suslin_constant_mul_augmentation
   · change
       suslinEvaluation
         ((suslinConstantSection (suslinEvaluation g))⁻¹ * g) = 1
-    simp
-  · simp
+    simp only [map_mul, map_inv, suslinEvaluation_constantSection, inv_mul_cancel]
+  · simp only [mul_inv_cancel_left]
 
 theorem suslinElementaryGeneration_iff_base_and_relative :
     SuslinElementaryGeneration ↔
@@ -1775,7 +1787,7 @@ theorem localization_comp_commonDenom_mul_X_mem_lifts
   rw [Polynomial.comp_C_mul_X_coeff]
   by_cases hn : n = 0
   · subst n
-    simpa using hzero
+    simpa only [pow_zero, mul_one, Set.mem_range] using hzero
   by_cases hs : n ∈ p.support
   · have hpos : 0 < n := Nat.pos_of_ne_zero hn
     let d : M := IsLocalization.commonDenom M p.support p.coeff
@@ -1857,10 +1869,12 @@ theorem suslinBivariateShift_eval_zero (a : A) :
       suslinDifferenceDilationRingHom a := by
   apply Polynomial.ringHom_ext
   · intro c
-    simp [suslinBivariateShiftRingHom,
-      suslinDifferenceDilationRingHom]
-  · simp [suslinBivariateShiftRingHom,
-      suslinDifferenceDilationRingHom]
+    simp only [suslinBivariateShiftRingHom, map_mul, RingHom.coe_comp, coe_evalRingHom,
+      coe_eval₂RingHom, Function.comp_apply, eval₂_C, eval_C, suslinDifferenceDilationRingHom,
+      coe_compRingHom, C_comp]
+  · simp only [suslinBivariateShiftRingHom, map_mul, RingHom.coe_comp, coe_evalRingHom,
+      coe_eval₂RingHom, Function.comp_apply, eval₂_X, eval_add, eval_mul, eval_C, eval_X, add_zero,
+      suslinDifferenceDilationRingHom, coe_compRingHom, X_comp]
 
 theorem suslinDifferencePath_eval_zero (a : A)
     (g : Matrix.SpecialLinearGroup Index (Polynomial A)) :
@@ -1886,7 +1900,8 @@ theorem suslinDifferencePath_eval_zero (a : A)
         suslinDifferenceDilation a g := by
     apply Matrix.SpecialLinearGroup.ext
     intro i j
-    simp [suslinBivariateConstantRingHom]
+    simp only [suslinBivariateConstantRingHom, Matrix.SpecialLinearGroup.map_apply_coe,
+      RingHom.mapMatrix_apply, coe_evalRingHom, Matrix.map_apply, eval_C]
   rw [hshift, hconstant, mul_inv_cancel]
 
 theorem suslinBivariateShift_eval_mul_X (a b : A) :
@@ -1895,10 +1910,12 @@ theorem suslinBivariateShift_eval_mul_X (a b : A) :
       suslinDifferenceDilationRingHom (a + b) := by
   apply Polynomial.ringHom_ext
   · intro c
-    simp [suslinBivariateShiftRingHom,
-      suslinDifferenceDilationRingHom]
-  · simp [suslinBivariateShiftRingHom,
-      suslinDifferenceDilationRingHom, add_mul]
+    simp only [suslinBivariateShiftRingHom, map_mul, RingHom.coe_comp, coe_evalRingHom,
+      coe_eval₂RingHom, Function.comp_apply, eval₂_C, eval_C, suslinDifferenceDilationRingHom,
+      map_add, coe_compRingHom, C_comp]
+  · simp only [suslinBivariateShiftRingHom, map_mul, RingHom.coe_comp, coe_evalRingHom,
+      coe_eval₂RingHom, Function.comp_apply, eval₂_X, eval_add, eval_mul, eval_C, eval_X,
+      suslinDifferenceDilationRingHom, map_add, add_mul, coe_compRingHom, X_comp]
 
 theorem suslinDifferencePath_eval_mul_X (a b : A)
     (g : Matrix.SpecialLinearGroup Index (Polynomial A)) :
@@ -1926,7 +1943,8 @@ theorem suslinDifferencePath_eval_mul_X (a b : A)
         suslinDifferenceDilation a g := by
     apply Matrix.SpecialLinearGroup.ext
     intro i j
-    simp [suslinBivariateConstantRingHom]
+    simp only [suslinBivariateConstantRingHom, Matrix.SpecialLinearGroup.map_apply_coe,
+      RingHom.mapMatrix_apply, coe_evalRingHom, Matrix.map_apply, eval_C]
   rw [hshift, hconstant]
 
 theorem suslinDifferenceDilationRingHom_baseChange
@@ -1937,8 +1955,10 @@ theorem suslinDifferenceDilationRingHom_baseChange
         (Polynomial.mapRingHom f) := by
   apply Polynomial.ringHom_ext
   · intro c
-    simp [suslinDifferenceDilationRingHom]
-  · simp [suslinDifferenceDilationRingHom]
+    simp only [suslinDifferenceDilationRingHom, RingHom.coe_comp, coe_mapRingHom, coe_compRingHom,
+      Function.comp_apply, C_comp, map_C]
+  · simp only [suslinDifferenceDilationRingHom, RingHom.coe_comp, coe_mapRingHom, coe_compRingHom,
+      Function.comp_apply, X_comp, Polynomial.map_mul, map_C, map_X]
 
 theorem suslinDifferenceDilation_baseChange
     {B : Type v} [CommRing B] (f : A →+* B) (a : A)
@@ -1960,8 +1980,11 @@ theorem suslinBivariateShiftRingHom_baseChange
         (Polynomial.mapRingHom f) := by
   apply Polynomial.ringHom_ext
   · intro c
-    simp [suslinBivariateShiftRingHom]
-  · simp [suslinBivariateShiftRingHom]
+    simp only [suslinBivariateShiftRingHom, map_mul, RingHom.coe_comp, coe_mapRingHom,
+      coe_eval₂RingHom, Function.comp_apply, eval₂_C, map_C]
+  · simp only [suslinBivariateShiftRingHom, map_mul, RingHom.coe_comp, coe_mapRingHom,
+      coe_eval₂RingHom, Function.comp_apply, eval₂_X, Polynomial.map_add, Polynomial.map_mul, map_C,
+      map_X]
 
 theorem suslinBivariateConstantRingHom_baseChange
     {B : Type v} [CommRing B] (f : A →+* B) :
@@ -1971,8 +1994,10 @@ theorem suslinBivariateConstantRingHom_baseChange
         (Polynomial.mapRingHom f) := by
   apply Polynomial.ringHom_ext
   · intro c
-    simp [suslinBivariateConstantRingHom]
-  · simp [suslinBivariateConstantRingHom]
+    simp only [suslinBivariateConstantRingHom, RingHom.coe_comp, coe_mapRingHom,
+      Function.comp_apply, map_C]
+  · simp only [suslinBivariateConstantRingHom, RingHom.coe_comp, coe_mapRingHom,
+      Function.comp_apply, map_C, map_X]
 
 theorem suslinDifferencePath_baseChange
     {B : Type v} [CommRing B] (f : A →+* B) (a : A)
@@ -2135,7 +2160,7 @@ theorem suslin_transvection_conj_adjacent
           (Matrix.SpecialLinearGroup.transvection hij a)⁻¹ *
           (Matrix.SpecialLinearGroup.transvection hjk b)⁻¹) *
           Matrix.SpecialLinearGroup.transvection hjk b := by
-            simp [mul_assoc]
+            simp only [mul_assoc, inv_mul_cancel, mul_one]
     _ = _ := by
       rw [specialLinear_transvection_commutator i j k hij hjk hik a b]
 
@@ -2155,7 +2180,7 @@ theorem suslin_transvection_conj_reverse_adjacent
           (Matrix.SpecialLinearGroup.transvection hik.symm b)⁻¹ *
           (Matrix.SpecialLinearGroup.transvection hij a)⁻¹)⁻¹ *
           Matrix.SpecialLinearGroup.transvection hik.symm b := by
-            simp [mul_assoc]
+            simp only [mul_assoc, mul_inv_rev, inv_inv, inv_mul_cancel, mul_one]
     _ =
         (Matrix.SpecialLinearGroup.transvection hjk.symm (b * a))⁻¹ *
           Matrix.SpecialLinearGroup.transvection hik.symm b := by
@@ -2200,7 +2225,7 @@ theorem suslin_transvection_conj_opposite_factor
           Matrix.SpecialLinearGroup.transvection hik.symm v *
           (Matrix.SpecialLinearGroup.transvection hij a)⁻¹)⁻¹ := by
             rw [← hopposite]
-            simp [mul_assoc]
+            simp only [mul_assoc, inv_mul_cancel_left, mul_inv_rev, inv_inv]
     _ = _ := by rw [hadjacent, hreverse]
 
 @[simp] theorem suslin_specialLinear_map_transvection
@@ -2212,9 +2237,10 @@ theorem suslin_transvection_conj_opposite_factor
       Matrix.SpecialLinearGroup.transvection hij (f a) := by
   apply Matrix.SpecialLinearGroup.ext
   intro k l
-  simp [Matrix.SpecialLinearGroup.map,
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.single_apply, Matrix.one_apply]
+  simp only [Matrix.SpecialLinearGroup.map, RingHom.mapMatrix_apply, MonoidHom.coe_mk,
+    OneHom.coe_mk, Matrix.SpecialLinearGroup.transvection_coe, Matrix.map_apply, Matrix.add_apply,
+    Matrix.one_apply, Matrix.single_apply, map_add, MonoidWithZeroHom.map_ite_one_zero,
+    add_right_inj]
   split <;> simp
 
 theorem exists_suslin_opposite_conjugate_elementary_lift
@@ -2265,7 +2291,8 @@ theorem exists_suslin_opposite_conjugate_elementary_lift
     rw [← mul_assoc, ha]
   rw [hprod, suslin_transvection_conj_opposite_factor
     i j k hij hjk hik a (f (d * p)) (f d)]
-  simp [L, R, hcoeff', hreverse]
+  simp only [mul_inv_rev, map_mul, suslin_specialLinear_map_transvection, map_neg, map_inv, hcoeff',
+    hreverse, L, R]
 
 theorem exists_localization_polynomial_common_denominator
     {A : Type v} {B : Type w} [CommRing A] [CommRing B]
@@ -2327,7 +2354,7 @@ theorem suslinDilation_mul (a b : A) (g : SuslinPolynomialSL A) :
       (Polynomial.C b * Polynomial.X) =
       (g i j).comp (Polynomial.C (a * b) * Polynomial.X)
   rw [Polynomial.comp_assoc]
-  simp [Polynomial.mul_comp, Polynomial.C_mul, mul_assoc]
+  simp only [mul_comp, C_comp, X_comp, C_mul, mul_assoc]
 
 theorem suslinPolynomialBaseChange_dilation (a : A)
     (g : SuslinPolynomialSL A) :
@@ -2342,7 +2369,7 @@ theorem suslinPolynomialBaseChange_dilation (a : A)
       (Polynomial.map (algebraMap A B) (g i j)).comp
         (Polynomial.C (algebraMap A B a) * Polynomial.X)
   rw [Polynomial.map_comp]
-  simp
+  simp only [Polynomial.map_mul, map_C, map_X]
 
 theorem suslinDilation_elementary_mem (a : A)
     {g : SuslinPolynomialSL A}
@@ -2356,11 +2383,11 @@ theorem suslinDilation_elementary_mem (a : A)
           (Matrix.SpecialLinearGroup.transvection h p) =
           Matrix.SpecialLinearGroup.transvection h
             (p.comp (Polynomial.C a * Polynomial.X)) from
-        by simp [suslinDilation, Polynomial.coe_compRingHom_apply]]
+        by simp only [suslinDilation, suslin_specialLinear_map_transvection, coe_compRingHom_apply]]
       exact localGlobal_transvection_mem i j h
         (p.comp (Polynomial.C a * Polynomial.X))
   | one =>
-      simp
+      simp only [map_one, one_mem]
   | mul x y hx hy ihx ihy =>
       rw [map_mul]
       exact (localGlobalElementarySubgroup (Polynomial A)).mul_mem ihx ihy
@@ -2379,7 +2406,7 @@ theorem suslinEventuallyElementaryLift_one (M : Submonoid A) :
     (1 : SuslinPolynomialSL B) ∈
       suslinEventuallyElementaryLift (A := A) (B := B) M := by
   exact ⟨1, 1, (localGlobalElementarySubgroup (Polynomial A)).one_mem,
-    by simp [suslinDilation]⟩
+    by simp only [map_one, suslinDilation, OneMemClass.coe_one, one_mul]⟩
 
 theorem suslinEventuallyElementaryLift_inv (M : Submonoid A)
     {g : SuslinPolynomialSL B}
@@ -2388,7 +2415,7 @@ theorem suslinEventuallyElementaryLift_inv (M : Submonoid A)
   obtain ⟨d, q, hq, heq⟩ := hg
   refine ⟨d, q⁻¹,
     (localGlobalElementarySubgroup (Polynomial A)).inv_mem hq, ?_⟩
-  simpa using congrArg Inv.inv heq
+  simpa only [map_inv, inv_inj] using congrArg Inv.inv heq
 
 theorem suslinEventuallyElementaryLift_mul (M : Submonoid A)
     {g h : SuslinPolynomialSL B}
@@ -2493,7 +2520,7 @@ theorem suslin_polynomial_conjugate_opposite_mem_eventual
   obtain ⟨d, q, hq⟩ := exists_localization_dilated_polynomial_lift M p hp
   have hzero : algebraMap A B (q.coeff 0) = 0 := by
     have hz := congrArg (fun r : Polynomial B => r.coeff 0) hq
-    simpa [Polynomial.comp_C_mul_X_coeff, hp] using hz
+    simpa only [coeff_map, comp_C_mul_X_coeff, hp, pow_zero, mul_one] using hz
   have hremove :
       Polynomial.map (algebraMap A B) (Polynomial.X * q.divX) =
         Polynomial.map (algebraMap A B) q := by
@@ -2512,8 +2539,8 @@ theorem suslin_polynomial_conjugate_opposite_mem_eventual
       (a.comp (Polynomial.C (algebraMap A B (d : A)) * Polynomial.X))
       q.divX
   rw [hremove, hq] at htarget
-  simpa [suslinDilation, map_mul, map_inv,
-    specialLinear_map_transvection_baseChange] using htarget
+  simpa only [suslinDilation, map_mul, suslin_specialLinear_map_transvection, coe_compRingHom,
+    map_inv] using htarget
 
 theorem suslin_polynomial_relative_z_mem_eventual
     (M : Submonoid A) [IsLocalization M B]
@@ -2557,7 +2584,8 @@ theorem quotient_uniformizer_isUnit_of_relation
       (1 : Polynomial A ⧸ Ideal.span ({f} : Set (Polynomial A))) +
           quotientCoefficientMap f π * ρ q =
             ρ (1 + Polynomial.C π * q) := by
-              simp [quotientCoefficientMap, ρ, map_add, map_mul]
+              simp only [quotientCoefficientMap, RingHom.coe_comp, Function.comp_apply, map_add,
+                map_one, map_mul, ρ]
       _ = ρ f := (congrArg ρ hf).symm
       _ = 0 := hfzero
   refine isUnit_iff_exists_inv'.mpr ⟨-(ρ q), ?_⟩
@@ -2713,8 +2741,10 @@ theorem dvrPolynomialQuotientFractionSurjection_surjective
   have hψ : ψ = ρ := by
     apply Polynomial.ringHom_ext
     · intro a
-      simp [ψ, ρ, F, φ]
-    · simp [ψ, ρ, F, φ]
+      simp only [RingHom.coe_comp, coe_mapRingHom, Function.comp_apply, map_C, AdjoinRoot.mk_C,
+        dvrPolynomialQuotientFractionSurjection_of_algebraMap, ψ, φ, ρ, F]
+    · simp only [RingHom.coe_comp, coe_mapRingHom, Function.comp_apply, map_X, AdjoinRoot.mk_X,
+        dvrPolynomialQuotientFractionSurjection_root, ψ, φ, ρ, F]
   intro y
   obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective y
   refine ⟨AdjoinRoot.mk F (p.map (algebraMap A (FractionRing A))), ?_⟩
@@ -2782,7 +2812,7 @@ theorem specialLinear_column_unimodular
     (fun x : Matrix.SpecialLinearGroup (Fin n) A => x j j)
     (inv_mul_cancel g)
   change ((g⁻¹).val * g.val) j j = (1 : Matrix (Fin n) (Fin n) A) j j at h
-  simpa [Matrix.mul_apply, Matrix.one_apply] using h
+  simpa only [Matrix.SpecialLinearGroup.coe_inv, Matrix.mul_apply, Matrix.one_apply_eq] using h
 
 theorem integralSpecialLinear_lastColumn_stableRange_shorten
     (hstable : IntegralPolynomialStableRangeThree)
@@ -2807,11 +2837,11 @@ theorem exists_add_mem_avoiding_finite_prime_antichain
   let avoids : Finset (Ideal A) := all.filter (fun p => x ∉ p)
   let correction : Ideal A := J * avoids.prod (fun p => p)
   have hall {p : Ideal A} : p ∈ all ↔ p ∈ S := by
-    simp [all]
+    simp only [Set.Finite.mem_toFinset, all]
   have hcontains {p : Ideal A} : p ∈ contains ↔ p ∈ S ∧ x ∈ p := by
-    simp [contains, hall]
+    simp only [Finset.mem_filter, hall, contains]
   have havoids {p : Ideal A} : p ∈ avoids ↔ p ∈ S ∧ x ∉ p := by
-    simp [avoids, hall]
+    simp only [Finset.mem_filter, hall, avoids]
   have hcorrection_not_le : ∀ p ∈ contains, ¬ correction ≤ p := by
     intro p hp hle
     have hpS : p ∈ S := (hcontains.mp hp).1
@@ -2883,7 +2913,8 @@ theorem krullDimLE_zero_quotient_span_pair_of_avoids_minimalPrimes
     Ring.KrullDimLE 0
       (A ⧸ (Ideal.span ({a} : Set A) ⊔ Ideal.span ({b} : Set A))) := by
   letI : FiniteRingKrullDim A :=
-    finiteRingKrullDim_iff_ne_bot_and_top.mpr ⟨by simp [hdim], by
+    finiteRingKrullDim_iff_ne_bot_and_top.mpr ⟨by simp only [hdim, ne_eq, WithBot.ofNat_ne_bot,
+                                                    not_false_eq_true], by
       rw [hdim]
       change (↑(2 : ℕ∞) : WithBot ℕ∞) ≠ ↑(⊤ : ℕ∞)
       exact fun h => ENat.coe_ne_top 2 (WithBot.coe_injective h)⟩
@@ -2906,7 +2937,7 @@ theorem krullDimLE_zero_quotient_span_pair_of_avoids_minimalPrimes
   have hone_le_q : (1 : ℕ∞) ≤ q.height := by
     have h := Ideal.height_add_one_le_of_lt_of_isPrime
       (show (⊥ : Ideal A) < q from bot_lt_iff_ne_bot.mpr hq_ne_bot)
-    simpa using h
+    simpa only [ge_iff_le, Ideal.height_bot, zero_add] using h
   have htwo_le_p : (2 : ℕ∞) ≤ p.height := calc
     (2 : ℕ∞) = 1 + 1 := by norm_num
     _ ≤ q.height + 1 := by gcongr
@@ -2924,16 +2955,21 @@ theorem exists_nonzero_elementary_first_coordinate
     by_contra hnone
     push Not at hnone
     obtain ⟨r, hr⟩ := hv
-    simp [Fin.sum_univ_succ, hnone.1, hnone.2.1,
-      hnone.2.2.1, hnone.2.2.2] at hr
+    simp only [Fin.sum_univ_succ, Fin.isValue, hnone.1, mul_zero, Fin.succ_zero_eq_one, hnone.2.1,
+      Fin.succ_one_eq_two, hnone.2.2.1, Finset.univ_unique, Fin.default_eq_zero,
+      Finset.sum_singleton, Fin.reduceSucc, hnone.2.2.2, add_zero, zero_ne_one] at hr
   by_cases h0 : v 0 = 0
   · by_cases h1 : v 1 = 0
     · by_cases h2 : v 2 = 0
-      · have h3 : v 3 ≠ 0 := by simpa [h0, h1, h2] using hentry
-        exact ⟨0, 0, 1, by simpa [h0] using h3⟩
-      · exact ⟨0, 1, 0, by simpa [h0] using h2⟩
-    · exact ⟨1, 0, 0, by simpa [h0] using h1⟩
-  · exact ⟨0, 0, 0, by simpa using h0⟩
+      · have h3 : v 3 ≠ 0 := by simpa only [Fin.isValue, ne_eq, h0, not_true_eq_false, h1, h2,
+                                  false_or] using hentry
+        exact ⟨0, 0, 1, by simpa only [Fin.isValue, h0, zero_mul, add_zero, one_mul, zero_add,
+                             ne_eq] using h3⟩
+      · exact ⟨0, 1, 0, by simpa only [Fin.isValue, h0, zero_mul, add_zero, one_mul, zero_add,
+                             ne_eq] using h2⟩
+    · exact ⟨1, 0, 0, by simpa only [Fin.isValue, h0, one_mul, zero_add, zero_mul, add_zero,
+                           ne_eq] using h1⟩
+  · exact ⟨0, 0, 0, by simpa only [Fin.isValue, zero_mul, add_zero, ne_eq] using h0⟩
 
 theorem exists_second_coordinate_avoiding_minimalPrimes
     {A : Type*} [CommRing A] [IsNoetherianRing A]
@@ -3000,11 +3036,11 @@ theorem exists_third_coordinate_unit_mod_span_pair
   have hcoprime : IsCoprime (π c) (π d) := by
     refine ⟨π rc, π rd, ?_⟩
     have hmap := congrArg π hcomb
-    simpa [map_add, map_mul, ha0, hb0] using hmap
+    simpa only [map_add, map_mul, ha0, mul_zero, hb0, add_zero, zero_add, map_one] using hmap
   obtain ⟨tq, hu⟩ := exists_add_mul_isUnit_of_artinian hcoprime
   obtain ⟨t, rfl⟩ := Ideal.Quotient.mk_surjective tq
   refine ⟨t, ?_⟩
-  simpa [π, map_add, map_mul] using hu
+  simpa only [map_add, map_mul] using hu
 
 theorem unimodularRow_three_of_isUnit_quotient
     {A : Type*} [CommRing A] (a b c : A)
@@ -3026,7 +3062,7 @@ theorem unimodularRow_three_of_isUnit_quotient
   obtain ⟨q, hq⟩ := isUnit_iff_exists_inv.mp hunit
   obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective q
   have hzero : π (c * r - 1) = 0 := calc
-    π (c * r - 1) = π c * π r - 1 := by simp
+    π (c * r - 1) = π c * π r - 1 := by simp only [map_sub, map_mul, map_one]
     _ = 0 := sub_eq_zero.mpr hq
   have hmem : c * r - 1 ∈ I := Ideal.Quotient.eq_zero_iff_mem.mp hzero
   have hnegone : (-1 : A) ∈ M := by
@@ -3043,7 +3079,9 @@ theorem bassStableRangeThree_of_noetherian_domain_dimension_two
   obtain ⟨r, hr⟩ := hv
   have hrow_original :
       r 0 * v 0 + r 1 * v 1 + r 2 * v 2 + r 3 * v 3 = 1 := by
-    simpa [Fin.sum_univ_succ, add_assoc] using hr
+    simpa only [Fin.isValue, add_assoc, Nat.reduceAdd, Fin.sum_univ_succ, Fin.succ_zero_eq_one,
+      Fin.succ_one_eq_two, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton,
+      Fin.reduceSucc] using hr
   let a : A := v 0 + u * v 1 + w * v 2 + z * v 3
   have ha : a ≠ 0 := hfirst
   have hrow_first : ∃ ra rb rc rd : A,
@@ -3081,9 +3119,13 @@ theorem bassStableRangeThree_of_noetherian_domain_dimension_two
   intro M hM
   by_contra hnone
   push Not at hnone
-  have hzero : v 0 + s₀ * v 3 ∈ M := by simpa using hnone 0
-  have hone : v 1 + s₁ * v 3 ∈ M := by simpa using hnone 1
-  have htwo : v 2 + t * v 3 ∈ M := by simpa using hnone 2
+  have hzero : v 0 + s₀ * v 3 ∈ M := by simpa only [Fin.isValue, Fin.castSucc_zero,
+                                          Matrix.cons_val_zero, Fin.reduceLast] using hnone 0
+  have hone : v 1 + s₁ * v 3 ∈ M := by simpa only [Fin.isValue, Fin.castSucc_one,
+                                         Matrix.cons_val_one, Matrix.cons_val_zero,
+                                         Fin.reduceLast] using hnone 1
+  have htwo : v 2 + t * v 3 ∈ M := by simpa only [Fin.isValue, Fin.reduceCastSucc, Matrix.cons_val,
+                                        Fin.reduceLast] using hnone 2
   have hb : b ∈ M := by
     have h := M.add_mem hone (M.mul_mem_left k htwo)
     convert h using 1; dsimp [b, s₁]; ring
@@ -3121,13 +3163,13 @@ theorem isUnit_quotient_span_singleton_iff_isCoprime
     have hmem : 1 - b * g ∈ Ideal.span ({f} : Set A) :=
       Ideal.Quotient.eq_zero_iff_mem.mp (by
         change q (1 - b * g) = 0
-        simp [map_sub, map_mul, hbbar])
+        simp only [map_sub, map_one, map_mul, hbbar, sub_self])
     obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hmem
     exact ⟨a, b, by rw [ha]; ring⟩
   · rintro ⟨a, b, hab⟩
     refine isUnit_iff_exists_inv'.mpr ⟨q b, ?_⟩
     have hmap := congrArg q hab
-    simpa [map_add, map_mul, hfzero] using hmap
+    simpa only [map_add, map_mul, hfzero, mul_zero, zero_add, map_one] using hmap
 
 theorem dvr_one_add_uniformizer_mul_ne_zero
     {A : Type*} [CommRing A] [IsDomain A]
@@ -3135,7 +3177,8 @@ theorem dvr_one_add_uniformizer_mul_ne_zero
     (1 + Polynomial.C π * q : Polynomial A) ≠ 0 := by
   intro hzero
   have hconstant := congrArg (fun p : Polynomial A => p.coeff 0) hzero
-  simp at hconstant
+  simp only [Polynomial.coeff_add, Polynomial.coeff_one_zero, Polynomial.mul_coeff_zero,
+    Polynomial.coeff_C_zero, Polynomial.coeff_zero] at hconstant
   have hdiv : π ∣ (1 : A) := by
     refine ⟨-(q.coeff 0), ?_⟩
     linear_combination hconstant
@@ -3218,8 +3261,8 @@ theorem suslin_residue_polynomial_isUnit_of_determinant
   have hmul :
       g.map (IsLocalRing.residue A) *
         -(p.map (IsLocalRing.residue A)) = 1 := by
-    simpa [Polynomial.map_sub, Polynomial.map_mul,
-      Polynomial.map_C, hzero, mul_neg, neg_mul] using hdet'
+    simpa only [mul_neg, Polynomial.map_sub, Polynomial.map_mul, map_C, hzero, map_zero, zero_mul,
+      zero_sub, Polynomial.map_one] using hdet'
   exact isUnit_iff_exists_inv.mpr
     ⟨-(p.map (IsLocalRing.residue A)), hmul⟩
 
@@ -3235,8 +3278,8 @@ theorem suslin_residue_polynomial_eq_C_of_determinant
   have hc0 : c = (IsLocalRing.residue A) (g.coeff 0) := by
     have h := congrArg (fun r : Polynomial (IsLocalRing.ResidueField A) =>
       r.coeff 0) hcg
-    simpa using h
-  simpa [hc0] using hcg.symm
+    simpa only [coeff_C_zero, coeff_map] using h
+  simpa only [hc0] using hcg.symm
 
 theorem suslin_residue_constantCoeff_isUnit_of_determinant
     {A : Type*} [CommRing A] [IsLocalRing A]
@@ -3338,11 +3381,11 @@ theorem dvr_polynomial_map_uniformizer_zero_iff
   · intro h n
     have hn := congrArg (fun p : Polynomial
       (A ⧸ Ideal.span ({π} : Set A)) => p.coeff n) h
-    simpa [dvr_uniformizer_quotient_eq_zero_iff_dvd hπ] using hn
+    simpa only [coeff_map, coeff_zero, dvr_uniformizer_quotient_eq_zero_iff_dvd hπ] using hn
   · intro h
     apply Polynomial.ext
     intro n
-    simp [dvr_uniformizer_quotient_eq_zero_iff_dvd hπ, h n]
+    simp only [coeff_map, coeff_zero, dvr_uniformizer_quotient_eq_zero_iff_dvd hπ, h n]
 
 omit [IsDomain A] [IsDiscreteValuationRing A] in
 theorem dvr_polynomial_map_uniformizer_zero_iff_C_dvd
@@ -3360,7 +3403,7 @@ theorem dvr_polynomial_eq_one_add_uniformizer_mul_of_residue_one
     ∃ q : Polynomial A, f = 1 + Polynomial.C π * q := by
   have hzero : (f - 1).map (Ideal.Quotient.mk
       (Ideal.span ({π} : Set A))) = 0 := by
-    simp [Polynomial.map_sub, hone]
+    simp only [Polynomial.map_sub, hone, Polynomial.map_one, sub_self]
   obtain ⟨q, hq⟩ :=
     (dvr_polynomial_map_uniformizer_zero_iff_C_dvd hπ (f - 1)).mp hzero
   refine ⟨q, ?_⟩
@@ -3397,7 +3440,7 @@ theorem transvection_smul_same (i j : Fin 4) (h : i ≠ j) (a : A)
   change ((Matrix.SpecialLinearGroup.transvection h a).val *ᵥ v) i = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
     Matrix.one_mulVec, Matrix.single_mulVec]
-  simp
+  simp only [Pi.add_apply, Function.update_self]
 
 theorem transvection_smul_other (i j k : Fin 4) (h : i ≠ j)
     (hk : k ≠ i) (a : A) (v : Fin 4 → A) :
@@ -3405,7 +3448,8 @@ theorem transvection_smul_other (i j k : Fin 4) (h : i ≠ j)
   change ((Matrix.SpecialLinearGroup.transvection h a).val *ᵥ v) k = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
     Matrix.one_mulVec, Matrix.single_mulVec]
-  simp [hk]
+  simp only [Pi.add_apply, ne_eq, hk, not_false_eq_true, Function.update_of_ne, Pi.zero_apply,
+    add_zero]
 
 def coordinateRotation (i j : Fin 4) (h : i ≠ j) :
     Matrix.SpecialLinearGroup (Fin 4) A :=
@@ -3557,13 +3601,13 @@ theorem unit_first_elementary_reduce
       transvection_smul_other 3 0 0 (by decide) (by decide),
       transvection_smul_other 2 0 0 (by decide) (by decide),
       unitPairNormalizer_smul_pivot]
-    simp
+    simp only [Fin.isValue, Pi.single_eq_same]
   · dsimp [t₃, t₂, p]
     rw [mul_smul, mul_smul,
       transvection_smul_other 3 0 1 (by decide) (by decide),
       transvection_smul_other 2 0 1 (by decide) (by decide),
       unitPairNormalizer_smul_auxiliary]
-    simp
+    simp only [Fin.isValue, ne_eq, one_ne_zero, not_false_eq_true, Pi.single_eq_of_ne]
   · dsimp [t₃, t₂, p]
     rw [mul_smul, mul_smul,
       transvection_smul_other 3 0 2 (by decide) (by decide),
@@ -3571,7 +3615,8 @@ theorem unit_first_elementary_reduce
       unitPairNormalizer_smul_other 0 1 2 (by decide)
         (by decide) (by decide),
       unitPairNormalizer_smul_pivot]
-    simp
+    simp only [Fin.isValue, mul_one, add_neg_cancel, ne_eq, Fin.reduceEq, not_false_eq_true,
+      Pi.single_eq_of_ne]
   · dsimp [t₃, t₂, p]
     rw [mul_smul, mul_smul,
       transvection_smul_same,
@@ -3580,7 +3625,8 @@ theorem unit_first_elementary_reduce
       unitPairNormalizer_smul_other 0 1 3 (by decide)
         (by decide) (by decide),
       unitPairNormalizer_smul_pivot]
-    simp
+    simp only [Fin.isValue, mul_one, add_neg_cancel, ne_eq, Fin.reduceEq, not_false_eq_true,
+      Pi.single_eq_of_ne]
 
 end LocalElementaryProof
 
@@ -3618,7 +3664,10 @@ def lowerBlockMatrix (b : Matrix (Fin 3) (Fin 3) R) :
 theorem lowerBlockMatrix_det (b : Matrix (Fin 3) (Fin 3) R) :
     (lowerBlockMatrix b).det = b.det := by
   rw [Matrix.det_succ_column_zero]
-  simp [Fin.sum_univ_succ, lowerBlockMatrix, Matrix.submatrix]
+  simp only [Nat.succ_eq_add_one, Nat.reduceAdd, lowerBlockMatrix, Fin.isValue, Fin.cases_zero,
+    submatrix, Fin.cases_succ, Fin.sum_univ_succ, Fin.coe_ofNat_eq_mod, Nat.zero_mod, pow_zero,
+    mul_one, Fin.zero_succAbove, one_mul, Fin.val_succ, mul_zero, zero_mul, Finset.sum_const_zero,
+    add_zero]
   congr 1
 
 def lowerBlockSpecialLinear
@@ -3678,7 +3727,12 @@ theorem lowerRight_det_eq_one
   have h1 := hcolumn 1
   have h2 := hcolumn 2
   have h3 := hcolumn 3
-  simpa [Fin.sum_univ_succ, h0, h1, h2, h3] using hdet
+  simpa only [Nat.succ_eq_add_one, Nat.reduceAdd, Fin.isValue, Fin.sum_univ_succ,
+    Fin.coe_ofNat_eq_mod, Nat.zero_mod, pow_zero, h0, ↓reduceIte, mul_one, Fin.succAbove_zero,
+    one_mul, Fin.val_succ, zero_add, pow_one, Fin.succ_zero_eq_one, h1, one_ne_zero, mul_zero,
+    zero_mul, even_two, Even.neg_pow, one_pow, Fin.succ_one_eq_two, h2, Fin.reduceEq,
+    Finset.univ_unique, Fin.default_eq_zero, Fin.val_eq_zero, Finset.sum_singleton, Fin.reduceSucc,
+    h3, add_zero] using hdet
 
 def lowerRightSpecialLinear
     (g : Matrix.SpecialLinearGroup (Fin 4) R)
@@ -3713,7 +3767,7 @@ theorem firstColumn_mem_elementary_iff_block
   · intro hg
     have h := (localGlobalElementarySubgroup R).mul_mem hg
       ((localGlobalElementarySubgroup R).inv_mem (firstRowClear_mem g))
-    simpa [mul_assoc] using h
+    simpa only [mul_assoc, mul_inv_cancel, mul_one] using h
 
 theorem specialLinear_mem_elementary_of_column_reduction
     (g e : Matrix.SpecialLinearGroup (Fin 4) R)
@@ -3725,7 +3779,7 @@ theorem specialLinear_mem_elementary_of_column_reduction
           intro i
           change (e • (fun j : Fin 4 => g j 0)) i = _
           rw [hcolumn]
-          simp [Pi.single_apply])) ∈
+          simp only [Fin.isValue, Pi.single_apply])) ∈
         localGlobalElementarySubgroup R) :
     g ∈ localGlobalElementarySubgroup R := by
   have hnormalized : e * g ∈ localGlobalElementarySubgroup R :=
@@ -3733,10 +3787,10 @@ theorem specialLinear_mem_elementary_of_column_reduction
       intro i
       change (e • (fun j : Fin 4 => g j 0)) i = _
       rw [hcolumn]
-      simp [Pi.single_apply])).2 hblock
+      simp only [Fin.isValue, Pi.single_apply])).2 hblock
   have h := (localGlobalElementarySubgroup R).mul_mem
     ((localGlobalElementarySubgroup R).inv_mem he) hnormalized
-  simpa [mul_assoc] using h
+  simpa only [inv_mul_cancel_left] using h
 
 end MonicMatrixElimination
 
@@ -3821,22 +3875,28 @@ def stabilizedTwoMatrix (b : Matrix (Fin 2) (Fin 2) R) :
 @[simp] theorem stabilizedTwoMatrix_castSucc_castSucc
     (b : Matrix (Fin 2) (Fin 2) R) (i j : Fin 2) :
     stabilizedTwoMatrix b i.castSucc j.castSucc = b i j := by
-  simp [stabilizedTwoMatrix, Matrix.reindex_apply, Matrix.fromBlocks]
+  simp only [stabilizedTwoMatrix, Nat.reduceAdd, fromBlocks, reindex_apply, submatrix_apply,
+    finSumFinEquiv_symm_apply_castSucc, of_apply, Sum.elim_inl]
 
 @[simp] theorem stabilizedTwoMatrix_castSucc_last
     (b : Matrix (Fin 2) (Fin 2) R) (i : Fin 2) :
     stabilizedTwoMatrix b i.castSucc (Fin.last 2) = 0 := by
-  simp [stabilizedTwoMatrix, Matrix.reindex_apply, Matrix.fromBlocks]
+  simp only [stabilizedTwoMatrix, Nat.reduceAdd, fromBlocks, Fin.reduceLast, reindex_apply,
+    Fin.isValue, submatrix_apply, finSumFinEquiv_symm_apply_castSucc, finTwoPlusOne_symm_two,
+    of_apply, Sum.elim_inl, Sum.elim_inr, Matrix.zero_apply]
 
 @[simp] theorem stabilizedTwoMatrix_last_castSucc
     (b : Matrix (Fin 2) (Fin 2) R) (j : Fin 2) :
     stabilizedTwoMatrix b (Fin.last 2) j.castSucc = 0 := by
-  simp [stabilizedTwoMatrix, Matrix.reindex_apply, Matrix.fromBlocks]
+  simp only [stabilizedTwoMatrix, Nat.reduceAdd, fromBlocks, Fin.reduceLast, reindex_apply,
+    Fin.isValue, submatrix_apply, finTwoPlusOne_symm_two, finSumFinEquiv_symm_apply_castSucc,
+    of_apply, Sum.elim_inr, Sum.elim_inl, Matrix.zero_apply]
 
 @[simp] theorem stabilizedTwoMatrix_last_last
     (b : Matrix (Fin 2) (Fin 2) R) :
     stabilizedTwoMatrix b (Fin.last 2) (Fin.last 2) = 1 := by
-  simp [stabilizedTwoMatrix, Matrix.reindex_apply, Matrix.fromBlocks]
+  simp only [stabilizedTwoMatrix, Nat.reduceAdd, fromBlocks, Fin.reduceLast, reindex_apply,
+    Fin.isValue, submatrix_apply, finTwoPlusOne_symm_two, of_apply, Sum.elim_inr, one_apply_eq]
 
 theorem stabilizedTwoMatrix_det
     (b : Matrix (Fin 2) (Fin 2) R) :
@@ -4008,7 +4068,8 @@ theorem elementary_eq_top_iff_columnTransitivity_and_stabilizedThree :
       · funext i
         change (g⁻¹ * g) i 0 = _
         rw [inv_mul_cancel]
-        simp [Matrix.one_apply, Pi.single_apply]
+        simp only [Fin.isValue, Matrix.SpecialLinearGroup.coe_one, Matrix.one_apply,
+          Pi.single_apply]
     · intro b
       rw [htop]
       trivial
@@ -4042,7 +4103,7 @@ theorem elementaryThree_transvection_smul_same
   change ((Matrix.SpecialLinearGroup.transvection h r).val *ᵥ v) i = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
     Matrix.one_mulVec, Matrix.single_mulVec]
-  simp
+  simp only [Pi.add_apply, Function.update_self]
 
 theorem elementaryThree_transvection_smul_other
     (i j k : Fin 3) (h : i ≠ j) (hk : k ≠ i)
@@ -4051,7 +4112,8 @@ theorem elementaryThree_transvection_smul_other
   change ((Matrix.SpecialLinearGroup.transvection h r).val *ᵥ v) k = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
     Matrix.one_mulVec, Matrix.single_mulVec]
-  simp [hk]
+  simp only [Pi.add_apply, ne_eq, hk, not_false_eq_true, Function.update_of_ne, Pi.zero_apply,
+    add_zero]
 
 theorem elementaryThree_coprime_pair_reduce
     (v : Fin 3 → R) (hcoprime : IsCoprime (v 0) (v 1)) :
@@ -4143,7 +4205,7 @@ theorem elementaryThree_coprime_pair_reduce
     · simp only [mul_smul, Pi.single_apply]
       dsimp [r]
       rw [elementaryThree_transvection_smul_same, hq₂, hq₀]
-      simp
+      simp only [mul_one, add_neg_cancel]
 
 end StabilizedBlockReduction
 
@@ -4304,7 +4366,7 @@ theorem unimodularRow_smul_specialLinear_three
   by_contra hnone
   push Not at hnone
   apply hj
-  have hback : v j = (e⁻¹ • (e • v)) j := by simp
+  have hback : v j = (e⁻¹ • (e • v)) j := by simp only [inv_smul_smul]
   rw [hback]
   change ∑ k : Fin 3, (e⁻¹) j k * (e • v) k ∈ M
   exact M.sum_mem fun k _ => M.mul_mem_left _ (hnone k)
@@ -4315,7 +4377,8 @@ theorem unimodularThree_isCoprime_of_last_zero
     IsCoprime (v 0) (v 1) := by
   obtain ⟨r, hr⟩ := hv
   refine ⟨r 0, r 1, ?_⟩
-  simpa [Fin.sum_univ_succ, hz, add_assoc] using hr
+  simpa only [Fin.isValue, Fin.sum_univ_succ, Fin.succ_zero_eq_one, Finset.univ_unique,
+    Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_one_eq_two, hz, mul_zero, add_zero] using hr
 
 theorem euclideanElementaryThree_unimodular_reduce
     {R : Type*} [EuclideanDomain R]
@@ -4330,7 +4393,7 @@ theorem euclideanElementaryThree_unimodular_reduce
   obtain ⟨p, hp, hreduce⟩ :=
     elementaryThree_coprime_pair_reduce (g • v) hcoprime
   exact ⟨p * g, (elementaryThreeSubgroup R).mul_mem hp hg,
-    by simpa [mul_smul] using hreduce⟩
+    by simpa only [mul_smul, Fin.isValue] using hreduce⟩
 
 theorem fieldPolynomialElementaryThree_unimodular_reduce
     {k : Type*} [Field k]
@@ -4360,9 +4423,9 @@ theorem specialLinearThree_map_transvection
         Matrix.SpecialLinearGroup.transvection hij (φ a) := by
   apply Matrix.SpecialLinearGroup.ext
   intro k l
-  simp [Matrix.SpecialLinearGroup.map,
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.single_apply, Matrix.one_apply]
+  simp only [SpecialLinearGroup.map, RingHom.mapMatrix_apply, MonoidHom.coe_mk, OneHom.coe_mk,
+    SpecialLinearGroup.transvection_coe, map_apply, Matrix.add_apply, Matrix.one_apply,
+    single_apply, map_add, MonoidWithZeroHom.map_ite_one_zero, add_right_inj]
   split <;> simp
 
 theorem map_elementaryThreeSubgroup_eq_of_surjective
@@ -4808,7 +4871,7 @@ private theorem elementaryThreeTransvection_smul_same
   change ((Matrix.SpecialLinearGroup.transvection h a).val *ᵥ v) i = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
     Matrix.one_mulVec, Matrix.single_mulVec]
-  simp
+  simp only [Pi.add_apply, Function.update_self]
 
 private theorem elementaryThreeTransvection_smul_other
     (i j k : Fin 3) (h : i ≠ j) (hk : k ≠ i)
@@ -4817,7 +4880,8 @@ private theorem elementaryThreeTransvection_smul_other
   change ((Matrix.SpecialLinearGroup.transvection h a).val *ᵥ v) k = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
     Matrix.one_mulVec, Matrix.single_mulVec]
-  simp [hk]
+  simp only [Pi.add_apply, ne_eq, hk, not_false_eq_true, Function.update_of_ne, Pi.zero_apply,
+    add_zero]
 
 theorem elementaryThreeCoordinateRotation_smul_left
     (i j : Fin 3) (h : i ≠ j) (v : Fin 3 → R) :
@@ -4862,16 +4926,18 @@ theorem elementaryThreeCoordinateRotation_two_zero_smul_single_zero :
   · change (elementaryThreeCoordinateRotation (R := R) 2 0 h20 •
         (Pi.single (0 : Fin 3) (1 : R) : Fin 3 → R)) 0 = _
     rw [elementaryThreeCoordinateRotation_smul_right]
-    simp
+    simp only [Fin.isValue, ne_eq, Fin.reduceEq, not_false_eq_true, Pi.single_eq_of_ne, neg_zero,
+      Nat.reduceAdd, Fin.zero_eta]
   · change (elementaryThreeCoordinateRotation (R := R) 2 0 h20 •
         (Pi.single (0 : Fin 3) (1 : R) : Fin 3 → R)) 1 = _
     rw [elementaryThreeCoordinateRotation_smul_other
       2 0 1 h20 (by decide) (by decide)]
-    simp
+    simp only [Fin.isValue, ne_eq, one_ne_zero, not_false_eq_true, Pi.single_eq_of_ne,
+      Nat.reduceAdd, Fin.mk_one, Fin.reduceEq]
   · change (elementaryThreeCoordinateRotation (R := R) 2 0 h20 •
         (Pi.single (0 : Fin 3) (1 : R) : Fin 3 → R)) 2 = _
     rw [elementaryThreeCoordinateRotation_smul_left]
-    simp
+    simp only [Fin.isValue, Pi.single_eq_same, Nat.reduceAdd, Fin.reduceFinMk]
 
 theorem elementaryThree_reduce_last_of_reduce_zero
     (v : Fin 3 → R)
@@ -4962,13 +5028,15 @@ theorem suslin_stableRangeThree_elementary_row_transitive
     change c 0 * (shorten • v) 0 +
       c 1 * (shorten • v) 1 + c 2 * (shorten • v) 2 = 1
     have h₀ : (shorten • v) 0 = v 0 + s 0 * v 3 := by
-      simpa using hshorten_first 0
+      simpa only [Fin.isValue, Fin.castSucc_zero, Fin.reduceLast] using hshorten_first 0
     have h₁ : (shorten • v) 1 = v 1 + s 1 * v 3 := by
-      simpa using hshorten_first 1
+      simpa only [Fin.isValue, Fin.castSucc_one, Fin.reduceLast] using hshorten_first 1
     have h₂ : (shorten • v) 2 = v 2 + s 2 * v 3 := by
-      simpa using hshorten_first 2
+      simpa only [Fin.isValue, Fin.reduceCastSucc, Fin.reduceLast] using hshorten_first 2
     rw [h₀, h₁, h₂]
-    simpa [Fin.sum_univ_succ, add_assoc] using hc
+    simpa only [Fin.isValue, add_assoc, Fin.reduceLast, Fin.sum_univ_succ, Fin.castSucc_zero,
+      Fin.castSucc_succ, Nat.reduceAdd, Fin.succ_zero_eq_one, Finset.univ_unique,
+      Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_one_eq_two] using hc
   let q₀ : Matrix.SpecialLinearGroup (Fin 4) R :=
     Matrix.SpecialLinearGroup.transvection
       (show (3 : Fin 4) ≠ 0 by decide) ((1 - w 3) * c 0)
@@ -5021,7 +5089,7 @@ theorem suslin_stableRangeThree_elementary_row_transitive
       ((localGlobalElementarySubgroup R).mul_mem
         ((localGlobalElementarySubgroup R).mul_mem hp hrotate)
         hcreate) hshorten
-  · simpa [mul_smul, w] using hreduce
+  · simpa only [mul_smul, Fin.isValue] using hreduce
 
 theorem suslin_elementary_eq_top_of_stableRangeThree_of_stabilizedThree
     (hstable : BassStableRangeAtMost R 3)
@@ -5058,7 +5126,8 @@ def mennickeBlock (a b c d : R) (hdet : a * d - b * c = 1) :
     Matrix.SpecialLinearGroup (Fin 3) R :=
   ⟨!![a, b, 0; c, d, 0; 0, 0, 1], by
     rw [Matrix.det_fin_three]
-    simpa using hdet⟩
+    simpa only [Fin.isValue, of_apply, cons_val', cons_val_zero, cons_val_fin_one, cons_val_one,
+      cons_val, mul_one, mul_zero, sub_zero, add_zero, zero_mul] using hdet⟩
 
 @[simp] theorem mennickeBlock_val
     (a b c d : R) (hdet : a * d - b * c = 1) :
@@ -5263,20 +5332,20 @@ theorem mennicke_swapped_block_mem_of_factors
     have hconj := mennickeBlock_rotation_conjugate
       a b c (ap * d) (mennicke_left_factor_det a ap b c d hdet)
     have hp := E.mul_mem (E.mul_mem (E.inv_mem hrot) hP) hrot
-    simpa [← hconj, mul_assoc] using hp
+    simpa only [← hconj, mul_assoc, inv_mul_cancel_left, inv_mul_cancel, mul_one] using hp
   have hright :
       mennickeBlock ap (-c) (-b) (a * d)
         (mennicke_right_factor_det a ap (-c) (-b) d hsource) ∈ E := by
     have hconj := mennickeBlock_rotation_conjugate
       ap b c (a * d) (mennicke_right_factor_det a ap b c d hdet)
     have hq := E.mul_mem (E.mul_mem (E.inv_mem hrot) hQ) hrot
-    simpa [← hconj, mul_assoc] using hq
+    simpa only [← hconj, mul_assoc, inv_mul_cancel_left, inv_mul_cancel, mul_one] using hq
   have horiginal := mennicke_block_mem_of_factors
     E hE a ap (-c) (-b) d hsource hleft hright
   have hconj := mennickeBlock_rotation_conjugate
     (a * ap) b c d hdet
   have hfinal := E.mul_mem (E.mul_mem hrot horiginal) (E.inv_mem hrot)
-  simpa [hconj] using hfinal
+  simpa only [hconj] using hfinal
 
 end MennickeIdentity
 
@@ -5297,8 +5366,8 @@ theorem suslin_horrocks_truncated_remainder_aux
         f = X ^ k * h + q * e := by
   induction k generalizing f with
   | zero =>
-      refine ⟨f, 0, ?_, by simp⟩
-      simpa using hk
+      refine ⟨f, 0, ?_, by simp only [pow_zero, one_mul, zero_mul, add_zero]⟩
+      simpa only [zero_add, Order.add_one_le_iff] using hk
   | succ k ih =>
       let u : A := (↑he0.unit⁻¹ : A) * f.coeff 0
       let f' : Polynomial A := f.divX - C u * e.divX
@@ -5325,7 +5394,7 @@ theorem suslin_horrocks_truncated_remainder_aux
         calc
           (C u * e.divX).natDegree ≤ (C u).natDegree + e.divX.natDegree :=
             natDegree_mul_le
-          _ ≤ e.natDegree - 1 := by simpa using hdive
+          _ ≤ e.natDegree - 1 := by simpa only [natDegree_C, zero_add] using hdive
       have hf'deg : f'.natDegree ≤ max (f.natDegree - 1) (e.natDegree - 1) := by
         exact (natDegree_sub_le _ _).trans (max_le_max hdivf hmul)
       have hk' : f'.natDegree + 1 ≤ k + e.natDegree := by
@@ -5607,7 +5676,8 @@ theorem stabilizedTwoByTwo_mem_elementaryThree_of_topLeft_isUnit
   have hdet : b 0 0 * b 1 1 - b 0 1 * b 1 0 = 1 := by
     have hb := b.property
     rw [Matrix.det_fin_three] at hb
-    simpa [hrow, hcolumn] using hb
+    simpa only [Fin.isValue, hrow, ↓reduceIte, mul_one, hcolumn, Fin.reduceEq, mul_zero, sub_zero,
+      add_zero, zero_mul] using hb
   have hleft : (↑hu.unit⁻¹ : R) * b 0 0 = 1 := hu.val_inv_mul
   have hright : b 0 0 * (↑hu.unit⁻¹ : R) = 1 := by
     simpa only [mul_comm] using hleft
@@ -5688,11 +5758,14 @@ theorem mennickeBlock_mem_of_isUnit_topRight
         Matrix.single_apply, Matrix.one_apply]
   have htop : IsUnit ((B * J) 0 0) := by
     have hentry : (B * J) 0 0 = -b := by
-      simp [B, J, MennickeIdentity.mennickeBlock,
-        MennickeIdentity.mennickeRotation,
-        Matrix.SpecialLinearGroup.transvection_coe,
-        Matrix.mul_apply, Fin.sum_univ_succ,
-        Matrix.single_apply, Matrix.one_apply]
+      simp only [MennickeIdentity.mennickeBlock, MennickeIdentity.mennickeRotation, Fin.isValue,
+        Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe, Matrix.mul_apply,
+        of_apply, cons_val', cons_val_fin_one, cons_val_zero, Matrix.add_apply, Matrix.one_apply,
+        single_apply, Fin.sum_univ_succ, one_ne_zero, and_false, ↓reduceIte, add_zero, false_and,
+        mul_ite, mul_one, mul_zero, Fin.succ_zero_eq_one, and_true, true_and, Finset.univ_unique,
+        Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_one_eq_two, Fin.reduceEq,
+        Finset.sum_ite_eq', Finset.mem_univ, zero_add, mul_neg, neg_add_rev, zero_ne_one, neg_zero,
+        add_neg_cancel, cons_val_succ, Fin.succ_ne_zero, zero_mul, Finset.sum_const_zero, B, J]
     rw [hentry]
     exact hb.neg
   have hBJ : B * J ∈ E :=
@@ -5700,7 +5773,7 @@ theorem mennickeBlock_mem_of_isUnit_topRight
       (B * J) hrow hcolumn htop
   have hB : B ∈ E := by
     have h := E.mul_mem hBJ (E.inv_mem hJ)
-    simpa using h
+    simpa only [mul_inv_cancel_right] using h
   exact hB
 
 end
@@ -5719,10 +5792,11 @@ theorem mennickeBlock_X_topRight_constant_isUnit
     IsUnit (g.coeff 0) := by
   have hz := congrArg (Polynomial.eval (0 : A)) hdet
   have hproduct : -(g.coeff 0 * p.coeff 0) = 1 := by
-    simpa [Polynomial.coeff_zero_eq_eval_zero] using hz
+    simpa only [coeff_zero_eq_eval_zero, eval_sub, eval_mul, eval_X, mul_zero, zero_sub,
+      eval_one] using hz
   apply isUnit_iff_exists_inv.mpr
   refine ⟨-(p.coeff 0), ?_⟩
-  simpa [mul_neg] using hproduct
+  simpa only [mul_neg] using hproduct
 
 theorem mennickeBlock_X_constant_shear_det
     {A : Type u} [CommRing A]
@@ -5815,8 +5889,8 @@ theorem mennickeBlock_mem_of_bottomRight_X_pow
     exact Subgroup.subset_closure ⟨i, j, hij, r, rfl⟩
   induction n generalizing a b c with
   | zero =>
-      simpa using mennickeBlock_mem_of_isUnit_bottomRight
-        a b c 1 (by simpa using hdet) isUnit_one
+      simpa only [pow_zero] using mennickeBlock_mem_of_isUnit_bottomRight
+        a b c 1 (by simpa only [mul_one, pow_zero] using hdet) isUnit_one
   | succ n ih =>
       have hswap :
           (Polynomial.X : Polynomial A) * Polynomial.X ^ n * a -
@@ -5840,7 +5914,7 @@ theorem mennickeBlock_mem_of_bottomRight_X_pow
       have htarget := mennicke_swapped_block_mem_of_factors
         E hroots Polynomial.X (Polynomial.X ^ n) b c a hswap
         hleft hright
-      simpa [pow_succ, mul_comm] using htarget
+      simpa only [pow_succ, mul_comm] using htarget
 
 theorem mennickeBlock_mem_of_topLeft_X_pow
     {A : Type u} [CommRing A]
@@ -5865,7 +5939,7 @@ theorem mennickeBlock_mem_of_topLeft_X_pow
     E.mul_mem (E.mul_mem hrot hblock) (E.inv_mem hrot)
   have hrotation := mennickeBlock_rotation_conjugate d b c
     (Polynomial.X ^ n) (by linear_combination hdet)
-  simpa [hrotation] using hconjugate
+  simpa only [hrotation] using hconjugate
 
 end
 
@@ -5906,82 +5980,118 @@ theorem suslinSignedSwap_inv_eq :
           (show (1 : Fin 2) ≠ 0 by decide) 1 *
         Matrix.SpecialLinearGroup.transvection
           (show (0 : Fin 2) ≠ 1 by decide) (-1) := by
-  simp [suslinSignedSwap, Matrix.SpecialLinearGroup.transvection_inv, mul_assoc]
+  simp only [suslinSignedSwap, Fin.isValue, mul_assoc, _root_.mul_inv_rev,
+    SpecialLinearGroup.transvection_inv, neg_neg]
 
 @[simp] theorem suslinSignedSwap_zero_zero : suslinSignedSwap (R := R) 0 0 = 0 := by
-  simp [suslinSignedSwap, Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+    SpecialLinearGroup.transvection_coe, Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply,
+    single_apply, true_and, Fin.sum_univ_succ, ↓reduceIte, one_ne_zero, add_zero, false_and,
+    mul_ite, mul_one, mul_zero, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton,
+    Fin.succ_zero_eq_one, zero_ne_one, zero_add, one_mul, and_false, Finset.sum_ite_eq',
+    Finset.mem_univ, add_neg_cancel]
 
 @[simp] theorem suslinSignedSwap_zero_one : suslinSignedSwap (R := R) 0 1 = 1 := by
-  simp [suslinSignedSwap, Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+    SpecialLinearGroup.transvection_coe, Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply,
+    single_apply, true_and, Fin.sum_univ_succ, ↓reduceIte, one_ne_zero, add_zero, false_and,
+    mul_ite, mul_one, mul_zero, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton,
+    Fin.succ_zero_eq_one, zero_ne_one, zero_add, one_mul, and_true, add_neg_cancel]
 
 @[simp] theorem suslinSignedSwap_one_zero : suslinSignedSwap (R := R) 1 0 = -1 := by
-  simp [suslinSignedSwap, Matrix.mul_apply,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+    SpecialLinearGroup.transvection_coe, Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply,
+    zero_ne_one, false_and, not_false_eq_true, single_apply_of_ne, add_zero, single_apply, ite_mul,
+    one_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, true_and, one_ne_zero,
+    and_false, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq', zero_add]
 
 @[simp] theorem suslinSignedSwap_one_one : suslinSignedSwap (R := R) 1 1 = 0 := by
-  simp [suslinSignedSwap, Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+    SpecialLinearGroup.transvection_coe, Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply,
+    zero_ne_one, false_and, not_false_eq_true, single_apply_of_ne, add_zero, single_apply, ite_mul,
+    one_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, true_and, and_true,
+    Fin.sum_univ_succ, one_ne_zero, zero_add, mul_one, Finset.univ_unique, Fin.default_eq_zero,
+    Finset.sum_singleton, Fin.succ_zero_eq_one, neg_add_cancel]
 
 @[simp] theorem suslin_mul_signedSwap_zero_one
     (b : Matrix.SpecialLinearGroup (Fin 2) R) :
     (b * suslinSignedSwap (R := R)) 0 1 = b 0 0 := by
-  simp [Matrix.mul_apply, Fin.sum_univ_succ]
+  simp only [Fin.isValue, Matrix.SpecialLinearGroup.coe_mul, Matrix.mul_apply, Fin.sum_univ_succ,
+    suslinSignedSwap_zero_one, mul_one, Finset.univ_unique, Fin.default_eq_zero,
+    Finset.sum_singleton, Fin.succ_zero_eq_one, suslinSignedSwap_one_one, mul_zero, add_zero]
 
 @[simp] theorem suslin_mul_signedSwap_one_zero
     (b : Matrix.SpecialLinearGroup (Fin 2) R) :
     (b * suslinSignedSwap (R := R)) 1 0 = -(b 1 1) := by
-  simp [Matrix.mul_apply, Fin.sum_univ_succ]
+  simp only [Fin.isValue, Matrix.SpecialLinearGroup.coe_mul, Matrix.mul_apply, Fin.sum_univ_succ,
+    suslinSignedSwap_zero_zero, mul_zero, Finset.univ_unique, Fin.default_eq_zero,
+    Finset.sum_singleton, Fin.succ_zero_eq_one, suslinSignedSwap_one_zero, mul_neg, mul_one,
+    zero_add]
 
 @[simp] theorem suslinSignedSwap_inv_zero_zero :
     (suslinSignedSwap (R := R))⁻¹ 0 0 = 0 := by
-  simp [suslinSignedSwap, Matrix.SpecialLinearGroup.transvection_inv,
-    Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, _root_.mul_inv_rev, SpecialLinearGroup.transvection_inv,
+    neg_neg, Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe,
+    Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply, single_apply, true_and, one_ne_zero,
+    and_false, add_zero, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq', Finset.mem_univ,
+    ↓reduceIte, and_true, Fin.sum_univ_succ, Finset.univ_unique, Fin.default_eq_zero,
+    Fin.succ_ne_zero, zero_add, Finset.sum_singleton, Fin.succ_zero_eq_one, zero_ne_one,
+    add_neg_cancel]
 
 @[simp] theorem suslinSignedSwap_inv_zero_one :
     (suslinSignedSwap (R := R))⁻¹ 0 1 = -1 := by
-  simp [suslinSignedSwap, Matrix.SpecialLinearGroup.transvection_inv,
-    Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, _root_.mul_inv_rev, SpecialLinearGroup.transvection_inv,
+    neg_neg, Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe,
+    Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply, single_apply, true_and, and_true,
+    Fin.sum_univ_succ, zero_ne_one, ↓reduceIte, zero_add, mul_neg, mul_one, neg_add_rev,
+    Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_zero_eq_one, and_false,
+    add_zero, one_ne_zero, neg_zero, Fin.succ_ne_zero, neg_add_cancel, mul_zero]
 
 @[simp] theorem suslinSignedSwap_inv_one_zero :
     (suslinSignedSwap (R := R))⁻¹ 1 0 = 1 := by
-  simp [suslinSignedSwap, Matrix.SpecialLinearGroup.transvection_inv,
-    Matrix.mul_apply, Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, _root_.mul_inv_rev, SpecialLinearGroup.transvection_inv,
+    neg_neg, Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe,
+    Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply, zero_ne_one, false_and, not_false_eq_true,
+    single_apply_of_ne, add_zero, single_apply, one_ne_zero, and_false, mul_ite, mul_one, mul_zero,
+    Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte, and_true, ite_mul, one_mul, zero_mul,
+    Finset.sum_ite_eq, zero_add]
 
 @[simp] theorem suslinSignedSwap_inv_one_one :
     (suslinSignedSwap (R := R))⁻¹ 1 1 = 0 := by
-  simp [suslinSignedSwap, Matrix.SpecialLinearGroup.transvection_inv,
-    Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, _root_.mul_inv_rev, SpecialLinearGroup.transvection_inv,
+    neg_neg, Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe,
+    Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply, zero_ne_one, false_and, not_false_eq_true,
+    single_apply_of_ne, add_zero, single_apply, and_true, Fin.sum_univ_succ, ↓reduceIte, zero_add,
+    mul_neg, mul_one, neg_add_rev, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton,
+    Fin.succ_zero_eq_one, and_false, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ,
+    one_ne_zero, neg_zero, neg_add_cancel]
 
 @[simp] theorem suslinSignedSwap_conjugate_zero_one
     (b : Matrix.SpecialLinearGroup (Fin 2) R) :
     (suslinSignedSwap (R := R) * b * (suslinSignedSwap (R := R))⁻¹) 0 1 =
       -(b 1 0) := by
   rw [suslinSignedSwap_inv_eq]
-  simp [suslinSignedSwap, Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+    SpecialLinearGroup.transvection_coe, Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply,
+    single_apply, true_and, Fin.sum_univ_succ, ↓reduceIte, one_ne_zero, add_zero, false_and,
+    mul_ite, mul_one, mul_zero, Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton,
+    Fin.succ_zero_eq_one, zero_ne_one, zero_add, one_mul, add_neg_cancel, zero_mul, ite_mul,
+    Finset.sum_ite_eq, Finset.mem_univ, and_false, and_true, mul_neg, neg_add_rev, neg_neg,
+    neg_zero, Fin.succ_ne_zero, add_neg_add_add_cancel, neg_add_cancel, Finset.sum_const_zero]
 
 @[simp] theorem suslinSignedSwap_conjugate_one_zero
     (b : Matrix.SpecialLinearGroup (Fin 2) R) :
     (suslinSignedSwap (R := R) * b * (suslinSignedSwap (R := R))⁻¹) 1 0 =
       -(b 0 1) := by
   rw [suslinSignedSwap_inv_eq]
-  simp [suslinSignedSwap, Matrix.mul_apply, Fin.sum_univ_succ,
-    Matrix.SpecialLinearGroup.transvection_coe, Matrix.one_apply,
-    Matrix.single_apply]
+  simp only [suslinSignedSwap, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+    SpecialLinearGroup.transvection_coe, Matrix.mul_apply, Matrix.add_apply, Matrix.one_apply,
+    zero_ne_one, false_and, not_false_eq_true, single_apply_of_ne, add_zero, single_apply, ite_mul,
+    one_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, true_and, Fin.sum_univ_succ,
+    one_ne_zero, zero_add, neg_mul, neg_add_rev, Finset.univ_unique, Fin.default_eq_zero,
+    Finset.sum_singleton, Fin.succ_zero_eq_one, mul_ite, mul_one, mul_zero, neg_add_cancel_comm,
+    Finset.sum_neg_distrib, and_false, and_true, Finset.sum_ite_eq', add_neg_cancel,
+    Fin.succ_ne_zero]
 
 theorem suslin_local_polynomial_specialLinear_constant_unit_dichotomy
     {A : Type u} [CommRing A] [IsLocalRing A]
@@ -5993,7 +6103,7 @@ theorem suslin_local_polynomial_specialLinear_constant_unit_dichotomy
   have hdet0 :
       (b 0 0).coeff 0 * (b 1 1).coeff 0 -
         (b 0 1).coeff 0 * (b 1 0).coeff 0 = (1 : A) := by
-    simpa [← Polynomial.coeff_zero_eq_eval_zero] using hdet
+    simpa only [Fin.isValue, eval_sub, eval_mul, ← coeff_zero_eq_eval_zero, eval_one] using hdet
   have hsum : IsUnit
       ((b 0 0).coeff 0 * (b 1 1).coeff 0 +
         -((b 0 1).coeff 0 * (b 1 0).coeff 0)) := by
@@ -6005,7 +6115,7 @@ theorem suslin_local_polynomial_specialLinear_constant_unit_dichotomy
         isUnit_of_mul_isUnit_right hdiag⟩
   · have hprod : IsUnit
         ((b 0 1).coeff 0 * (b 1 0).coeff 0) := by
-      simpa using hoff.neg
+      simpa only [Fin.isValue, IsUnit.mul_iff, neg_neg] using hoff.neg
     exact Or.inr
       ⟨isUnit_of_mul_isUnit_left hprod,
         isUnit_of_mul_isUnit_right hprod⟩
@@ -6050,7 +6160,7 @@ theorem valuation_finset_exists_dvd_all
     ∃ i ∈ s, ∀ j ∈ s, x i ∣ x j := by
   classical
   induction s using Finset.induction_on with
-  | empty => simp at hs
+  | empty => simp only [Finset.not_nonempty_empty] at hs
   | @insert a s ha ih =>
       by_cases hsempty : s.Nonempty
       · obtain ⟨b, hb, hmin⟩ := ih hsempty
@@ -6067,7 +6177,8 @@ theorem valuation_finset_exists_dvd_all
           · exact hmin j hj
       · have hz : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hsempty
         subst s
-        exact ⟨a, by simp, by simp⟩
+        exact ⟨a, by simp only [insert_empty_eq, Finset.mem_singleton], by simp only [insert_empty_eq, Finset.mem_singleton, forall_eq,
+                                 dvd_refl]⟩
 
 theorem valuation_polynomial_exists_primitive_factor
     {R : Type u} [CommRing R] [IsDomain R] [PreValuationRing R]
@@ -6096,7 +6207,7 @@ theorem valuation_polynomial_exists_primitive_factor
     have h := congrArg (fun p : Polynomial R => p.coeff i) heq
     rw [Polynomial.coeff_C_mul] at h
     change c = c * g.coeff i at h
-    simpa using h.symm
+    simpa only [mul_one] using h.symm
   have hprimitive : g.IsPrimitive := by
     intro r hr
     have hri : r ∣ g.coeff i :=
@@ -6119,7 +6230,7 @@ theorem dvr_uniformizer_factor_with_classification
   obtain ⟨n, u, rfl⟩ :=
     IsDiscreteValuationRing.eq_unit_mul_pow_irreducible hx hϖ
   refine ⟨n, u, rfl, ?_, ?_, ?_⟩
-  · simp [isUnit_pow_iff_of_not_isUnit hϖ.not_isUnit]
+  · simp only [IsUnit.mul_iff, Units.isUnit, isUnit_pow_iff_of_not_isUnit hϖ.not_isUnit, true_and]
   · intro k
     rw [Units.dvd_mul_left,
       pow_dvd_pow_iff hϖ.ne_zero hϖ.not_isUnit]
@@ -6196,7 +6307,7 @@ theorem suslin_uniformizer_mennickeBlock_mem_elementary
     exact hnew
   have hcancel := (elementaryThreeSubgroup (Polynomial A)).mul_mem
     hproduct ((elementaryThreeSubgroup (Polynomial A)).inv_mem hroot)
-  simpa using hcancel
+  simpa only [Fin.isValue, mul_inv_cancel_right] using hcancel
 
 end
 
@@ -6244,8 +6355,8 @@ theorem mennickeBlock_mem_of_unit_mul_uniformizer_pow
   induction n generalizing g p q with
   | zero =>
       have hdet' : Polynomial.C (v : A) * q - g * p = 1 := by
-        simpa using hdet
-      simpa using hunit v g p q hdet'
+        simpa only [pow_zero, mul_one] using hdet
+      simpa only [pow_zero, mul_one] using hunit v g p q hdet'
   | succ n ih =>
       let a : Polynomial A := Polynomial.C π
       let ap : Polynomial A := Polynomial.C ((v : A) * π ^ n)
@@ -6304,7 +6415,7 @@ theorem mennickeBlock_zero_constant_mem
   have hg : IsUnit g := by
     apply isUnit_iff_exists_inv.mpr
     refine ⟨-p, ?_⟩
-    simpa [mul_neg] using hdet
+    simpa only [mul_neg, map_zero, zero_mul, zero_sub] using hdet
   exact mennickeBlock_mem_of_isUnit_topRight
     (Polynomial.C (0 : A)) g p q hdet hg
 
@@ -6362,7 +6473,7 @@ theorem isUnit_sub_mul_of_isLocalRing
     hc (isUnit_of_mul_isUnit_left hb)
   have hsum := IsLocalRing.nonunits_add h hcb
   apply hsum
-  simpa [sub_add_cancel] using hu
+  simpa only [sub_add_cancel] using hu
 
 theorem polynomial_valuation_coefficient_ascent
     {A : Type*} [CommRing A] [IsLocalRing A]
@@ -6378,7 +6489,7 @@ theorem polynomial_valuation_coefficient_ascent
   dsimp
   have hf : f ≠ 0 := by
     intro h
-    simp [h] at hunit
+    simp only [h, coeff_zero, isUnit_zero_iff, zero_ne_one] at hunit
   have hshift : 0 < g.natDegree - f.natDegree := Nat.sub_pos_of_lt hdeg
   have hm : m ≤ f.natDegree := le_natDegree_of_ne_zero hunit.ne_zero
   have hsdeg : f.natDegree + (g.natDegree - f.natDegree) = g.natDegree :=
@@ -6395,7 +6506,7 @@ theorem polynomial_valuation_coefficient_ascent
     exact isUnit_sub_mul_of_isLocalRing hunit hc _
   have hf' : X ^ (g.natDegree - f.natDegree) * f - C c * g ≠ 0 := by
     intro h
-    simp [h] at hunit'
+    simp only [h, coeff_zero, isUnit_zero_iff, zero_ne_one] at hunit'
   have hpnat :
       (X ^ (g.natDegree - f.natDegree) * f).natDegree =
         g.natDegree := by
@@ -6405,7 +6516,7 @@ theorem polynomial_valuation_coefficient_ascent
   have hpzero : X ^ (g.natDegree - f.natDegree) * f ≠ 0 := by
     intro h
     have := congrArg natDegree h
-    simp [hpnat, Nat.ne_of_gt (lt_of_le_of_lt (Nat.zero_le _) hdeg)] at this
+    simp only [hpnat, natDegree_zero, Nat.ne_of_gt (lt_of_le_of_lt (Nat.zero_le _) hdeg)] at this
   have hdegrees :
       (X ^ (g.natDegree - f.natDegree) * f).degree =
         (C c * g).degree := by
@@ -6413,7 +6524,8 @@ theorem polynomial_valuation_coefficient_ascent
       degree_eq_natDegree (by
         intro h
         have := congrArg natDegree h
-        simp [hqnat, Nat.ne_of_gt (lt_of_le_of_lt (Nat.zero_le _) hdeg)] at this),
+        simp only [hqnat, natDegree_zero,
+          Nat.ne_of_gt (lt_of_le_of_lt (Nat.zero_le _) hdeg)] at this),
       hpnat, hqnat]
   have hlc :
       (X ^ (g.natDegree - f.natDegree) * f).leadingCoeff =
@@ -6485,7 +6597,7 @@ theorem valuation_primitive_ascent_terminates
           (valuation_leadingCoeff_dvd_total f g).resolve_left hdvd
         obtain ⟨c, hc⟩ := hreverse
         have hlead : f.leadingCoeff = c * g.leadingCoeff := by
-          simpa [mul_comm] using hc
+          simpa only [mul_comm] using hc
         have hcunit : ¬ IsUnit c := by
           intro hcu
           apply hdvd
@@ -6812,7 +6924,7 @@ theorem mennickeBlock_mem_of_dividing_outerIH
   let t : Polynomial A := shiftedLeadingCancellationQuotient f g c
   have hg : g ≠ 0 := by
     intro hzero
-    simpa [hzero] using hgunit.ne_zero
+    simpa only [hzero, coeff_zero, ne_eq, not_true_eq_false] using hgunit.ne_zero
   have hgpos : 0 < g.natDegree :=
     lt_of_le_of_lt (Nat.zero_le _) hdegree
   have hsmaller : (g - t * f).natDegree < g.natDegree := by
@@ -6870,7 +6982,7 @@ theorem valuationPrimitiveAscentStep_mennicke_transport_of_powers
         (p - t * f - C c * R) R
         (mennicke_ascent_good_det f g p q t R s c hdet hq) ∈
           elementaryThreeSubgroup (Polynomial A) := by
-    simpa [hf'] using hgood
+    simpa only [hf'] using hgood
   have hpower' :
       mennickeBlock (R * f) g (p - t * f) (X ^ s)
         (mennicke_ascent_monic_det f g p q t R s hdet hq) ∈
@@ -6924,10 +7036,10 @@ theorem mennicke_transport_of_valuationPrimitiveAscentChain
         polynomial_valuation_coefficient_ascent f₀ g c m
           hdegree hunit hc hlead
       have hdegree' : f₁.natDegree < g.natDegree := by
-        simpa [hform] using hsmall
+        simpa only [hform] using hsmall
       have hunit'' :
           IsUnit (f₁.coeff (g.natDegree - f₀.natDegree + m)) := by
-        simpa [hform] using hunit'
+        simpa only [hform, coeff_sub, coeff_C_mul] using hunit'
       have hactual : valuationPrimitiveAscentStep g f₀ f₁ :=
         ⟨c, hc, hlead, hform⟩
       obtain ⟨p₁, q₁, hdet₁, hback₁⟩ :=
@@ -6966,7 +7078,7 @@ theorem mennickeBlock_mem_of_valuation_primitive_outerIH
   apply hback
   have hf' : f' ≠ 0 := by
     intro hz
-    simpa [hz] using hunit'.ne_zero
+    simpa only [hz, coeff_zero, ne_eq, not_true_eq_false] using hunit'.ne_zero
   exact ScratchSuslinDividingOuterIH.mennickeBlock_mem_of_dividing_outerIH
     f' g p' q' hdet' hf' hsmall hgzero hdivide
     (fun f₀ g₀ p₀ q₀ hd hu hlt => houter f₀ g₀ p₀ q₀ hd hlt hu)
@@ -7169,7 +7281,7 @@ theorem valuation_mennicke_outer_induction
             have hgunit : IsUnit g := by
               apply IsUnit.of_mul_eq_one (-(p - t * q))
               have heq : -(g * (p - t * q)) = 1 := by
-                simpa [hzero] using hdet'
+                simpa only [hzero, mul_zero, zero_mul, zero_sub] using hdet'
               calc
                 g * (-(p - t * q)) = -(g * (p - t * q)) := by ring
                 _ = 1 := heq
@@ -7286,13 +7398,13 @@ theorem suslin_semilocalTriple_exists_coprime
   have hcoprime : IsCoprime (q g) (q h) := by
     refine ⟨q b, q c, ?_⟩
     have hmap := congrArg q hcomb
-    simpa [map_add, map_mul, hfzero] using hmap
+    simpa only [map_add, map_mul, hfzero, mul_zero, zero_add, map_one] using hmap
   obtain ⟨tq, htq⟩ :=
     exists_add_mul_isUnit_of_finite_maximalIdeals hfinite hcoprime
   obtain ⟨t, rfl⟩ := Ideal.Quotient.mk_surjective tq
   refine ⟨t, (isUnit_quotient_span_singleton_iff_isCoprime
     f (g + t * h)).mp ?_⟩
-  simpa [q, map_add, map_mul] using htq
+  simpa only [map_add, map_mul] using htq
 
 theorem suslin_unimodularTriple_exists_coprime
     {A : Type*} [CommRing A]
@@ -7333,9 +7445,10 @@ theorem elementaryThree_reduce_of_coprime_second_add_third
   obtain ⟨p, hp, hpzero, hpone⟩ :=
     elementaryThree_second_add_third v t
   obtain ⟨q, hq, hqaction⟩ :=
-    elementaryThree_coprime_pair_reduce (p • v) (by simpa [hpzero, hpone] using ht)
+    elementaryThree_coprime_pair_reduce (p • v) (by simpa only [Fin.isValue, hpzero,
+                                                      hpone] using ht)
   exact ⟨q * p, (elementaryThreeSubgroup R).mul_mem hq hp,
-    by simpa [mul_smul] using hqaction⟩
+    by simpa only [mul_smul, Fin.isValue] using hqaction⟩
 
 theorem elementaryThree_reduce_of_semilocal_first_quotient
     {A : Type*} [CommRing A]
@@ -7349,7 +7462,8 @@ theorem elementaryThree_reduce_of_semilocal_first_quotient
   have hrow : ∃ p q r : Polynomial A,
       p * v 0 + q * v 1 + r * v 2 = 1 := by
     refine ⟨a 0, a 1, a 2, ?_⟩
-    simpa [Fin.sum_univ_succ, add_assoc] using ha
+    simpa only [Fin.isValue, add_assoc, Fin.sum_univ_succ, Fin.succ_zero_eq_one, Finset.univ_unique,
+      Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_one_eq_two] using ha
   exact elementaryThree_reduce_of_coprime_second_add_third v
     (suslin_unimodularTriple_exists_coprime
       (v 0) (v 1) (v 2) hfinite hrow)
@@ -7368,7 +7482,7 @@ theorem dvr_elementaryThree_first_coordinate_one_add_uniformizer
   have hfirst :
       Polynomial.map (Ideal.Quotient.mk (Ideal.span ({π} : Set A)))
           ((e • v) 0) = 1 := by
-    simpa [Pi.single_apply] using hreduce 0
+    simpa only [Fin.isValue, Pi.single_eq_same] using hreduce 0
   obtain ⟨q, hq⟩ :=
     dvr_polynomial_eq_one_add_uniformizer_mul_of_residue_one
       hπ ((e • v) 0) hfirst
@@ -7395,7 +7509,7 @@ theorem suslin_valuation_unimodular_three_elementary_reduce
     elementaryThree_reduce_of_semilocal_first_quotient (p • v) hpunit hfinite
   apply elementaryThree_reduce_last_of_reduce_zero v
   exact ⟨r * p, (elementaryThreeSubgroup (Polynomial A)).mul_mem hr hp,
-    by simpa [mul_smul] using hreduce⟩
+    by simpa only [mul_smul, Fin.isValue] using hreduce⟩
 
 end
 
@@ -7456,7 +7570,8 @@ theorem upperLeft_det_eq_one
   have h0 := hcolumn 0
   have h1 := hcolumn 1
   have h2 := hcolumn 2
-  simpa [Matrix.submatrix, h0, h1, h2] using hdet
+  simpa only [submatrix, Fin.isValue, of_apply, Fin.castSucc_zero, Fin.castSucc_one, h2, ↓reduceIte,
+    mul_one, h1, Fin.reduceEq, mul_zero, zero_mul, sub_zero, add_zero, h0] using hdet
 
 def upperLeftSpecialLinear
     (g : Matrix.SpecialLinearGroup (Fin 3) R)
@@ -7493,7 +7608,7 @@ theorem specialLinearThree_mem_of_lastColumnTransitivity_and_stabilizedTwo
     intro i
     change (e • (fun j : Fin 3 => g j 2)) i = _
     rw [hcolumn]
-    simp [Pi.single_apply]
+    simp only [Fin.isValue, Pi.single_apply]
   have hcleared :
       (e * g) * lastRowClear (e * g) ∈ elementaryThreeSubgroup R := by
     rw [lastColumn_block_decomposition (e * g) hnormalized]
@@ -7502,10 +7617,10 @@ theorem specialLinearThree_mem_of_lastColumnTransitivity_and_stabilizedTwo
     have h := (elementaryThreeSubgroup R).mul_mem hcleared
       ((elementaryThreeSubgroup R).inv_mem
         (lastRowClear_mem (e * g)))
-    simpa [mul_assoc] using h
+    simpa only [mul_assoc, mul_inv_cancel, mul_one] using h
   have h := (elementaryThreeSubgroup R).mul_mem
     ((elementaryThreeSubgroup R).inv_mem he) heg
-  simpa [mul_assoc] using h
+  simpa only [inv_mul_cancel_left] using h
 
 end HorrocksValuationInduction
 
@@ -7531,7 +7646,7 @@ theorem transvection_smul_same (i j : Index) (h : i ≠ j) (c : ℤ)
   change ((Matrix.SpecialLinearGroup.transvection h c).val *ᵥ v) i = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
       Matrix.one_mulVec, Matrix.single_mulVec]
-  simp
+  simp only [Pi.add_apply, Function.update_self]
 
 theorem transvection_smul_other (i j k : Index) (h : i ≠ j)
     (hk : k ≠ i) (c : ℤ) (v : IVec) :
@@ -7539,7 +7654,8 @@ theorem transvection_smul_other (i j k : Index) (h : i ≠ j)
   change ((Matrix.SpecialLinearGroup.transvection h c).val *ᵥ v) k = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
       Matrix.one_mulVec, Matrix.single_mulVec]
-  simp [hk]
+  simp only [Pi.add_apply, ne_eq, hk, not_false_eq_true, Function.update_of_ne, Pi.zero_apply,
+    add_zero]
 
 def coordinateRotation (i j : Index) (h : i ≠ j) : IGroup :=
   Matrix.SpecialLinearGroup.transvection h 1 *
@@ -7800,7 +7916,7 @@ theorem fin_four_upperTriangular_of_six (A : IGroup)
     omega
   · change j.val < 1 at hval
     have hj : j = 0 := Fin.ext (by omega)
-    simpa [hj] using h10
+    simpa only [Nat.reduceAdd, Fin.mk_one, Fin.isValue, hj] using h10
   · change j.val < 2 at hval
     have hj : j = 0 ∨ j = 1 := by
       by_cases hzero : j.val = 0
@@ -7833,7 +7949,7 @@ theorem upper_triangularize (A : IGroup) :
   have hp : p ∈ elementary :=
     elementary.mul_mem (elementary.mul_mem hp₂ hp₁) hp₀
   have hprod : p * A = p₂ * (p₁ * (p₀ * A)) := by
-    simp [p, mul_assoc]
+    simp only [mul_assoc, p]
   refine ⟨p, hp, ?_⟩
   rw [hprod]
   exact fin_four_upperTriangular_of_six _
@@ -7857,9 +7973,9 @@ theorem upperTriangular_diag_unit (g : IGroup)
   obtain ⟨u, hu⟩ := hu
   rcases Int.units_eq_one_or u with h | h
   · left
-    simpa [h] using hu.symm
+    simpa only [h, Units.val_one] using hu.symm
   · right
-    simpa [h] using hu.symm
+    simpa only [Int.reduceNeg, h, Units.val_neg, Units.val_one] using hu.symm
 
 def signFlip (i j : Index) (h : i ≠ j) : IGroup :=
   coordinateRotation i j h * coordinateRotation i j h
@@ -7893,18 +8009,18 @@ theorem signFlip_mul_apply (i j : Index) (h : i ≠ j)
   change (signFlip i j h • (fun k : Index => g k b)) a = _
   by_cases hai : a = i
   · subst a
-    simp [signFlip_smul_same_left]
+    simp only [signFlip_smul_same_left, true_or, ↓reduceIte]
   · by_cases haj : a = j
     · subst a
-      simp [signFlip_smul_same_right]
-    · simp [hai, haj, signFlip_smul_other i j a h hai haj]
+      simp only [signFlip_smul_same_right, or_true, ↓reduceIte]
+    · simp only [signFlip_smul_other i j a h hai haj, hai, haj, or_self, ↓reduceIte]
 
 theorem signFlip_preserves_upper (i j : Index) (h : i ≠ j)
     (g : IGroup) (hg : ∀ a b : Index, b < a → g a b = 0) :
     ∀ a b : Index, b < a → (signFlip i j h * g) a b = 0 := by
   intro a b hab
   rw [signFlip_mul_apply]
-  simp [hg a b hab]
+  simp only [hg a b hab, neg_zero, ite_self]
 
 def normalizeSigns (g : IGroup) : IGroup :=
   (if g 3 3 = -1 then signFlip 0 3 (by decide) else 1) *
@@ -7985,7 +8101,8 @@ theorem normalizeSigns_diag_one (g : IGroup)
         ((normalizeSigns g * g) 2 2 *
           (normalizeSigns g * g) 3 3)) = 1 at hprod
     rw [hdiag1, hdiag2, hdiag3] at hprod
-    simpa using hprod
+    simpa only [Nat.reduceAdd, Fin.zero_eta, Fin.isValue, Matrix.SpecialLinearGroup.coe_mul,
+      mul_one] using hprod
   · unfold normalizeSigns
     simp only [mul_assoc]
     rcases h1 with h1 | h1 <;> rcases h2 with h2 | h2 <;>
@@ -8071,7 +8188,7 @@ theorem elementary_eq_top : elementary = ⊤ := by
       (normalizeSigns_diag_one (p * A) htri)
   have hA := elementary.mul_mem
     (elementary.inv_mem (elementary.mul_mem hq hp)) hunit
-  simpa [q, mul_assoc] using hA
+  simpa only [_root_.mul_inv_rev, mul_assoc, inv_mul_cancel_left] using hA
 
 end IntegerElementaryProof
 
@@ -8170,7 +8287,7 @@ theorem suslin_exists_away_eq_of_localization_eq
   rw [hmap_s, hmap_a, ha'] at hspec'
   have hz : f (x - y) = 0 := by
     apply hsunit.mul_right_cancel
-    simpa using hspec'
+    simpa only [Submonoid.coe_mul, map_sub, zero_mul] using hspec'
   exact sub_eq_zero.mp (by simpa only [map_sub] using hz)
 
 def suslinAwayMapOfDvd {r s : A} (hrs : r ∣ s) :
@@ -8282,7 +8399,7 @@ theorem suslin_exists_away_specialLinear_eq_of_localization_eq
       fun hx => hn (Finset.mem_union_left _ hx)
     have hny : n ∉ (y.1 i j).support :=
       fun hy => hn (Finset.mem_union_right _ hy)
-    simp [Polynomial.notMem_support_iff.mp hnx,
+    simp only [Submonoid.coe_mul, Polynomial.notMem_support_iff.mp hnx, map_zero,
       Polynomial.notMem_support_iff.mp hny]
 
 end
@@ -8335,7 +8452,7 @@ theorem suslin_exists_away_elementary_of_atPrime
           (algebraMap A (Localization.Away (d : A))) (g.1 i j))
     apply Polynomial.ext
     intro n
-    simp [suslinAwayToAtPrime_algebraMap]
+    simp only [coeff_map, suslinAwayToAtPrime_algebraMap]
   obtain ⟨e, heq'⟩ :=
     suslin_exists_away_specialLinear_eq_of_localization_eq
       m.primeCompl d q gd heq
@@ -8407,23 +8524,25 @@ def suslinPoweredPrefix
 @[simp] theorem suslinPoweredPrefix_zero
     {A : Type*} [CommRing A] (s c : ℕ → A) (N : ℕ) :
     suslinPoweredPrefix s c N 0 = 0 := by
-  simp [suslinPoweredPrefix]
+  simp only [suslinPoweredPrefix, Finset.range_zero, Finset.sum_empty]
 
 theorem suslinPoweredPrefix_succ
     {A : Type*} [CommRing A] (s c : ℕ → A) (N j : ℕ) :
     suslinPoweredPrefix s c N (j + 1) =
       suslinPoweredPrefix s c N j + c j * s j ^ N := by
-  simp [suslinPoweredPrefix, Finset.sum_range_succ]
+  simp only [suslinPoweredPrefix, Finset.sum_range_succ]
 
 theorem suslin_reverse_telescope
     {G : Type*} [Group G] (f : ℕ → G) (n : ℕ) :
     (((List.range n).map fun j => f (j + 1) * (f j)⁻¹).reverse).prod =
       f n * (f 0)⁻¹ := by
   induction n with
-  | zero => simp
+  | zero => simp only [List.range_zero, List.map_nil, List.reverse_nil, List.prod_nil,
+              mul_inv_cancel]
   | succ n ih =>
-      simp [List.range_succ, List.map_append, List.reverse_append,
-        ih, mul_assoc]
+      simp only [List.range_succ, List.map_append, List.map_cons, List.map_nil, List.reverse_append,
+        List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append, List.prod_cons, ih,
+        mul_assoc, inv_mul_cancel_left]
 
 theorem subgroup_mem_of_powered_partition_patches
     {A : Type*} [CommRing A]
@@ -8470,7 +8589,7 @@ def suslinPolynomialDilate (a : ℤ) :
     suslinPolynomialDilate 1 g = g := by
   apply Matrix.SpecialLinearGroup.ext
   intro i j
-  simp [suslinPolynomialDilate_entry, Polynomial.eval₂_C_X]
+  simp only [suslinPolynomialDilate_entry, eq_intCast, Int.cast_one, one_mul, Polynomial.eval₂_C_X]
 
 theorem suslinPolynomialDilate_zero
     (g : IntegralSpecialLinearGroup) :
@@ -8478,8 +8597,10 @@ theorem suslinPolynomialDilate_zero
       suslinConstantSection (suslinEvaluation g) := by
   apply Matrix.SpecialLinearGroup.ext
   intro i j
-  simp [suslinPolynomialDilate_entry, suslinConstantSection,
-    suslinEvaluation, Polynomial.coeff_zero_eq_eval_zero]
+  simp only [suslinPolynomialDilate_entry, eq_intCast, Int.cast_zero, zero_mul,
+    Polynomial.eval₂_at_zero, Polynomial.coeff_zero_eq_eval_zero, suslinConstantSection,
+    suslinEvaluation, Matrix.SpecialLinearGroup.map_apply_coe, RingHom.mapMatrix_apply,
+    Polynomial.coe_evalRingHom, Matrix.map_apply]
 
 theorem suslinPolynomialDilate_zero_of_mem_augmentation
     {g : IntegralSpecialLinearGroup} (hg : g ∈ suslinAugmentationKernel) :
@@ -8504,7 +8625,7 @@ theorem suslin_augmentation_mem_elementary_of_powered_patches
     (fun a : ℤ => suslinPolynomialDilate a g)
     (suslinPolynomialDilate_zero_of_mem_augmentation hg)
     s c n N hpartition hpatch
-  simpa using h
+  simpa only [suslinPolynomialDilate_one] using h
 
 end
 
@@ -8540,7 +8661,8 @@ theorem relativeZ_mem (I : Ideal R) (i j : Fin 4) (h : i ≠ j)
 theorem relativeRoot_mem_Z (I : Ideal R) (i j : Fin 4) (h : i ≠ j)
     (b : R) (hb : b ∈ I) :
     Matrix.SpecialLinearGroup.transvection h b ∈ relativeZSubgroup I := by
-  simpa using relativeZ_mem I i j h 0 b hb
+  simpa only [Matrix.SpecialLinearGroup.transvection_coeff_zero, one_mul, inv_one,
+    mul_one] using relativeZ_mem I i j h 0 b hb
 
 theorem relativeRoot_mem_F (I : Ideal R) (i j : Fin 4) (h : i ≠ j)
     (b : R) (hb : b ∈ I) :
@@ -8611,13 +8733,13 @@ theorem conjugate_relative_F_mem_Z
       obtain ⟨i, j, hij, b, hb, rfl⟩ := hx
       exact conjugate_relative_root_mem_Z I k l i j hkl hij a b hb
   | one =>
-      simp
+      simp only [mul_one, mul_inv_cancel, one_mem]
   | mul x y hx hy ihx ihy =>
       have h := (relativeZSubgroup I).mul_mem ihx ihy
-      simpa [mul_assoc] using h
+      simpa only [mul_assoc, inv_mul_cancel_left] using h
   | inv x hx ih =>
       have h := (relativeZSubgroup I).inv_mem ih
-      simpa [mul_assoc] using h
+      simpa only [mul_assoc, mul_inv_rev, inv_inv] using h
 
 private theorem conjugate_Z_generator_of_commute_outer
     (I : Ideal R) (k l i j : Fin 4)
@@ -8638,10 +8760,10 @@ private theorem conjugate_Z_generator_of_commute_outer
     suslin_transvection_conj_noncomposable hkl hij.symm hlj hik c a
   have hxy : x * y = y * x := by
     calc
-      x * y = (x * y * x⁻¹) * x := by simp [mul_assoc]
+      x * y = (x * y * x⁻¹) * x := by simp only [mul_assoc, inv_mul_cancel, mul_one]
       _ = y * x := by rw [hxyconj]
   have hxyinv : y⁻¹ * x⁻¹ = x⁻¹ * y⁻¹ := by
-    simpa using congrArg Inv.inv hxy
+    simpa only [mul_inv_rev] using congrArg Inv.inv hxy
   have hroot : x * z * x⁻¹ ∈ relativeRootSubgroup I :=
     conjugate_relative_root_mem_F_of_not_opposite
       I k l i j hkl hij c b hb hnot
@@ -8652,9 +8774,9 @@ private theorem conjugate_Z_generator_of_commute_outer
       y * (x * z * x⁻¹) * y⁻¹ by
     calc
       x * (y * z * y⁻¹) * x⁻¹ =
-          (x * y) * z * (y⁻¹ * x⁻¹) := by simp [mul_assoc]
+          (x * y) * z * (y⁻¹ * x⁻¹) := by simp only [mul_assoc]
       _ = (y * x) * z * (x⁻¹ * y⁻¹) := by rw [hxy, hxyinv]
-      _ = y * (x * z * x⁻¹) * y⁻¹ := by simp [mul_assoc]]
+      _ = y * (x * z * x⁻¹) * y⁻¹ := by simp only [mul_assoc]]
   exact hy
 
 theorem conjugate_mul_relative_root_mem_Z
@@ -8676,7 +8798,7 @@ theorem conjugate_mul_relative_root_mem_Z
     conjugate_relative_root_mem_F_of_not_opposite
       I m n i j hmn hij c b hb hnot
   have houter := conjugate_relative_F_mem_Z I k l hkl a hinner
-  simpa [mul_assoc] using houter
+  simpa only [mul_assoc, mul_inv_rev] using houter
 
 theorem hard_commutator_mem_relativeZ
     (I : Ideal R) (i j k : Fin 4)
@@ -8707,7 +8829,7 @@ theorem hard_commutator_mem_relativeZ
       hik.symm hjk.symm hik hjk (-a) (1 + a * c)
   have hxy : x * y = y * x := by
     calc
-      x * y = (x * y * x⁻¹) * x := by simp [mul_assoc]
+      x * y = (x * y * x⁻¹) * x := by simp only [mul_assoc, inv_mul_cancel, mul_one]
       _ = y * x := by rw [hxconj]
   have hfirst : (x * y) * u * (x * y)⁻¹ ∈ relativeZSubgroup I := by
     exact conjugate_mul_relative_root_mem_Z
@@ -8725,12 +8847,12 @@ theorem hard_commutator_mem_relativeZ
     have h := (relativeZSubgroup I).mul_mem
       ((relativeZSubgroup I).inv_mem hsecond)
       ((relativeZSubgroup I).inv_mem hfirst)
-    simpa [mul_assoc] using h
+    simpa only [mul_inv_rev, mul_assoc, inv_inv, inv_mul_cancel_left] using h
   change (u * v) * (x * y) * (u * v)⁻¹ * (x * y)⁻¹ ∈
     relativeZSubgroup I
   have huv := (relativeZSubgroup I).mul_mem hu hv
   have h := (relativeZSubgroup I).mul_mem huv hconjInv
-  simpa [mul_assoc] using h
+  simpa only [mul_assoc, mul_inv_rev] using h
 
 theorem conjugate_Z_generator_of_not_same_inner
     (I : Ideal R) (k l i j : Fin 4)
@@ -8755,7 +8877,7 @@ theorem conjugate_Z_generator_of_not_same_inner
         (Matrix.SpecialLinearGroup.transvection_add hij.symm c a).symm
       change x * (y * z * y⁻¹) * x⁻¹ ∈ relativeZSubgroup I
       rw [show x * (y * z * y⁻¹) * x⁻¹ =
-          (x * y) * z * (x * y)⁻¹ by simp [mul_assoc], hxy]
+          (x * y) * z * (x * y)⁻¹ by simp only [mul_assoc, mul_inv_rev], hxy]
       exact relativeZ_mem I i j hij (c + a) b hb
     · exact conjugate_Z_generator_of_commute_outer I j l i j
         hkl hij c a b hb (Ne.symm hkl) hij
@@ -8781,9 +8903,10 @@ theorem conjugate_Z_generator_of_not_same_inner
           calc
             x * (y * z * y⁻¹) * x⁻¹ =
                 (x * y * x⁻¹) * (x * z * x⁻¹) *
-                  (x * y * x⁻¹)⁻¹ := by simp [mul_assoc]
+                  (x * y * x⁻¹)⁻¹ := by simp only [mul_assoc, inv_mul_cancel_left, mul_inv_rev,
+                                          inv_inv]
             _ = (u * y) * z * (u * y)⁻¹ := by rw [hxy, hxz]
-            _ = u * (y * z * y⁻¹) * u⁻¹ := by simp [mul_assoc]]
+            _ = u * (y * z * y⁻¹) * u⁻¹ := by simp only [mul_assoc, mul_inv_rev]]
         exact conjugate_Z_generator_of_commute_outer I k i i j
           hki hij (c * a) a b hb hij (Ne.symm hki)
           (fun h => hkj h.1)
@@ -8803,9 +8926,10 @@ theorem conjugate_Z_generator_of_not_same_inner
             calc
               x * (y * z * y⁻¹) * x⁻¹ =
                   (x * y * x⁻¹) * (x * z * x⁻¹) *
-                    (x * y * x⁻¹)⁻¹ := by simp [mul_assoc]
+                    (x * y * x⁻¹)⁻¹ := by simp only [mul_assoc, inv_mul_cancel_left, mul_inv_rev,
+                                            inv_inv]
               _ = (u * y) * z * (u * y)⁻¹ := by rw [hxy, hxz]
-              _ = u * (y * z * y⁻¹) * u⁻¹ := by simp [mul_assoc]]
+              _ = u * (y * z * y⁻¹) * u⁻¹ := by simp only [mul_assoc, mul_inv_rev]]
           exact conjugate_Z_generator_of_commute_outer I j l i j
             (Ne.symm hlj) hij (-(a * c)) a b hb hlj hij
             (fun h => hkl h.2.symm)
@@ -8863,18 +8987,18 @@ theorem suslin_bak_vavilov_opposite_conjugate_factor
           Matrix.SpecialLinearGroup.transvection hjk (a * b) := by
       have h := suslin_transvection_conj_noncomposable
         hjk hik hik.symm hjk.symm (a * b) b
-      simpa [mul_assoc] using congrArg
+      simpa only [mul_assoc, inv_mul_cancel, mul_one] using congrArg
         (fun z => z * Matrix.SpecialLinearGroup.transvection hjk (a * b)) h
     calc
       (x * y) * u * (x * y)⁻¹ =
-          x * (y * u * y⁻¹) * x⁻¹ := by simp [mul_assoc]
+          x * (y * u * y⁻¹) * x⁻¹ := by simp only [mul_assoc, mul_inv_rev]
       _ = x *
           (Matrix.SpecialLinearGroup.transvection hjk (a * b) *
             Matrix.SpecialLinearGroup.transvection hik b) * x⁻¹ := by rw [hyu]
       _ =
           (x * Matrix.SpecialLinearGroup.transvection hjk (a * b) * x⁻¹) *
             (x * Matrix.SpecialLinearGroup.transvection hik b * x⁻¹) := by
-              simp [mul_assoc]
+              simp only [mul_assoc, inv_mul_cancel_left]
       _ =
           (Matrix.SpecialLinearGroup.transvection hik (c * (a * b)) *
             Matrix.SpecialLinearGroup.transvection hjk (a * b)) *
@@ -8896,13 +9020,13 @@ theorem suslin_bak_vavilov_opposite_conjugate_factor
     have hyv : y * v * y⁻¹ =
         Matrix.SpecialLinearGroup.transvection hik.symm (-a) *
           Matrix.SpecialLinearGroup.transvection hjk.symm 1 := by
-      simpa using suslin_transvection_conj_reverse_adjacent
+      simpa only [one_mul] using suslin_transvection_conj_reverse_adjacent
         j i k hij.symm hik hjk a (1 : A)
     have hxleft :
         x * Matrix.SpecialLinearGroup.transvection hik.symm (-a) * x⁻¹ =
           Matrix.SpecialLinearGroup.transvection hjk.symm (a * c) *
             Matrix.SpecialLinearGroup.transvection hik.symm (-a) := by
-      simpa using suslin_transvection_conj_reverse_adjacent
+      simpa only [neg_mul, neg_neg] using suslin_transvection_conj_reverse_adjacent
         i j k hij hjk hik c (-a)
     have hxright :
         x * Matrix.SpecialLinearGroup.transvection hjk.symm 1 * x⁻¹ =
@@ -8916,11 +9040,11 @@ theorem suslin_bak_vavilov_opposite_conjugate_factor
           Matrix.SpecialLinearGroup.transvection hjk.symm (a * c) := by
       have h := suslin_transvection_conj_noncomposable
         hjk.symm hik.symm hjk hik (a * c) (-a)
-      simpa [mul_assoc] using congrArg
+      simpa only [mul_assoc, inv_mul_cancel, mul_one] using congrArg
         (fun z => z * Matrix.SpecialLinearGroup.transvection hjk.symm (a * c)) h
     calc
       (x * y) * v * (x * y)⁻¹ =
-          x * (y * v * y⁻¹) * x⁻¹ := by simp [mul_assoc]
+          x * (y * v * y⁻¹) * x⁻¹ := by simp only [mul_assoc, mul_inv_rev]
       _ = x *
           (Matrix.SpecialLinearGroup.transvection hik.symm (-a) *
             Matrix.SpecialLinearGroup.transvection hjk.symm 1) * x⁻¹ := by
@@ -8928,7 +9052,7 @@ theorem suslin_bak_vavilov_opposite_conjugate_factor
       _ =
           (x * Matrix.SpecialLinearGroup.transvection hik.symm (-a) * x⁻¹) *
             (x * Matrix.SpecialLinearGroup.transvection hjk.symm 1 * x⁻¹) := by
-              simp [mul_assoc]
+              simp only [mul_assoc, inv_mul_cancel_left]
       _ =
           (Matrix.SpecialLinearGroup.transvection hjk.symm (a * c) *
             Matrix.SpecialLinearGroup.transvection hik.symm (-a)) *
@@ -8950,7 +9074,7 @@ theorem suslin_bak_vavilov_opposite_conjugate_factor
       u * v * u⁻¹ * v⁻¹ =
         Matrix.SpecialLinearGroup.transvection hij b := by
     dsimp [u, v]
-    simpa using hcomm
+    simpa only [mul_one] using hcomm
   change
     x * (y * Matrix.SpecialLinearGroup.transvection hij b * y⁻¹) * x⁻¹ =
       U * V * U⁻¹ * V⁻¹
@@ -8961,7 +9085,7 @@ theorem suslin_bak_vavilov_opposite_conjugate_factor
           ((x * y) * v * (x * y)⁻¹) *
           ((x * y) * u * (x * y)⁻¹)⁻¹ *
           ((x * y) * v * (x * y)⁻¹)⁻¹ := by
-            simp [mul_assoc]
+            simp only [mul_assoc, mul_inv_rev, inv_mul_cancel_left, inv_inv]
     _ = U * V * U⁻¹ * V⁻¹ := by rw [hxyu, hxyv]
 
 theorem conjugate_Z_generator
@@ -8998,13 +9122,13 @@ theorem relativeZ_conjugate_by_root
       obtain ⟨i, j, hij, a, b, hb, rfl⟩ := hz
       exact conjugate_Z_generator I k l i j hkl hij c a b hb
   | one =>
-      simp
+      simp only [mul_one, mul_inv_cancel, one_mem]
   | mul x y hx hy ihx ihy =>
       have h := (relativeZSubgroup I).mul_mem ihx ihy
-      simpa [mul_assoc] using h
+      simpa only [mul_assoc, inv_mul_cancel_left] using h
   | inv x hx ih =>
       have h := (relativeZSubgroup I).inv_mem ih
-      simpa [mul_assoc] using h
+      simpa only [mul_assoc, mul_inv_rev, inv_inv] using h
 
 theorem elementary_le_normalizer_relativeZ (I : Ideal R) :
     suslinElementarySubgroup (Fin 4) R ≤
@@ -9022,7 +9146,7 @@ theorem elementary_le_normalizer_relativeZ (I : Ideal R) :
   · intro hz
     have h := relativeZ_conjugate_by_root I i j hij (-a) hz
     rw [← Matrix.SpecialLinearGroup.transvection_inv hij a] at h
-    simpa [mul_assoc] using h
+    simpa only [mul_assoc, inv_mul_cancel_left, inv_inv, inv_mul_cancel, mul_one] using h
 
 theorem relativeZ_normalized_by_elementary
     (I : Ideal R) {g : SL R}
@@ -9066,7 +9190,7 @@ def suslinPolynomialConstantRetraction (A : Type*) [CommRing A] :
 @[simp] theorem suslinPolynomial_sub_C_eval_coeff_zero
     (p : Polynomial A) :
     (p - Polynomial.C (p.eval 0)).coeff 0 = 0 := by
-  simp [Polynomial.coeff_zero_eq_eval_zero]
+  simp only [coeff_zero_eq_eval_zero, eval_sub, eval_C, sub_self]
 
 theorem suslinPolynomialRoot_deviation
     (i j : Index) (hij : i ≠ j) (p : Polynomial A) :
@@ -9098,14 +9222,14 @@ theorem suslinElementary_deviation_mem_of_normalized
       exact hroot i j hij (p - Polynomial.C (p.eval 0))
         (suslinPolynomial_sub_C_eval_coeff_zero p)
   | one =>
-      simp
+      simp only [map_one, inv_one, mul_one, one_mem]
   | mul x y hx hy ihx ihy =>
       have hxelem : x ∈ localGlobalElementarySubgroup (Polynomial A) := hx
       have hc :
           x * (y * (suslinPolynomialConstantRetraction A y)⁻¹) * x⁻¹ ∈ H :=
         hnormal x hxelem _ ihy
       have hp := H.mul_mem hc ihx
-      simpa [map_mul, mul_assoc] using hp
+      simpa only [map_mul, mul_inv_rev, mul_assoc, inv_mul_cancel_left] using hp
   | inv x hx ih =>
       have hxelem : x ∈ localGlobalElementarySubgroup (Polynomial A) := hx
       have hxe : x⁻¹ ∈ localGlobalElementarySubgroup (Polynomial A) :=
@@ -9114,7 +9238,7 @@ theorem suslinElementary_deviation_mem_of_normalized
           x⁻¹ * (x * (suslinPolynomialConstantRetraction A x)⁻¹)⁻¹ *
               (x⁻¹)⁻¹ ∈ H :=
         hnormal x⁻¹ hxe _ (H.inv_mem ih)
-      simpa [map_inv, mul_assoc] using hc
+      simpa only [map_inv, inv_inv, mul_inv_rev, mul_assoc, inv_mul_cancel, mul_one] using hc
 
 theorem suslinRelativePolynomialKernel_le_of_normalized
     (H : Subgroup (Matrix.SpecialLinearGroup Index (Polynomial A)))
@@ -9136,7 +9260,7 @@ theorem suslinRelativePolynomialKernel_le_of_normalized
         (Matrix.SpecialLinearGroup.map
           (Polynomial.evalRingHom (0 : A)) g) = 1
     rw [hzero, map_one]
-  simpa [hretract] using hdev
+  simpa only [hretract, inv_one, mul_one] using hdev
 
 theorem suslin_relative_elementary_mem_eventual
     {B : Type v} [CommRing B] [Algebra A B]
@@ -9154,7 +9278,7 @@ theorem suslin_relative_elementary_mem_eventual
     intro i j hij p hp
     apply relativeRoot_mem_Z I i j hij p
     change p.eval 0 = 0
-    simpa [Polynomial.coeff_zero_eq_eval_zero] using hp
+    simpa only [coeff_zero_eq_eval_zero] using hp
   have hnormal :
       ∀ (x : Matrix.SpecialLinearGroup Index (Polynomial B)),
         x ∈ localGlobalElementarySubgroup (Polynomial B) →
@@ -9174,7 +9298,7 @@ theorem suslin_relative_elementary_mem_eventual
     rintro _ ⟨i, j, hij, a, p, hp, rfl⟩
     have hpzero : p.coeff 0 = 0 := by
       change p.eval 0 = 0 at hp
-      simpa [Polynomial.coeff_zero_eq_eval_zero] using hp
+      simpa only [coeff_zero_eq_eval_zero] using hp
     exact suslin_polynomial_relative_z_mem_eventual M i j hij a p hpzero
   exact hle hZ
 
@@ -9217,7 +9341,7 @@ def suslinSymbolicLift (g : IntegralSpecialLinearGroup) :
   have h : (Polynomial.evalRingHom a).comp
       (Polynomial.C : ℤ →+* Polynomial ℤ) = RingHom.id ℤ := by
     ext z
-    simp
+    simp only [eq_intCast, Int.cast_eq]
   rw [h, Polynomial.map_id]
 
 theorem suslinSymbolicDifference_eval
@@ -9229,7 +9353,7 @@ theorem suslinSymbolicDifference_eval
           (suslinSymbolicLift g)) =
       suslinDifferencePath a g := by
   rw [suslinDifferencePath_baseChange]
-  simp [suslinSymbolicLift_eval]
+  simp only [coe_evalRingHom, eval_X, suslinSymbolicLift_eval]
 
 theorem suslinSymbolicDifferenceDilation_integer
     (a : ℤ) (g : IntegralSpecialLinearGroup) :
@@ -9248,9 +9372,11 @@ theorem suslinSymbolic_outer_dilation_eval_mul_X
         (Polynomial.C (c * d) * (Polynomial.X : Polynomial ℤ)) := by
   apply Polynomial.ringHom_ext
   · intro p
-    simp [suslinDifferenceDilationRingHom]
-  · simp [suslinDifferenceDilationRingHom, mul_assoc,
-      mul_left_comm]
+    simp only [eq_intCast, suslinDifferenceDilationRingHom, map_intCast, RingHom.coe_comp,
+      coe_evalRingHom, coe_compRingHom, Function.comp_apply, C_comp, eval_C, Int.cast_mul]
+  · simp only [eq_intCast, suslinDifferenceDilationRingHom, map_intCast, RingHom.coe_comp,
+      coe_evalRingHom, coe_compRingHom, Function.comp_apply, X_comp, eval_mul, eval_intCast, eval_X,
+      mul_left_comm, Int.cast_mul, mul_assoc]
 
 theorem suslinSymbolicPoweredIncrement_of_elementary_dilation
     (g : IntegralSpecialLinearGroup) (d : ℤ) (N : ℕ)
@@ -9421,7 +9547,7 @@ theorem suslin_uniform_symbolic_differencePath_elementary
         Polynomial.map (Polynomial.C : L →+* B₁)
           (Polynomial.map f (g i j))
     ext n
-    simp [f₁]
+    simp only [coeff_map, eq_intCast, map_intCast, f₁]
   have hgT :
       Matrix.SpecialLinearGroup.map (Polynomial.mapRingHom f₁) gT ∈
         localGlobalElementarySubgroup (Polynomial B₁) := by
@@ -9489,7 +9615,7 @@ theorem suslin_away_elementary_implies_powered_local_increment
   · subst d
     refine ⟨1, ?_⟩
     intro a c
-    simp
+    simp only [pow_one, mul_zero, add_zero, mul_inv_cancel, one_mem]
   · obtain ⟨N, hpath⟩ :=
       suslin_uniform_symbolic_differencePath_elementary g d hd hg
     refine ⟨N, ?_⟩
@@ -9719,7 +9845,7 @@ theorem cornulierRoot_mem_K₁_sup_K₂
         (Matrix.SpecialLinearGroup.transvection hi a)⁻¹ *
         (Matrix.SpecialLinearGroup.transvection hlastj 1)⁻¹ =
         Matrix.SpecialLinearGroup.transvection hij a
-    simpa using specialLinear_transvection_commutator
+    simpa only [mul_one] using specialLinear_transvection_commutator
       i cornulierLast j hi hlastj hij a 1
   rw [← hroot]
   exact hcomm
@@ -9755,10 +9881,12 @@ def cornulierBlockSubgroup : Subgroup IntegralSpecialLinearGroup where
     constructor
     · intro i
       change (g.val * h.val) i cornulierLast = _
-      simp [Matrix.mul_apply, hhcol, hgcol]
+      simp only [Matrix.mul_apply, hhcol, mul_ite, mul_one, mul_zero, Finset.sum_ite_eq',
+        Finset.mem_univ, ↓reduceIte, hgcol]
     · intro j
       change (g.val * h.val) cornulierLast j = _
-      simp [Matrix.mul_apply, hgrow, hhrow]
+      simp only [Matrix.mul_apply, hgrow, ite_mul, one_mul, zero_mul, Finset.sum_ite_eq,
+        Finset.mem_univ, ↓reduceIte, hhrow]
   inv_mem' := by
     rintro g ⟨hgcol, hgrow⟩
     constructor
@@ -9767,13 +9895,17 @@ def cornulierBlockSubgroup : Subgroup IntegralSpecialLinearGroup where
         (fun z : IntegralSpecialLinearGroup => z i cornulierLast)
         (inv_mul_cancel g)
       change (g⁻¹).val * g.val |> fun M => M i cornulierLast = _ at he
-      simpa [Matrix.mul_apply, hgcol, Matrix.one_apply] using he
+      simpa only [Matrix.SpecialLinearGroup.coe_inv, Matrix.mul_apply, hgcol, mul_ite, mul_one,
+        mul_zero, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte,
+        Matrix.SpecialLinearGroup.coe_one, Matrix.one_apply] using he
     · intro j
       have he := congrArg
         (fun z : IntegralSpecialLinearGroup => z cornulierLast j)
         (mul_inv_cancel g)
       change (g.val * (g⁻¹).val) cornulierLast j = _ at he
-      simpa [Matrix.mul_apply, hgrow, Matrix.one_apply] using he
+      simpa only [Matrix.SpecialLinearGroup.coe_inv, Matrix.mul_apply, hgrow, ite_mul, one_mul,
+        zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, Matrix.SpecialLinearGroup.coe_one,
+        Matrix.one_apply] using he
 
 def cornulierH : Subgroup integralElementaryGroup :=
   cornulierBlockSubgroup.comap integralElementarySubgroup.subtype
@@ -9792,7 +9924,8 @@ theorem cornulier_conjugate_single_apply
     (i j p q : Index) (a : IntegralPolynomial) :
     (g.val * Matrix.single i j a * (g⁻¹).val) p q =
       g p i * a * (g⁻¹) j q := by
-  simp [Matrix.mul_apply, Matrix.single_apply, mul_ite, ite_and, mul_assoc]
+  simp only [Matrix.SpecialLinearGroup.coe_inv, Matrix.mul_apply, single_apply, ite_and, mul_ite,
+    mul_zero, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte, ite_mul, mul_assoc, zero_mul]
 
 theorem cornulier_conjugate_root_apply
     (g : IntegralSpecialLinearGroup)
@@ -9805,7 +9938,7 @@ theorem cornulier_conjugate_root_apply
   rw [mul_add, add_mul, Matrix.mul_one]
   have hunit : g.val * (g⁻¹).val = 1 := by
     change ((g * g⁻¹ : IntegralSpecialLinearGroup).val) = _
-    simp
+    simp only [mul_inv_cancel, Matrix.SpecialLinearGroup.coe_one]
   rw [hunit, Matrix.add_apply, Matrix.one_apply,
     cornulier_conjugate_single_apply]
 
@@ -9912,12 +10045,12 @@ theorem cornulier_conjugate_K₁_root_mem
       by_cases hp : p = cornulierLast
       · subst p
         have hzero : h.val cornulierLast i = 0 := by
-          simpa [hi.symm] using hh.2 i
-        simp [hhinv.2 cornulierLast, hzero, v]
-      · simp [hhinv.2 cornulierLast, hp, v]
+          simpa only [hi.symm, ↓reduceIte] using hh.2 i
+        simp only [↓reduceIte, hzero, zero_mul, hhinv.2 cornulierLast, mul_one, add_zero, v]
+      · simp only [hp, ↓reduceIte, hhinv.2 cornulierLast, mul_one, zero_add, v]
     · have hzero : (h.val⁻¹) cornulierLast q = 0 := by
-        simpa [Ne.symm hq] using hhinv.2 q
-      simp [hzero, hq]
+        simpa only [Matrix.SpecialLinearGroup.coe_inv, Ne.symm hq, ↓reduceIte] using hhinv.2 q
+      simp only [hzero, mul_zero, add_zero, hq, ↓reduceIte]
   rw [heq]
   exact cornulierColumnRootProduct_mem v
 
@@ -9944,12 +10077,13 @@ theorem cornulier_conjugate_K₂_root_mem
       by_cases hq : q = cornulierLast
       · subst q
         have hzero : (h.val⁻¹) j cornulierLast = 0 := by
-          simpa [Ne.symm hj] using hhinv.1 j
-        simp [hh.1 cornulierLast, hzero, v]
-      · simp [hh.1 cornulierLast, hq, v]
+          simpa only [Matrix.SpecialLinearGroup.coe_inv, Ne.symm hj, ↓reduceIte] using hhinv.1 j
+        simp only [↓reduceIte, hh.1 cornulierLast, one_mul, hzero, mul_zero, add_zero, v]
+      · simp only [hh.1 cornulierLast, ↓reduceIte, one_mul, Matrix.SpecialLinearGroup.coe_inv, hq,
+          v]
     · have hzero : h.val p cornulierLast = 0 := by
-        simpa [hp] using hh.1 p
-      simp [hzero, hp]
+        simpa only [hp, ↓reduceIte] using hh.1 p
+      simp only [hzero, zero_mul, Matrix.SpecialLinearGroup.coe_inv, add_zero, hp, ↓reduceIte]
   rw [heq]
   exact cornulierRowRootProduct_mem v
 
@@ -9991,7 +10125,7 @@ theorem cornulierH_le_normalizer_K₁ :
   · intro hk
     have hback := cornulier_conjugate_K₁_mem h⁻¹
       (cornulierH.inv_mem hh) (h * k * h⁻¹) hk
-    simpa [mul_assoc] using hback
+    simpa only [mul_assoc, inv_mul_cancel_left, inv_inv, inv_mul_cancel, mul_one] using hback
 
 theorem cornulierH_le_normalizer_K₂ :
     cornulierH ≤ Subgroup.normalizer (cornulierK₂ : Set integralElementaryGroup) := by
@@ -10003,7 +10137,7 @@ theorem cornulierH_le_normalizer_K₂ :
   · intro hk
     have hback := cornulier_conjugate_K₂_mem h⁻¹
       (cornulierH.inv_mem hh) (h * k * h⁻¹) hk
-    simpa [mul_assoc] using hback
+    simpa only [mul_assoc, inv_mul_cancel_left, inv_inv, inv_mul_cancel, mul_one] using hback
 
 end
 
@@ -10135,7 +10269,8 @@ private theorem minkowski_geom_sum_modThree
     (A : Matrix ι ι ℤ) (hA : minkowskiModThree A = 1) (m : ℕ) :
     minkowskiModThree (∑ i ∈ Finset.range m, A ^ i) =
       (m : ZMod 3) • (1 : Matrix ι ι (ZMod 3)) := by
-  simp [map_sum, map_pow, hA, Nat.cast_smul_eq_nsmul]
+  simp only [map_sum, map_pow, hA, one_pow, Finset.sum_const, Finset.card_range, nsmul_eq_mul,
+    mul_one, Nat.cast_smul_eq_nsmul]
 
 private theorem minkowski_prime_ne_three_modThree
     {p : ℕ} (hp : p.Prime) (hp3 : p ≠ 3) :
@@ -10163,16 +10298,17 @@ private theorem minkowski_exists_sub_one_eq_three_smul
     (A : Matrix ι ι ℤ) (hA : minkowskiModThree A = 1) :
     ∃ B : Matrix ι ι ℤ, A - 1 = (3 : ℤ) • B := by
   have hzero : minkowskiModThree (A - 1) = 0 := by
-    simp [hA]
+    simp only [map_sub, hA, map_one, sub_self]
   have hdiv : ∀ i j, (3 : ℤ) ∣ (A - 1) i j := by
     intro i j
     apply (ZMod.intCast_zmod_eq_zero_iff_dvd ((A - 1) i j) 3).mp
-    simpa [minkowskiModThree, RingHom.mapMatrix_apply] using
+    simpa only [Matrix.sub_apply, Int.cast_sub, minkowskiModThree, RingHom.mapMatrix_apply,
+      Int.coe_castRingHom, Matrix.map_apply, Matrix.zero_apply] using
       congrArg (fun M : Matrix ι ι (ZMod 3) => M i j) hzero
   choose B hB using hdiv
   refine ⟨B, ?_⟩
   ext i j
-  simpa [smul_eq_mul] using hB i j
+  simpa only [Matrix.sub_apply, Matrix.smul_apply, Int.zsmul_eq_mul] using hB i j
 
 private theorem minkowski_prime_three_matrix
     (A : Matrix ι ι ℤ) (hA : minkowskiModThree A = 1)
@@ -10181,12 +10317,13 @@ private theorem minkowski_prime_three_matrix
   obtain ⟨B, hB⟩ := minkowski_exists_sub_one_eq_three_smul A hA
   have hAform : A = 1 + (3 : ℤ) • B := by
     rw [← hB]
-    simp
+    simp only [add_sub_cancel]
   let T : Matrix ι ι ℤ := 1 + (3 : ℤ) • B + (3 : ℤ) • (B * B)
   have hgeom : (∑ i ∈ Finset.range 3, A ^ i) = (3 : ℤ) • T := by
-    simp [Finset.sum_range_succ, hAform, T, zsmul_eq_mul, pow_succ]
+    simp only [hAform, zsmul_eq_mul, Int.cast_ofNat, Finset.sum_range_succ, Finset.range_one,
+      Finset.sum_singleton, pow_zero, pow_succ, one_mul, smul_add, mul_one, T]
     noncomm_ring
-    simp
+    simp only [zsmul_eq_mul, Int.cast_ofNat, mul_one]
     abel
   have hzero : (A - 1) * T = 0 := by
     have hzero' : (A - 1) * ((3 : ℤ) • T) = 0 := by
@@ -10204,10 +10341,10 @@ private theorem minkowski_prime_three_matrix
     dsimp [T]
     rw [zsmul_eq_mul, zsmul_eq_mul]
     simp only [map_add, map_mul, map_intCast, map_one]
-    simp [hthree]
+    simp only [Int.cast_ofNat, hthree, zero_mul, add_zero]
   have hdet : T.det ≠ 0 :=
     minkowski_det_ne_zero_of_modThree_eq_smul_one T 1 one_ne_zero
-      (by simpa using hT)
+      (by simpa only [one_smul] using hT)
   exact sub_eq_zero.mp
     (minkowski_matrix_mul_eq_zero_of_det_ne_zero hzero hdet)
 
@@ -10238,7 +10375,7 @@ theorem specialLinear_eq_one_of_modThree_eq_one_of_isOfFinOrder
   have hane : a ≠ 1 := by
     intro ha
     have hpone : p = 1 := by
-      simpa [ha] using haorder.symm
+      simpa only [ha, orderOf_one] using haorder.symm
     exact hp.ne_one hpone
   have hapow : a ^ p = 1 := by
     rw [← haorder]
@@ -10253,7 +10390,7 @@ theorem specialLinear_eq_one_of_modThree_eq_one_of_isOfFinOrder
       (fun z : Matrix.SpecialLinearGroup ι (ZMod 3) =>
         (z : Matrix ι ι (ZMod 3))) hamod
   have hamatrixpow : (a : Matrix ι ι ℤ) ^ p = 1 := by
-    simpa using congrArg
+    simpa only [Matrix.SpecialLinearGroup.coe_pow, Matrix.SpecialLinearGroup.coe_one] using congrArg
       (fun z : Matrix.SpecialLinearGroup ι ℤ => (z : Matrix ι ι ℤ)) hapow
   have hamatrixone : (a : Matrix ι ι ℤ) = 1 :=
     minkowski_prime_order_matrix (a : Matrix ι ι ℤ)
@@ -10311,7 +10448,7 @@ theorem transvection_conjugates_eq_iff_commutes
   rw [conjugates_eq_iff_quotient_commutes,
     Matrix.SpecialLinearGroup.transvection_inv,
     ← Matrix.SpecialLinearGroup.transvection_add]
-  simp [sub_eq_add_neg, add_comm]
+  simp only [add_comm, sub_eq_add_neg]
 
 theorem commute_matrixUnit_of_commute_nonzero_transvection
     [IsDomain A] {i j : ι} (hij : i ≠ j) (a : A) (ha : a ≠ 0)
@@ -10325,7 +10462,7 @@ theorem commute_matrixUnit_of_commute_nonzero_transvection
       ((1 : Matrix ι ι A) + Matrix.single i j a) at hmatrix
   have hsingle : Matrix.single i j a * (g : Matrix ι ι A) =
       (g : Matrix ι ι A) * Matrix.single i j a := by
-    simpa [Matrix.add_mul, Matrix.mul_add] using hmatrix
+    simpa only [Matrix.add_mul, one_mul, Matrix.mul_add, mul_one, add_right_inj] using hmatrix
   have hrepr : Matrix.single i j a = a • Matrix.single i j (1 : A) := by
     rw [Matrix.smul_single, smul_eq_mul, mul_one]
   rw [hrepr, Matrix.smul_mul, Matrix.mul_smul] at hsingle
@@ -10369,7 +10506,8 @@ theorem specialLinear_scalar_pow_card_eq_one
     g ^ Fintype.card ι = 1 := by
   obtain ⟨a, ha⟩ := hscalar
   have hroot : a ^ Fintype.card ι = 1 := by
-    simpa [← ha] using g.property
+    simpa only [← ha, Matrix.scalar_apply, Matrix.det_diagonal, Finset.prod_const,
+      Finset.card_univ] using g.property
   apply Matrix.SpecialLinearGroup.ext
   intro i j
   change ((g : Matrix ι ι A) ^ Fintype.card ι) i j =
@@ -10382,8 +10520,8 @@ theorem specialLinear_transvection_injective
       A → Matrix.SpecialLinearGroup ι A) := by
   intro a b hab
   have hentry := congrArg (fun u : Matrix.SpecialLinearGroup ι A => u i j) hab
-  simpa [Matrix.SpecialLinearGroup.transvection_coe, Matrix.single_apply,
-    Matrix.one_apply, hij] using hentry
+  simpa only [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_apply, ne_eq, hij,
+    not_false_eq_true, Matrix.one_apply_ne, Matrix.single_apply_same, zero_add] using hentry
 
 theorem specialLinear_subgroup_conjugacy_infinite
     [IsDomain A] [Infinite A] [Nonempty ι]
@@ -10416,7 +10554,7 @@ theorem specialLinear_subgroup_conjugacy_infinite
     intro a b hab
     apply scaled_transvection_conjugates_injective
       hij g.val hnot c hc
-    simpa [lift] using congrArg (fun h : H => h.val) hab
+    simpa only [Subgroup.coe_mul, InvMemClass.coe_inv] using congrArg (fun h : H => h.val) hab
   apply (Set.infinite_range_of_injective hinj).mono
   rintro _ ⟨a, rfl⟩
   exact ⟨lift a, rfl⟩
@@ -10476,26 +10614,26 @@ theorem tensorFunctional_add_left (ℓ₁ ℓ₂ ℓ' : X) :
       tensorFunctional ℓ₁ ℓ' + tensorFunctional ℓ₂ ℓ' := by
   apply TensorProduct.ext'
   intro v w
-  simp [add_mul]
+  simp only [tensorFunctional_tmul, LinearMap.add_apply, add_mul]
 
 theorem tensorFunctional_add_right (ℓ ℓ₁ ℓ₂ : X) :
     tensorFunctional ℓ (ℓ₁ + ℓ₂) =
       tensorFunctional ℓ ℓ₁ + tensorFunctional ℓ ℓ₂ := by
   apply TensorProduct.ext'
   intro v w
-  simp [mul_add]
+  simp only [tensorFunctional_tmul, LinearMap.add_apply, mul_add]
 
 theorem tensorFunctional_smul_left (a : F) (ℓ ℓ' : X) :
     tensorFunctional (a • ℓ) ℓ' = a • tensorFunctional ℓ ℓ' := by
   apply TensorProduct.ext'
   intro v w
-  simp [smul_eq_mul, mul_assoc]
+  simp only [tensorFunctional_tmul, LinearMap.smul_apply, smul_eq_mul, mul_assoc]
 
 theorem tensorFunctional_smul_right (a : F) (ℓ ℓ' : X) :
     tensorFunctional ℓ (a • ℓ') = a • tensorFunctional ℓ ℓ' := by
   apply TensorProduct.ext'
   intro v w
-  simp [smul_eq_mul, mul_left_comm]
+  simp only [tensorFunctional_tmul, LinearMap.smul_apply, smul_eq_mul, mul_left_comm]
 
 @[simp] theorem carry_zero_left (ℓ : X) : carry 0 ℓ = 0 := by
   apply LinearMap.ext
@@ -10504,7 +10642,7 @@ theorem tensorFunctional_smul_right (a : F) (ℓ ℓ' : X) :
   have h : tensorFunctional 0 ℓ = 0 := by
     apply TensorProduct.ext'
     intro v u
-    simp
+    simp only [tensorFunctional_tmul, LinearMap.zero_apply, zero_mul]
   rw [h]
   rfl
 
@@ -10515,7 +10653,7 @@ theorem tensorFunctional_smul_right (a : F) (ℓ ℓ' : X) :
   have h : tensorFunctional ℓ 0 = 0 := by
     apply TensorProduct.ext'
     intro v u
-    simp
+    simp only [tensorFunctional_tmul, LinearMap.zero_apply, mul_zero]
   rw [h]
   rfl
 
@@ -10581,8 +10719,8 @@ theorem carry_comm (ℓ ℓ' : X) : carry ℓ ℓ' = carry ℓ' ℓ := by
     (p := fun z _ => tensorFunctional ℓ ℓ' z = tensorFunctional ℓ' ℓ z)
     ?_ ?_ ?_ ?_ hw
   · rintro _ ⟨v, rfl⟩
-    simp [square, mul_comm]
-  · simp
+    simp only [square, tensorFunctional_tmul, mul_comm]
+  · simp only [map_zero]
   · intro u v _ _ hu hv
     simp only [map_add, hu, hv]
   · intro a v _ hv
@@ -10620,11 +10758,11 @@ def shiftedCarry (n : ℕ) (ℓ ℓ' : X) : Y :=
 
 @[simp] theorem shiftedCarry_zero_left (n : ℕ) (ℓ : X) :
     shiftedCarry n 0 ℓ = 0 := by
-  simp [shiftedCarry]
+  simp only [shiftedCarry, shift_zero, carry_zero_left]
 
 @[simp] theorem shiftedCarry_zero_right (n : ℕ) (ℓ : X) :
     shiftedCarry n ℓ 0 = 0 := by
-  simp [shiftedCarry]
+  simp only [shiftedCarry, shift_zero, carry_zero_right]
 
 theorem shiftedCarry_comm (n : ℕ) (ℓ ℓ' : X) :
     shiftedCarry n ℓ ℓ' = shiftedCarry n ℓ' ℓ :=
@@ -10693,12 +10831,13 @@ private theorem add_assoc' (x y z : CarryGroup n) :
 
 private theorem zero_add' (x : CarryGroup n) : 0 + x = x := by
   apply ext
-  · simp
-  · simp
+  · simp only [add_linear, zero_linear, zero_add]
+  · simp only [add_quadratic, zero_quadratic, zero_add, zero_linear, shiftedCarry_zero_left,
+      add_zero]
 
 private theorem neg_add_cancel' (x : CarryGroup n) : -x + x = 0 := by
   apply ext
-  · simp [add_self_eq_zero]
+  · simp only [add_linear, neg_linear, add_self_eq_zero, zero_linear]
   · change (x.quadratic + shiftedCarry n x.linear x.linear) +
         x.quadratic + shiftedCarry n x.linear x.linear = 0
     calc
@@ -10730,8 +10869,8 @@ theorem four_nsmul_eq_zero (x : CarryGroup n) : (4 : ℕ) • x = 0 := by
   change (2 * 2 : ℕ) • x = 0
   rw [mul_nsmul]
   apply ext
-  · simp
-  · simp
+  · simp only [two_nsmul_linear, zero_linear]
+  · simp only [two_nsmul_quadratic, two_nsmul_linear, shiftedCarry_zero_right, zero_quadratic]
 
 def coefficientFunctional (n : ℕ) : X :=
   (Polynomial.lcoeff F n).comp (LinearMap.proj (R := F) (0 : Fin 4))
@@ -10741,7 +10880,10 @@ def coefficientFunctional (n : ℕ) : X :=
 
 @[simp] theorem shift_coefficientFunctional_e (n : ℕ) :
     shift n (coefficientFunctional n) e = 1 := by
-  simp [shift, coefficientFunctional, shiftVector]
+  simp only [shift, shiftVector, coefficientFunctional, Fin.isValue, LinearMap.coe_mk,
+    AddHom.coe_mk, LinearMap.coe_comp, LinearMap.coe_proj, LinearMap.coe_restrictScalars,
+    Function.comp_apply, LinearMap.lsmul_apply, Function.eval, Pi.smul_apply, e_apply, ↓reduceIte,
+    smul_eq_mul, mul_one, Polynomial.lcoeff_apply, Polynomial.coeff_X_pow]
 
 def orderFourElement (n : ℕ) : CarryGroup n :=
   ⟨coefficientFunctional n, 0⟩
@@ -10908,7 +11050,8 @@ noncomputable section
 def binaryRootsEquiv : Multiplicative F ≃* rootsOfUnity 2 Circle :=
   MulEquiv.ofBijective
     (AddChar.toMonoidHomEquiv (ZMod.rootsOfUnityAddChar 2))
-    (by simpa using (bijective_rootsOfUnityAddChar (n := 2)))
+    (by simpa only [AddChar.coe_toMonoidHomEquiv,
+          EquivLike.bijective_comp] using (bijective_rootsOfUnityAddChar (n := 2)))
 
 @[simp] theorem binaryRootsEquiv_apply (a : F) :
     binaryRootsEquiv (Multiplicative.ofAdd a) =
@@ -10926,7 +11069,7 @@ theorem character_sq (χ : PontryaginDual (Multiplicative M))
   have hx : x ^ (2 : ℕ) = (1 : Multiplicative M) := by
     apply Multiplicative.toAdd.injective
     change (2 : ℕ) • Multiplicative.toAdd x = 0
-    simpa [two_nsmul] using
+    simpa only [two_nsmul] using
       (ConnesRigidity.add_self_eq_zero (Multiplicative.toAdd x))
   rw [← map_pow, hx, map_one]
 
@@ -11008,12 +11151,12 @@ theorem continuous_characterLinear
   have hs : (characterLinear M χ : M → F) ⁻¹' s =
       ⋃ a ∈ s, {x : M | characterLinear M χ x = a} := by
     ext x
-    simp
+    simp only [Set.mem_preimage, Set.mem_iUnion, Set.mem_setOf_eq, exists_prop, exists_eq_right']
   rw [hs]
   apply isOpen_iUnion
   intro a
   exact isOpen_iUnion fun _ => by
-    simpa using hopen a
+    simpa only using hopen a
 
 end
 
@@ -11037,13 +11180,13 @@ theorem continuous_binaryDual_eq_evaluation
   obtain ⟨U, hU, hpre⟩ := isOpen_induced_iff.mp hkerOpen'
   have hzeroU : (0 : M → F) ∈ U := by
     have h : (0 : M →ₗ[F] F) ∈ {ℓ : M →ₗ[F] F | φ ℓ = 0} := by
-      simp
+      simp only [Set.mem_setOf_eq, map_zero]
     rw [← hpre] at h
     exact h
   obtain ⟨I, u, hu, hsubset⟩ := (isOpen_pi_iff.mp hU) 0 hzeroU
   have hzeroCoord : ∀ i ∈ I, (0 : F) ∈ u i := by
     intro i hi
-    simpa using (hu i hi).2
+    simpa only [Pi.zero_apply] using (hu i hi).2
   have hkernels :
       (⨅ i : {i // i ∈ I}, (Module.Dual.eval F M i.1).ker) ≤ φ.ker := by
     intro ℓ hℓ
@@ -11073,7 +11216,8 @@ theorem continuous_binaryDual_eq_evaluation
   refine ⟨∑ i, c i • i.1, ?_⟩
   intro ℓ
   rw [← hc]
-  simp
+  simp only [Finset.univ_eq_attach, LinearMap.coe_sum, LinearMap.coe_smul, Finset.sum_apply,
+    Pi.smul_apply, Module.Dual.eval_apply, smul_eq_mul, map_sum, map_smul]
 
 def continuousBinaryBidual (M : Type*) [AddCommGroup M] [Module F M] :
     Submodule F ((M →ₗ[F] F) →ₗ[F] F) :=
@@ -11149,7 +11293,7 @@ def pointwiseEvaluationHom :
     apply PontryaginDual.ext
     intro ℓ
     change ZMod.toCircle ((Multiplicative.toAdd ℓ) 0) = 1
-    simp
+    simp only [map_zero, AddChar.map_zero_eq_one]
   map_add' m n := by
     apply Additive.toMul.injective
     apply PontryaginDual.ext
@@ -11218,21 +11362,21 @@ abbrev Point := Bit × Bit
 def carry (x x' : Bit) : Bit := x * x'
 
 @[simp] theorem carry_zero_left (x : Bit) : carry 0 x = 0 := by
-  simp [carry]
+  simp only [carry, zero_mul]
 
 @[simp] theorem carry_zero_right (x : Bit) : carry x 0 = 0 := by
-  simp [carry]
+  simp only [carry, mul_zero]
 
 theorem carry_comm (x y : Bit) : carry x y = carry y x := by
-  simp [carry, mul_comm]
+  simp only [carry, mul_comm]
 
 theorem carry_add_left (x y z : Bit) :
     carry (x + y) z = carry x z + carry y z := by
-  simp [carry, add_mul]
+  simp only [carry, add_mul]
 
 theorem carry_add_right (x y z : Bit) :
     carry x (y + z) = carry x y + carry x z := by
-  simp [carry, mul_add]
+  simp only [carry, mul_add]
 
 def liftBit (x : Bit) : ZMod 4 := (x.val : ZMod 4)
 
@@ -11326,7 +11470,7 @@ def pointEvaluation (n : ℕ) (v : V) : CarryGroup n →+ FiniteCarry.Carry wher
     apply FiniteCarry.Carry.ext <;> simp
   map_add' x y := by
     apply FiniteCarry.Carry.ext
-    · simp
+    · simp only [add_linear, shift_add, LinearMap.add_apply, shift_apply, FiniteCarry.Carry.add_low]
     · change (x.quadratic + y.quadratic +
           shiftedCarry n x.linear y.linear) (diagonal v) =
         x.quadratic (diagonal v) + y.quadratic (diagonal v) +
@@ -11353,7 +11497,10 @@ def evalFour (n : ℕ) (v : V) : CarryGroup n →+ ZMod 4 :=
 
 @[simp] theorem evalFour_orderFourElement (n : ℕ) :
     evalFour n e (orderFourElement n) = 1 := by
-  simp
+  simp only [evalFour_apply, orderFourElement_linear, shift_apply, coefficientFunctional_apply,
+    Fin.isValue, shiftVector_apply, e_apply, ↓reduceIte, mul_one, Polynomial.coeff_X_pow,
+    FiniteCarry.liftBit_one, orderFourElement_quadratic, LinearMap.zero_apply,
+    FiniteCarry.liftBit_zero, mul_zero, add_zero]
 
 end CarryGroup
 
@@ -11375,7 +11522,7 @@ private theorem continuous_shiftedCarry_linear_pair_apply (n : ℕ) (b : B) :
       z.1.linear (shiftVector n v) * z.2.linear (shiftVector n v))
     exact ((continuous_linear_eval n (shiftVector n v)).comp continuous_fst).mul
       ((continuous_linear_eval n (shiftVector n v)).comp continuous_snd)
-  · simpa using
+  · simpa only [map_zero] using
       (continuous_const : Continuous (fun _ : CarryGroup n × CarryGroup n => (0 : F)))
   · intro u v _ _ hu hv
     simp_rw [map_add]
@@ -11402,7 +11549,7 @@ private theorem continuous_shiftedCarry_linear_self_apply (n : ℕ) (b : B) :
       z.linear (shiftVector n v) * z.linear (shiftVector n v))
     exact (continuous_linear_eval n (shiftVector n v)).mul
       (continuous_linear_eval n (shiftVector n v))
-  · simpa using
+  · simpa only [map_zero] using
       (continuous_const : Continuous (fun _ : CarryGroup n => (0 : F)))
   · intro u v _ _ hu hv
     simp_rw [map_add]
@@ -11492,8 +11639,8 @@ theorem fourthRootCharacter_injective :
     [TopologicalSpace A] (φ : PontryaginDual A) (m : ℕ) (a : A) :
     (φ ^ m) a = (φ a) ^ m := by
   induction m with
-  | zero => simp
-  | succ m ih => simp [pow_succ, ih]
+  | zero => simp only [pow_zero, PontryaginDual.one_apply]
+  | succ m ih => simp only [pow_succ, pontryaginDual_mul_apply, ih]
 
 theorem E_four_nsmul (n : ℕ) (η : E n) : 4 • η = 0 := by
   change (Additive.toMul η) ^ 4 = 1
@@ -11503,7 +11650,7 @@ theorem E_four_nsmul (n : ℕ) (η : E n) : 4 • η = 0 := by
     apply Multiplicative.toAdd.injective
     change 4 • Multiplicative.toAdd z = 0
     exact CarryGroup.four_nsmul_eq_zero (Multiplicative.toAdd z)
-  simpa using congrArg
+  simpa only [pontryaginDual_pow_apply, PontryaginDual.one_apply, map_pow, map_one] using congrArg
     (fun w : Multiplicative (CarryGroup n) => (Additive.toMul η) w) hz
 
 theorem continuous_evalFour (n : ℕ) (v : V) :
@@ -11553,11 +11700,12 @@ theorem fourthRootCharacter_comp_sq_ne_one_of_apply
   have hpoint := DFunLike.congr_fun h a
   have hpoint' :
       fourthRootCharacter (f a) * fourthRootCharacter (f a) = 1 := by
-    simpa [pow_two] using hpoint
+    simpa only [pow_two, pontryaginDual_mul_apply, fourthRootCharacter.comp_apply,
+      PontryaginDual.one_apply] using hpoint
   have hroot :
       fourthRootCharacter (f a * f a) =
         fourthRootCharacter (1 : Multiplicative (ZMod 4)) := by
-    simpa using hpoint'
+    simpa only [map_mul, map_one] using hpoint'
   have heq := fourthRootCharacter_injective hroot
   exact ha (congrArg Multiplicative.toAdd heq)
 
@@ -11578,14 +11726,17 @@ theorem epsilon_two_nsmul_ne_zero (n : ℕ) :
     CarryGroup.evalFour n e (CarryGroup.orderFourElement n) +
       CarryGroup.evalFour n e (CarryGroup.orderFourElement n) ≠
       (0 : ZMod 4)
-  simpa using
+  simpa only [CarryGroup.evalFour_apply, CarryGroup.orderFourElement_linear, shift_apply,
+    CarryGroup.coefficientFunctional_apply, Fin.isValue, shiftVector_apply, e_apply, ↓reduceIte,
+    mul_one, Polynomial.coeff_X_pow, FiniteCarry.liftBit_one, CarryGroup.orderFourElement_quadratic,
+    LinearMap.zero_apply, FiniteCarry.liftBit_zero, mul_zero, add_zero, ne_eq] using
     (by decide : (1 : ZMod 4) + (1 : ZMod 4) ≠ 0)
 
 theorem epsilon_addOrderOf (n : ℕ) :
     addOrderOf (epsilon n e) = 4 := by
   exact addOrderOf_eq_prime_pow (p := 2) (n := 1)
-    (by simpa using epsilon_two_nsmul_ne_zero n)
-    (by simpa using E_four_nsmul n (epsilon n e))
+    (by simpa only [pow_one, ne_eq] using epsilon_two_nsmul_ne_zero n)
+    (by simpa only [Nat.reduceAdd, Nat.reducePow] using E_four_nsmul n (epsilon n e))
 
 section GeneralPontryaginDual
 
@@ -11603,10 +11754,12 @@ def dualAut (e : A ≃ₜ* A) : MulAut (PontryaginDual A) where
   invFun χ := PontryaginDual.map (e : A →ₜ* A) χ
   left_inv χ := by
     ext a
-    simp [PontryaginDual.map_apply]
+    simp only [PontryaginDual.map_apply, ContinuousMonoidHom.coe_coe,
+      ContinuousMulEquiv.symm_apply_apply]
   right_inv χ := by
     ext a
-    simp [PontryaginDual.map_apply]
+    simp only [PontryaginDual.map_apply, ContinuousMonoidHom.coe_coe,
+      ContinuousMulEquiv.apply_symm_apply]
   map_mul' χ ψ := by
     ext a
     rfl
@@ -11632,14 +11785,14 @@ def dualAction (ρ : K →* MulAut A)
     apply PontryaginDual.ext
     intro a
     change χ ((ρ 1)⁻¹ a) = χ a
-    simp
+    simp only [map_one, inv_one, MulAut.one_apply]
   map_mul' k h := by
     apply MulEquiv.ext
     intro χ
     apply PontryaginDual.ext
     intro a
     change χ ((ρ (k * h))⁻¹ a) = χ ((ρ h)⁻¹ ((ρ k)⁻¹ a))
-    simp [map_mul, MulAut.mul_apply]
+    simp only [map_mul, mul_inv_rev, MulAut.mul_apply, MulAut.inv_apply]
 
 omit [IsTopologicalGroup A] in
 @[simp] theorem dualAction_apply
@@ -11721,8 +11874,8 @@ def carryKernelInclusion (n : ℕ) : Y →+ CarryGroup n where
   map_zero' := rfl
   map_add' q q' := by
     apply CarryGroup.ext
-    · simp
-    · simp
+    · simp only [CarryGroup.add_linear, add_zero]
+    · simp only [CarryGroup.add_quadratic, shiftedCarry_zero_right, add_zero]
 
 @[simp] theorem carryKernelInclusion_linear (n : ℕ) (q : Y) :
     (carryKernelInclusion n q).linear = 0 := rfl
@@ -11733,7 +11886,8 @@ def carryKernelInclusion (n : ℕ) : Y →+ CarryGroup n where
 @[simp] theorem shift_zero_apply (ℓ : X) : shift 0 ℓ = ℓ := by
   apply LinearMap.ext
   intro v
-  simp [shift, shiftVector]
+  simp only [shift, shiftVector, pow_zero, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.coe_comp,
+    LinearMap.coe_restrictScalars, Function.comp_apply, LinearMap.lsmul_apply, one_smul]
 
 def carryPullback (n : ℕ) : CarryGroup n →+ CarryGroup 0 where
   toFun z := ⟨shift n z.linear, z.quadratic⟩
@@ -11741,11 +11895,11 @@ def carryPullback (n : ℕ) : CarryGroup n →+ CarryGroup 0 where
     apply CarryGroup.ext <;> simp
   map_add' z w := by
     apply CarryGroup.ext
-    · simp
+    · simp only [CarryGroup.add_linear, shift_add]
     · change z.quadratic + w.quadratic + shiftedCarry n z.linear w.linear =
         z.quadratic + w.quadratic +
           shiftedCarry 0 (shift n z.linear) (shift n w.linear)
-      simp [shiftedCarry]
+      simp only [shiftedCarry, shift_zero_apply]
 
 @[simp] theorem carryPullback_linear (n : ℕ) (z : CarryGroup n) :
     (carryPullback n z).linear = shift n z.linear := rfl
@@ -11767,7 +11921,7 @@ def shiftKernelInclusion (n : ℕ) : shiftKernel n →+ CarryGroup n where
     · rfl
     · change 0 = 0 + 0 + shiftedCarry n ℓ.1 ℓ'.1
       have hℓ : shift n ℓ.1 = 0 := ℓ.property
-      simp [shiftedCarry, hℓ]
+      simp only [add_zero, shiftedCarry, hℓ, LinearMap.map_coe_ker, carry_zero_right]
 
 @[simp] theorem shiftKernelInclusion_linear (n : ℕ) (ℓ : shiftKernel n) :
     (shiftKernelInclusion n ℓ).linear = ℓ.1 := rfl
@@ -11824,7 +11978,7 @@ def carryPullbackSection (n : ℕ) : CarryGroup 0 →+ CarryGroup n where
     · change z.quadratic + w.quadratic + shiftedCarry 0 z.linear w.linear =
         z.quadratic + w.quadratic +
           shiftedCarry n (shiftSection n z.linear) (shiftSection n w.linear)
-      simp [shiftedCarry]
+      simp only [shiftedCarry, shift_zero_apply, shift_shiftSection]
 
 @[simp] theorem carryPullbackSection_linear (n : ℕ) (z : CarryGroup 0) :
     (carryPullbackSection n z).linear = shiftSection n z.linear := rfl
@@ -11879,7 +12033,7 @@ def kernelProjection (n : ℕ) : CarryGroup n →+ shiftKernel n where
       rw [map_sub, shift_shiftSection, sub_self]⟩
   map_zero' := by
     apply Subtype.ext
-    simp
+    simp only [CarryGroup.zero_linear, map_zero, sub_self, ZeroMemClass.coe_zero]
   map_add' z w := by
     apply Subtype.ext
     change z.linear + w.linear -
@@ -11958,7 +12112,7 @@ def carryGroupSplitEquiv (n : ℕ) :
       have hzero : shift n
           (z.linear - shiftSection n (shift n z.linear)) = 0 := by
         rw [map_sub, shift_shiftSection, sub_self]
-      simp [shiftedCarry, hzero]
+      simp only [add_zero, shiftedCarry, shift_shiftSection, hzero, carry_zero_right]
   right_inv z := by
     apply Prod.ext
     · change carryPullback n (carryPullbackSection n z.1 +
@@ -11993,23 +12147,29 @@ private def coordinateProduct : V →ₗ[F] V →ₗ[F] V where
       map_add' y z := by
         apply auxiliaryBasis.repr.injective
         ext i
-        simp [Finsupp.mul_apply, mul_add]
+        simp only [map_add, mul_add, Basis.repr_symm_apply, Basis.repr_linearCombination,
+          Finsupp.coe_add, Pi.add_apply, Finsupp.mul_apply]
       map_smul' c y := by
         apply auxiliaryBasis.repr.injective
         ext i
-        simp [Finsupp.mul_apply, smul_eq_mul, mul_left_comm] }
+        simp only [map_smul, Basis.repr_symm_apply, Basis.repr_linearCombination, Finsupp.mul_apply,
+          Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul, mul_left_comm, RingHom.id_apply] }
   map_add' x y := by
     apply LinearMap.ext
     intro z
     apply auxiliaryBasis.repr.injective
     ext i
-    simp [Finsupp.mul_apply, add_mul]
+    simp only [map_add, add_mul, Basis.repr_symm_apply, LinearMap.coe_mk, AddHom.coe_mk,
+      Basis.repr_linearCombination, Finsupp.coe_add, Pi.add_apply, Finsupp.mul_apply,
+      LinearMap.add_apply]
   map_smul' c x := by
     apply LinearMap.ext
     intro y
     apply auxiliaryBasis.repr.injective
     ext i
-    simp [Finsupp.mul_apply, smul_eq_mul, mul_assoc]
+    simp only [map_smul, Basis.repr_symm_apply, LinearMap.coe_mk, AddHom.coe_mk,
+      Basis.repr_linearCombination, Finsupp.mul_apply, Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
+      mul_assoc, RingHom.id_apply, LinearMap.smul_apply]
 
 private def tensorDiagonal : T →ₗ[F] V := TensorProduct.lift coordinateProduct
 
@@ -12019,8 +12179,9 @@ private theorem scalar_mul_self (c : F) : c * c = c := by
 private theorem tensorDiagonal_square (v : V) : tensorDiagonal (square v) = v := by
   apply auxiliaryBasis.repr.injective
   ext i
-  simp [tensorDiagonal, square, coordinateProduct, Finsupp.mul_apply,
-    scalar_mul_self]
+  simp only [tensorDiagonal, coordinateProduct, Basis.repr_symm_apply, square,
+    TensorProduct.lift.tmul, LinearMap.coe_mk, AddHom.coe_mk, Basis.repr_linearCombination,
+    Finsupp.mul_apply, scalar_mul_self]
 
 def d : B →ₗ[F] V := tensorDiagonal.comp B.subtype
 
@@ -12032,7 +12193,7 @@ def d : B →ₗ[F] V := tensorDiagonal.comp B.subtype
     symm
     simpa only [map_add, d_diagonal] using congrArg d (diagonal_add u v)
   apply add_left_cancel (a := u + v)
-  simpa using h
+  simpa only [add_zero, add_eq_left] using h
 
 theorem d_surjective : Function.Surjective d := by
   intro v
@@ -12052,7 +12213,7 @@ theorem linearMap_ext_on_diagonal {W : Type*}
       exact h v
   | zero =>
       change f 0 = g 0
-      simp
+      simp only [map_zero]
   | add x y hx hy ihx ihy =>
       change f (⟨x, hx⟩ + ⟨y, hy⟩) = g (⟨x, hx⟩ + ⟨y, hy⟩)
       simpa only [map_add] using congrArg₂ (· + ·) ihx ihy
@@ -12107,7 +12268,7 @@ def iota (n : ℕ) : V →+ E n where
     apply PontryaginDual.ext
     intro z
     change ZMod.toCircle ((Multiplicative.toAdd z).linear 0) = 1
-    simp
+    simp only [map_zero, AddChar.map_zero_eq_one]
   map_add' v w := by
     apply Additive.toMul.injective
     apply PontryaginDual.ext
@@ -12136,7 +12297,7 @@ theorem circle_four_square_liftBit (a : F) :
       ZMod.toCircle a := by
   fin_cases a
   · change ZMod.toCircle (0 : ZMod 4) ^ 2 = ZMod.toCircle (0 : ZMod 2)
-    simp
+    simp only [AddChar.map_zero_eq_one, one_pow]
   · rw [← AddChar.map_nsmul_eq_pow]
     change ZMod.toCircle (2 : ZMod 4) = ZMod.toCircle (1 : ZMod 2)
     apply Circle.ext
@@ -12179,7 +12340,7 @@ theorem iota_range_le_ker_quadraticRestriction (n : ℕ) :
   apply PontryaginDual.ext
   intro q
   change ZMod.toCircle ((0 : X) v) = 1
-  simp
+  simp only [LinearMap.zero_apply, AddChar.map_zero_eq_one]
 
 def quadraticEvaluation (b : B) : Y →+ F where
   toFun q := q b
@@ -12207,7 +12368,7 @@ def quadraticPairing : B →+ Additive (PontryaginDual (Multiplicative Y)) where
     apply PontryaginDual.ext
     intro q
     change ZMod.toCircle ((Multiplicative.toAdd q) 0) = 1
-    simp
+    simp only [map_zero, AddChar.map_zero_eq_one]
   map_add' b c := by
     apply Additive.toMul.injective
     apply PontryaginDual.ext
@@ -12228,7 +12389,7 @@ theorem circle_four_twice_liftBit (a : F) :
     _ = (ZMod.toCircle (FiniteCarry.liftBit a) : Circle) ^ 2 := by
       rw [← AddChar.map_nsmul_eq_pow]
       congr 1
-      simp [two_mul]
+      simp only [two_mul, nsmul_eq_mul, Nat.cast_ofNat]
     _ = ZMod.toCircle a := circle_four_square_liftBit a
 
 theorem quadraticRestriction_epsilon (n : ℕ) (v : V) :
@@ -12240,7 +12401,8 @@ theorem quadraticRestriction_epsilon (n : ℕ) (v : V) :
     (CarryGroup.evalFour n v (⟨0, Multiplicative.toAdd q⟩ : CarryGroup n)) =
       ZMod.toCircle ((Multiplicative.toAdd q) (diagonal v))
   rw [CarryGroup.evalFour_apply]
-  simpa [shift] using
+  simpa only [shift, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.zero_comp, LinearMap.zero_apply,
+    FiniteCarry.liftBit_zero, zero_add] using
     circle_four_twice_liftBit ((Multiplicative.toAdd q) (diagonal v))
 
 theorem quadraticPairing_range_le_quadraticRestriction_range (n : ℕ) :
@@ -12268,19 +12430,19 @@ theorem quadraticPairing_range_le_quadraticRestriction_range (n : ℕ) :
         · exact Or.inr rfl
       rcases ha with rfl | rfl
       · have hzero :
-            (⟨(0 : F) • b, by simp⟩ : B) = 0 := by
+            (⟨(0 : F) • b, by simp only [zero_smul, zero_mem]⟩ : B) = 0 := by
           apply Subtype.ext
-          simp
+          simp only [zero_smul, ZeroMemClass.coe_zero]
         change quadraticPairing
           (⟨(0 : F) • b, _⟩ : B) ∈ (quadraticRestriction n).range
         rw [hzero, map_zero]
         exact (quadraticRestriction n).range.zero_mem
       · have hone :
-            (⟨(1 : F) • b, by simpa using
+            (⟨(1 : F) • b, by simpa only [one_smul] using
               (show b ∈ B from hb)⟩ : B) =
               (⟨b, (show b ∈ B from hb)⟩ : B) := by
           apply Subtype.ext
-          simp
+          simp only [one_smul]
         change quadraticPairing
           (⟨(1 : F) • b, _⟩ : B) ∈ (quadraticRestriction n).range
         rw [hone]
@@ -12325,8 +12487,10 @@ theorem linearSection_add (n : ℕ) (ℓ ℓ' : X) :
       linearSection n (ℓ + ℓ') +
         carryKernelInclusion n (shiftedCarry n ℓ ℓ') := by
   apply CarryGroup.ext
-  · simp
-  · simp
+  · simp only [CarryGroup.add_linear, linearSection_linear, carryKernelInclusion_linear, add_zero]
+  · simp only [CarryGroup.add_quadratic, linearSection_quadratic, add_zero, linearSection_linear,
+      zero_add, carryKernelInclusion_quadratic, carryKernelInclusion_linear,
+      shiftedCarry_zero_right]
 
 def evalEta {n : ℕ} (η : E n) (z : CarryGroup n) : Circle :=
   Additive.toMul η (Multiplicative.ofAdd z)
@@ -12366,7 +12530,7 @@ def kernelCharacter (n : ℕ) (η : E n)
   toMonoidHom :=
     { toFun := fun ℓ => evalEta η
         (linearSection n (Multiplicative.toAdd ℓ))
-      map_one' := by simp
+      map_one' := by simp only [toAdd_one, linearSection_zero, evalEta_zero]
       map_mul' ℓ ℓ' :=
         evalEta_linearSection_add η h
           (Multiplicative.toAdd ℓ) (Multiplicative.toAdd ℓ') }
@@ -12466,11 +12630,11 @@ theorem two_nsmul_eta (n : ℕ) (η : E n) :
     apply Multiplicative.toAdd.injective
     apply CarryGroup.ext
     · change ((2 : ℕ) • Multiplicative.toAdd z).linear = 0
-      simp
+      simp only [CarryGroup.two_nsmul_linear]
     · change ((2 : ℕ) • Multiplicative.toAdd z).quadratic =
         shiftedCarry n (Multiplicative.toAdd z).linear
           (Multiplicative.toAdd z).linear
-      simp
+      simp only [CarryGroup.two_nsmul_quadratic]
   calc
     (Additive.toMul η z) ^ (2 : ℕ) =
         Additive.toMul η (z ^ (2 : ℕ)) :=
@@ -12519,16 +12683,19 @@ def normalizedAddHaar
     (A : Type u) [AddGroup A] [TopologicalSpace A] [CompactSpace A]
     [IsTopologicalAddGroup A] [MeasurableSpace A] [BorelSpace A] : Measure A :=
   Measure.addHaarMeasure
-    (⟨⟨Set.univ, isCompact_univ⟩, by simp⟩ : PositiveCompacts A)
+    (⟨⟨Set.univ, isCompact_univ⟩, by simp only [interior_univ,
+                                       Set.univ_nonempty]⟩ : PositiveCompacts A)
 
 instance normalizedAddHaar_isProbabilityMeasure
     (A : Type u) [AddGroup A] [TopologicalSpace A] [CompactSpace A]
     [IsTopologicalAddGroup A] [MeasurableSpace A] [BorelSpace A] :
     IsProbabilityMeasure (normalizedAddHaar A) where
   measure_univ := by
-    simpa [normalizedAddHaar] using
+    simpa only [normalizedAddHaar, interior_univ, Set.univ_nonempty, PositiveCompacts.coe_mk,
+      Compacts.coe_mk] using
       (Measure.addHaarMeasure_self
-        (K₀ := (⟨⟨Set.univ, isCompact_univ⟩, by simp⟩ : PositiveCompacts A)))
+        (K₀ := (⟨⟨Set.univ, isCompact_univ⟩, by simp only [interior_univ,
+                                                  Set.univ_nonempty]⟩ : PositiveCompacts A)))
 
 instance normalizedAddHaar_isAddHaarMeasure
     (A : Type u) [AddGroup A] [TopologicalSpace A] [CompactSpace A]
@@ -12545,10 +12712,10 @@ theorem normalizedAddHaar_unique
     [Measure.IsAddLeftInvariant μ] :
     μ = normalizedAddHaar A := by
   let U : PositiveCompacts A :=
-    ⟨⟨Set.univ, isCompact_univ⟩, by simp⟩
+    ⟨⟨Set.univ, isCompact_univ⟩, by simp only [interior_univ, Set.univ_nonempty]⟩
   have h := Measure.addHaarMeasure_unique μ U
   change μ = μ Set.univ • normalizedAddHaar A at h
-  simpa using h
+  simpa only [measure_univ, one_smul] using h
 
 theorem normalizedAddHaar_preserving_addEquiv
     (A : Type u) [AddCommGroup A] [TopologicalSpace A] [CompactSpace A]
@@ -12641,7 +12808,7 @@ private theorem continuous_shiftedCarry_right (n : ℕ) (ℓ : X) :
     exact (continuous_const : Continuous
       (fun _ : X => ℓ (shiftVector n v))).mul
         (continuous_X_eval (shiftVector n v))
-  · simpa using (continuous_const : Continuous (fun _ : X => (0 : F)))
+  · simpa only [map_zero] using (continuous_const : Continuous (fun _ : X => (0 : F)))
   · intro u v _ _ hu hv
     simp_rw [map_add]
     convert hu.add hv using 1
@@ -12753,7 +12920,8 @@ open scoped ENNReal Topology
 private def linearEvaluationCharacter (n : ℕ) (v : V) : E n :=
   Additive.ofMul
     { toFun := fun z => ZMod.toCircle ((Multiplicative.toAdd z).linear v)
-      map_one' := by simp
+      map_one' := by simp only [toAdd_one, CarryGroup.zero_linear, LinearMap.zero_apply,
+                       AddChar.map_zero_eq_one]
       map_mul' z w := by
         change ZMod.toCircle
           ((Multiplicative.toAdd z).linear v +
@@ -12863,7 +13031,8 @@ theorem carryCharacterL2_span_closure_eq_top (n : ℕ) :
     (span ℂ (range (carryCharacterL2 n))).topologicalClosure = ⊤ := by
   convert!
     (ContinuousMap.toLp_denseRange (p := (2 : ℝ≥0∞))
-      ℂ (carryHaar n) ℂ (by simp)).topologicalClosure_map_submodule
+      ℂ (carryHaar n) ℂ (by simp only [ne_eq, ENNReal.ofNat_ne_top,
+                              not_false_eq_true])).topologicalClosure_map_submodule
       (carryComplexCharacter_span_closure_eq_top n)
   rw [map_span]
   unfold carryCharacterL2
@@ -12882,7 +13051,7 @@ private theorem integral_add_character_eq_zero
     apply hχ
     apply PontryaginDual.ext
     intro g
-    simpa using h (Multiplicative.toAdd g)
+    simpa only [PontryaginDual.one_apply, ofAdd_toAdd] using h (Multiplicative.toAdd g)
   have htrans :
       (χ (Multiplicative.ofAdd g) : ℂ) *
         (∫ x : G, (χ (Multiplicative.ofAdd x) : ℂ) ∂μ) =
@@ -12898,7 +13067,7 @@ private theorem integral_add_character_eq_zero
       _ = ∫ x : G, (χ (Multiplicative.ofAdd (g + x)) : ℂ) ∂μ := by
         congr 1
         funext x
-        simp
+        simp only [ofAdd_add, map_mul, Circle.coe_mul]
       _ = ∫ x : G, (χ (Multiplicative.ofAdd x) : ℂ) ∂μ :=
         integral_add_left_eq_self
           (fun x : G => (χ (Multiplicative.ofAdd x) : ℂ)) g
@@ -12939,7 +13108,7 @@ theorem carryCharacterL2_orthonormal (n : ℕ) :
             (Additive.toMul η (Multiplicative.ofAdd x) : ℂ)
           ∂carryHaar n) = 1
     simp_rw [hpoint]
-    simp
+    simp only [integral_const, probReal_univ, one_smul]
   · have hne :
         Additive.toMul θ * (Additive.toMul η)⁻¹ ≠ 1 := by
       intro he
@@ -13158,7 +13327,7 @@ theorem evaluation_surjective (n : ℕ) :
           (Multiplicative.ofAdd η'))⁻¹) = φ η
   change carryBidualEvaluation n (linearCandidate n φ) η *
       (φ η * (carryBidualEvaluation n (linearCandidate n φ) η)⁻¹) = φ η
-  simp [mul_left_comm, mul_comm]
+  simp only [mul_left_comm, mul_inv_cancel, mul_comm, one_mul]
 
 end CarryBidualInternal
 
@@ -13190,7 +13359,7 @@ open scoped ENNReal Topology
 
 def splitBinaryEvaluation (d : D) : (X × Y) →+ F where
   toFun z := z.1 d.1 + z.2 d.2
-  map_zero' := by simp
+  map_zero' := by simp only [Prod.fst_zero, LinearMap.zero_apply, Prod.snd_zero, add_zero]
   map_add' z w := by
     change (z.1 d.1 + w.1 d.1) + (z.2 d.2 + w.2 d.2) =
       (z.1 d.1 + z.2 d.2) + (w.1 d.1 + w.2 d.2)
@@ -13228,14 +13397,16 @@ theorem splitPontryaginCharacter_injective :
     apply ZMod.injective_toCircle
     have hpoint := DFunLike.congr_fun h
       (Multiplicative.ofAdd (ℓ, (0 : Y)))
-    simpa using hpoint
+    simpa only [Module.Dual.eval_apply, splitPontryaginCharacter_apply, LinearMap.zero_apply,
+      add_zero] using hpoint
   · apply Module.eval_apply_injective F
     apply LinearMap.ext
     intro q
     apply ZMod.injective_toCircle
     have hpoint := DFunLike.congr_fun h
       (Multiplicative.ofAdd ((0 : X), q))
-    simpa using hpoint
+    simpa only [Module.Dual.eval_apply, splitPontryaginCharacter_apply, LinearMap.zero_apply,
+      zero_add] using hpoint
 
 theorem splitPontryaginCharacter_separates
     (z w : X × Y) (hzw : z ≠ w) :
@@ -13249,11 +13420,11 @@ theorem splitPontryaginCharacter_separates
   · apply LinearMap.ext
     intro v
     apply ZMod.injective_toCircle
-    simpa using h (v, (0 : B))
+    simpa only [splitPontryaginCharacter_apply, map_zero, add_zero] using h (v, (0 : B))
   · apply LinearMap.ext
     intro b
     apply ZMod.injective_toCircle
-    simpa using h ((0 : V), b)
+    simpa only [splitPontryaginCharacter_apply, map_zero, zero_add] using h ((0 : V), b)
 
 def splitComplexCharacter (d : D) : C(X × Y, ℂ) where
   toFun z := (splitPontryaginCharacter d (Multiplicative.ofAdd z) : ℂ)
@@ -13266,7 +13437,9 @@ def splitComplexCharacter (d : D) : C(X × Y, ℂ) where
 
 @[simp] theorem splitComplexCharacter_zero : splitComplexCharacter 0 = 1 := by
   ext z
-  simp [splitComplexCharacter]
+  simp only [splitComplexCharacter, splitPontryaginCharacter_apply, Prod.fst_zero, map_zero,
+    Prod.snd_zero, add_zero, AddChar.map_zero_eq_one, Circle.coe_one, ContinuousMap.coe_mk,
+    ContinuousMap.one_apply]
 
 @[simp] theorem splitComplexCharacter_add (d e : D) :
     splitComplexCharacter (d + e) =
@@ -13331,7 +13504,8 @@ theorem splitCharacterL2_span_closure_eq_top :
     (span ℂ (range splitCharacterL2)).topologicalClosure = ⊤ := by
   convert!
     (ContinuousMap.toLp_denseRange (p := (2 : ℝ≥0∞))
-      ℂ productHaar ℂ (by simp)).topologicalClosure_map_submodule
+      ℂ productHaar ℂ (by simp only [ne_eq, ENNReal.ofNat_ne_top,
+                            not_false_eq_true])).topologicalClosure_map_submodule
       splitComplexCharacter_span_closure_eq_top
   rw [map_span]
   unfold splitCharacterL2
@@ -13350,7 +13524,7 @@ private theorem split_integral_character_eq_zero
     apply hχ
     apply PontryaginDual.ext
     intro g
-    simpa using h (Multiplicative.toAdd g)
+    simpa only [PontryaginDual.one_apply, ofAdd_toAdd] using h (Multiplicative.toAdd g)
   have htrans :
       (χ (Multiplicative.ofAdd g) : ℂ) *
         (∫ z : G, (χ (Multiplicative.ofAdd z) : ℂ) ∂μ) =
@@ -13364,7 +13538,7 @@ private theorem split_integral_character_eq_zero
       _ = ∫ z : G, (χ (Multiplicative.ofAdd (g + z)) : ℂ) ∂μ := by
         congr 1
         funext z
-        simp
+        simp only [ofAdd_add, map_mul, Circle.coe_mul]
       _ = ∫ z : G, (χ (Multiplicative.ofAdd z) : ℂ) ∂μ :=
         integral_add_left_eq_self
           (fun z : G => (χ (Multiplicative.ofAdd z) : ℂ)) g
@@ -13404,7 +13578,7 @@ theorem splitCharacterL2_orthonormal : Orthonormal ℂ splitCharacterL2 := by
             (splitPontryaginCharacter d (Multiplicative.ofAdd z) : ℂ)
           ∂productHaar) = 1
     simp_rw [hpoint]
-    simp
+    simp only [integral_const, probReal_univ, one_smul]
   · have hne :
         splitPontryaginCharacter e * (splitPontryaginCharacter d)⁻¹ ≠ 1 := by
       intro he
@@ -13468,7 +13642,7 @@ def groupFactorEquivSymm
   trace_preserving := by
     intro y
     have h := e.trace_preserving (e.toStarAlgEquiv.symm y)
-    simpa using h.symm
+    simpa only [StarAlgEquiv.apply_symm_apply] using h.symm
 
 def groupFactorEquivTrans
     {G : CountableDiscreteGroup.{u}}
@@ -13588,7 +13762,7 @@ def symm
   equivariant := by
     intro k z
     apply e.toMeasurableEquiv.injective
-    simpa using (e.equivariant k (e.toMeasurableEquiv.symm z)).symm
+    simpa only [MeasurableEquiv.apply_symm_apply] using (e.equivariant k (e.toMeasurableEquiv.symm z)).symm
 
 def trans
     {X : HaarProbabilityAction K Ω}
@@ -13636,7 +13810,7 @@ def kLinear : K →* (V ≃ₗ[F] V) where
     apply LinearEquiv.ext
     intro v
     change Matrix.SpecialLinearGroup.toLin' (pi₂ 1) v = v
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq]
   map_mul' k l := by
     apply LinearEquiv.ext
     intro v
@@ -13676,14 +13850,14 @@ theorem kTensorLinear_map_B (k : K) :
     rintro _ ⟨v, rfl⟩
     apply Submodule.subset_span
     refine ⟨square ((kLinear k).symm v), ⟨_, rfl⟩, ?_⟩
-    simp
+    simp only [LinearEquiv.coe_coe, kTensorLinear_square, LinearEquiv.apply_symm_apply]
 
 def kDividedSquareLinear : K →* (B ≃ₗ[F] B) where
   toFun k := (kTensorLinear k).ofSubmodules B B (kTensorLinear_map_B k)
   map_one' := by
     ext b
     change kTensorLinear 1 (b : T) = (b : T)
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq]
   map_mul' k l := by
     ext b
     change kTensorLinear (k * l) (b : T) =
@@ -13705,7 +13879,7 @@ def kDividedSquareLinear : K →* (B ≃ₗ[F] B) where
   apply Subtype.ext
   change kTensorLinear k (u ⊗ₜ[F] v + v ⊗ₜ[F] u) =
     kLinear k u ⊗ₜ[F] kLinear k v + kLinear k v ⊗ₜ[F] kLinear k u
-  simp
+  simp only [map_add, kTensorLinear_tmul, kLinear_apply, pi₂_apply]
 
 def kDLinear : K →* (D ≃ₗ[F] D) where
   toFun k := (kLinear k).prodCongr (kDividedSquareLinear k)
@@ -13723,7 +13897,7 @@ def kDAction : K →* MulAut (Multiplicative D) where
     apply MulEquiv.ext
     intro d
     change kDLinear 1 (Multiplicative.toAdd d) = Multiplicative.toAdd d
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq]
   map_mul' k l := by
     apply MulEquiv.ext
     intro d
@@ -13815,7 +13989,7 @@ noncomputable def rangeEquiv (f : ExactIndexEmbedding G H index) :
 
 theorem range_finiteIndex (f : ExactIndexEmbedding G H index)
     (hindex : index ≠ 0) : f.hom.range.FiniteIndex :=
-  Subgroup.finiteIndex_iff.mpr (by simpa [f.index_eq] using hindex)
+  Subgroup.finiteIndex_iff.mpr (by simpa only [f.index_eq, ne_eq] using hindex)
 
 end ExactIndexEmbedding
 
@@ -13840,7 +14014,7 @@ theorem not_groupsIsomorphic_of_orderFour
     ¬GroupsIsomorphic G H := by
   rintro ⟨e⟩
   obtain ⟨g, hg⟩ := hG
-  exact hH (e g) (by simpa using (e.orderOf_eq g).trans hg)
+  exact hH (e g) (by simpa only [MulEquiv.orderOf_eq] using (e.orderOf_eq g).trans hg)
 
 structure PaperFamilyInput where
   Lambda : CountableDiscreteGroup.{u}
@@ -13941,13 +14115,14 @@ def kXLinear : K →* (X ≃ₗ[F] X) where
     intro ℓ
     apply LinearMap.ext
     intro v
-    simp
+    simp only [inv_one, map_one, LinearEquiv.dualMap_apply, LinearEquiv.coe_one, id_eq]
   map_mul' k h := by
     apply LinearEquiv.ext
     intro ℓ
     apply LinearMap.ext
     intro v
-    simp [map_mul]
+    simp only [mul_inv_rev, map_mul, map_inv, LinearEquiv.dualMap_apply, LinearEquiv.mul_apply,
+      LinearEquiv.coe_inv]
 
 @[simp] theorem kXLinear_apply (k : K) (ℓ : X) (v : V) :
     kXLinear k ℓ v = ℓ (kLinear k⁻¹ v) := rfl
@@ -13959,13 +14134,14 @@ def kYLinear : K →* (Y ≃ₗ[F] Y) where
     intro q
     apply LinearMap.ext
     intro b
-    simp
+    simp only [inv_one, map_one, LinearEquiv.dualMap_apply, LinearEquiv.coe_one, id_eq]
   map_mul' k h := by
     apply LinearEquiv.ext
     intro q
     apply LinearMap.ext
     intro b
-    simp [map_mul]
+    simp only [mul_inv_rev, map_mul, map_inv, LinearEquiv.dualMap_apply, LinearEquiv.mul_apply,
+      LinearEquiv.coe_inv]
 
 @[simp] theorem kYLinear_apply (k : K) (q : Y) (b : B) :
     kYLinear k q b = q (kDividedSquareLinear k⁻¹ b) := rfl
@@ -14021,7 +14197,7 @@ def kCarryAddAut (n : ℕ) (k : K) : AddAut (CarryGroup n) where
     apply CarryGroup.ext <;> simp
   map_add' z w := by
     apply CarryGroup.ext
-    · simp
+    · simp only [CarryGroup.add_linear, map_add]
     · change kYLinear k
         (z.quadratic + w.quadratic + shiftedCarry n z.linear w.linear) =
           kYLinear k z.quadratic + kYLinear k w.quadratic +
@@ -14043,10 +14219,10 @@ def kCarryAction (n : ℕ) : K →* MulAut (Multiplicative (CarryGroup n)) where
     apply CarryGroup.ext
     · change kXLinear 1 (Multiplicative.toAdd z).linear =
         (Multiplicative.toAdd z).linear
-      simp
+      simp only [map_one, LinearEquiv.coe_one, id_eq]
     · change kYLinear 1 (Multiplicative.toAdd z).quadratic =
         (Multiplicative.toAdd z).quadratic
-      simp
+      simp only [map_one, LinearEquiv.coe_one, id_eq]
   map_mul' k h := by
     apply MulEquiv.ext
     intro z
@@ -14147,7 +14323,7 @@ def paperSplitPerm : K →* Equiv.Perm (X × Y) where
     apply Equiv.ext
     intro z
     change (kXLinear 1 z.1, kYLinear 1 z.2) = z
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq, Prod.mk.eta]
   map_mul' k h := by
     apply Equiv.ext
     intro z
@@ -14155,7 +14331,7 @@ def paperSplitPerm : K →* Equiv.Perm (X × Y) where
       (kXLinear (k * h) z.1, kYLinear (k * h) z.2) =
         (kXLinear k (kXLinear h z.1),
           kYLinear k (kYLinear h z.2))
-    simp [map_mul]
+    simp only [map_mul, LinearEquiv.mul_apply]
 
 theorem continuous_paperSplitAddAut (k : K) :
     Continuous (paperSplitAddAut k : X × Y → X × Y) :=
@@ -14312,7 +14488,7 @@ def crossedFiberwiseOperator
           apply ((lp.memℓp ξ).const_smul (‖T‖ : ℂ)).mono'
           intro k
           change ‖T (ξ k)‖ ≤ ‖(‖T‖ : ℂ) • ξ k‖
-          simpa [norm_smul] using T.le_opNorm (ξ k)⟩
+          simpa only [Complex.coe_smul, norm_smul, norm_norm] using T.le_opNorm (ξ k)⟩
       map_add' := by
         intro ξ η
         ext k
@@ -14327,10 +14503,10 @@ def crossedFiberwiseOperator
       ‖F ξ‖ ≤ ‖(‖T‖ : ℂ) • ξ‖ := lp.norm_mono (by norm_num) (by
         intro k
         change ‖T (ξ k)‖ ≤ ‖(‖T‖ : ℂ) • ξ k‖
-        simpa [norm_smul] using T.le_opNorm (ξ k))
+        simpa only [Complex.coe_smul, norm_smul, norm_norm] using T.le_opNorm (ξ k))
       _ = ‖T‖ * ‖ξ‖ := by
         rw [lp.norm_const_smul (by norm_num : (2 : ℝ≥0∞) ≠ 0)]
-        simp)
+        simp only [Complex.norm_real, norm_norm])
 
 omit [Group K] in
 @[simp] theorem crossedFiberwiseOperator_apply
@@ -14358,13 +14534,13 @@ def crossedFiberwiseEquiv
         ⟨fun k ↦ e (ξ k), by
           change Memℓp (fun k ↦ e (ξ k)) 2
           rw [memℓp_gen_iff (by norm_num : 0 < (2 : ℝ≥0∞).toReal)]
-          simpa using
+          simpa only [norm_map, ENNReal.toReal_ofNat, Real.rpow_ofNat] using
             (lp.memℓp ξ).summable (by norm_num : 0 < (2 : ℝ≥0∞).toReal)⟩
       invFun := fun ξ ↦
         ⟨fun k ↦ e.symm (ξ k), by
           change Memℓp (fun k ↦ e.symm (ξ k)) 2
           rw [memℓp_gen_iff (by norm_num : 0 < (2 : ℝ≥0∞).toReal)]
-          simpa using
+          simpa only [norm_map, ENNReal.toReal_ofNat, Real.rpow_ofNat] using
             (lp.memℓp ξ).summable (by norm_num : 0 < (2 : ℝ≥0∞).toReal)⟩
       left_inv := by
         intro ξ
@@ -14462,15 +14638,17 @@ def crossedBaseHaarEquiv
         have h := Lp.compMeasurePreserving_comp_apply f
           (EquivariantHaarEquiv.symm e).measure_preserving
           e.measure_preserving
-        simpa [Function.comp_def, EquivariantHaarEquiv.symm,
-          show (fun z : Ω ↦ z) = id from rfl] using h.symm
+        simpa only [EquivariantHaarEquiv.symm, Function.comp_def, MeasurableEquiv.symm_apply_apply,
+          show (fun z : Ω ↦ z) = id from rfl, Lp.compMeasurePreserving_id,
+          AddMonoidHom.id_apply] using h.symm
       right_inv := by
         intro f
         have h := Lp.compMeasurePreserving_comp_apply f
           e.measure_preserving
           (EquivariantHaarEquiv.symm e).measure_preserving
-        simpa [Function.comp_def, EquivariantHaarEquiv.symm,
-          show (fun z : Ξ ↦ z) = id from rfl] using h.symm
+        simpa only [EquivariantHaarEquiv.symm, Function.comp_def, MeasurableEquiv.apply_symm_apply,
+          show (fun z : Ξ ↦ z) = id from rfl, Lp.compMeasurePreserving_id,
+          AddMonoidHom.id_apply] using h.symm
       map_add' := by
         intro f g
         exact map_add
@@ -14504,15 +14682,17 @@ def crossedActionL2Equiv (X : HaarProbabilityAction K Ω) (k : K) :
         have h := Lp.compMeasurePreserving_comp_apply f
           (X.action_preserves_measure k⁻¹)
           (X.action_preserves_measure k)
-        simpa [Function.comp_def, ← map_mul,
-          show (fun z : Ω ↦ z) = id from rfl] using h.symm
+        simpa only [map_inv, Equiv.Perm.coe_inv, Function.comp_def, Equiv.symm_apply_apply,
+          show (fun z : Ω ↦ z) = id from rfl, Lp.compMeasurePreserving_id,
+          AddMonoidHom.id_apply] using h.symm
       right_inv := by
         intro f
         have h := Lp.compMeasurePreserving_comp_apply f
           (X.action_preserves_measure k)
           (X.action_preserves_measure k⁻¹)
-        simpa [Function.comp_def, ← map_mul,
-          show (fun z : Ω ↦ z) = id from rfl] using h.symm
+        simpa only [map_inv, Equiv.Perm.coe_inv, Function.comp_def, Equiv.apply_symm_apply,
+          show (fun z : Ω ↦ z) = id from rfl, Lp.compMeasurePreserving_id,
+          AddMonoidHom.id_apply] using h.symm
       map_add' := by
         intro f g
         exact map_add (Lp.compMeasurePreserving (X.action k⁻¹)
@@ -14615,9 +14795,11 @@ theorem crossedHaarHilbertEquiv_vacuum
   funext k
   by_cases hk : k = 1
   · subst k
-    simpa [crossedVacuum, lp.single_apply] using
+    simpa only [crossedVacuum, crossedHaarHilbertEquiv_apply, lp.single_apply, Pi.single_eq_same,
+      crossedBaseHaarEquiv_apply] using
       crossedBaseHaarEquiv_const_one e
-  · simp [crossedVacuum, lp.single_apply, hk]
+  · simp only [crossedVacuum, crossedHaarHilbertEquiv_apply, lp.single_apply, ne_eq, hk,
+      not_false_eq_true, Pi.single_eq_of_ne, map_zero]
 
 theorem crossedBaseHaarEquiv_multiplier_apply
     {X : HaarProbabilityAction K Ω}
@@ -14687,7 +14869,7 @@ theorem crossedBaseHaarEquiv_action
       e.toMeasurableEquiv.symm (Y.action k⁻¹ z)
     apply e.toMeasurableEquiv.injective
     rw [e.equivariant]
-    simp
+    simp only [map_inv, MeasurableEquiv.apply_symm_apply, Equiv.Perm.coe_inv]
   calc
     _ = Lp.compMeasurePreserving
       ((X.action k⁻¹ : Ω → Ω) ∘
@@ -14731,7 +14913,9 @@ theorem crossedHaarHilbertEquiv_group_conj
   apply ContinuousLinearMap.ext
   intro η
   obtain ⟨ξ, rfl⟩ := (crossedHaarHilbertEquiv e).surjective η
-  simpa using crossedHaarHilbertEquiv_group_apply e k ξ
+  simpa only [LinearIsometryEquiv.conjStarAlgEquiv_apply_apply,
+    LinearIsometryEquiv.symm_apply_apply, ContinuousLinearEquiv.coe_coe,
+    LinearIsometryEquiv.coe_toContinuousLinearEquiv] using crossedHaarHilbertEquiv_group_apply e k ξ
 
 end
 
@@ -14802,7 +14986,7 @@ theorem carryCharacterMultiplier_character
     _ = carryCharacterFunction n η z * carryCharacterFunction n θ z :=
       congrArg₂ (· * ·) hcoeff hθ
     _ = carryCharacterFunction n (η + θ) z := by
-      simp [carryCharacterFunction]
+      simp only [carryCharacterFunction, toMul_add, pontryaginDual_mul_apply, Circle.coe_mul]
     _ = (carryCharacterL2 n (η + θ) : CarryGroup n → ℂ) z := hsum.symm
 
 def splitCharacterFunction (d : D) : X × Y → ℂ :=
@@ -14936,13 +15120,13 @@ private theorem carry_l2Reindex_single
   ext j
   simp only [l2Reindex_apply, lp.single_apply]
   by_cases h : e.symm j = i
-  · have hj : j = e i := by simpa using congrArg e h
-    simp [hj]
+  · have hj : j = e i := by simpa only [Equiv.apply_symm_apply] using congrArg e h
+    simp only [hj, Equiv.symm_apply_apply, Pi.single_eq_same]
   · have hj : j ≠ e i := by
       intro hj
       apply h
-      simp [hj]
-    simp [h, hj]
+      simp only [hj, Equiv.symm_apply_apply]
+    simp only [ne_eq, h, not_false_eq_true, Pi.single_eq_of_ne, hj]
 
 theorem carryFourier_kEAction_comp (n : ℕ) (k : K)
     (ξ : GroupL2 (E n)) :
@@ -14975,7 +15159,7 @@ theorem carryFourier_kEAction_comp (n : ℕ) (k : K)
         (carryFourierEquiv n (lp.single 2 η c))
     have hsingle : (lp.single 2 η c : GroupL2 (E n)) =
         c • (lp.single 2 η (1 : ℂ) : GroupL2 (E n)) := by
-      simpa using (lp.single_smul (E := fun _ : E n => ℂ) 2 η c (1 : ℂ))
+      simpa only [smul_eq_mul, mul_one] using (lp.single_smul (E := fun _ : E n => ℂ) 2 η c (1 : ℂ))
     rw [hsingle]
     simp only [map_smul]
     rw [carry_l2Reindex_single, carryFourierEquiv_single,
@@ -15032,7 +15216,7 @@ theorem complexUnitBallClip_sub_norm_le_two (z u : ℂ) (hu : ‖u‖ = 1) :
     ‖complexUnitBallClip z - u‖ ≤ 2 * ‖z - u‖ := by
   by_cases hz : ‖z‖ ≤ 1
   · rw [complexUnitBallClip_eq_self_of_norm_le hz]
-    nlinarith [norm_nonneg (z - u)]
+    linarith [norm_nonneg (z - u)]
   · have hz1 : 1 < ‖z‖ := lt_of_not_ge hz
     have hzpos : 0 < ‖z‖ := zero_lt_one.trans hz1
     have hclip : complexUnitBallClip z = (1 / ‖z‖ : ℝ) • z := by
@@ -15282,7 +15466,7 @@ theorem exists_continuous_multiplier_approx_pair
       apply (div_le_iff₀ (by positivity :
         0 < 4 * (‖h₁‖ + ‖h₂‖ + 1))).2
       nlinarith [norm_nonneg h₁, norm_nonneg h₂]
-    nlinarith
+    linarith
   · rw [dist_eq_norm] at hh₂
     have hmul :
         ‖h₂‖ * ‖(ContinuousMap.toLp 2 μ ℂ) q -
@@ -15294,7 +15478,7 @@ theorem exists_continuous_multiplier_approx_pair
       apply (div_le_iff₀ (by positivity :
         0 < 4 * (‖h₁‖ + ‖h₂‖ + 1))).2
       nlinarith [norm_nonneg h₁, norm_nonneg h₂]
-    nlinarith
+    linarith
 
 omit [SecondCountableTopology Ω] [μ.WeaklyRegular] in
 theorem commute_continuousMultiplier_of_commute_characters
@@ -15444,7 +15628,7 @@ theorem lp_infty_ae_norm_le (f : Lp ℂ ⊤ μ) :
   have hnorm : lpNorm (fun x => f x) ⊤ μ = ‖f‖ := by
     rw [← toReal_eLpNorm (Lp.memLp f).aestronglyMeasurable,
       Lp.norm_def]
-  simpa [hnorm] using
+  simpa only [hnorm] using
     (ae_le_lpNorm_exponent_top (Lp.memLp f))
 
 def normalizedCoefficient (f : Lp ℂ ⊤ μ) (x : Ω) : ℂ :=
@@ -15682,8 +15866,8 @@ theorem crossedFiberwiseOperator_single
   simp only [crossedFiberwiseOperator_apply, lp.single_apply]
   by_cases h : k = q
   · subst q
-    simp
-  · simp [h]
+    simp only [Pi.single_eq_same]
+  · simp only [ne_eq, h, not_false_eq_true, Pi.single_eq_of_ne', map_zero]
 
 theorem crossedOperatorBlock_commute_of_commute_fiberwise
     (X : HaarProbabilityAction K Ω)
@@ -16030,13 +16214,13 @@ theorem exists_kernel_mul_splitting
     ∃ (a : A) (h : H),
       g = E.inclusion (Multiplicative.ofAdd a) * E.splitting h := by
   have hkernel : g * (E.splitting (E.quotient g))⁻¹ ∈ E.quotient.ker := by
-    simp [quotient_splitting_apply]
+    simp only [MonoidHom.mem_ker, map_mul, map_inv, quotient_splitting_apply, mul_inv_cancel]
   rw [E.exact] at hkernel
   obtain ⟨a, ha⟩ := hkernel
   refine ⟨Multiplicative.toAdd a, E.quotient g, ?_⟩
   calc
     g = (g * (E.splitting (E.quotient g))⁻¹) *
-      E.splitting (E.quotient g) := by simp
+      E.splitting (E.quotient g) := by simp only [inv_mul_cancel_right]
     _ = E.inclusion a * E.splitting (E.quotient g) := by rw [← ha]
 
 end SplitAbelianExtension
@@ -16053,7 +16237,7 @@ def dualCharacterAction
     (χ : DiscreteCharacterSpace A) : DiscreteCharacterSpace A where
   toFun a := χ (Multiplicative.ofAdd
     ((Multiplicative.toAdd (action h⁻¹)) (Multiplicative.toAdd a)))
-  map_one' := by simp
+  map_one' := by simp only [map_inv, toAdd_inv, toAdd_one, map_zero, ofAdd_zero, map_one]
   map_mul' a b := by
     change χ (Multiplicative.ofAdd
       ((Multiplicative.toAdd (action h⁻¹))
@@ -16284,7 +16468,8 @@ theorem scalar_univ_real
     (P : ProjectionValuedSpectralMeasure E V π) (x : V) :
     (P.scalar x).real Set.univ = ‖x‖ ^ 2 := by
   rw [P.scalar_apply x Set.univ MeasurableSet.univ, P.projection_univ]
-  simpa using (inner_self_eq_norm_sq (𝕜 := ℂ) x)
+  simpa only [one_apply_eq_self, inner_self_eq_norm_sq_to_K, Complex.coe_algebraMap,
+    RCLike.re_to_complex] using (inner_self_eq_norm_sq (𝕜 := ℂ) x)
 
 omit [BorelSpace (DiscreteCharacterSpace A)] in
 
@@ -16349,7 +16534,8 @@ theorem trivialProjection_kernel_fixed
     (x : V) (a : A) :
     (π (E.inclusion (Multiplicative.ofAdd a)) : V →L[ℂ] V)
         (P.projection {1} x) = P.projection {1} x := by
-  simpa using P.kernel_eigenprojection a 1 x
+  simpa only [PontryaginDual.one_apply, Circle.coe_one,
+    one_smul] using P.kernel_eigenprojection a 1 x
 
 omit [BorelSpace (DiscreteCharacterSpace A)] in
 
@@ -16359,8 +16545,7 @@ theorem trivialProjection_quotient_fixed
     (π (E.splitting h) : V →L[ℂ] V)
       (P.projection {1} x.vector) = P.projection {1} x.vector := by
   have hcov := P.projection_covariance h {1} x.vector
-  simpa [Set.image_singleton, dualCharacterAction_trivial,
-    x.quotient_fixed h] using hcov
+  simpa only [Set.image_singleton, dualCharacterAction_trivial, x.quotient_fixed h] using hcov
 
 theorem positive_atom_invariant
     (P : ProjectionValuedSpectralMeasure E V π)
@@ -16417,7 +16602,8 @@ theorem normalizedVector_rescale (p : W) (hp : p ≠ 0) :
     (‖p‖ : ℂ) • normalizedVector p = p := by
   have hpNorm : (‖p‖ : ℂ) ≠ 0 := by
     exact_mod_cast norm_ne_zero_iff.mpr hp
-  simp [normalizedVector, smul_smul, hpNorm]
+  simp only [normalizedVector, smul_smul, ne_eq, hpNorm, not_false_eq_true, mul_inv_cancel₀,
+    one_smul]
 
 omit [InnerProductSpace ℂ W] [CompleteSpace W] in
 
@@ -16457,7 +16643,7 @@ theorem normalizedVector_sub_unit_norm_le
           abel
     _ ≤ ‖normalizedVector p - p‖ + ‖p - ξ‖ := norm_add_le _ _
     _ ≤ 2 * ‖p - ξ‖ := by
-      nlinarith [normalizedVector_sub_self_norm_le ξ p hξ hp]
+      linarith [normalizedVector_sub_self_norm_le ξ p hξ hp]
 
 theorem normalizedVector_fixed
     (U : unitary (W →L[ℂ] W)) (p : W)
@@ -16497,7 +16683,7 @@ theorem normalizedVector_unitary_displacement_le
           2 * ‖normalizedVector p - ξ‖ :=
       unitary_displacement_le_of_distance U ξ (normalizedVector p)
     _ ≤ ‖(U : W →L[ℂ] W) ξ - ξ‖ + 4 * ‖p - ξ‖ := by
-      nlinarith [normalizedVector_sub_unit_norm_le ξ p hξ hp]
+      linarith [normalizedVector_sub_unit_norm_le ξ p hξ hp]
 
 end
 
@@ -16525,7 +16711,9 @@ theorem mem_quotientFixedSubmodule
     (π : UnitaryRepresentation G V) (x : V) :
     x ∈ quotientFixedSubmodule E π ↔
       ∀ h : H, (π (E.splitting h) : V →L[ℂ] V) x = x := by
-  simp [quotientFixedSubmodule, sub_eq_zero]
+  simp only [quotientFixedSubmodule, ContinuousLinearMap.toLinearMap_sub,
+    ContinuousLinearMap.coe_id, Submodule.mem_iInf, LinearMap.mem_ker, LinearMap.sub_apply,
+    ContinuousLinearMap.coe_coe, LinearMap.id_coe, id_eq, sub_eq_zero]
 
 theorem quotientFixedSubmodule_isClosed
     (E : SplitAbelianExtension A G H)
@@ -16593,14 +16781,14 @@ def quotientFixedOrthogonalIsometry
       (↑(π (E.splitting h⁻¹) * π (E.splitting h)) :
         V →L[ℂ] V) x = x
     rw [← map_mul, ← map_mul]
-    simp
+    simp only [inv_mul_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
   right_inv x := by
     apply Subtype.ext
     change
       (↑(π (E.splitting h) * π (E.splitting h⁻¹)) :
         V →L[ℂ] V) x = x
     rw [← map_mul, ← map_mul]
-    simp
+    simp only [mul_inv_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_add' x y := by
     apply Subtype.ext
     exact map_add (π (E.splitting h) : V →L[ℂ] V) (x : V) (y : V)
@@ -16626,7 +16814,7 @@ def quotientFixedOrthogonalIsometryHom
   map_one' := by
     ext x
     change (π (E.splitting 1) : V →L[ℂ] V) x = x
-    simp
+    simp only [map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_mul' g h := by
     ext x
     change
@@ -16744,7 +16932,7 @@ theorem quotientProjection_error_lt_of_spectralGap
   have hzlower : θ ≤ ‖z‖ := le_of_not_gt hnot
   have hz : z ≠ 0 := by
     intro hzzero
-    simp [hzzero] at hzlower
+    simp only [hzzero, norm_zero] at hzlower
     linarith
   let w : V := ((‖z‖ : ℂ)⁻¹) • z
   have hwmem : w ∈ Mᗮ := (Mᗮ).smul_mem _ hzmem
@@ -16766,7 +16954,7 @@ theorem quotientProjection_error_lt_of_spectralGap
     dsimp [w]
     rw [map_smul, ← smul_sub, norm_smul, norm_inv,
       Complex.norm_real, Real.norm_of_nonneg (norm_nonneg _)]
-    simp [div_eq_mul_inv, mul_comm]
+    simp only [div_eq_mul_inv, mul_comm]
   rw [hwnorm_formula] at hgap
   have hzpos : 0 < ‖z‖ := norm_pos_iff.mpr hz
   have hgap' : κ * ‖z‖ ≤
@@ -16814,11 +17002,11 @@ theorem quotientFixedApproximation_of_uniform
           nlinarith [sq_nonneg
             (‖(π (E.inclusion (Multiplicative.ofAdd a)) : V →L[ℂ] V)
               x.vector - x.vector‖)]
-    _ = (J.card : ℝ) * (ε / denominator) := by simp
+    _ = (J.card : ℝ) * (ε / denominator) := by simp only [Finset.sum_const, nsmul_eq_mul]
     _ < ε := by
       rw [← mul_div_assoc, div_lt_iff₀ hdenominator]
       dsimp [denominator]
-      nlinarith
+      linarith
 
 theorem quotientFixedUnitVector_uniform
     (E : SplitAbelianExtension A G H)
@@ -16873,7 +17061,7 @@ theorem quotientFixedUnitVector_uniform
     exact herr
   change ‖(π g : V →L[ℂ] V) (normalizedVector p) -
     normalizedVector p‖ < ε
-  nlinarith
+  linarith
 
 theorem quotientFixedApproximation
     (E : SplitAbelianExtension A G H)
@@ -16983,7 +17171,8 @@ theorem measure_univ_real
     (Φ : PositiveSpectralFunctional E V π) (x : V) :
     (Φ.measure x).real Set.univ = ‖x‖ ^ 2 := by
   have h := Φ.integral_measure x (spectralUnitTest A)
-  simpa [Φ.normalization x] using h
+  simpa only [spectralUnitTest_apply, integral_const, smul_eq_mul, mul_one,
+    Φ.normalization x] using h
 
 theorem measure_isProbabilityMeasure
     (Φ : PositiveSpectralFunctional E V π)
@@ -17061,7 +17250,9 @@ theorem mem_kernelFixedSubmodule
     x ∈ kernelFixedSubmodule E π ↔
       ∀ a : A,
         (π (E.inclusion (Multiplicative.ofAdd a)) : V →L[ℂ] V) x = x := by
-  simp [kernelFixedSubmodule, sub_eq_zero]
+  simp only [kernelFixedSubmodule, ContinuousLinearMap.toLinearMap_sub, ContinuousLinearMap.coe_id,
+    Submodule.mem_iInf, LinearMap.mem_ker, LinearMap.sub_apply, ContinuousLinearMap.coe_coe,
+    LinearMap.id_coe, id_eq, sub_eq_zero]
 
 omit [TopologicalSpace A] [DiscreteTopology A]
   [MeasurableSpace (DiscreteCharacterSpace A)]
@@ -17166,7 +17357,7 @@ theorem trivialCharacterProjection_kernel_commutes
   change
     U ((kernelFixedSubmodule E π).starProjection x) =
       (kernelFixedSubmodule E π).starProjection (U x)
-  simpa [hmap] using hprojection
+  simpa only [LinearIsometryEquiv.coe_toLinearIsometry, hmap] using hprojection
 
 omit [TopologicalSpace A] [DiscreteTopology A]
   [MeasurableSpace (DiscreteCharacterSpace A)]
@@ -17200,7 +17391,7 @@ theorem quotient_preserves_kernelFixedSubmodule
   have haction : (Multiplicative.toAdd (E.action h)) b = a := by
     change (Multiplicative.toAdd (E.action h * E.action h⁻¹)) a = a
     rw [← map_mul]
-    simp
+    simp only [mul_inv_cancel, map_one, toAdd_one, AddAut.zero_apply]
   have hconj := E.conjugation h b
   rw [haction] at hconj
   have hcomm :
@@ -17211,7 +17402,7 @@ theorem quotient_preserves_kernelFixedSubmodule
           (E.splitting h * E.inclusion (Multiplicative.ofAdd b) *
             (E.splitting h)⁻¹) * E.splitting h := by rw [hconj]
       _ = E.splitting h * E.inclusion (Multiplicative.ofAdd b) := by
-        simp [mul_assoc]
+        simp only [mul_assoc, inv_mul_cancel, mul_one]
   have hfixed := (mem_kernelFixedSubmodule E π x).mp hx b
   calc
     (π (E.inclusion (Multiplicative.ofAdd a)) : V →L[ℂ] V)
@@ -17250,7 +17441,7 @@ theorem quotient_map_kernelFixedSubmodule
     have hop :
         π (E.splitting h) * π (E.splitting h⁻¹) = 1 := by
       rw [← map_mul, ← map_mul]
-      simp
+      simp only [mul_inv_cancel, map_one]
     have hx' := DFunLike.congr_fun
       (congrArg (fun U : unitary (V →L[ℂ] V) ↦ (U : V →L[ℂ] V)) hop) x
     exact hx'
@@ -17287,7 +17478,7 @@ theorem trivialCharacterProjection_quotient_commutes
   change
     U ((kernelFixedSubmodule E π).starProjection x) =
       (kernelFixedSubmodule E π).starProjection (U x)
-  simpa [hmap] using hprojection
+  simpa only [LinearIsometryEquiv.coe_toLinearIsometry, hmap] using hprojection
 
 end
 
@@ -17317,7 +17508,7 @@ theorem measureReal_singleton_le_integral_of_nonneg
     μ.real {x} ≤ μ.real {x} * f x := by nlinarith
     _ = ∫ y in {x}, f y ∂μ := by
       rw [integral_singleton]
-      simp [smul_eq_mul]
+      simp only [smul_eq_mul]
     _ ≤ ∫ y, f y ∂μ :=
       setIntegral_le_integral hf (Filter.Eventually.of_forall hpos)
 
@@ -17580,8 +17771,10 @@ theorem spectralFiniteAverageTest_eq_sub_energy {ι : Type*}
     s w (fun i ↦ (((χ (Multiplicative.ofAdd (a i)) : Circle) : ℂ))) 1 hw
       (fun i _ ↦ Circle.norm_coe _)
   simp only [one_pow, character_sub_norm_sq] at hvariance
-  simpa [spectralFiniteAverageTest_apply, spectralUnitTest_apply,
-    spectralEnergyTest_apply, smul_eq_mul] using hvariance
+  simpa only [spectralFiniteAverageTest_apply, one_div, CompactlySupportedContinuousMap.coe_sub,
+    CompactlySupportedContinuousMap.coe_smul, CompactlySupportedContinuousMap.coe_sum, Pi.sub_apply,
+    spectralUnitTest_apply, Pi.smul_apply, Finset.sum_apply, spectralEnergyTest_apply, ofAdd_sub,
+    map_div, Circle.coe_div, smul_eq_mul, Complex.real_smul] using hvariance
 
 namespace PositiveSpectralFunctional
 
@@ -17676,7 +17869,7 @@ theorem trivialCharacterProjection_ne_zero_of_atom_pos_of_orbitApproximation
   have hzatom : ‖z‖ < (Φ.measure x.vector).real {1} :=
     lt_of_lt_of_le hsmall (min_le_right _ _)
   have hznorm : 0 ≤ ‖z‖ := norm_nonneg _
-  nlinarith [mul_nonneg hznorm (sub_nonneg.mpr (le_of_lt hzone))]
+  linarith [mul_nonneg hznorm (sub_nonneg.mpr (le_of_lt hzone))]
 
 theorem positive_atom_invariant_of_orbitApproximation
     (Φ : PositiveSpectralFunctional E V π)
@@ -17777,7 +17970,7 @@ theorem spectralOperatorGenerators_commute
     rw [← E.inclusion.map_mul, ← E.inclusion.map_mul]
     congr 1
     exact mul_comm _ _
-  simpa using congrArg
+  simpa only [map_mul, Submonoid.coe_mul] using congrArg
     (fun U : unitary (V →L[ℂ] V) ↦ (U : V →L[ℂ] V))
     (congrArg π hkernel)
 
@@ -17846,7 +18039,7 @@ omit [TopologicalSpace A] [DiscreteTopology A] in
     (π : UnitaryRepresentation G V) :
     spectralKernelOperator E π 0 = 1 := by
   apply Subtype.ext
-  simp [spectralKernelOperator]
+  simp only [spectralKernelOperator, ofAdd_zero, map_one, OneMemClass.coe_one]
 
 omit [TopologicalSpace A] [DiscreteTopology A] in
 theorem spectralKernelOperator_add
@@ -17864,7 +18057,7 @@ theorem spectralKernelOperator_add
       (Multiplicative.ofAdd a * Multiplicative.ofAdd b)) :
       V →L[ℂ] V) = _
   rw [E.inclusion.map_mul]
-  simp
+  simp only [map_mul, Submonoid.coe_mul]
 
 omit [TopologicalSpace A] [DiscreteTopology A] in
 theorem spectralKernelOperator_unitary
@@ -18252,7 +18445,7 @@ theorem quotientOperatorConjugation_generators_image
     congr 3
     change (Multiplicative.toAdd (E.action h * E.action h⁻¹)) a = a
     rw [← map_mul]
-    simp
+    simp only [mul_inv_cancel, map_one, toAdd_one, AddAut.zero_apply]
 
 omit [TopologicalSpace A] [DiscreteTopology A] in
 theorem quotientOperatorConjugation_mem
@@ -18406,7 +18599,8 @@ theorem jointFunctionalCalculus_quotient_covariance
       (CharacterSpace.compContinuousMap
         (quotientSpectralOperatorConjugation E π h⁻¹).toStarAlgHom φ) =
       dualCharacterAction E.action h (spectralCharacter E π φ)
-    simpa using spectralCharacter_quotientConjugation E π h⁻¹ φ
+    simpa only [CharacterSpace.compContinuousMap_apply,
+      inv_inv] using spectralCharacter_quotientConjugation E π h⁻¹ φ
   have hnaturality := inverseGelfand_naturality α
     (spectralCharacterMap E π) d hp f
   change
@@ -18448,14 +18642,16 @@ def characterRealComplexification
     characterRealComplexification (f + g) =
       characterRealComplexification f + characterRealComplexification g := by
   ext y
-  simp [characterRealComplexification]
+  simp only [characterRealComplexification, CompactlySupportedContinuousMap.coe_add, Pi.add_apply,
+    Complex.ofReal_add, ContinuousMap.coe_mk, ContinuousMap.add_apply]
 
 @[simp] theorem characterRealComplexification_smul
     (r : ℝ) (f : C_c(X, ℝ)) :
     characterRealComplexification (r • f) =
       (r : ℂ) • characterRealComplexification f := by
   ext y
-  simp [characterRealComplexification]
+  simp only [characterRealComplexification, CompactlySupportedContinuousMap.coe_smul, Pi.smul_apply,
+    smul_eq_mul, Complex.ofReal_mul, ContinuousMap.coe_mk, ContinuousMap.coe_smul]
 
 variable [CompactSpace X]
 
@@ -18474,8 +18670,9 @@ theorem characterRealComplexification_eq_star_mul_sqrt
       star (characterRealComplexification (characterRealSqrt f)) *
         characterRealComplexification (characterRealSqrt f) := by
   ext y
-  simp [characterRealComplexification, characterRealSqrt,
-    ← Complex.ofReal_mul]
+  simp only [characterRealComplexification, ContinuousMap.coe_mk, characterRealSqrt,
+    CompactlySupportedContinuousMap.coe_mk, ContinuousMap.mul_apply, ContinuousMap.star_apply,
+    RCLike.star_def, Complex.conj_ofReal, ← Complex.ofReal_mul, Complex.ofReal_inj]
   exact (Real.mul_self_sqrt (hf y)).symm
 
 def characterVectorFunctionalLinear
@@ -18484,7 +18681,7 @@ def characterVectorFunctionalLinear
   toFun f :=
     (inner ℂ x ((calculus (characterRealComplexification f)) x)).re
   map_add' f g := by
-    simp [characterRealComplexification_add, map_add,
+    simp only [characterRealComplexification_add, map_add, add_apply, CStarModule.inner_add_right,
       Complex.add_re]
   map_smul' r f := by
     rw [characterRealComplexification_smul, map_smul]
@@ -18547,7 +18744,8 @@ theorem characterVectorFunctional_one
   have hcomplex : characterRealComplexification f =
       (1 : C(X, ℂ)) := by
     ext y
-    simp [characterRealComplexification, hf y]
+    simp only [characterRealComplexification, ContinuousMap.coe_mk, hf y, Complex.ofReal_one,
+      ContinuousMap.one_apply]
   change positiveVectorState x
     (calculus (characterRealComplexification f)) = ‖x‖ ^ 2
   rw [hcomplex, map_one, positiveVectorState_one]
@@ -18561,7 +18759,7 @@ theorem characterVectorFunctional_energy_of_operator
   change positiveVectorState x
     (calculus (characterRealComplexification f)) = ‖T x - x‖ ^ 2
   rw [hf, positiveVectorState_star_mul_self]
-  simp
+  simp only [sub_apply, one_apply_eq_self]
 
 section PontryaginCharacter
 
@@ -18579,7 +18777,8 @@ theorem characterEnergy_complexification
     ((‖((χ (Multiplicative.ofAdd a) : Circle) : ℂ) - 1‖ ^ 2 : ℝ) : ℂ) =
       star (evaluation χ - 1) * (evaluation χ - 1)
   rw [hevaluation]
-  simpa [Complex.normSq_eq_norm_sq] using
+  simpa only [Complex.ofReal_pow, star_sub, RCLike.star_def, star_one, Complex.normSq_eq_norm_sq,
+    map_sub, map_one] using
     (Complex.normSq_eq_conj_mul_self
       (z := ((χ (Multiplicative.ofAdd a) : Circle) : ℂ) - 1))
 
@@ -18759,7 +18958,7 @@ theorem mem_kernelOrbitClosedConvexHull
     x ∈ kernelOrbitClosedConvexHull E π x := by
   apply subset_closedConvexHull
   refine ⟨0, ?_⟩
-  simp
+  simp only [ofAdd_zero, map_one, OneMemClass.coe_one, one_apply_eq_self]
 
 theorem kernelUnitary_preserves_closedConvexHull
     (E : SplitAbelianExtension A G H)
@@ -18816,14 +19015,14 @@ private theorem spectralOrbit_norm_minimizer_fixed
     have hcomm : @inner ℝ W _ (U y) y = @inner ℝ W _ y (U y) :=
       real_inner_comm _ _
     rw [hcomm]
-    nlinarith
+    linarith
   have hupper := real_inner_le_norm (U y) y
   rw [hUnorm] at hupper
   have heq : @inner ℝ W _ (U y) y = ‖y‖ ^ 2 := by
-    nlinarith
+    linarith
   apply eq_of_norm_le_re_inner_eq_norm_sq (𝕜 := ℝ)
   · exact le_of_eq (hUnorm y)
-  · simpa using heq
+  · simpa only [RCLike.re_to_real] using heq
 
 theorem exists_kernel_fixed_norm_minimizer
     (E : SplitAbelianExtension A G H)
@@ -18844,7 +19043,7 @@ theorem exists_kernel_fixed_norm_minimizer
     exists_norm_eq_iInf_of_complete_convex
       hnonempty hclosed.isComplete hconvex (0 : V)
   have hnorm' : ‖y‖ = ⨅ z : S, ‖(z : V)‖ := by
-    simpa using hnorm
+    simpa only [zero_sub, norm_neg] using hnorm
   have hminimal : ∀ z ∈ S, ‖y‖ ≤ ‖z‖ := by
     intro z hz
     rw [hnorm']
@@ -18969,8 +19168,8 @@ theorem exists_finset_affineCombination_approx_of_mem_closedConvexHull
   refine ⟨s, w, hw, hsum, ?_⟩
   rw [Finset.affineCombination_eq_linear_combination s orbit w hsum] at hcomb
   rw [hcomb]
-  simpa [dist_eq_norm] using
-    (show dist z y < ε by simpa [dist_comm] using hdist)
+  simpa only [dist_eq_norm] using
+    (show dist z y < ε by simpa only [dist_comm] using hdist)
 
 theorem exists_finset_affineCombination_norm_lt_of_zero_mem_closedConvexHull
     {I : Type u} {V : Type v} [NormedAddCommGroup V] [NormedSpace ℝ V]
@@ -18981,7 +19180,7 @@ theorem exists_finset_affineCombination_norm_lt_of_zero_mem_closedConvexHull
       (∀ i ∈ s, 0 ≤ w i) ∧
       (∑ i ∈ s, w i) = 1 ∧
       ‖∑ i ∈ s, w i • orbit i‖ < ε := by
-  simpa using
+  simpa only [sub_zero] using
     exists_finset_affineCombination_approx_of_mem_closedConvexHull
       orbit hzero hε
 
@@ -19037,7 +19236,7 @@ theorem zero_mem_kernelOrbitClosedConvexHull_of_projection_eq_zero
     apply kernel_fixed_eq_zero_of_mem_closedConvexHull E π x y hx
     · exact hy
     · exact hfixed
-  simpa [hzero] using hy
+  simpa only [hzero] using hy
 
 omit [TopologicalSpace A] [DiscreteTopology A]
   [MeasurableSpace (DiscreteCharacterSpace A)]
@@ -19100,8 +19299,9 @@ def jointPositiveSpectralFunctional
     apply jointCharacterFunctional_riesz_covariance_of_operatorCovariance
       E π h ?_ x
     intro f
-    simpa [jointFunctionalCalculusOperator, dualCharacterActionContinuousMap,
-      dualCharacterHomeomorph] using
+    simpa only [jointFunctionalCalculusOperator, dualCharacterHomeomorph,
+      Homeomorph.homeomorph_mk_coe, Equiv.coe_fn_mk, StarAlgHom.comp_apply,
+      StarSubalgebra.coe_subtype, dualCharacterActionContinuousMap] using
       jointFunctionalCalculus_quotient_covariance E π h f
 
 theorem spectral_criterion_unconditional
@@ -19203,7 +19403,7 @@ def conditionedProbability (μ : ProbabilityMeasure Ω)
     ProbabilityTheory.cond_isProbabilityMeasure (by
       intro hzero
       change 0 < ((μ : Measure Ω) U).toReal at hU
-      simp [hzero] at hU)⟩
+      simp only [hzero, ENNReal.toReal_zero, lt_self_iff_false] at hU)⟩
 
 theorem conditionedProbability_measureReal
     (μ : ProbabilityMeasure Ω) {U : Set Ω}
@@ -19320,7 +19520,7 @@ theorem affineLinearRepresentation_sub_fixed
     (k : K) :
     (affineLinearRepresentation α (k : G) : V →L[ℂ] V) (x - y) = x - y := by
   change (α (k : G)).linearIsometryEquiv (x - y) = x - y
-  simpa [hx k, hy k] using (α (k : G)).map_vsub x y
+  simpa only [map_sub, vsub_eq_sub, hx k, hy k] using (α (k : G)).map_vsub x y
 
 theorem IsAffineFixed.normalizer_action
     {α : AffineHilbertAction G V} {K : Subgroup G}
@@ -19418,7 +19618,7 @@ def affineLinearStabilizer
       _ = (affineLinearRepresentation α (g⁻¹ * g) : V →L[ℂ] V) x := by
         rw [map_mul]
         rfl
-      _ = x := by simp
+      _ = x := by simp only [inv_mul_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
 
 @[simp] theorem mem_affineLinearStabilizer
     (α : AffineHilbertAction G V) (x : V) (g : G) :
@@ -19560,7 +19760,8 @@ theorem preKernel_inner_single {I : Type u}
       (Finsupp.single j w).sum (fun xv d =>
         star c * d *
           ⟪scalarOperatorKernel K xv.1 yu.1 yu.2, xv.2⟫_ℂ)) = _
-  simp
+  simp only [RCLike.star_def, RCLike.inner_apply, mul_zero, zero_mul, Finsupp.sum_single_index,
+    map_zero]
 
 def actionPreKernelTranslation {G I : Type u} [Group G]
     (K : Matrix I I ℂ) (ρ : G →* Equiv.Perm I) (a : G) :
@@ -19577,14 +19778,14 @@ theorem actionPreKernelTranslation_inner {G I : Type u} [Group G]
     ⟪actionPreKernelTranslation K ρ a f,
       actionPreKernelTranslation K ρ a g⟫_ℂ = ⟪f, g⟫_ℂ := by
   induction f using Finsupp.induction_linear generalizing g with
-  | zero => simp
+  | zero => simp only [map_zero, inner_zero_left]
   | add f₁ f₂ ih₁ ih₂ =>
-    simp [map_add, inner_add_left, ih₁ g, ih₂ g]
+    simp only [map_add, inner_add_left, ih₁ g, ih₂ g]
   | single i z =>
     induction g using Finsupp.induction_linear with
-    | zero => simp
+    | zero => simp only [map_zero, inner_zero_right]
     | add g₁ g₂ ih₁ ih₂ =>
-      simp [map_add, inner_add_right, ih₁, ih₂]
+      simp only [map_add, inner_add_right, ih₁, ih₂]
     | single j w =>
       simp only [actionPreKernelTranslation,
         Finsupp.domLCongr_single, preKernel_inner_single,
@@ -19648,8 +19849,8 @@ theorem actionPreKernelTranslation_mul_apply {G I : Type u} [Group G]
       actionPreKernelTranslation K ρ a
         (actionPreKernelTranslation K ρ b f) := by
   induction f using Finsupp.induction_linear with
-  | zero => simp
-  | add f g hf hg => simp [map_add, hf, hg]
+  | zero => simp only [map_zero]
+  | add f g hf hg => simp only [map_add, hf, hg]
   | single i z =>
     simp only [actionPreKernelTranslation,
       Finsupp.domLCongr_single]
@@ -19664,14 +19865,14 @@ theorem actionPreKernelTranslation_one_apply {G I : Type u} [Group G]
     (f : RKHS.H₀ (scalarOperatorKernel K)) :
     actionPreKernelTranslation K ρ 1 f = f := by
   induction f using Finsupp.induction_linear with
-  | zero => simp
-  | add f g hf hg => simp [map_add, hf, hg]
+  | zero => simp only [map_zero]
+  | add f g hf hg => simp only [map_add, hf, hg]
   | single i z =>
     simp only [actionPreKernelTranslation,
       Finsupp.domLCongr_single]
     change Finsupp.single (ρ 1 i.1, i.2) z =
       Finsupp.single (i.1, i.2) z
-    simp
+    simp only [map_one, Equiv.Perm.coe_one, id_eq, Prod.mk.eta]
 
 theorem actionKernelTranslationMap_mul_apply {G I : Type u} [Group G]
     (K : Matrix I I ℂ)
@@ -19726,7 +19927,7 @@ def actionKernelTranslationLinearEquiv {G I : Type u} [Group G]
           actionKernelTranslationMap K ρ hinv (a⁻¹ * a) x :=
             (actionKernelTranslationMap_mul_apply
               K ρ hinv a⁻¹ a x).symm
-      _ = x := by simp
+      _ = x := by simp only [inv_mul_cancel, actionKernelTranslationMap_one_apply]
   right_inv x := by
     calc
       actionKernelTranslationMap K ρ hinv a
@@ -19734,7 +19935,7 @@ def actionKernelTranslationLinearEquiv {G I : Type u} [Group G]
           actionKernelTranslationMap K ρ hinv (a * a⁻¹) x :=
             (actionKernelTranslationMap_mul_apply
               K ρ hinv a a⁻¹ x).symm
-      _ = x := by simp
+      _ = x := by simp only [mul_inv_cancel, actionKernelTranslationMap_one_apply]
 
 def actionKernelTranslationUnitary {G I : Type u} [Group G]
     (K : Matrix I I ℂ)
@@ -19776,7 +19977,9 @@ theorem ofKernel_kerFun_one_eq_coe_single
     RKHS.kerFun (RKHS.OfKernel L) i (1 : ℂ) =
       ((Finsupp.single (i, (1 : ℂ)) (1 : ℂ) : RKHS.H₀ L) :
         RKHS.OfKernel L) := by
-  simp [RKHS.kerFun, RKHS.coeCLM]
+  simp only [RKHS.kerFun, RKHS.coeCLM, ContinuousLinearMap.proj_pi,
+    ContinuousLinearMap.adjoint_adjoint, LinearMap.mkContinuous_apply, LinearMap.coe_mk,
+    AddHom.coe_mk]
 
 theorem actionKernelUnitaryRepresentation_kerFun_one
     {G I : Type u} [Group G]
@@ -19800,7 +20003,8 @@ theorem actionKernelUnitaryRepresentation_kerFun_one
         RKHS.H₀ (scalarOperatorKernel K)) :
           RKHS.OfKernel (scalarOperatorKernel K)) = _
   rw [actionKernelTranslationMap_coe]
-  simp [actionPreKernelTranslation]
+  simp only [actionPreKernelTranslation, Finsupp.domLCongr_apply, Finsupp.domCongr_apply,
+    Finsupp.equivMapDomain_single, Equiv.prodCongr_apply, Equiv.coe_refl, Prod.map_apply, id_eq]
 
 structure HilbertKernelRealization {I : Type u}
     (K : Matrix I I ℂ) where
@@ -19843,7 +20047,7 @@ theorem hilbertKernelRealization_pair_vector_add
   apply (inner_self_eq_zero (𝕜 := ℂ)).mp
   rw [inner_sub_right, inner_add_right,
     horth (g, h), horth (h, j), horth (g, j)]
-  simp
+  simp only [add_zero, sub_self]
 
 structure EquivariantHilbertKernelRealization
     {G : Type u} [Group G]
@@ -19888,11 +20092,12 @@ def unitaryCocycleAffineAction
   map_one' := by
     have hb_one : b 1 = 0 := by
       have h := hb 1 1
-      simpa using (congrArg (fun x : H => x - b 1) h).symm
+      simpa only [map_one, LinearIsometryEquiv.coe_one, id_eq, add_sub_cancel_right, mul_one,
+        sub_self] using (congrArg (fun x : H => x - b 1) h).symm
     apply AffineIsometryEquiv.ext
     intro x
     change π 1 x + b 1 = x
-    simp [hb_one]
+    simp only [map_one, LinearIsometryEquiv.coe_one, id_eq, hb_one, add_zero]
   map_mul' g h := by
     apply AffineIsometryEquiv.ext
     intro x
@@ -19952,7 +20157,7 @@ def equivariantPairAffineAction
     (g : G) :
     equivariantPairAffineAction K R hadd g 0 =
       equivariantPairCocycle R g := by
-  simp [equivariantPairAffineAction_apply]
+  simp only [equivariantPairAffineAction_apply, map_zero, zero_add]
 
 def markedPairAction
     {G I : Type u} [Group G] (ρ : G →* Equiv.Perm I) :
@@ -19997,7 +20202,7 @@ theorem scalarKernel_canonical_dense
         z • RKHS.kerFun (RKHS.OfKernel (scalarOperatorKernel K))
           i (1 : ℂ) := by
     rw [← map_smul]
-    simp
+    simp only [smul_eq_mul, mul_one]
   rw [hscalar]
   apply Submodule.smul_mem
   exact Submodule.subset_span ⟨i, rfl⟩
@@ -20022,8 +20227,8 @@ theorem exists_equivariantMarkedHilbertKernelRealization_dense
       intro q r
       rw [RKHS.kerFun_inner, RKHS.kerFun_apply,
         RKHS.OfKernel.kernel_ofKernel]
-      simp [scalarOperatorKernel,
-        ContinuousLinearMap.toSpanSingleton_apply]
+      simp only [scalarOperatorKernel, ContinuousLinearMap.toSpanSingleton_apply, smul_eq_mul,
+        one_mul, RCLike.inner_apply, map_one, mul_one]
   }
   have hinvariant : ∀ (g : G) (q r : I × I),
       K (markedPairAction ρ g q) (markedPairAction ρ g r) = K q r := by
@@ -20238,7 +20443,7 @@ theorem exists_hyperfilter_gram_limit_of_pointwise_bound
       Metric.closedBall (0 : ℂ) (B q.1 * B q.2) :=
     fun n q =>
       ⟨⟪v n q.1, v n q.2⟫_ℂ,
-        by simpa [Metric.mem_closedBall, dist_zero_right]
+        by simpa only [Metric.mem_closedBall, dist_zero_right]
           using hinnerbound n q.1 q.2⟩
   let u := Ultrafilter.map b (Filter.hyperfilter ℕ)
   let z : (q : I × I) →
@@ -20399,7 +20604,7 @@ theorem AffineUniformGeneratorDisplacement.no_global_fixed
   rintro ⟨z, hz⟩
   obtain ⟨s, _, hs⟩ := h z
   have hzero : (1 : ℝ) ≤ 0 := by
-    simpa [hz s] using hs
+    simpa only [hz s, sub_self, norm_zero] using hs
   linarith
 
 theorem ultrafilter_eventually_exists_finset
@@ -20412,14 +20617,14 @@ theorem ultrafilter_eventually_exists_finset
   | empty =>
       have hempty : ∀ᶠ n in (U : Filter N), False := by
         filter_upwards [h] with n hn
-        simp at hn
+        simp only [Finset.notMem_empty, false_and, exists_false] at hn
       obtain ⟨_, hn⟩ := hempty.exists
       exact hn.elim
   | @insert a S ha ih =>
       have hsplit : ∀ᶠ n in (U : Filter N),
           P n a ∨ ∃ s ∈ S, P n s := by
         filter_upwards [h] with n hn
-        simpa [Finset.mem_insert] using hn
+        simpa only [Finset.mem_insert, exists_eq_or_imp] using hn
       rcases Ultrafilter.eventually_or.mp hsplit with hfirst | hrest
       · exact ⟨a, Finset.mem_insert_self a S, hfirst⟩
       · obtain ⟨s, hs, hevent⟩ := ih hrest
@@ -20446,11 +20651,11 @@ theorem finsupp_sum_markedDisplacementCoefficients
         c.sum (fun q a => a • v q) + v (ρ g i₀, i₀) := by
   classical
   unfold markedDisplacementCoefficients
-  rw [Finsupp.sum_add_index' (by simp) (by intros; simp [add_smul]),
-    Finsupp.sum_sub_index (by intros; simp [sub_smul]),
-    Finsupp.sum_mapDomain_index (by simp)
-      (by intros; simp [add_smul]),
-    Finsupp.sum_single_index (by simp)]
+  rw [Finsupp.sum_add_index' (by simp only [zero_smul, implies_true]) (by intros; simp only [add_smul]),
+    Finsupp.sum_sub_index (by intros; simp only [sub_smul]),
+    Finsupp.sum_mapDomain_index (by simp only [zero_smul, implies_true])
+      (by intros; simp only [add_smul]),
+    Finsupp.sum_single_index (by simp only [zero_smul])]
   simp only [one_smul]
   congr 2
   calc
@@ -20461,7 +20666,7 @@ theorem finsupp_sum_markedDisplacementCoefficients
       exact congrArg (fun z : H => c q • z) (hequiv q)
     _ = π (c.sum (fun q a => a • v q)) := by
       rw [map_finsuppSum]
-      simp
+      simp only [map_smul]
 
 def markedOrbitAction (G : Type u) [Group G] :
     G →* Equiv.Perm (G × Bool) where
@@ -20569,14 +20774,15 @@ theorem markedAffinePairDisplacement_finsupp_action
       markedAffinePairDisplacement α x y
         (markedOrbitAction G g ((1 : G), false), ((1 : G), false)) =
         α g y - y := by
-    simp [markedAffinePairDisplacement, markedAffineOrbitPoint]
+    simp only [markedAffinePairDisplacement, markedAffineOrbitPoint, markedOrbitAction_apply,
+      mul_one, Bool.false_eq_true, ↓reduceIte, map_one, AffineIsometryEquiv.coe_one, id_eq]
   rw [hbase]
   have hmap : α g (y + z) =
       (α g).linearIsometryEquiv z + α g y := by
     calc
       α g (y + z) = α g (z + y) := by rw [add_comm]
       _ = (α g).linearIsometryEquiv z + α g y := by
-        simpa using (α g).map_vadd y z
+        simpa only [vadd_eq_add] using (α g).map_vadd y z
   change (α g).linearIsometryEquiv z - z + (α g y - y) =
     α g (y + z) - (y + z)
   rw [hmap]
@@ -20716,7 +20922,7 @@ theorem realization_vector_eq_of_kernel_rows
   apply sub_eq_zero.mp
   apply (inner_self_eq_zero (𝕜 := ℂ)).mp
   rw [inner_sub_right, horth i, horth j]
-  simp
+  simp only [sub_self]
 
 theorem exists_marked_affine_ultralimit
     {G : Type u} [Group G] {H : ℕ → Type u}
@@ -20974,7 +21180,8 @@ theorem normalFixedSubmodule_isClosed
   have hset : (normalFixedSubmodule N π : Set H) =
       ⋂ n : N, {x : H | (π (n : G) : H →L[ℂ] H) x = x} := by
     ext x
-    simp
+    simp only [SetLike.mem_coe, mem_normalFixedSubmodule, Subtype.forall, Set.mem_iInter,
+      Set.mem_setOf_eq]
   rw [hset]
   exact isClosed_iInter fun n =>
     isClosed_eq (π (n : G) : H →L[ℂ] H).continuous continuous_id
@@ -20994,7 +21201,7 @@ theorem unitary_mem_normalFixedSubmodule
   intro n
   let n' : N :=
     ⟨g⁻¹ * (n : G) * g,
-      by simpa using
+      by simpa only [inv_inv] using
         (inferInstance : N.Normal).conj_mem (n : G) n.property g⁻¹⟩
   calc
     (π (n : G) : H →L[ℂ] H) ((π g : H →L[ℂ] H) x) =
@@ -21030,7 +21237,7 @@ theorem unitary_mem_normalFixedSubmodule_orthogonal
       congr 1
       change y = (↑(π g * π g⁻¹) : H →L[ℂ] H) y
       rw [← map_mul]
-      simp
+      simp only [mul_inv_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
     _ = @inner ℂ H _
           ((π g⁻¹ : H →L[ℂ] H) y) x :=
       Unitary.inner_map_map (π g)
@@ -21049,12 +21256,12 @@ def normalFixedLinearIsometryEquiv (g : G) :
     apply Subtype.ext
     change (↑(π g⁻¹ * π g) : H →L[ℂ] H) x = x
     rw [← map_mul]
-    simp
+    simp only [inv_mul_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
   right_inv x := by
     apply Subtype.ext
     change (↑(π g * π g⁻¹) : H →L[ℂ] H) x = x
     rw [← map_mul]
-    simp
+    simp only [mul_inv_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_add' x y := Subtype.ext
     (map_add (π g : H →L[ℂ] H) (x : H) (y : H))
   map_smul' c x := Subtype.ext
@@ -21071,7 +21278,7 @@ def normalFixedRepresentation :
     intro x
     apply Subtype.ext
     change (π 1 : H →L[ℂ] H) (x : H) = x
-    simp
+    simp only [map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_mul' g h := by
     apply Subtype.ext
     apply ContinuousLinearMap.ext
@@ -21121,12 +21328,12 @@ def normalFixedOrthogonalLinearIsometryEquiv (g : G) :
     apply Subtype.ext
     change (↑(π g⁻¹ * π g) : H →L[ℂ] H) x = x
     rw [← map_mul]
-    simp
+    simp only [inv_mul_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
   right_inv x := by
     apply Subtype.ext
     change (↑(π g * π g⁻¹) : H →L[ℂ] H) x = x
     rw [← map_mul]
-    simp
+    simp only [mul_inv_cancel, map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_add' x y := Subtype.ext
     (map_add (π g : H →L[ℂ] H) (x : H) (y : H))
   map_smul' c x := Subtype.ext
@@ -21143,7 +21350,7 @@ def normalFixedOrthogonalRepresentation :
     intro x
     apply Subtype.ext
     change (π 1 : H →L[ℂ] H) (x : H) = x
-    simp
+    simp only [map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_mul' g h := by
     apply Subtype.ext
     apply ContinuousLinearMap.ext
@@ -21242,7 +21449,7 @@ theorem hilbertSquaredEnclosingRadii_nonempty
   refine ⟨(max R 0) ^ 2, sq_nonneg _, 0, ?_⟩
   intro z hz
   have hnorm : ‖z‖ ≤ max R 0 := (hR z hz).trans (le_max_left _ _)
-  simpa using (pow_le_pow_left₀ (norm_nonneg z) hnorm 2)
+  simpa only [zero_sub, norm_neg, ge_iff_le] using (pow_le_pow_left₀ (norm_nonneg z) hnorm 2)
 
 omit [InnerProductSpace ℂ V] [CompleteSpace V] in
 theorem hilbertSquaredEnclosingRadii_bddBelow (S : Set V) :
@@ -21259,7 +21466,7 @@ theorem hilbert_midpoint_sq_parallelogram
       2 * (‖x - z‖ ^ 2 + ‖y - z‖ ^ 2) := by
   have hmid : midpoint ℂ x y - z =
       midpoint ℂ (x - z) (y - z) := by
-    simpa [vsub_eq_sub] using
+    simpa only [midpoint_self, vsub_eq_sub] using
       (midpoint_vsub_midpoint (R := ℂ) x y z z)
   have hsum : (x - z) + (y - z) =
       (2 : ℂ) • (midpoint ℂ x y - z) := by
@@ -21269,7 +21476,7 @@ theorem hilbert_midpoint_sq_parallelogram
   have hp := parallelogram_law_with_norm ℂ (x - z) (y - z)
   rw [hsum, hsub, norm_smul] at hp
   norm_num at hp
-  nlinarith
+  linarith
 
 omit [CompleteSpace V] in
 theorem hilbertSquaredEnclosingRadii_midpoint
@@ -21284,7 +21491,7 @@ theorem hilbertSquaredEnclosingRadii_midpoint
         (r + s) / 2 - ‖x - y‖ ^ 2 / 4 := by
     intro z hz
     have hp := hilbert_midpoint_sq_parallelogram x y z
-    nlinarith [hx z hz, hy z hz]
+    linarith [hx z hz, hy z hz]
   obtain ⟨z, hz⟩ := hS
   exact ⟨(sq_nonneg _).trans (hbound z hz),
     midpoint ℂ x y, hbound⟩
@@ -21320,7 +21527,7 @@ theorem hilbert_near_circumcenter_dist_sq_le
     ‖x - y‖ ^ 2 ≤ 2 * ε + 2 * η := by
   have hmid := hilbertCircumradiusSq_le S
     (hilbertSquaredEnclosingRadii_midpoint hSne hx hy)
-  nlinarith
+  linarith
 
 omit [CompleteSpace V] in
 theorem hilbert_near_circumcenter_cauchy
@@ -21394,7 +21601,7 @@ theorem hilbert_circumcenter_unique
     (hy : ∀ z ∈ S, ‖y - z‖ ^ 2 ≤ hilbertCircumradiusSq S) :
     x = y := by
   have hdist := hilbert_near_circumcenter_dist_sq_le
-    hSne (ε := 0) (η := 0) (by simpa using hx) (by simpa using hy)
+    hSne (ε := 0) (η := 0) (by simpa only [add_zero] using hx) (by simpa only [add_zero] using hy)
   have hnorm : ‖x - y‖ = 0 := by
     nlinarith [sq_nonneg ‖x - y‖, norm_nonneg (x - y)]
   exact sub_eq_zero.mp (norm_eq_zero.mp hnorm)
@@ -21438,7 +21645,7 @@ theorem affineSubgroupOrbit_nonempty
     (α : AffineHilbertAction G V) (N : Subgroup G) (x : V) :
     (affineSubgroupOrbit α N x).Nonempty := by
   refine ⟨x, 1, ?_⟩
-  simp
+  simp only [OneMemClass.coe_one, map_one, AffineIsometryEquiv.coe_one, id_eq]
 
 theorem affineSubgroupOrbit_image
     (α : AffineHilbertAction G V) (N : Subgroup G)
@@ -21463,7 +21670,7 @@ theorem affineSubgroupOrbit_image
       _ = α (k : G) x := by
         congr 1
         dsimp [m]
-        simp
+        simp only [mul_inv_cancel_left]
 
 theorem affineSubgroupOrbit_bounded
     (α : AffineHilbertAction G V) (N : Subgroup G) (x : V)
@@ -21474,7 +21681,7 @@ theorem affineSubgroupOrbit_bounded
   refine ⟨C, ?_⟩
   rintro _ ⟨n, rfl⟩
   change dist (α (n : G) x) x ≤ C
-  simpa [dist_eq_norm] using hC n
+  simpa only [dist_eq_norm] using hC n
 
 theorem affine_subgroup_fixedPoint_of_bounded_orbit
     (α : AffineHilbertAction G V) (N : Subgroup G) (x : V)
@@ -21534,7 +21741,7 @@ theorem cornulier_normalized_minimizing_action_false
   have hHbound : ∃ C : ℝ, ∀ h : H, ‖α (h : G) x₁ - x₁‖ ≤ C := by
     refine ⟨0, ?_⟩
     intro h
-    simp [hHfixed h]
+    simp only [hHfixed h, sub_self, norm_zero, Std.le_refl]
   obtain ⟨C, hC⟩ :=
     hcorel V inferInstance inferInstance inferInstance α x₁ hHbound
   obtain ⟨z, hz⟩ := affine_subgroup_fixedPoint_of_bounded_orbit
@@ -21550,7 +21757,7 @@ def realInnerCharacter (f : G →* Multiplicative V) (v : V) :
   map_one' := by
     change (@inner ℂ V _ v
       (Multiplicative.toAdd (f 1))).re = 0
-    simp
+    simp only [map_one, toAdd_one, inner_zero_right, Complex.zero_re]
   map_mul' g h := by
     change (@inner ℂ V _ v
       (Multiplicative.toAdd (f (g * h)))).re =
@@ -21588,7 +21795,8 @@ def affineInvariantProjectionHom
   map_one' := by
     apply Multiplicative.toAdd.injective
     apply Subtype.ext
-    simp
+    simp only [map_one, AffineIsometryEquiv.coe_one, id_eq, map_zero, toAdd_ofAdd, toAdd_one,
+      ZeroMemClass.coe_zero]
   map_mul' g h := by
     apply Multiplicative.toAdd.injective
     apply Subtype.ext
@@ -21664,7 +21872,7 @@ def affineOrthogonalLinearHom
   map_one' := by
     ext x
     change (affineLinearRepresentation α 1 : V →L[ℂ] V) x = x
-    simp
+    simp only [map_one, OneMemClass.coe_one, one_apply_eq_self]
   map_mul' g h := by
     ext x
     change (affineLinearRepresentation α (g * h) : V →L[ℂ] V) x =
@@ -21763,12 +21971,12 @@ private theorem exists_add_ne_zero_of_unit_coordinates
     have hx : x n = -v n := eq_neg_of_add_eq_zero_left (h n)
     rw [hx, norm_neg, hv]
   have hsummable : Summable (fun n : ℕ => ‖x n‖ ^ (2 : ℝ)) := by
-    simpa using (lp.memℓp x).summable
+    simpa only [Real.rpow_ofNat, ENNReal.toReal_ofNat] using (lp.memℓp x).summable
       (by norm_num : 0 < (2 : ℝ≥0∞).toReal)
   have hconstant : Summable (fun _ : ℕ => (1 : ℝ)) := by
     convert hsummable using 1
     funext n
-    simp [hnorm n]
+    simp only [hnorm n, Real.rpow_ofNat, one_pow]
   exact (Finite.of_summable_const (by norm_num : (0 : ℝ) < 1) hconstant).false
 
 theorem affineDiagonal_subgroup_nonzero_invariant_of_fixed
@@ -21823,7 +22031,7 @@ theorem diagonalDisplacement_memℓp_of_summable
       ‖(π g : V →L[ℂ] V) (v n) - v n‖ ^ (2 : ℕ)) :
     Memℓp (fun n : ℕ => (π g : V →L[ℂ] V) (v n) - v n) 2 := by
   apply (memℓp_gen_iff (by norm_num : 0 < (2 : ℝ≥0∞).toReal)).2
-  simpa using hsum
+  simpa only [ENNReal.toReal_ofNat, Real.rpow_ofNat] using hsum
 
 def diagonalDisplacement
     (π : UnitaryRepresentation G V) (v : ℕ → V)
@@ -21885,7 +22093,7 @@ def diagonalAffineAction
     change (π 1 : V →L[ℂ] V) (x n) +
       ((π 1 : V →L[ℂ] V) (v n) - v n) = x n
     rw [map_one]
-    simp
+    simp only [OneMemClass.coe_one, one_apply_eq_self, sub_self, add_zero]
   map_mul' g h := by
     apply AffineIsometryEquiv.ext
     intro x
@@ -22048,7 +22256,9 @@ private theorem columnShear_mul_last (s : Fin 3 → IntegralPolynomial)
       Matrix.transvection (1 : Fin 4) 3 (s 1) *
       Matrix.transvection (2 : Fin 4) 3 (s 2) * g.val.val :
         Matrix (Fin 4) (Fin 4) IntegralPolynomial)) 3 j = _
-  simp [Matrix.transvection, Matrix.mul_apply, Fin.sum_univ_four]
+  simp only [transvection, Fin.isValue, Matrix.mul_apply, Matrix.add_apply, Fin.reduceEq, false_and,
+    not_false_eq_true, single_apply_of_ne, add_zero, Fin.sum_univ_four, ne_eq, one_apply_ne,
+    one_ne_zero, zero_mul, one_apply_eq, one_mul, zero_add]
 
 private theorem rowShear_mul_last (s : Fin 3 → IntegralPolynomial)
     (g : integralElementaryGroup) (j : Fin 4) :
@@ -22062,8 +22272,11 @@ private theorem rowShear_mul_last (s : Fin 3 → IntegralPolynomial)
       Matrix.transvection (3 : Fin 4) 1 (s 1) *
       Matrix.transvection (3 : Fin 4) 2 (s 2) * g.val.val :
         Matrix (Fin 4) (Fin 4) IntegralPolynomial)) 3 j = _
-  simp [Matrix.transvection, Matrix.mul_apply, Fin.sum_univ_four,
-    Fin.sum_univ_three]
+  simp only [transvection, Fin.isValue, Matrix.mul_apply, Matrix.add_apply, Fin.sum_univ_four,
+    ne_eq, Fin.reduceEq, not_false_eq_true, one_apply_ne, single_apply_same, zero_add, false_and,
+    single_apply_of_ne, add_zero, zero_ne_one, and_false, zero_mul, one_apply_eq, one_mul, mul_one,
+    one_ne_zero, mul_zero, Fin.sum_univ_three, Fin.castSucc_zero, Fin.castSucc_one,
+    Fin.reduceCastSucc]
   ring
 
 private theorem mul_rowShear_castSucc (s : Fin 3 → IntegralPolynomial)
@@ -22093,7 +22306,7 @@ private theorem mul_rowShear_last (s : Fin 3 → IntegralPolynomial)
       Matrix.transvection (3 : Fin 4) 2 (s 2)) :
         Matrix (Fin 4) (Fin 4) IntegralPolynomial)) i 3 = _
   simp only [← mul_assoc]
-  simp [Matrix.mul_transvection_apply_of_ne]
+  simp only [Fin.isValue, ne_eq, Fin.reduceEq, not_false_eq_true, mul_transvection_apply_of_ne]
 
 theorem cornulierBoundedFactorization_of_stableRange
     (hstable : IntegralPolynomialStableRangeThree) :
@@ -22235,9 +22448,10 @@ theorem rankTwo_transvection_smul_single
         (Pi.single j b : Fin 2 → A) =
       Pi.single j b + Pi.single i (a * b) := by
   ext k
-  simp [Matrix.SpecialLinearGroup.smul_def,
-    Matrix.SpecialLinearGroup.transvection_coe, Pi.single_apply,
-    Matrix.one_apply, Matrix.single_apply, eq_comm]
+  simp only [Matrix.SpecialLinearGroup.smul_def, SpecialLinearGroup.transvection_coe,
+    smul_eq_mulVec, mulVec_single, Pi.smul_apply, col_apply, Matrix.add_apply, Matrix.one_apply,
+    eq_comm, single_apply, and_true, smul_add, smul_ite, MulOpposite.smul_eq_mul_unop,
+    MulOpposite.unop_op, one_mul, smul_zero, Pi.add_apply, Pi.single_apply]
 
 def elementaryRankTwo (A : Type) [CommRing A] :
     Subgroup (Matrix.SpecialLinearGroup (Fin 2) A) :=
@@ -22261,7 +22475,7 @@ def rankTwoLinearAction (A : Type) [CommRing A] :
     apply Multiplicative.toAdd.injective
     change Matrix.SpecialLinearGroup.toLin' 1 (Multiplicative.toAdd v) =
       Multiplicative.toAdd v
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq]
   map_mul' g h := by
     apply MulEquiv.ext
     intro v
@@ -22475,7 +22689,7 @@ theorem uniformRelativeKazhdanDisplacement_of_pair
         rw [map_smul, ← smul_sub]
         rw [norm_smul, norm_inv, Complex.norm_real,
           Real.norm_of_nonneg (norm_nonneg z)]
-        simp [div_eq_mul_inv, mul_comm]
+        simp only [div_eq_mul_inv, mul_comm]
       rw [hwformula]
       apply (div_lt_iff₀ (norm_pos_iff.mpr hz)).2
       have hsmallg := hsmall g hg
@@ -22594,13 +22808,13 @@ theorem gaussian_parameter_lt_one_of_displacement
   have hdsq : d ^ 2 < 1 := by nlinarith
   have hexpneg : (2 : ℝ)⁻¹ < Real.exp (-(t * r ^ 2)) := by
     norm_num
-    nlinarith
+    linarith
   have hexp : Real.exp (t * r ^ 2) < 2 := by
     apply (inv_lt_inv₀ (by norm_num : (0 : ℝ) < 2)
       (Real.exp_pos (t * r ^ 2))).mp
-    simpa [Real.exp_neg] using hexpneg
+    simpa only [Real.exp_neg] using hexpneg
   have hlower := Real.add_one_le_exp (t * r ^ 2)
-  nlinarith
+  linarith
 
 theorem gaussian_affine_displacement_le
     {t r d : ℝ}
@@ -22611,7 +22825,7 @@ theorem gaussian_affine_displacement_le
   have hlt := gaussian_parameter_lt_one_of_displacement ht hr hd hdlt hsq
   apply le_of_lt
   apply (lt_div_iff₀ ht).mpr
-  nlinarith
+  linarith
 
 def HasAffineGaussianRealization
     (G : CountableDiscreteGroup.{u}) : Prop :=
@@ -22686,7 +22900,7 @@ theorem gaussian_relativeAffineFixedPoint_of_uniform
           dsimp [t]
           field_simp
           ring
-        _ < δ ^ 2 := by nlinarith [sq_pos_of_pos hδ]
+        _ < δ ^ 2 := by linarith [sq_pos_of_pos hδ]
     exact (sq_lt_sq₀ (norm_nonneg _) (le_of_lt hδ)).mp hsquare
   have hN := hF W inferInstance inferInstance inferInstance π ξ hξ hfinite
   apply affine_subgroup_fixedPoint_of_bounded_orbit α N x
@@ -22711,7 +22925,7 @@ theorem constantOneKernel_posSemidef {I : Type*} :
   constructor
   · apply Matrix.IsHermitian.ext
     intro i j
-    simp
+    simp only [star_one]
   · intro c
     convert (star_mul_self_nonneg
       (∑ i ∈ c.support, c i) :
@@ -22745,7 +22959,7 @@ theorem entrywisePow_posSemidef
       have hproduct := schurProduct_posSemidef ih hA
       convert hproduct using 1
       ext i j
-      simp [entrywisePow, pow_succ, Matrix.hadamard_apply]
+      simp only [entrywisePow, pow_succ, Matrix.hadamard_apply]
 
 theorem nonnegReal_smul_posSemidef
     {I : Type*} {A : Matrix I I ℂ}
@@ -22862,7 +23076,8 @@ omit [InnerProductSpace ℂ V] in
 @[simp] theorem gaussianKernel_diag
     (v : I → V) (t : ℝ) (i : I) :
     gaussianKernel v t i i = 1 := by
-  simp [gaussianKernel]
+  simp only [gaussianKernel, sub_self, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+    zero_pow, mul_zero, Real.exp_zero, Complex.ofReal_one]
 
 def gaussianSymmetricGram (v : I → V) (t : ℝ) : Matrix I I ℂ :=
   t • (Matrix.gram ℂ v + (Matrix.gram ℂ v)ᵀ)
@@ -22922,7 +23137,7 @@ theorem gaussianKernel_factor
     ← Complex.exp_add]
   congr 1
   push_cast
-  simpa [add_assoc] using hcomplex
+  simpa only [neg_mul, add_assoc] using hcomplex
 
 theorem gaussianKernel_posSemidef
     (v : I → V) {t : ℝ} (ht : 0 ≤ t) :
@@ -23072,10 +23287,10 @@ theorem mem_sup_of_elementwise_commute
     induction hx using Subgroup.closure_induction with
     | mem y hy =>
         rcases hy with hy | hy
-        · exact ⟨y, hy, 1, N₂.one_mem, by simp⟩
-        · exact ⟨1, N₁.one_mem, y, hy, by simp⟩
+        · exact ⟨y, hy, 1, N₂.one_mem, by simp only [mul_one]⟩
+        · exact ⟨1, N₁.one_mem, y, hy, by simp only [one_mul]⟩
     | one =>
-        exact ⟨1, N₁.one_mem, 1, N₂.one_mem, by simp⟩
+        exact ⟨1, N₁.one_mem, 1, N₂.one_mem, by simp only [mul_one]⟩
     | mul y z hy hz ihy ihz =>
         obtain ⟨y₁, hy₁, y₂, hy₂, rfl⟩ := ihy
         obtain ⟨z₁, hz₁, z₂, hz₂, rfl⟩ := ihz
@@ -23230,7 +23445,7 @@ def rankTwoColumnBlock (v : Fin 2 → A) : Matrix (Fin 2) (Fin 2) A :=
 @[simp] theorem rankTwoColumnBlock_zero :
     rankTwoColumnBlock (0 : Fin 2 → A) = 0 := by
   ext i j
-  simp [rankTwoColumnBlock]
+  simp only [rankTwoColumnBlock, Fin.isValue, Pi.zero_apply, ite_self, Matrix.zero_apply]
 
 @[simp] theorem rankTwoColumnBlock_mul
     (g : Matrix.SpecialLinearGroup (Fin 2) A) (v : Fin 2 → A) :
@@ -23239,10 +23454,10 @@ def rankTwoColumnBlock (v : Fin 2 → A) : Matrix (Fin 2) (Fin 2) A :=
   ext i j
   by_cases hj : j = (1 : Fin 2)
   · subst j
-    simp [rankTwoColumnBlock, Matrix.mul_apply,
-      Matrix.SpecialLinearGroup.smul_def,
-      Matrix.mulVec, dotProduct]
-  · simp [rankTwoColumnBlock, Matrix.mul_apply, hj]
+    simp only [Fin.isValue, Matrix.mul_apply, rankTwoColumnBlock, ↓reduceIte, Fin.sum_univ_two,
+      Matrix.SpecialLinearGroup.smul_def, smul_eq_mulVec, mulVec, dotProduct]
+  · simp only [Matrix.mul_apply, rankTwoColumnBlock, Fin.isValue, hj, ↓reduceIte, mul_zero,
+      Finset.sum_const_zero]
 
 def rankTwoParabolicMatrix (x : ElementaryRankTwoSemidirect A) :
     Matrix (Fin 4) (Fin 4) A :=
@@ -23293,13 +23508,14 @@ def rankTwoParabolicSpecialLinear :
     apply congrArg (Matrix.reindexAlgEquiv A A
       (finSumFinEquiv (m := 2) (n := 2)))
     congr 1
-    · simp
+    · simp only [SemidirectProduct.mul_right, Subgroup.coe_mul, Matrix.SpecialLinearGroup.coe_mul,
+        mul_zero, add_zero]
     · simp only [Matrix.mul_one, SemidirectProduct.mul_left,
           toAdd_mul, elementaryRankTwoAction_toAdd]
       rw [rankTwoColumnBlock_add, rankTwoColumnBlock_mul]
       exact add_comm _ _
-    · simp
-    · simp
+    · simp only [zero_mul, mul_zero, add_zero]
+    · simp only [zero_mul, mul_one, zero_add]
 
 @[simp] theorem rankTwoParabolicSpecialLinear_inl
     (v : Fin 2 → A) :
@@ -23358,7 +23574,7 @@ theorem rankTwoParabolicSpecialLinear_inr_mem_integral
           (1 : elementaryRankTwo IntegralPolynomial) :
           ElementaryRankTwoSemidirect IntegralPolynomial) ∈
         integralElementarySubgroup
-      simp
+      simp only [map_one, one_mem]
   | mul x y hx hy ihx ihy =>
       have hxy :
           (⟨x * y, Subgroup.mul_mem _ hx hy⟩ :
@@ -23452,10 +23668,9 @@ def specialLinearReindexHom (e : Equiv.Perm (Fin 4)) :
       Matrix.SpecialLinearGroup.transvection (e.injective.ne hij) a := by
   apply Matrix.SpecialLinearGroup.ext
   intro k l
-  simp [specialLinearReindexHom, Matrix.reindex_apply,
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.one_apply, Matrix.single_apply,
-    Equiv.eq_symm_apply, eq_comm]
+  simp only [specialLinearReindexHom, reindex_apply, MonoidHom.coe_mk, OneHom.coe_mk,
+    SpecialLinearGroup.transvection_coe, submatrix_apply, Matrix.add_apply, Matrix.one_apply,
+    Equiv.eq_symm_apply, Equiv.apply_symm_apply, single_apply, eq_comm]
 
 theorem specialLinearReindexHom_mem_integral
     (e : Equiv.Perm Index) :
@@ -23492,7 +23707,8 @@ def specialLinearTransposeInverseHom :
   map_one' := by
     apply Matrix.SpecialLinearGroup.ext
     intro i j
-    simp [Matrix.SpecialLinearGroup.transpose, Matrix.one_apply]
+    simp only [SpecialLinearGroup.transpose, inv_one, Matrix.SpecialLinearGroup.coe_one,
+      transpose_one, Matrix.one_apply]
   map_mul' g h := by
     apply Subtype.ext
     change (((g * h)⁻¹ : Matrix.SpecialLinearGroup (Fin 4) A) :
@@ -23624,11 +23840,10 @@ theorem cornulierColumnRoot_commute
       Matrix.SpecialLinearGroup.transvection hj b *
         Matrix.SpecialLinearGroup.transvection hi a
   apply Matrix.SpecialLinearGroup.ext
-  simp [Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.add_mul, Matrix.mul_add,
-    Matrix.single_mul_single_of_ne _ _ _ _ hj.symm,
-    Matrix.single_mul_single_of_ne _ _ _ _ hi.symm,
-    add_comm, add_left_comm]
+  simp only [Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe, add_comm,
+    Matrix.mul_add, Matrix.add_mul, Matrix.single_mul_single_of_ne _ _ _ _ hj.symm, one_mul,
+    add_zero, mul_one, Matrix.add_apply, add_left_comm,
+    Matrix.single_mul_single_of_ne _ _ _ _ hi.symm, implies_true]
 
 theorem cornulierRowRoot_commute
     (i j : Index) (hi : cornulierLast ≠ i)
@@ -23642,11 +23857,10 @@ theorem cornulierRowRoot_commute
       Matrix.SpecialLinearGroup.transvection hj b *
         Matrix.SpecialLinearGroup.transvection hi a
   apply Matrix.SpecialLinearGroup.ext
-  simp [Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.add_mul, Matrix.mul_add,
-    Matrix.single_mul_single_of_ne _ _ _ _ hi.symm,
-    Matrix.single_mul_single_of_ne _ _ _ _ hj.symm,
-    add_comm, add_left_comm]
+  simp only [Matrix.SpecialLinearGroup.coe_mul, SpecialLinearGroup.transvection_coe, add_comm,
+    Matrix.mul_add, Matrix.add_mul, Matrix.single_mul_single_of_ne _ _ _ _ hi.symm, one_mul,
+    add_zero, mul_one, Matrix.add_apply, add_left_comm,
+    Matrix.single_mul_single_of_ne _ _ _ _ hj.symm, implies_true]
 
 theorem cornulierK₁_isMulCommutative : IsMulCommutative cornulierK₁ := by
   unfold cornulierK₁
@@ -23690,7 +23904,8 @@ theorem cornulierColumnPlane01_root_zero (a : IntegralPolynomial) :
   refine ⟨SemidirectProduct.inl (Multiplicative.ofAdd v),
     ⟨Multiplicative.ofAdd v, rfl⟩, ?_⟩
   rw [integralRankTwoColumnEmbedding_inl]
-  simp [v]
+  simp only [Fin.isValue, Pi.single_eq_same, ne_eq, one_ne_zero, not_false_eq_true,
+    Pi.single_eq_of_ne, cornulierRoot_zero, mul_one, v]
 
 theorem cornulierColumnPlane01_root_one (a : IntegralPolynomial) :
     cornulierRoot 1 3 (by decide) a ∈ cornulierColumnPlane01 := by
@@ -23698,7 +23913,8 @@ theorem cornulierColumnPlane01_root_one (a : IntegralPolynomial) :
   refine ⟨SemidirectProduct.inl (Multiplicative.ofAdd v),
     ⟨Multiplicative.ofAdd v, rfl⟩, ?_⟩
   rw [integralRankTwoColumnEmbedding_inl]
-  simp [v]
+  simp only [Fin.isValue, ne_eq, zero_ne_one, not_false_eq_true, Pi.single_eq_of_ne,
+    cornulierRoot_zero, Pi.single_eq_same, one_mul, v]
 
 def cornulierColumnPlane12 : Subgroup integralElementaryGroup :=
   integralElementaryRankTwoTranslationSubgroup.map
@@ -23721,7 +23937,8 @@ theorem cornulierColumnPlane12_root_two (a : IntegralPolynomial) :
   refine ⟨SemidirectProduct.inl (Multiplicative.ofAdd v),
     ⟨Multiplicative.ofAdd v, rfl⟩, ?_⟩
   rw [integralRankTwoColumnEmbedding12_inl]
-  simp [v]
+  simp only [Fin.isValue, Pi.single_eq_same, ne_eq, one_ne_zero, not_false_eq_true,
+    Pi.single_eq_of_ne, cornulierRoot_zero, mul_one, v]
 
 def cornulierRowPlane01 : Subgroup integralElementaryGroup :=
   integralElementaryRankTwoTranslationSubgroup.map
@@ -23744,7 +23961,8 @@ theorem cornulierRowPlane01_root_zero (a : IntegralPolynomial) :
   refine ⟨SemidirectProduct.inl (Multiplicative.ofAdd v),
     ⟨Multiplicative.ofAdd v, rfl⟩, ?_⟩
   rw [integralRankTwoRowEmbedding01_inl]
-  simp [v]
+  simp only [Fin.isValue, Pi.single_eq_same, neg_neg, ne_eq, one_ne_zero, not_false_eq_true,
+    Pi.single_eq_of_ne, neg_zero, cornulierRoot_zero, mul_one, v]
 
 theorem cornulierRowPlane01_root_one (a : IntegralPolynomial) :
     cornulierRoot 3 1 (by decide) a ∈ cornulierRowPlane01 := by
@@ -23752,7 +23970,8 @@ theorem cornulierRowPlane01_root_one (a : IntegralPolynomial) :
   refine ⟨SemidirectProduct.inl (Multiplicative.ofAdd v),
     ⟨Multiplicative.ofAdd v, rfl⟩, ?_⟩
   rw [integralRankTwoRowEmbedding01_inl]
-  simp [v]
+  simp only [Fin.isValue, ne_eq, zero_ne_one, not_false_eq_true, Pi.single_eq_of_ne, neg_zero,
+    cornulierRoot_zero, Pi.single_eq_same, neg_neg, one_mul, v]
 
 def cornulierRowPlane12 : Subgroup integralElementaryGroup :=
   integralElementaryRankTwoTranslationSubgroup.map
@@ -23775,7 +23994,8 @@ theorem cornulierRowPlane12_root_two (a : IntegralPolynomial) :
   refine ⟨SemidirectProduct.inl (Multiplicative.ofAdd v),
     ⟨Multiplicative.ofAdd v, rfl⟩, ?_⟩
   rw [integralRankTwoRowEmbedding12_inl]
-  simp [v]
+  simp only [Fin.isValue, Pi.single_eq_same, neg_neg, ne_eq, one_ne_zero, not_false_eq_true,
+    Pi.single_eq_of_ne, neg_zero, cornulierRoot_zero, mul_one, v]
 
 theorem cornulierColumnPlanes_sup_eq_K₁ :
     cornulierColumnPlane01 ⊔ cornulierColumnPlane12 = cornulierK₁ := by
@@ -23868,7 +24088,8 @@ def cornulierHilbertLength (α : AffineHilbertAction G V)
 @[simp] theorem cornulierHilbertLength_one
     (α : AffineHilbertAction G V) (x : V) :
     cornulierHilbertLength α x 1 = 0 := by
-  simp [cornulierHilbertLength]
+  simp only [cornulierHilbertLength, map_one, AffineIsometryEquiv.coe_one, id_eq, sub_self,
+    norm_zero]
 
 theorem cornulierHilbertLength_mul_le
     (α : AffineHilbertAction G V) (x : V) (g h : G) :
@@ -23935,12 +24156,12 @@ theorem cornulier_corelative_iff_affineOrbitBound
   constructor
   · intro h V _ _ _ α x hN
     obtain ⟨C, hC⟩ := h V inferInstance inferInstance inferInstance α x
-      (by simpa [CornulierHilbertLengthBoundedOn, cornulierHilbertLength]
+      (by simpa only [CornulierHilbertLengthBoundedOn, cornulierHilbertLength, Subtype.forall]
         using hN)
     exact ⟨C, fun g => hC ⟨g, Subgroup.mem_top g⟩⟩
   · intro h V _ _ _ α x hN
     obtain ⟨C, hC⟩ := h V inferInstance inferInstance inferInstance α x
-      (by simpa [CornulierHilbertLengthBoundedOn, cornulierHilbertLength]
+      (by simpa only [Subtype.forall, CornulierHilbertLengthBoundedOn, cornulierHilbertLength]
         using hN)
     exact ⟨C, fun g => hC (g : G)⟩
 
@@ -23996,7 +24217,8 @@ theorem cornulier_lastColumnRoot_mem_finiteOppositeRoots
   apply Finset.mem_biUnion.mpr
   refine ⟨i, Finset.mem_univ i, ?_⟩
   rw [dif_pos hi]
-  exact Finset.mem_image.mpr ⟨a, by simpa using ha, rfl⟩
+  exact Finset.mem_image.mpr ⟨a, by simpa only [Finset.mem_insert,
+                                      Finset.mem_singleton] using ha, rfl⟩
 
 theorem cornulier_lastRowRoot_mem_finiteOppositeRoots
     (j : Index) (hj : cornulierLast ≠ j) (a : IntegralPolynomial)
@@ -24008,7 +24230,8 @@ theorem cornulier_lastRowRoot_mem_finiteOppositeRoots
   apply Finset.mem_biUnion.mpr
   refine ⟨j, Finset.mem_univ j, ?_⟩
   rw [dif_pos hj]
-  exact Finset.mem_image.mpr ⟨a, by simpa using ha, rfl⟩
+  exact Finset.mem_image.mpr ⟨a, by simpa only [Finset.mem_insert,
+                                      Finset.mem_singleton] using ha, rfl⟩
 
 theorem cornulier_finiteOppositeRoots_subset
     (g : integralElementaryGroup)
@@ -24023,14 +24246,14 @@ theorem cornulier_finiteOppositeRoots_subset
       obtain ⟨a, _, rfl⟩ := Finset.mem_image.mp hi
       exact Or.inl (cornulierRoot_mem_K₁ i h a)
     · rw [dif_neg h] at hi
-      simp at hi
+      simp only [Finset.notMem_empty] at hi
   · obtain ⟨j, _, hj⟩ := Finset.mem_biUnion.mp hright
     by_cases h : cornulierLast ≠ j
     · rw [dif_pos h] at hj
       obtain ⟨a, _, rfl⟩ := Finset.mem_image.mp hj
       exact Or.inr (cornulierRoot_mem_K₂ j h a)
     · rw [dif_neg h] at hj
-      simp at hj
+      simp only [Finset.notMem_empty] at hj
 
 theorem cornulierRoot_mem_finiteOppositeRoots_closure
     (i j : Index) (hij : i ≠ j) (a : IntegralPolynomial)
@@ -24066,7 +24289,7 @@ theorem cornulierRoot_mem_finiteOppositeRoots_closure
         (Matrix.SpecialLinearGroup.transvection hi a)⁻¹ *
         (Matrix.SpecialLinearGroup.transvection (Ne.symm hj) 1)⁻¹ =
         Matrix.SpecialLinearGroup.transvection hij a
-    simpa using specialLinear_transvection_commutator
+    simpa only [mul_one] using specialLinear_transvection_commutator
       i cornulierLast j hi (Ne.symm hj) hij a 1
   exact heq ▸ hcomm
 
@@ -24258,7 +24481,7 @@ theorem affineHilbert_displacement_inv
         α g (α g⁻¹ x) = α (g * g⁻¹) x := by
           rw [map_mul]
           rfl
-        _ = x := by simp
+        _ = x := by simp only [mul_inv_cancel, map_one, AffineIsometryEquiv.coe_one, id_eq]
     _ = dist (α g x) x := dist_comm _ _
 
 theorem affine_displacement_le_of_generatorWord
@@ -24268,8 +24491,9 @@ theorem affine_displacement_le_of_generatorWord
     {g : G} {n : ℕ} (hword : AffineGeneratorWord S g n) :
     ‖α g x - x‖ ≤ (n : ℝ) * D := by
   induction hword with
-  | one => simp
-  | generator hg => simpa using hS _ hg
+  | one => simp only [map_one, AffineIsometryEquiv.coe_one, id_eq, sub_self, norm_zero,
+             CharP.cast_eq_zero, zero_mul, Std.le_refl]
+  | generator hg => simpa only [Nat.cast_one, one_mul] using hS _ hg
   | @mul g h m n hg hh ihg ihh =>
       calc
         ‖α (g * h) x - x‖ ≤
@@ -24292,7 +24516,7 @@ theorem affine_oppositeGenerator_displacement_left
     ‖α g x - x‖ ≤ 2 * ‖x - y‖ := by
   rcases hg with hg | hg
   · have hfixed : α g x = x := hx ⟨g, hg⟩
-    simp [hfixed]
+    simp only [hfixed, sub_self, norm_zero, Nat.ofNat_pos, mul_nonneg_iff_of_pos_left, norm_nonneg]
   · exact cornulierHilbertLength_le_of_fixed
       α K₂ x y hy ⟨g, hg⟩
 
@@ -24309,7 +24533,7 @@ theorem affine_oppositeGenerator_displacement_right
     change ‖α g y - y‖ ≤ 2 * ‖y - x‖ at hbound
     rwa [norm_sub_rev y x] at hbound
   · have hfixed : α g y = y := hy ⟨g, hg⟩
-    simp [hfixed]
+    simp only [hfixed, sub_self, norm_zero, Nat.ofNat_pos, mul_nonneg_iff_of_pos_left, norm_nonneg]
 
 theorem affine_oppositeWord_displacement_left
     (α : AffineHilbertAction G V) (K₁ K₂ : Subgroup G)
@@ -24386,7 +24610,7 @@ theorem markedAffineOrbitPoint_le_wordBound
           exact add_le_add
             (affine_oppositeWord_displacement_right
               α K₁ K₂ S hgen hS x y hx hy C hC g)
-            (by simpa [norm_sub_rev] using hC)
+            (by simpa only [norm_sub_rev] using hC)
         _ = affineMarkedPointWordBound S hgen C (g, false) := by
           unfold affineMarkedPointWordBound
           ring
@@ -24399,7 +24623,7 @@ theorem markedAffineOrbitPoint_le_wordBound
             α K₁ K₂ S hgen hS x y hx hy C hC g
         _ ≤ affineMarkedPointWordBound S hgen C (g, true) := by
           unfold affineMarkedPointWordBound
-          nlinarith
+          linarith
 
 theorem markedAffinePairDisplacement_le_wordBound
     (α : AffineHilbertAction G V) (K₁ K₂ : Subgroup G)
@@ -24599,7 +24823,7 @@ theorem exists_cornulierNormalizedMinimizingSequence
     funext n
     exact ha n
   rw [heq]
-  simpa [cornulierNormalizedDistanceInfimum] using hd
+  simpa only [cornulierNormalizedDistanceInfimum] using hd
 
 theorem cornulierNormalizedMinimizingSequence_bounded
     {G : Type u} [Group G] {K₁ K₂ : Subgroup G} {S : Finset G}
@@ -24934,15 +25158,15 @@ theorem exists_affineUniformGeneratorDisplacement_of_local_sequence
           ‖α n q.1.1 (0 : H n)‖ +
             ‖α n q.2.1 (0 : H n)‖ := norm_sub_le _ _
       _ ≤ (ℓ q.1.1 : ℝ) * 2 + (ℓ q.2.1 : ℝ) * 2 := by
-        simpa using add_le_add (hword n q.1.1) (hword n q.2.1)
+        simpa only [sub_zero] using add_le_add (hword n q.1.1) (hword n q.2.1)
   have hx : ∀ n,
       ConnesRigidity.IsAffineFixed (α n) (⊥ : Subgroup G) (x n) := by
     intro n g
     have hg : (g : G) = 1 := Subgroup.mem_bot.mp g.property
-    simp [hg, x]
+    simp only [hg, map_one, AffineIsometryEquiv.coe_one, id_eq, x]
   have hdist : Tendsto (fun n => ‖x n - x n‖)
       Filter.atTop (𝓝 (0 : ℝ)) := by
-    simp
+    simp only [sub_self, norm_zero, tendsto_const_nhds_iff]
   obtain ⟨L, R, hadd, _, hdense, _, _, _, _, hgram⟩ :=
     exists_marked_affine_ultralimit α x x
       (⊥ : Subgroup G) (⊥ : Subgroup G)
@@ -24951,7 +25175,7 @@ theorem exists_affineUniformGeneratorDisplacement_of_local_sequence
     inferInstance, markedPairAffineAction L R hadd ((1 : G), false), ?_⟩
   apply affineUniformGeneratorDisplacement_marked_limit_of_local
     α S hlocal L R hadd hdense
-  simpa [x] using hgram
+  simpa only [Prod.forall, Bool.forall_bool] using hgram
 
 end CornulierUltralimit
 
@@ -24976,12 +25200,12 @@ theorem exists_local_half_minimizer
   let x : ℕ → X := fun n => Nat.rec x₀ (fun _ y => f y) n
   have hxzero : x 0 = x₀ := rfl
   have hxsucc (n : ℕ) : x (n + 1) = f (x n) := by
-    simp [x]
+    simp only [x]
   have hdecay : ∀ n : ℕ,
       D (x n) ≤ D x₀ * ((1 / 2 : ℝ) ^ n) := by
     intro n
     induction n with
-    | zero => simp [hxzero]
+    | zero => simp only [hxzero, one_div, pow_zero, mul_one, Std.le_refl]
     | succ n ih =>
       calc
         D (x (n + 1)) ≤ D (x n) / 2 := by
@@ -25012,7 +25236,7 @@ theorem exists_local_half_minimizer
     apply squeeze_zero
       (fun n => (hpositive (x n)).le)
       hdecay
-    simpa using
+    simpa only [one_div, inv_pow, mul_zero] using
       (tendsto_const_nhds.mul
         (tendsto_pow_atTop_nhds_zero_of_lt_one
           (by norm_num : (0 : ℝ) ≤ 1 / 2)
@@ -25036,7 +25260,8 @@ theorem continuous_generatorMaxDisplacement
   change Continuous (fun x : H => ((S.sup fun s => ‖α s x - x‖₊ : NNReal) : ℝ))
   apply NNReal.continuous_coe.comp
   induction S using Finset.induction_on with
-  | empty => simpa using (continuous_const : Continuous fun _ : H => (0 : NNReal))
+  | empty => simpa only [Finset.sup_empty,
+               bot_eq_zero'] using (continuous_const : Continuous fun _ : H => (0 : NNReal))
   | @insert a S ha ih =>
       simpa only [Finset.sup_insert, Pi.sub_apply, id_eq] using
         (((α a).continuous.sub continuous_id).nnnorm.sup ih)
@@ -25056,7 +25281,7 @@ def affinePointStabilizer
     [InnerProductSpace ℂ H] [CompleteSpace H]
     (α : G →* (H ≃ᵃⁱ[ℂ] H)) (x : H) : Subgroup G where
   carrier := {g : G | α g x = x}
-  one_mem' := by simp
+  one_mem' := by simp only [Set.mem_setOf_eq, map_one, AffineIsometryEquiv.coe_one, id_eq]
   mul_mem' := by
     intro a b ha hb
     change α (a * b) x = x
@@ -25071,7 +25296,7 @@ def affinePointStabilizer
       α a (α a⁻¹ x) = α (a * a⁻¹) x := by
         rw [map_mul]
         rfl
-      _ = x := by simp
+      _ = x := by simp only [mul_inv_cancel, map_one, AffineIsometryEquiv.coe_one, id_eq]
       _ = α a x := ha.symm
 
 theorem generatorMaxDisplacement_pos_of_no_fixed
@@ -25092,7 +25317,7 @@ theorem generatorMaxDisplacement_pos_of_no_fixed
     apply sub_eq_zero.mp
     apply norm_eq_zero.mp
     apply le_antisymm
-    · simpa [hzero] using generator_displacement_le_max α S x hs
+    · simpa only [norm_le_zero_iff, hzero] using generator_displacement_le_max α S x hs
     · exact norm_nonneg _
   have hstabilizer :
       Subgroup.closure (S : Set G) ≤ affinePointStabilizer α x := by
@@ -25116,7 +25341,8 @@ theorem exists_generator_eq_max
   have hnonempty : S.Nonempty := by
     by_contra hempty
     have heq : S = ∅ := Finset.not_nonempty_iff_eq_empty.mp hempty
-    simp [generatorMaxDisplacement, heq] at hpositive
+    simp only [generatorMaxDisplacement, heq, Finset.sup_empty, bot_eq_zero', NNReal.coe_zero,
+      lt_self_iff_false] at hpositive
   obtain ⟨s, hs, heq⟩ :=
     Finset.exists_mem_eq_sup S hnonempty (fun s => ‖α s x - x‖₊)
   refine ⟨s, hs, ?_⟩
@@ -25139,7 +25365,8 @@ theorem gromov_rescaled_generator_displacement_at_zero_le_two
   calc
     ‖gromovRescaledAffineAction α x (D / 2) s 0‖ =
         (D / 2)⁻¹ * ‖α s x - x‖ := by
-      simpa using
+      simpa only [gromovRescaledAffineAction_apply, map_zero, inv_div, zero_add, sub_zero,
+        smul_zero, add_zero] using
         gromovRescaledAffineAction_displacement_norm α x (D / 2) hr s 0
     _ ≤ (D / 2)⁻¹ * D := by
       apply mul_le_mul_of_nonneg_left
@@ -25171,7 +25398,7 @@ theorem gromov_rescaled_generator_displacement_ge_one_on_ball
       dist x y = ‖(D x / 2) • z‖ := by
         dsimp [y]
         rw [dist_eq_norm]
-        simp [norm_neg]
+        simp only [sub_add_cancel_left, norm_neg]
       _ = (D x / 2) * ‖z‖ := by
         rw [norm_smul, Real.norm_eq_abs, abs_of_pos hr]
       _ ≤ (D x / 2) * (N : ℝ) := by
@@ -25514,8 +25741,8 @@ theorem circle_nonpositive_real_energy (z : Circle)
   have hnorm : Complex.normSq (z : ℂ) = 1 := Circle.normSq_coe z
   rw [Complex.sq_norm, Complex.normSq_apply]
   rw [Complex.normSq_apply] at hnorm
-  simp
-  nlinarith
+  simp only [Complex.sub_re, Complex.one_re, Complex.sub_im, Complex.one_im, sub_zero, ge_iff_le]
+  linarith
 
 def spectralNonpositiveRealSet (a : A) : Set (DiscreteCharacterSpace A) :=
   {χ | (((χ (Multiplicative.ofAdd a) : Circle) : ℂ).re) ≤ 0}
@@ -25581,7 +25808,7 @@ theorem spectralTorusWindow_compl_measureReal_mul_two_le_energy_sum
   have hbad : 2 * (μ : Measure (DiscreteCharacterSpace A)).real
       (spectralNonpositiveRealSet a ∪ spectralNonpositiveRealSet b) ≤
       spectralDetectionEnergy μ a + spectralDetectionEnergy μ b := by
-    nlinarith
+    linarith
   simpa only [spectralTorusWindow, compl_compl] using hbad
 
 theorem spectralTorusWindow_compl_measureReal_le_sq
@@ -25670,7 +25897,7 @@ theorem circle_re_pos_iff_arg_mem_Ioo (z : Circle) :
     0 < (z : ℂ).re ↔
       -(Real.pi / 2) < Complex.arg (z : ℂ) ∧
         Complex.arg (z : ℂ) < Real.pi / 2 := by
-  simpa [abs_lt, z.coe_ne_zero] using
+  simpa only [z.coe_ne_zero, or_false, abs_lt] using
     (Complex.abs_arg_lt_pi_div_two_iff (z := (z : ℂ))).symm
 
 theorem circle_arg_mul_of_no_wrap_le (z w : Circle)
@@ -25724,7 +25951,7 @@ theorem circle_arg_div_of_re_pos (z w : Circle)
   obtain ⟨hzlo, hzhi⟩ := (circle_re_pos_iff_arg_mem_Ioo z).mp hz
   obtain ⟨hwlo, hwhi⟩ := (circle_re_pos_iff_arg_mem_Ioo w).mp hw
   apply circle_arg_div_of_no_wrap z w
-  · nlinarith [Real.pi_pos]
+  · linarith [Real.pi_pos]
   · linarith
   · linarith
 
@@ -25752,7 +25979,8 @@ theorem spectralTorusWindow_mem_iff_re_pos (a b : A)
     χ ∈ spectralTorusWindow a b ↔
       0 < (((χ (Multiplicative.ofAdd a) : Circle) : ℂ).re) ∧
         0 < (((χ (Multiplicative.ofAdd b) : Circle) : ℂ).re) := by
-  simp [spectralTorusWindow, spectralNonpositiveRealSet, not_le]
+  simp only [spectralTorusWindow, spectralNonpositiveRealSet, compl_union, mem_inter_iff,
+    mem_compl_iff, mem_setOf_eq, not_le]
 
 omit [DiscreteTopology A] [MeasurableSpace (DiscreteCharacterSpace A)]
   [BorelSpace (DiscreteCharacterSpace A)] in
@@ -25789,7 +26017,8 @@ theorem spectralArgCoordinates_tpos (a b : A)
   apply Prod.ext
   · rfl
   · exact spectralArg_sub_of_window b a χ (by
-      simpa [spectralTorusWindow, Set.union_comm] using hχ)
+      simpa only [spectralTorusWindow, union_comm, compl_union, mem_inter_iff,
+        mem_compl_iff] using hχ)
 
 omit [DiscreteTopology A] [MeasurableSpace (DiscreteCharacterSpace A)]
   [BorelSpace (DiscreteCharacterSpace A)] in
@@ -25814,7 +26043,8 @@ theorem spectralArgCoordinates_tneg (a b : A)
   apply Prod.ext
   · rfl
   · exact spectralArg_add_of_window b a χ (by
-      simpa [spectralTorusWindow, Set.union_comm] using hχ)
+      simpa only [spectralTorusWindow, union_comm, compl_union, mem_inter_iff,
+        mem_compl_iff] using hχ)
 
 omit [DiscreteTopology A] [MeasurableSpace (DiscreteCharacterSpace A)]
   [BorelSpace (DiscreteCharacterSpace A)] in
@@ -25854,7 +26084,7 @@ theorem integerDual_eq_one_iff_coordinate_values
         χ (Multiplicative.ofAdd integerDualCoordinateOne) = 1 := by
   constructor
   · rintro rfl
-    simp
+    simp only [PontryaginDual.one_apply, and_self]
   · rintro ⟨hzero, hone⟩
     apply PontryaginDual.ext
     intro z
@@ -25864,7 +26094,7 @@ theorem integerDual_eq_one_iff_coordinate_values
     change
       χ ((Multiplicative.ofAdd integerDualCoordinateZero) ^ (v 0) *
         (Multiplicative.ofAdd integerDualCoordinateOne) ^ (v 1)) = 1
-    simp [hzero, hone]
+    simp only [Fin.isValue, map_mul, map_zpow, hzero, one_zpow, hone, mul_one]
 
 local instance integerDualMeasurable :
     MeasurableSpace (DiscreteCharacterSpace IntegerRankTwo) :=
@@ -25891,7 +26121,8 @@ theorem integerDual_spectralArgCoordinates_origin_preimage :
       integerDualCoordinateOne ⁻¹' {(0, 0)} =
         ({1} : Set (DiscreteCharacterSpace IntegerRankTwo)) := by
   ext χ
-  simp [integerDual_spectralArgCoordinates_eq_zero_iff]
+  simp only [Set.mem_preimage, Set.mem_singleton_iff,
+    integerDual_spectralArgCoordinates_eq_zero_iff]
 
 end
 
@@ -25980,8 +26211,8 @@ theorem regular_measureReal_le_add_of_testFunctions
       ENNReal.add_ne_top.mpr ⟨measure_ne_top ν K, ENNReal.ofReal_ne_top⟩
     have hreal := (ENNReal.toReal_lt_toReal
       (measure_ne_top ν U) hfinite).mpr hUmeasure
-    simpa [measureReal_def, ENNReal.toReal_add,
-      ENNReal.toReal_ofReal hε.le] using hreal
+    simpa only [measureReal_def, gt_iff_lt, ne_eq, measure_ne_top, not_false_eq_true,
+      ENNReal.ofReal_ne_top, ENNReal.toReal_add, ENNReal.toReal_ofReal hε.le] using hreal
   obtain ⟨f, hfK, hfcompact, hfsupport, hfbounds⟩ :=
     exists_continuousMap_one_of_isCompact_subset_isOpen hK hUopen hKU
   let fc : C_c(Ω, ℝ) := ⟨f, hfcompact⟩
@@ -25993,11 +26224,11 @@ theorem regular_measureReal_le_add_of_testFunctions
     · exact fc.integrable
     · intro x
       by_cases hx : x ∈ K
-      · simp [hx]
+      · simp only [hx, indicator_of_mem, Pi.one_apply]
         change 1 ≤ f x
-        have hvalue : f x = 1 := by simpa using hfK hx
-        simp [hvalue]
-      · simp [hx]
+        have hvalue : f x = 1 := by simpa only [Pi.one_apply] using hfK hx
+        simp only [hvalue, Std.le_refl]
+      · simp only [hx, not_false_eq_true, indicator_of_notMem]
         change 0 ≤ f x
         exact (hfbounds x).1
   have hright : (∫ x, fc x ∂ν) ≤ ν.real U := by
@@ -26008,15 +26239,15 @@ theorem regular_measureReal_le_add_of_testFunctions
         hUopen.measurableSet
     · intro x
       by_cases hx : x ∈ U
-      · simp [hx]
+      · simp only [hx, indicator_of_mem, Pi.one_apply]
         change f x ≤ 1
         exact (hfbounds x).2
       · have hzero : f x = 0 :=
           image_eq_zero_of_notMem_tsupport
             (fun hxsupport => hx (hfsupport hxsupport))
-        simp [hx]
+        simp only [hx, not_false_eq_true, indicator_of_notMem, ge_iff_le]
         change f x ≤ 0
-        simp [hzero]
+        simp only [hzero, Std.le_refl]
   have hKν : ν.real K ≤ ν.real s :=
     measureReal_mono (μ := ν) hKs
   have htest' := htest fc hfbounds
@@ -26065,7 +26296,7 @@ theorem bounded_vector_state_lipschitz
   have hTx : ‖T x‖ ≤ 1 := by
     calc
       ‖T x‖ ≤ ‖T‖ * ‖x‖ := T.le_opNorm x
-      _ ≤ 1 := by simpa [hx] using hT
+      _ ≤ 1 := by simpa only [hx, mul_one] using hT
   have hTsub : ‖T (x - y)‖ ≤ ‖x - y‖ := by
     calc
       ‖T (x - y)‖ ≤ ‖T‖ * ‖x - y‖ := T.le_opNorm (x - y)
@@ -26187,7 +26418,7 @@ theorem trivialCharacterProjection_ne_zero_of_joint_atom_pos
   have hzatom : ‖z‖ < (Φ.measure x).real {1} :=
     lt_of_lt_of_le hsmall (min_le_right _ _)
   have hznorm : 0 ≤ ‖z‖ := norm_nonneg _
-  nlinarith [mul_nonneg hznorm (sub_nonneg.mpr (le_of_lt hzone))]
+  linarith [mul_nonneg hznorm (sub_nonneg.mpr (le_of_lt hzone))]
 
 theorem exists_kernel_fixed_of_joint_atom_pos
     (E : SplitAbelianExtension A G H)
@@ -26323,10 +26554,12 @@ theorem integerShalomTranslations_in_generators
   simp only [integerShalomTranslations, Finset.mem_insert,
     Finset.mem_singleton] at ha
   rcases ha with rfl | rfl
-  · simp [integerShalomGenerators, integerShalomTranslationGenerators,
-      integerShalomTranslation, integerTranslationZero]
-  · simp [integerShalomGenerators, integerShalomTranslationGenerators,
-      integerShalomTranslation, integerTranslationOne]
+  · simp only [integerShalomGenerators, integerShalomTranslationGenerators,
+      integerShalomTranslation, Fin.isValue, Int.reduceNeg, Finset.insert_union,
+      Finset.singleton_union, integerTranslationZero, Finset.mem_insert, true_or]
+  · simp only [integerShalomGenerators, integerShalomTranslationGenerators,
+      integerShalomTranslation, Fin.isValue, Int.reduceNeg, Finset.insert_union,
+      Finset.singleton_union, integerTranslationOne, Finset.mem_insert, true_or, or_true]
 
 theorem integerShalomShears_in_generators
     {h : integerElementaryRankTwoActingGroup}
@@ -26504,13 +26737,13 @@ theorem shalomPunctured_cover :
       apply hne
       exact Prod.ext hx hy
     exact Or.inl (Or.inl (Or.inl
-      ⟨by simp [hx], by simp [hx, abs_pos.mpr hyne]⟩))
+      ⟨by simp only [hx, zero_mul, Std.le_refl], by simp only [hx, abs_zero, abs_pos.mpr hyne]⟩))
   · have hxne : x ≠ 0 := by
       intro hx
       apply hne
       exact Prod.ext hx hy
     exact Or.inl (Or.inr
-      ⟨by simp [hy], by simp [hy, abs_pos.mpr hxne]⟩)
+      ⟨by simp only [hy, mul_zero, Std.le_refl], by simp only [hy, abs_zero, abs_pos.mpr hxne]⟩)
 
 private theorem abs_sub_of_mul_nonpos {x y : ℝ} (h : x * y ≤ 0) :
     |y - x| = |y| + |x| := by
@@ -26545,11 +26778,11 @@ theorem shalomTpos_sector_inclusion :
   have hy : y ≠ 0 := by
     intro hy
     rcases hxy with h | h
-    · exact (not_lt_of_ge (abs_nonneg x)) (by simpa [hy] using h.2)
-    · simpa [hy] using h.1
+    · exact (not_lt_of_ge (abs_nonneg x)) (by simpa only [hy, abs_zero] using h.2)
+    · simpa only [hy, mul_zero, lt_self_iff_false] using h.1
   change x * (y - x) ≤ 0 ∧ |x| < |y - x|
   constructor
-  · nlinarith [sq_nonneg x]
+  · linarith [sq_nonneg x]
   · rw [abs_sub_of_mul_nonpos hnonpos]
     linarith [abs_pos.mpr hy]
 
@@ -26563,11 +26796,11 @@ theorem shalomSpos_sector_inclusion :
   have hy : y ≠ 0 := by
     intro hy
     rcases hxy with h | h
-    · exact (not_lt_of_ge (abs_nonneg x)) (by simpa [hy] using h.2)
-    · simpa [hy] using h.1
+    · exact (not_lt_of_ge (abs_nonneg x)) (by simpa only [hy, abs_zero] using h.2)
+    · simpa only [hy, mul_zero, lt_self_iff_false] using h.1
   change (x - y) * y < 0 ∧ |y| ≤ |x - y|
   constructor
-  · nlinarith [sq_pos_of_ne_zero hy]
+  · linarith [sq_pos_of_ne_zero hy]
   · rw [abs_sub_comm, abs_sub_of_mul_nonpos hnonpos]
     linarith [abs_nonneg x]
 
@@ -26581,11 +26814,11 @@ theorem shalomTneg_sector_inclusion :
   have hx : x ≠ 0 := by
     intro hx
     rcases hxy with h | h
-    · simpa [hx] using h.1
-    · exact (not_lt_of_ge (abs_nonneg y)) (by simpa [hx] using h.2)
+    · simpa only [hx, zero_mul, lt_self_iff_false] using h.1
+    · exact (not_lt_of_ge (abs_nonneg y)) (by simpa only [hx, abs_zero] using h.2)
   change 0 < x * (y + x) ∧ |x| ≤ |y + x|
   constructor
-  · nlinarith [sq_pos_of_ne_zero hx]
+  · linarith [sq_pos_of_ne_zero hx]
   · rw [add_comm y x, abs_add_of_mul_nonneg hnonneg]
     linarith [abs_nonneg y]
 
@@ -26599,11 +26832,11 @@ theorem shalomSneg_sector_inclusion :
   have hx : x ≠ 0 := by
     intro hx
     rcases hxy with h | h
-    · simpa [hx] using h.1
-    · exact (not_lt_of_ge (abs_nonneg y)) (by simpa [hx] using h.2)
+    · simpa only [hx, zero_mul, lt_self_iff_false] using h.1
+    · exact (not_lt_of_ge (abs_nonneg y)) (by simpa only [hx, abs_zero] using h.2)
   change 0 ≤ (x + y) * y ∧ |y| < |x + y|
   constructor
-  · nlinarith [sq_nonneg y]
+  · linarith [sq_nonneg y]
   · rw [abs_add_of_mul_nonneg hnonneg]
     linarith [abs_pos.mpr hx]
 
@@ -26650,7 +26883,7 @@ theorem spectralArgCoordinates_dualCharacterAction_tpos
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
     _ = shalomTpos (spectralArgCoordinates a b χ) := by
-      simpa [shalomTpos] using spectralArgCoordinates_tpos a b χ hχ
+      simpa only [shalomTpos] using spectralArgCoordinates_tpos a b χ hχ
 
 omit [MeasurableSpace (DiscreteCharacterSpace A)] [BorelSpace (DiscreteCharacterSpace A)]
   in
@@ -26669,7 +26902,7 @@ theorem spectralArgCoordinates_dualCharacterAction_spos
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
     _ = shalomSpos (spectralArgCoordinates a b χ) := by
-      simpa [shalomSpos] using spectralArgCoordinates_spos a b χ hχ
+      simpa only [shalomSpos] using spectralArgCoordinates_spos a b χ hχ
 
 omit [MeasurableSpace (DiscreteCharacterSpace A)] [BorelSpace (DiscreteCharacterSpace A)]
   in
@@ -26688,7 +26921,7 @@ theorem spectralArgCoordinates_dualCharacterAction_tneg
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
     _ = shalomTneg (spectralArgCoordinates a b χ) := by
-      simpa [shalomTneg] using spectralArgCoordinates_tneg a b χ hχ
+      simpa only [shalomTneg] using spectralArgCoordinates_tneg a b χ hχ
 
 omit [MeasurableSpace (DiscreteCharacterSpace A)] [BorelSpace (DiscreteCharacterSpace A)]
   in
@@ -26707,7 +26940,7 @@ theorem spectralArgCoordinates_dualCharacterAction_sneg
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
     _ = shalomSneg (spectralArgCoordinates a b χ) := by
-      simpa [shalomSneg] using spectralArgCoordinates_sneg a b χ hχ
+      simpa only [shalomSneg] using spectralArgCoordinates_sneg a b χ hχ
 
 end
 
@@ -26747,7 +26980,7 @@ theorem integerUpperShear_inv_action_one :
       Pi.single (1 : Fin 2) 1 - Pi.single (0 : Fin 2) 1
   rw [Matrix.SpecialLinearGroup.transvection_inv,
     Matrix.SpecialLinearGroup.transvection_smul_single_snd]
-  simp [sub_eq_add_neg]
+  simp only [Fin.isValue, Int.reduceNeg, neg_smul, one_smul, sub_eq_add_neg]
 
 theorem integerLowerShear_inv_action_zero :
     (Multiplicative.toAdd
@@ -26761,7 +26994,7 @@ theorem integerLowerShear_inv_action_zero :
       Pi.single (0 : Fin 2) 1 - Pi.single (1 : Fin 2) 1
   rw [Matrix.SpecialLinearGroup.transvection_inv,
     Matrix.SpecialLinearGroup.transvection_smul_single_snd]
-  simp [sub_eq_add_neg]
+  simp only [Fin.isValue, Int.reduceNeg, neg_smul, one_smul, sub_eq_add_neg]
 
 theorem integerLowerShear_inv_action_one :
     (Multiplicative.toAdd
@@ -26799,7 +27032,7 @@ theorem integerUpperShear_action_one :
       (Pi.single (1 : Fin 2) 1 : Fin 2 → ℤ) =
       Pi.single (1 : Fin 2) 1 + Pi.single (0 : Fin 2) 1
   rw [Matrix.SpecialLinearGroup.transvection_smul_single_snd]
-  simp
+  simp only [Fin.isValue, one_smul]
 
 theorem integerLowerShear_action_zero :
     (Multiplicative.toAdd
@@ -26812,7 +27045,7 @@ theorem integerLowerShear_action_zero :
       (Pi.single (0 : Fin 2) 1 : Fin 2 → ℤ) =
       Pi.single (0 : Fin 2) 1 + Pi.single (1 : Fin 2) 1
   rw [Matrix.SpecialLinearGroup.transvection_smul_single_snd]
-  simp
+  simp only [Fin.isValue, one_smul]
 
 theorem integerLowerShear_action_one :
     (Multiplicative.toAdd
@@ -26850,7 +27083,7 @@ theorem shalom_conditioned_image_variation_lt_one_fourth
     ext x
     constructor
     · rintro ⟨y, hy, rfl⟩
-      simpa using hy
+      simpa only [mem_preimage, MeasurableEquiv.symm_apply_apply] using hy
     · intro hx
       exact ⟨f.symm x, hx, f.apply_symm_apply x⟩
   rw [himage]
@@ -26871,7 +27104,8 @@ theorem shalom_conditioned_image_variation_of_map_lt_one_fourth
         (1 / 4 : ℝ) := by
   apply shalom_conditioned_image_variation_lt_one_fourth μ hU
     hUmeas hε hsmall hdiscard f s
-  simpa [map_measureReal_apply f.symm.measurable hs] using hvariation
+  simpa only [ProbabilityMeasure.measureReal_eq_coe_coeFn,
+    map_measureReal_apply f.symm.measurable hs] using hvariation
 
 universe u
 
@@ -26998,9 +27232,10 @@ theorem shalom_three_sector_supported_action_gap
       (act n '' A)
       hsupport hmass hA hB hC hAB hAC hBC hcover ht hs hn
       with h | h | h
-  · exact ⟨t, by simp, A ∪ B, hA.union hB, h⟩
-  · exact ⟨s, by simp, C ∪ B, hC.union hB, h⟩
-  · exact ⟨n, by simp, A, hA, h⟩
+  · exact ⟨t, by simp only [mem_insert_iff, mem_singleton_iff, true_or], A ∪ B, hA.union hB, h⟩
+  · exact ⟨s, by simp only [mem_insert_iff, mem_singleton_iff, true_or,
+                   or_true], C ∪ B, hC.union hB, h⟩
+  · exact ⟨n, by simp only [mem_insert_iff, mem_singleton_iff, or_true], A, hA, h⟩
 
 theorem shalom_four_sector_supported_probability_gap
     {Ω : Type*} [MeasurableSpace Ω]
@@ -27085,10 +27320,12 @@ theorem shalom_four_sector_supported_action_gap
       hsupport hmass hA hB hC hD
       hAB hAC hAD hBC hBD hCD hcover
       htpos hspos htneg hsneg with h | h | h | h
-  · exact ⟨tpos, by simp, A ∪ B, hA.union hB, h⟩
-  · exact ⟨spos, by simp, A ∪ B, hA.union hB, h⟩
-  · exact ⟨tneg, by simp, D ∪ C, hD.union hC, h⟩
-  · exact ⟨sneg, by simp, D ∪ C, hD.union hC, h⟩
+  · exact ⟨tpos, by simp only [mem_insert_iff, mem_singleton_iff, true_or], A ∪ B, hA.union hB, h⟩
+  · exact ⟨spos, by simp only [mem_insert_iff, mem_singleton_iff, true_or,
+                      or_true], A ∪ B, hA.union hB, h⟩
+  · exact ⟨tneg, by simp only [mem_insert_iff, mem_singleton_iff, true_or,
+                      or_true], D ∪ C, hD.union hC, h⟩
+  · exact ⟨sneg, by simp only [mem_insert_iff, mem_singleton_iff, or_true], D ∪ C, hD.union hC, h⟩
 
 theorem shalom_punctured_support_measureReal_eq_one
     {Ω : Type*} [MeasurableSpace Ω]
@@ -27104,7 +27341,7 @@ theorem shalom_punctured_support_measureReal_eq_one
   have hinter := measureReal_inter_add_sdiff
     (μ := μ) (s := support) horigin
   rw [hnull, hmass] at hinter
-  simpa using hinter
+  simpa only [zero_add] using hinter
 
 end
 
@@ -27125,10 +27362,10 @@ def torusShearTpos : ShalomTorus ≃ₜ ShalomTorus where
   invFun p := (p.1, p.2 * p.1)
   left_inv := by
     rintro ⟨z, w⟩
-    simp
+    simp only [div_mul_cancel]
   right_inv := by
     rintro ⟨z, w⟩
-    simp
+    simp only [mul_div_cancel_right]
   continuous_toFun := continuous_fst.prodMk (by
     change Continuous (fun p : Circle × Circle => p.2 * p.1⁻¹)
     fun_prop)
@@ -27139,10 +27376,10 @@ def torusShearSpos : ShalomTorus ≃ₜ ShalomTorus where
   invFun p := (p.1 * p.2, p.2)
   left_inv := by
     rintro ⟨z, w⟩
-    simp
+    simp only [div_mul_cancel]
   right_inv := by
     rintro ⟨z, w⟩
-    simp
+    simp only [mul_div_cancel_right]
   continuous_toFun := by
     change Continuous (fun p : Circle × Circle => (p.1 * p.2⁻¹, p.2))
     fun_prop
@@ -27293,31 +27530,35 @@ theorem shalomSpectralSector_cover (a b : A) :
     · refine ⟨hA.1, ?_⟩
       intro hzero
       have hcoord : spectralArgCoordinates a b χ = (0, 0) := by
-        simpa using hzero
+        simpa only [mem_preimage, mem_singleton_iff] using hzero
       have hsector := hA.2
-      simp [hcoord, shalomSectorA] at hsector
+      simp only [shalomSectorA, preimage_setOf_eq, mem_setOf_eq, hcoord, mul_zero, Std.le_refl,
+        abs_zero, lt_self_iff_false, and_false] at hsector
     · refine ⟨hB.1, ?_⟩
       intro hzero
       have hcoord : spectralArgCoordinates a b χ = (0, 0) := by
-        simpa using hzero
+        simpa only [mem_preimage, mem_singleton_iff] using hzero
       have hsector := hB.2
-      simp [hcoord, shalomSectorB] at hsector
+      simp only [shalomSectorB, preimage_setOf_eq, mem_setOf_eq, hcoord, mul_zero,
+        lt_self_iff_false, abs_zero, Std.le_refl, and_true] at hsector
     · refine ⟨hC.1, ?_⟩
       intro hzero
       have hcoord : spectralArgCoordinates a b χ = (0, 0) := by
-        simpa using hzero
+        simpa only [mem_preimage, mem_singleton_iff] using hzero
       have hsector := hC.2
-      simp [hcoord, shalomSectorC] at hsector
+      simp only [shalomSectorC, preimage_setOf_eq, mem_setOf_eq, hcoord, mul_zero, Std.le_refl,
+        abs_zero, lt_self_iff_false, and_false] at hsector
     · refine ⟨hD.1, ?_⟩
       intro hzero
       have hcoord : spectralArgCoordinates a b χ = (0, 0) := by
-        simpa using hzero
+        simpa only [mem_preimage, mem_singleton_iff] using hzero
       have hsector := hD.2
-      simp [hcoord, shalomSectorD] at hsector
+      simp only [shalomSectorD, preimage_setOf_eq, mem_setOf_eq, hcoord, mul_zero,
+        lt_self_iff_false, abs_zero, Std.le_refl, and_true] at hsector
   · rintro ⟨hwindow, hnonzero⟩
     have hcoord : spectralArgCoordinates a b χ ≠ (0, 0) := by
       intro hzero
-      exact hnonzero (by simpa using hzero)
+      exact hnonzero (by simpa only [mem_preimage, mem_singleton_iff] using hzero)
     let p : ShalomPuncturedPlane := ⟨spectralArgCoordinates a b χ, hcoord⟩
     have hp : p ∈ shalomPuncturedA ∪ shalomPuncturedB ∪
         shalomPuncturedC ∪ shalomPuncturedD := by
@@ -27676,12 +27917,14 @@ theorem integerShalomFourierAtomGap : IntegerShalomFourierAtomGap := by
       (shalomPolynomialKazhdanConstant 0) ^ 2 := by
     apply le_of_lt
     apply htranslations integerTranslationZero
-    simp [integerShalomTranslations]
+    simp only [integerShalomTranslations, integerTranslationZero_eq_dualCoordinate,
+      integerTranslationOne_eq_dualCoordinate, Finset.mem_insert, Finset.mem_singleton, true_or]
   have hone : spectralDetectionEnergy μ integerTranslationOne ≤
       (shalomPolynomialKazhdanConstant 0) ^ 2 := by
     apply le_of_lt
     apply htranslations integerTranslationOne
-    simp [integerShalomTranslations]
+    simp only [integerShalomTranslations, integerTranslationZero_eq_dualCoordinate,
+      integerTranslationOne_eq_dualCoordinate, Finset.mem_insert, Finset.mem_singleton, or_true]
   have hvariation :
       ∀ h ∈ ({integerUpperShear, integerLowerShear,
           integerUpperShear⁻¹, integerLowerShear⁻¹} :
@@ -27695,7 +27938,8 @@ theorem integerShalomFourierAtomGap : IntegerShalomFourierAtomGap := by
                 2 * shalomPolynomialKazhdanConstant 0 := by
     intro h hh s hs
     have hmem : h ∈ integerShalomShears := by
-      simpa [integerShalomShears] using hh
+      simpa only [integerShalomShears, Finset.mem_insert, Finset.mem_singleton, Set.mem_insert_iff,
+        Set.mem_singleton_iff] using hh
     exact le_of_lt
       (hshears h⁻¹ (integerShalomShears_inv_mem hmem) s hs)
   have hpositive := shalomSpectral_zeroFiber_positive_of_variation
@@ -27707,10 +27951,14 @@ theorem integerShalomFourierAtomGap : IntegerShalomFourierAtomGap := by
     integerUpperShear_inv_action_one
     integerLowerShear_inv_action_zero
     integerLowerShear_inv_action_one
-    (by simpa using integerUpperShear_action_zero)
-    (by simpa using integerUpperShear_action_one)
-    (by simpa using integerLowerShear_action_zero)
-    (by simpa using integerLowerShear_action_one)
+    (by simpa only [inv_inv,
+          integerTranslationZero_eq_dualCoordinate] using integerUpperShear_action_zero)
+    (by simpa only [inv_inv, integerTranslationOne_eq_dualCoordinate,
+          integerTranslationZero_eq_dualCoordinate] using integerUpperShear_action_one)
+    (by simpa only [inv_inv, integerTranslationZero_eq_dualCoordinate,
+          integerTranslationOne_eq_dualCoordinate] using integerLowerShear_action_zero)
+    (by simpa only [inv_inv,
+          integerTranslationOne_eq_dualCoordinate] using integerLowerShear_action_one)
     μ (le_of_lt (shalomPolynomialKazhdanConstant_pos 0))
     integerShalomKazhdanConstant_le_one_tenth hzero hone hvariation
   rw [integerShalom_spectralArgCoordinates_zero_preimage] at hpositive
@@ -27774,7 +28022,7 @@ theorem dualCharacterAction_image_measureReal_eq_map_inv
     {s : Set (DiscreteCharacterSpace A)} (hs : MeasurableSet s) :
     μ.real (dualCharacterAction action h '' s) =
       (μ.map (dualCharacterAction action h⁻¹)).real s := by
-  simpa using (dualCharacterAction_map_measureReal action h⁻¹ μ hs).symm
+  simpa only [inv_inv] using (dualCharacterAction_map_measureReal action h⁻¹ μ hs).symm
 
 theorem dualCharacterAction_image_variation_eq_map_inv
     (action : H →* Multiplicative (AddAut A)) (h : H)
@@ -27809,8 +28057,9 @@ theorem polynomialFirstNontrivial_eq_top_iff (x : PolynomialCircleSequence) :
     polynomialFirstNontrivial x = ⊤ ↔ ∀ n : ℕ, x n = 1 := by
   classical
   by_cases h : ∃ n : ℕ, x n ≠ 1
-  · simp [polynomialFirstNontrivial, h]
-  · simp [polynomialFirstNontrivial, h]
+  · simp only [polynomialFirstNontrivial, ne_eq, h, ↓reduceDIte, ENat.coe_ne_top, false_iff,
+      not_forall]
+  · simp only [polynomialFirstNontrivial, ne_eq, h, ↓reduceDIte, true_iff]
     exact fun n => Classical.byContradiction fun hn => h ⟨n, hn⟩
 
 theorem polynomialFirstNontrivial_eq_coe_iff
@@ -27823,7 +28072,7 @@ theorem polynomialFirstNontrivial_eq_coe_iff
     by_cases hex : ∃ k : ℕ, x k ≠ 1
     · have hfind : Nat.find hex = n := by
         exact_mod_cast (show (Nat.find hex : ℕ∞) = (n : ℕ∞) by
-          simpa [polynomialFirstNontrivial, hex] using hval)
+          simpa only [ne_eq, Nat.cast_inj, polynomialFirstNontrivial, hex, ↓reduceDIte] using hval)
       constructor
       · rw [← hfind]
         exact Nat.find_spec hex
@@ -27832,7 +28081,7 @@ theorem polynomialFirstNontrivial_eq_coe_iff
         intro hne
         have hle := Nat.find_min' hex hne
         omega
-    · simp [polynomialFirstNontrivial, hex] at hval
+    · simp only [polynomialFirstNontrivial, ne_eq, hex, ↓reduceDIte, ENat.top_ne_coe] at hval
   · rintro ⟨hn, hmin⟩
     have hex : ∃ k : ℕ, x k ≠ 1 := ⟨n, hn⟩
     simp only [polynomialFirstNontrivial, dif_pos hex]
@@ -27857,7 +28106,8 @@ theorem polynomialFirstNontrivial_le_coe_iff
       exact (Nat.find_min' hex hkn).trans hk
   · constructor
     · intro h
-      simp [polynomialFirstNontrivial, hex] at h
+      simp only [polynomialFirstNontrivial, ne_eq, hex, ↓reduceDIte, top_le_iff,
+        ENat.coe_ne_top] at h
     · rintro ⟨k, _, hk⟩
       exact (hex ⟨k, hk⟩).elim
 
@@ -27891,7 +28141,7 @@ theorem polynomialFirstNontrivial_mul_eq_left_of_lt
       polynomialFirstNontrivial x := by
   classical
   have hxne : polynomialFirstNontrivial x ≠ ⊤ :=
-    fun htop => by simp [htop] at hxy
+    fun htop => by simp only [htop, not_top_lt] at hxy
   obtain ⟨n, hn⟩ := ENat.ne_top_iff_exists.mp hxne
   have hxval : polynomialFirstNontrivial x = (n : ℕ∞) := hn.symm
   have hx := (polynomialFirstNontrivial_eq_coe_iff x n).mp hxval
@@ -27910,10 +28160,10 @@ theorem polynomialFirstNontrivial_mul_eq_left_of_lt
       rw [hxval] at hxy
       have hm' : (m : ℕ∞) < (n : ℕ∞) := ENat.coe_lt_coe.mpr hm
       exact (not_lt_of_ge hle) (hm'.trans hxy)
-    simp [hym]
+    simp only [hym, mul_one]
   rw [hxval]
   apply (polynomialFirstNontrivial_eq_coe_iff _ n).mpr
-  exact ⟨by simpa [polynomialSequenceMul_apply, hyn] using hx.1, hmin⟩
+  exact ⟨by simpa only [polynomialSequenceMul_apply, hyn, mul_one, ne_eq] using hx.1, hmin⟩
 
 theorem polynomialFirstNontrivial_eq_top_iff_eq_one
     (x : PolynomialCircleSequence) :
@@ -27924,7 +28174,7 @@ theorem polynomialFirstNontrivial_eq_top_iff_eq_one
     funext n
     exact h n
   · intro h n
-    simp [h]
+    simp only [h, Pi.one_apply]
 
 theorem polynomialFirstNontrivial_tail_lt_of_head
     (x : PolynomialCircleSequence) (hx0 : x 0 = 1) (hx : x ≠ 1) :
@@ -27997,7 +28247,7 @@ theorem measurableSet_polynomialFirstNontrivial_lt :
     constructor
     · intro h
       have hxne : polynomialFirstNontrivial p.1 ≠ ⊤ :=
-        fun htop => by simp [htop] at h
+        fun htop => by simp only [htop, not_top_lt] at h
       obtain ⟨n, hn⟩ := ENat.ne_top_iff_exists.mp hxne
       have hxval : polynomialFirstNontrivial p.1 = (n : ℕ∞) := hn.symm
       have hx := (polynomialFirstNontrivial_eq_coe_iff p.1 n).mp hxval
@@ -28047,7 +28297,7 @@ theorem measurableSet_polynomialPunctured :
       simp only [mem_setOf_eq, mem_iInter]
       constructor
       · intro h n
-        simp [h]
+        simp only [h, Pi.one_apply]
       · intro h
         funext n
         exact h n
@@ -28090,7 +28340,7 @@ theorem measurableSet_polynomialRawSectorB :
     constructor
     · intro h
       rw [h]
-      simp
+      simp only [lt_self_iff_false, or_self, not_false_eq_true]
     · intro h
       exact le_antisymm
         (le_of_not_gt fun hlt => h (Or.inl hlt))
@@ -28286,7 +28536,7 @@ def polynomialCharacterCoefficientPair
 
 @[simp] theorem polynomialCharacterCoefficient_one (i : Fin 2) (n : ℕ) :
     polynomialCharacterCoefficient (1 : PolynomialRankTwoCharacter) i n = 1 := by
-  simp [polynomialCharacterCoefficient]
+  simp only [polynomialCharacterCoefficient, PontryaginDual.one_apply]
 
 @[simp] theorem polynomialCharacterCoefficientPair_one :
     polynomialCharacterCoefficientPair (1 : PolynomialRankTwoCharacter) = 1 := by
@@ -28417,7 +28667,7 @@ theorem polynomialCharacterNoFree_measurable :
       {χ : PolynomialRankTwoCharacter |
         polynomialCharacterCoefficient χ i 0 = 1}) := by
     ext χ
-    simp [polynomialCharacterNoFree]
+    simp only [polynomialCharacterNoFree, Fin.forall_fin_two, Fin.isValue, mem_setOf_eq, mem_iInter]
   rw [hset]
   exact MeasurableSet.iInter fun i =>
     measurableSet_eq_fun (measurable_polynomialCharacterCoefficient i 0)
@@ -28533,7 +28783,7 @@ theorem integralElementaryJointSpectralProbability_ae_character_eq_one
   let μ := integralElementaryJointSpectralProbability π x hx
   have henergy : spectralDetectionEnergy μ a = 0 := by
     rw [integralElementaryJointSpectralProbability_energy, hfixed]
-    simp
+    simp only [sub_self, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
   have hintegral :
       (∫ χ : DiscreteCharacterSpace (Fin 2 → IntegralPolynomial),
         ‖((χ (Multiplicative.ofAdd a) : Circle) : ℂ) - 1‖ ^ 2
@@ -28549,10 +28799,11 @@ theorem integralElementaryJointSpectralProbability_ae_character_eq_one
   filter_upwards [hae] with χ hχ
   have hnorm : ‖((χ (Multiplicative.ofAdd a) : Circle) : ℂ) - 1‖ = 0 := by
     have hsq : ‖((χ (Multiplicative.ofAdd a) : Circle) : ℂ) - 1‖ ^ 2 = 0 := by
-      simpa using hχ
+      simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, norm_eq_zero,
+        Pi.zero_apply] using hχ
     exact (sq_eq_zero_iff).mp hsq
   apply Circle.coe_injective
-  simpa using (sub_eq_zero.mp (norm_eq_zero.mp hnorm))
+  simpa only [Circle.coe_one, OneMemClass.coe_eq_one] using (sub_eq_zero.mp (norm_eq_zero.mp hnorm))
 
 theorem integralElementaryJointSpectralProbability_ae_polynomialCharacterNoFree
     (π : UnitaryRepresentation integralElementaryRankTwoGroup V)
@@ -28572,8 +28823,10 @@ theorem integralElementaryJointSpectralProbability_ae_polynomialCharacterNoFree
   change ∀ i : Fin 2, polynomialCharacterCoefficient χ i 0 = 1
   intro i
   fin_cases i
-  · simpa [polynomialCharacterCoefficient] using hχzero
-  · simpa [polynomialCharacterCoefficient] using hχone
+  · simpa only [polynomialCharacterCoefficient, Nat.reduceAdd, Fin.zero_eta, Fin.isValue,
+      pow_zero] using hχzero
+  · simpa only [polynomialCharacterCoefficient, Nat.reduceAdd, Fin.mk_one, Fin.isValue,
+      pow_zero] using hχone
 
 theorem integralElementaryJointSpectralProbability_polynomialCharacterNoFree
     (π : UnitaryRepresentation integralElementaryRankTwoGroup V)
@@ -28591,7 +28844,7 @@ theorem integralElementaryJointSpectralProbability_polynomialCharacterNoFree
       (integralElementaryJointSpectralProbability π x hx :
         Measure PolynomialRankTwoCharacter) polynomialCharacterNoFree = 1 :=
     (mem_ae_iff_prob_eq_one polynomialCharacterNoFree_measurable).mp hae
-  simp [measureReal_def, hmass]
+  simp only [measureReal_def, hmass, ENNReal.toReal_one]
 
 end IntegralPolynomialSpectralMeasure
 
@@ -28619,10 +28872,10 @@ theorem elementaryRankTwoRoot_smul_single_target
     Matrix.SpecialLinearGroup.transvection hij a •
       (Pi.single i b : Fin 2 → A) = Pi.single i b
   ext k
-  simp [Matrix.SpecialLinearGroup.smul_def,
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.one_apply, Pi.single_apply,
-    hij.symm]
+  simp only [Matrix.SpecialLinearGroup.smul_def, SpecialLinearGroup.transvection_coe,
+    smul_eq_mulVec, mulVec_single, Pi.smul_apply, col_apply, Matrix.add_apply, Matrix.one_apply,
+    hij.symm, and_false, not_false_eq_true, single_apply_of_ne, add_zero, smul_ite,
+    MulOpposite.smul_eq_mul_unop, MulOpposite.unop_op, one_mul, smul_zero, Pi.single_apply]
 
 theorem elementaryRankTwoRoot_smul_single_source
     {i j : Fin 2} (hij : i ≠ j) (a b : A) :
@@ -28824,7 +29077,7 @@ theorem polynomialCharacterCoefficientPair_preimage_sectorSupport :
       χ ∈ polynomialCharacterNoFree ∧ χ ∉ ({1} : Set PolynomialRankTwoCharacter)
   rw [polynomialCharacterNoFree_eq_preimage,
     polynomialCharacterCoefficientPair_mem_punctured]
-  simp
+  simp only [ne_eq, mem_preimage, mem_singleton_iff]
 
 theorem measurableSet_polynomialCharacterSectorSupport :
     MeasurableSet polynomialCharacterSectorSupport := by
@@ -29089,18 +29342,21 @@ theorem shalomPolynomialUpperShear_X_mem :
     shalomPolynomialUpperShear Polynomial.X ∈
       shalomPolynomialKazhdanGenerators := by
   classical
-  simp [shalomPolynomialKazhdanGenerators, shalomPolynomialShearGenerators]
+  simp only [shalomPolynomialKazhdanGenerators, shalomPolynomialShearGenerators,
+    Finset.union_insert, Finset.union_singleton, Finset.mem_insert, true_or, or_true]
 
 theorem shalomPolynomialLowerShear_one_mem :
     shalomPolynomialLowerShear 1 ∈ shalomPolynomialKazhdanGenerators := by
   classical
-  simp [shalomPolynomialKazhdanGenerators, shalomPolynomialShearGenerators]
+  simp only [shalomPolynomialKazhdanGenerators, shalomPolynomialShearGenerators,
+    Finset.union_insert, Finset.union_singleton, Finset.mem_insert, true_or, or_true]
 
 theorem shalomPolynomialLowerShear_X_mem :
     shalomPolynomialLowerShear Polynomial.X ∈
       shalomPolynomialKazhdanGenerators := by
   classical
-  simp [shalomPolynomialKazhdanGenerators, shalomPolynomialShearGenerators]
+  simp only [shalomPolynomialKazhdanGenerators, shalomPolynomialShearGenerators,
+    Finset.union_insert, Finset.union_singleton, Finset.mem_insert, true_or, or_true]
 
 end
 
@@ -29114,7 +29370,7 @@ theorem polynomialShearTActing_inv_mem_kazhdanGenerators :
   rw [map_inv]
   change (shalomPolynomialLowerShear (-Polynomial.X))⁻¹ ∈ _
   rw [shalomPolynomialLowerShear_inv]
-  simpa using shalomPolynomialLowerShear_X_mem
+  simpa only [neg_neg] using shalomPolynomialLowerShear_X_mem
 
 theorem polynomialShearSActing_inv_mem_kazhdanGenerators :
     integralElementaryRankTwoInr (polynomialShearSActing⁻¹) ∈
@@ -29122,7 +29378,7 @@ theorem polynomialShearSActing_inv_mem_kazhdanGenerators :
   rw [map_inv]
   change (shalomPolynomialUpperShear (-Polynomial.X))⁻¹ ∈ _
   rw [shalomPolynomialUpperShear_inv]
-  simpa using shalomPolynomialUpperShear_X_mem
+  simpa only [neg_neg] using shalomPolynomialUpperShear_X_mem
 
 theorem polynomialShearNActing_inv_mem_kazhdanGenerators :
     integralElementaryRankTwoInr (polynomialShearNActing⁻¹) ∈
@@ -29130,7 +29386,7 @@ theorem polynomialShearNActing_inv_mem_kazhdanGenerators :
   rw [map_inv]
   change (shalomPolynomialLowerShear (-1))⁻¹ ∈ _
   rw [shalomPolynomialLowerShear_inv]
-  simpa using shalomPolynomialLowerShear_one_mem
+  simpa only [neg_neg] using shalomPolynomialLowerShear_one_mem
 
 end
 
@@ -29249,10 +29505,10 @@ def shalomConstantVector : (Fin 2 → ℤ) →+ (Fin 2 → IntegralPolynomial) w
   toFun v i := Polynomial.C (v i)
   map_zero' := by
     ext i
-    simp
+    simp only [Pi.zero_apply, eq_intCast, Int.cast_zero, Polynomial.coeff_zero]
   map_add' v w := by
     ext i
-    simp
+    simp only [Pi.add_apply, eq_intCast, Int.cast_add, Polynomial.coeff_add]
 
 @[simp] theorem shalomConstantVector_apply
     (v : Fin 2 → ℤ) (i : Fin 2) :
@@ -29281,9 +29537,10 @@ def shalomConstantSpecialLinear :
       Matrix.SpecialLinearGroup.transvection hij (Polynomial.C a) := by
   apply Matrix.SpecialLinearGroup.ext
   intro k l
-  simp [shalomConstantSpecialLinear, Matrix.SpecialLinearGroup.map,
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.single_apply, Matrix.one_apply]
+  simp only [shalomConstantSpecialLinear, SpecialLinearGroup.map, RingHom.mapMatrix_apply,
+    MonoidHom.coe_mk, OneHom.coe_mk, SpecialLinearGroup.transvection_coe, map_apply,
+    Matrix.add_apply, Matrix.one_apply, single_apply, eq_intCast, Int.cast_add, Int.cast_ite,
+    Int.cast_one, Int.cast_zero]
 
 theorem shalomConstantSpecialLinear_map_elementary_le :
     (elementaryRankTwo ℤ).map shalomConstantSpecialLinear ≤
@@ -29342,7 +29599,7 @@ theorem shalomConstantVector_action
         Polynomial.C
           ((g : Matrix.SpecialLinearGroup (Fin 2) ℤ) i j) *
             Polynomial.C (v j)
-  simp
+  simp only [Fin.sum_univ_two, Fin.isValue, eq_intCast, Int.cast_add, Int.cast_mul]
 
 def shalomConstantMultiplicative :
     Multiplicative (Fin 2 → ℤ) →*
@@ -29418,13 +29675,15 @@ def shalomConstantEmbedding :
     shalomConstantEmbedding
         (integerElementaryRankTwoInr integerUpperShear) =
       shalomPolynomialUpperShear 1 := by
-  simpa [integerUpperShear] using shalomConstantEmbedding_upperShear 1
+  simpa only [integerUpperShear, Fin.isValue, shalomConstantEmbedding_inr,
+    shalomConstantActing_root, eq_intCast, Int.cast_one] using shalomConstantEmbedding_upperShear 1
 
 @[simp] theorem shalomConstantEmbedding_integerLowerShear :
     shalomConstantEmbedding
         (integerElementaryRankTwoInr integerLowerShear) =
       shalomPolynomialLowerShear 1 := by
-  simpa [integerLowerShear] using shalomConstantEmbedding_lowerShear 1
+  simpa only [integerLowerShear, Fin.isValue, shalomConstantEmbedding_inr,
+    shalomConstantActing_root, eq_intCast, Int.cast_one] using shalomConstantEmbedding_lowerShear 1
 
 end
 
@@ -29475,7 +29734,7 @@ theorem shalomConstantEmbedding_translationGenerators_image :
   simp only [integerShalomTranslationGenerators,
     shalomPolynomialTranslationGenerators, Finset.image_insert,
     Finset.image_singleton, shalomConstantEmbedding_integerTranslation]
-  simp
+  simp only [Fin.isValue, eq_intCast, Int.cast_one, Int.reduceNeg, Int.cast_neg]
 
 theorem shalomConstantEmbedding_shearGenerators_image_subset :
     integerShalomShearGenerators.image shalomConstantEmbedding ⊆
@@ -29488,23 +29747,26 @@ theorem shalomConstantEmbedding_shearGenerators_image_subset :
     Finset.mem_singleton] at hh
   rcases hh with rfl | rfl | rfl | rfl
   · rw [shalomConstantEmbedding_integerUpperShear]
-    simp [shalomPolynomialShearGenerators]
+    simp only [shalomPolynomialShearGenerators, Finset.mem_insert, Finset.mem_singleton, true_or]
   · rw [shalomConstantEmbedding_integerLowerShear]
-    simp [shalomPolynomialShearGenerators]
+    simp only [shalomPolynomialShearGenerators, Finset.mem_insert, Finset.mem_singleton, true_or,
+      or_true]
   · have hinv :
         integerElementaryRankTwoInr (integerUpperShear⁻¹) =
           (integerElementaryRankTwoInr integerUpperShear)⁻¹ :=
         map_inv integerElementaryRankTwoInr integerUpperShear
     rw [hinv, map_inv, shalomConstantEmbedding_integerUpperShear]
     rw [shalomPolynomialUpperShear_one_inv]
-    simp [shalomPolynomialShearGenerators]
+    simp only [shalomPolynomialShearGenerators, Finset.mem_insert, Finset.mem_singleton, true_or,
+      or_true]
   · have hinv :
         integerElementaryRankTwoInr (integerLowerShear⁻¹) =
           (integerElementaryRankTwoInr integerLowerShear)⁻¹ :=
         map_inv integerElementaryRankTwoInr integerLowerShear
     rw [hinv, map_inv, shalomConstantEmbedding_integerLowerShear]
     rw [shalomPolynomialLowerShear_one_inv]
-    simp [shalomPolynomialShearGenerators]
+    simp only [shalomPolynomialShearGenerators, Finset.mem_insert, Finset.mem_singleton, true_or,
+      or_true]
 
 theorem shalomConstantEmbedding_generators_image_subset :
     integerShalomGenerators.image shalomConstantEmbedding ⊆
@@ -29585,13 +29847,13 @@ theorem shalom_projectionResidual_norm_lt_of_relativePair
         (((‖z‖ : ℂ)⁻¹) • z) - ((‖z‖ : ℂ)⁻¹) • z‖ = _
       rw [map_smul, ← smul_sub, norm_smul, norm_inv,
         Complex.norm_real, Real.norm_of_nonneg (norm_nonneg z)]
-      simp [div_eq_mul_inv, mul_comm]
+      simp only [div_eq_mul_inv, mul_comm]
     rw [hwformula]
     apply (div_lt_iff₀ (norm_pos_iff.mpr hz)).2
     have hgsmall : ‖(ρ g : W →L[ℂ] W) ξ - ξ‖ < δ := by
       exact hsmall g hg
     have hδbound : δ ≤ κ * ‖z‖ :=
-      by simpa [mul_comm] using (div_le_iff₀ hκ).mp hzlower
+      by simpa only [mul_comm] using (div_le_iff₀ hκ).mp hzlower
     exact lt_of_lt_of_le (lt_of_le_of_lt hcontract hgsmall) hδbound
   obtain ⟨η, hη, hηfixed⟩ := hpair.2
     Mᗮ inferInstance inferInstance inferInstance
@@ -29689,7 +29951,7 @@ theorem shalom_normalizedFixedVector_of_relativePair
         ((‖p‖ : ℂ)⁻¹) • (p : W)‖ < _
     rw [map_smul, ← smul_sub, norm_smul, norm_inv,
       Complex.norm_real, Real.norm_of_nonneg (norm_nonneg p)]
-    simpa [div_eq_mul_inv, mul_comm] using hfrac
+    simpa only [Submodule.coe_norm, div_eq_mul_inv, mul_comm] using hfrac
 
 theorem shalom_normalizedConstantFixedVector_of_integerPair
     (hbase : ShalomIntegerRelativePair)
@@ -29963,7 +30225,7 @@ theorem isProjectionSupremum_image_starAlgEquiv
   · rintro q ⟨r, hrS, rfl⟩
     exact ⟨(hp.2.1 r hrS).1.map e,
       by
-        simpa [ProjectionLE] using
+        simpa only [ProjectionLE, map_mul] using
           congrArg e (hp.2.1 r hrS).2⟩
   · intro r hr hupper
     have hr' : IsStarProjection (e.symm r) := hr.map e.symm
@@ -29971,9 +30233,9 @@ theorem isProjectionSupremum_image_starAlgEquiv
       intro q hq
       have himage : e q ∈ e '' S := ⟨q, hq, rfl⟩
       have h := hupper (e q) himage
-      simpa [ProjectionLE] using congrArg e.symm h
+      simpa only [ProjectionLE, map_mul, StarAlgEquiv.symm_apply_apply] using congrArg e.symm h
     have hleast := hp.2.2 (e.symm r) hr' hbound
-    simpa [ProjectionLE] using congrArg e hleast
+    simpa only [ProjectionLE, map_mul, StarAlgEquiv.apply_symm_apply] using congrArg e hleast
 
 theorem starAlgEquiv_isNormal
     {A : Type u} {B : Type v}
@@ -30036,8 +30298,9 @@ theorem crossedCoefficient_pullback_symm_apply
       (e.toMeasurableEquiv.symm : Ξ → Ω) Y.measure X.measure :=
     (EquivariantHaarEquiv.symm e).measure_preserving
   have h := Lp.compMeasurePreserving_comp_apply f e.measure_preserving hs
-  simpa [Function.comp_def, EquivariantHaarEquiv.symm,
-    show (fun z : Ξ ↦ z) = id from rfl] using h.symm
+  simpa only [Function.comp_def, MeasurableEquiv.apply_symm_apply,
+    show (fun z : Ξ ↦ z) = id from rfl, Lp.compMeasurePreserving_id,
+    AddMonoidHom.id_apply] using h.symm
 
 theorem crossedGeneratorSet_image
     {X : HaarProbabilityAction Γ Ω}
@@ -30189,7 +30452,7 @@ theorem characterBit_spec (χ : DiscreteCharacterSpace D) (d : D) :
     characterBit χ 0 = 0 := by
   apply ZMod.injective_toCircle
   rw [characterBit_spec]
-  simp
+  simp only [ofAdd_zero, map_one, AddChar.map_zero_eq_one]
 
 theorem characterBit_add (χ : DiscreteCharacterSpace D) (d₁ d₂ : D) :
     characterBit χ (d₁ + d₂) = characterBit χ d₁ + characterBit χ d₂ := by
@@ -30233,7 +30496,8 @@ noncomputable def dualToPair (χ : DiscreteCharacterSpace D) : X × Y :=
 noncomputable def pairToDual (z : X × Y) : DiscreteCharacterSpace D where
   toFun d := ZMod.toCircle
     (z.1 (Multiplicative.toAdd d).1 + z.2 (Multiplicative.toAdd d).2)
-  map_one' := by simp
+  map_one' := by simp only [toAdd_one, Prod.fst_zero, map_zero, Prod.snd_zero, add_zero,
+                   AddChar.map_zero_eq_one]
   map_mul' d₁ d₂ := by
     change ZMod.toCircle
       (z.1 ((Multiplicative.toAdd d₁).1 + (Multiplicative.toAdd d₂).1) +
@@ -30255,7 +30519,7 @@ noncomputable def pairToDual (z : X × Y) : DiscreteCharacterSpace D where
   constructor
   · intro h
     apply ZMod.injective_toCircle
-    simpa using h
+    simpa only [AddChar.map_zero_eq_one] using h
   · intro h
     rw [h]
     exact ZMod.toCircle.map_zero_eq_one
@@ -30267,7 +30531,7 @@ noncomputable def pairToDual (z : X × Y) : DiscreteCharacterSpace D where
   constructor
   · intro h
     apply ZMod.injective_toCircle
-    simpa using h
+    simpa only [AddChar.map_zero_eq_one] using h
   · intro h
     rw [h]
     exact ZMod.toCircle.map_zero_eq_one
@@ -30290,7 +30554,7 @@ noncomputable def pairToDual (z : X × Y) : DiscreteCharacterSpace D where
       ZMod.toCircle (z.1 v)
     rw [characterBit_spec]
     change ZMod.toCircle (z.1 v + z.2 0) = ZMod.toCircle (z.1 v)
-    simp
+    simp only [map_zero, add_zero]
   · apply LinearMap.ext
     intro b
     apply ZMod.injective_toCircle
@@ -30298,7 +30562,7 @@ noncomputable def pairToDual (z : X × Y) : DiscreteCharacterSpace D where
       ZMod.toCircle (z.2 b)
     rw [characterBit_spec]
     change ZMod.toCircle (z.1 0 + z.2 b) = ZMod.toCircle (z.2 b)
-    simp
+    simp only [map_zero, zero_add]
 
 @[simp] theorem pairToDual_dualToPair (χ : DiscreteCharacterSpace D) :
     pairToDual (dualToPair χ) = χ := by
@@ -30314,7 +30578,7 @@ noncomputable def pairToDual (z : X × Y) : DiscreteCharacterSpace D where
           Multiplicative.ofAdd (v, b) := by
     apply Multiplicative.toAdd.injective
     change (v, (0 : B)) + ((0 : V), b) = (v, b)
-    simp
+    simp only [Prod.mk_add_mk, add_zero, zero_add]
   calc
     χ (Multiplicative.ofAdd (v, (0 : B))) *
         χ (Multiplicative.ofAdd ((0 : V), b)) =
@@ -30390,7 +30654,7 @@ theorem transvection_smul_same (i j : Index) (h : i ≠ j) (c : R)
   change ((Matrix.SpecialLinearGroup.transvection h c).val *ᵥ v) i = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
       Matrix.one_mulVec, Matrix.single_mulVec]
-  simp
+  simp only [Pi.add_apply, Function.update_self]
 
 theorem transvection_smul_other (i j k : Index) (h : i ≠ j)
     (hk : k ≠ i) (c : R) (v : V) :
@@ -30398,7 +30662,8 @@ theorem transvection_smul_other (i j k : Index) (h : i ≠ j)
   change ((Matrix.SpecialLinearGroup.transvection h c).val *ᵥ v) k = _
   rw [Matrix.SpecialLinearGroup.transvection_coe, Matrix.add_mulVec,
       Matrix.one_mulVec, Matrix.single_mulVec]
-  simp [hk]
+  simp only [Pi.add_apply, ne_eq, hk, not_false_eq_true, Function.update_of_ne, Pi.zero_apply,
+    add_zero]
 
 def coordinateSwap (i j : Index) (h : i ≠ j) : Q :=
   Matrix.SpecialLinearGroup.transvection h 1 *
@@ -30424,7 +30689,7 @@ theorem coordinateSwap_smul_left (i j : Index) (h : i ≠ j) (v : V) :
   calc
     v i + v j + (v j + (v i + v j)) =
       (v i + v i) + (v j + v j) + v j := by ac_rfl
-    _ = v j := by simp [CharTwo.add_self_eq_zero]
+    _ = v j := by simp only [CharTwo.add_self_eq_zero, zero_add]
 
 theorem coordinateSwap_smul_right (i j : Index) (h : i ≠ j) (v : V) :
     (coordinateSwap i j h • v) j = v i := by
@@ -30436,7 +30701,7 @@ theorem coordinateSwap_smul_right (i j : Index) (h : i ≠ j) (v : V) :
   simp only [one_mul]
   calc
     v j + (v i + v j) = (v j + v j) + v i := by ac_rfl
-    _ = v i := by simp [CharTwo.add_self_eq_zero]
+    _ = v i := by simp only [CharTwo.add_self_eq_zero, zero_add]
 
 theorem coordinateSwap_smul_other (i j k : Index) (h : i ≠ j)
     (hki : k ≠ i) (hkj : k ≠ j) (v : V) :
@@ -30464,7 +30729,7 @@ theorem euclideanStep_smul_left (i j : Index) (h : i ≠ j) (v : V) :
     v j + (v j / v i) * v i =
         (v i * (v j / v i) + v j % v i) + (v j / v i) * v i := by rw [hd]
     _ = (v i * (v j / v i) + v i * (v j / v i)) + v j % v i := by ac_rfl
-    _ = v j % v i := by simp [CharTwo.add_self_eq_zero]
+    _ = v j % v i := by simp only [CharTwo.add_self_eq_zero, zero_add]
 
 theorem euclideanStep_smul_right (i j : Index) (h : i ≠ j) (v : V) :
     (euclideanStep i j h (v i) (v j) • v) j = v i := by
@@ -30528,7 +30793,7 @@ theorem binaryPolynomial_eq_one_of_isUnit (p : R) (hp : IsUnit p) :
   have ha' : a = 1 := by
     have hne : a ≠ 0 := ha.ne_zero
     fin_cases a <;> simp_all
-  simpa [ha'] using hpa.symm
+  simpa only [ha', map_one] using hpa.symm
 
 theorem matrix_mul_apply_as_smul (g A : Q) (i j : Index) :
     (g * A) i j = (g • (fun k : Index => A k j)) i := by
@@ -30575,7 +30840,11 @@ theorem first_column_reduce (A : Q) :
   have hproduct :
       (g * A) 0 0 *
           (((g * A : Q).val).submatrix Fin.succ Fin.succ).det = 1 := by
-    simpa [Fin.sum_univ_succ, hz1, hz2, hz3] using hdet
+    simpa only [Fin.isValue, Matrix.SpecialLinearGroup.coe_mul, Nat.succ_eq_add_one, Nat.reduceAdd,
+      Fin.sum_univ_succ, Fin.coe_ofNat_eq_mod, Nat.zero_mod, pow_zero, one_mul, Fin.succAbove_zero,
+      Fin.val_succ, zero_add, pow_one, Fin.succ_zero_eq_one, hz1, mul_zero, zero_mul, even_two,
+      Even.neg_pow, one_pow, Fin.succ_one_eq_two, hz2, Finset.univ_unique, Fin.default_eq_zero,
+      Fin.val_eq_zero, Finset.sum_singleton, Fin.reduceSucc, hz3, add_zero] using hdet
   have hunit : IsUnit ((g * A) 0 0) :=
     IsUnit.of_mul_eq_one _ hproduct
   exact ⟨g, hg, binaryPolynomial_eq_one_of_isUnit _ hunit, hz1, hz2, hz3⟩
@@ -30587,7 +30856,7 @@ theorem transvection_fix_of_source_zero (i j : Index) (h : i ≠ j) (c : R)
   by_cases hk : k = i
   · subst k
     rw [transvection_smul_same i j h c w, hw]
-    simp
+    simp only [mul_zero, add_zero]
   · exact transvection_smul_other i j k h hk c w
 
 theorem coordinateSwap_fix_of_pair_zero (i j : Index) (h : i ≠ j) (w : V)
@@ -30750,7 +31019,7 @@ theorem fin_four_upperTriangular_of_six (A : Q)
     omega
   · change j.val < 1 at hval
     have hj : j = 0 := Fin.ext (by omega)
-    simpa [hj] using h10
+    simpa only [Nat.reduceAdd, Fin.mk_one, Fin.isValue, hj] using h10
   · change j.val < 2 at hval
     have hj : j = 0 ∨ j = 1 := by
       by_cases hzero : j.val = 0
@@ -30784,7 +31053,7 @@ theorem upper_triangularize (A : Q) :
     elementarySubgroup.mul_mem
       (elementarySubgroup.mul_mem hp₂ hp₁) hp₀
   have hprod : p * A = p₂ * (p₁ * (p₀ * A)) := by
-    simp [p, mul_assoc]
+    simp only [mul_assoc, p]
   refine ⟨p, hp, ?_⟩
   rw [hprod]
   exact fin_four_upperTriangular_of_six _
@@ -30872,7 +31141,7 @@ theorem elementarySubgroup_eq_top : elementarySubgroup = ⊤ := by
       (upperTriangular_diag_one (p * A) hupper)
   have hA := elementarySubgroup.mul_mem
     (elementarySubgroup.inv_mem hp) hunit
-  simpa using hA
+  simpa only [inv_mul_cancel_left] using hA
 
 end ElementaryGenerationProof
 
@@ -31007,7 +31276,7 @@ theorem dualCarryPullback_range_eq_shiftKernelRestriction_ker (n : ℕ) :
       apply CarryGroup.ext
       · exact (Multiplicative.toAdd ℓ).property
       · rfl
-    simp [hzero]
+    simp only [hzero, ofAdd_zero, map_one]
   · intro hη
     refine ⟨dualCarrySection n η, ?_⟩
     apply Additive.toMul.injective
@@ -31044,9 +31313,9 @@ theorem dualCarryPullback_range_eq_shiftKernelRestriction_ker (n : ℕ) :
             (carryPullback n (Multiplicative.toAdd z)) +
             shiftKernelInclusion n
               (kernelProjection n (Multiplicative.toAdd z)))) := by
-              simp
+              simp only [ofAdd_add, map_mul]
       _ = Additive.toMul η z := by
-              simpa using congrArg
+              simpa only [ofAdd_add, map_mul, ofAdd_toAdd] using congrArg
                 (fun w : CarryGroup n => Additive.toMul η (Multiplicative.ofAdd w))
                 hsplit
 
@@ -31207,8 +31476,8 @@ theorem additiveLeftRegularUnitary_single
       (lp.single 2 (Multiplicative.ofAdd b) c) =
       lp.single 2 (Multiplicative.ofAdd (a + b)) c := by
   ext k
-  simp [leftRegularUnitary_apply, lp.single_apply, Pi.single_apply,
-    inv_mul_eq_iff_eq_mul]
+  simp only [leftRegularUnitary_apply, lp.single_apply, Pi.single_apply, inv_mul_eq_iff_eq_mul,
+    ofAdd_add]
 
 theorem fourierUnitary_single_smul
     {A : Type u} [AddCommGroup A] [DecidableEq A]
@@ -31224,7 +31493,7 @@ theorem fourierUnitary_single_smul
       2 (Multiplicative.ofAdd b) c =
       c • lp.single (E := fun _ : Multiplicative A => ℂ)
         2 (Multiplicative.ofAdd b) (1 : ℂ) := by
-    simpa using (lp.single_smul (E := fun _ : Multiplicative A => ℂ)
+    simpa only [smul_eq_mul, mul_one] using (lp.single_smul (E := fun _ : Multiplicative A => ℂ)
       2 (Multiplicative.ofAdd b) c (1 : ℂ))
   rw [hs, map_smul, hU]
 
@@ -31248,7 +31517,7 @@ theorem fourier_conjugates_regular_of_character_basis
       F.comp (leftRegularUnitary (Multiplicative.ofAdd a) :
         GroupL2 (Multiplicative A) →L[ℂ]
           GroupL2 (Multiplicative A)) = T.comp F := by
-    apply lp.ext_continuousLinearMap (by simp)
+    apply lp.ext_continuousLinearMap (by simp only [ne_eq, ENNReal.ofNat_ne_top, not_false_eq_true])
     intro b
     apply ContinuousLinearMap.ext
     intro c
@@ -31371,7 +31640,8 @@ theorem exists_blockCoefficient_ne_zero {w : TensorProduct F R R} (hw : w ≠ 0)
   have h : blockCoefficients w ≠ 0 := by
     intro hzero
     apply hw
-    exact blockCoefficients.injective (by simpa using hzero)
+    exact blockCoefficients.injective (by simpa only [map_zero,
+                                            EmbeddingLike.map_eq_zero_iff] using hzero)
   by_contra hnot
   apply h
   apply Finsupp.ext
@@ -31385,9 +31655,10 @@ theorem blockCoefficients_map_mulLeft (f : R) (w : TensorProduct F R R)
         ((TensorProduct.map (LinearMap.mulLeft F f) LinearMap.id) w) n =
       f * blockCoefficients w n := by
   induction w using TensorProduct.induction_on with
-  | zero => simp
+  | zero => simp only [map_zero, Finsupp.coe_zero, Pi.zero_apply, mul_zero]
   | tmul u v =>
-      simp [blockCoefficients_tmul, Algebra.mul_smul_comm]
+      simp only [TensorProduct.map_tmul, LinearMap.mulLeft_apply, LinearMap.id_coe, id_eq,
+        blockCoefficients_tmul, Algebra.mul_smul_comm]
   | add u v hu hv =>
       simp only [map_add, Finsupp.add_apply]
       rw [hu, hv, mul_add]
@@ -31397,7 +31668,8 @@ theorem exists_tensor_blockCoefficient_ne_zero {w : T} (hw : w ≠ 0) :
   have hcoords : tensorCoords w ≠ 0 := by
     intro hzero
     apply hw
-    exact tensorCoords.injective (by simpa using hzero)
+    exact tensorCoords.injective (by simpa only [map_zero,
+                                       EmbeddingLike.map_eq_zero_iff] using hzero)
   simp only [ne_eq, funext_iff, Pi.zero_apply, not_forall] at hcoords
   obtain ⟨i, j, hij⟩ := hcoords
   obtain ⟨n, hn⟩ := exists_blockCoefficient_ne_zero hij
@@ -31419,7 +31691,8 @@ theorem specialLinear_map_transvection
   intro k l
   change f ((1 + Matrix.single i j a) k l) =
     (1 + Matrix.single i j (f a)) k l
-  simp [Matrix.one_apply, Matrix.single_apply]
+  simp only [Matrix.add_apply, Matrix.one_apply, single_apply, map_add,
+    MonoidWithZeroHom.map_ite_one_zero, add_right_inj]
   split_ifs <;> simp_all
 
 def binaryTransvection {i j : Index} (hij : i ≠ j) (n : ℕ) : Q :=
@@ -31437,7 +31710,10 @@ theorem integralOrbitTransvection_mem_K {i j : Index} (hij : i ≠ j) (n : ℕ) 
   rw [integralOrbitTransvection, modThreeGroupHom,
     specialLinear_map_transvection]
   have hthree : (3 : ZMod 3) = 0 := by decide
-  simp [modThreeAtZero, hthree]
+  simp only [modThreeAtZero, eq_intCast, Int.cast_ofNat, RingHom.coe_comp, Int.coe_castRingHom,
+    Polynomial.coe_evalRingHom, Function.comp_apply, Polynomial.eval_mul, Polynomial.eval_ofNat,
+    Polynomial.eval_pow, Polynomial.eval_X, Int.cast_mul, hthree, Int.cast_pow, Int.cast_zero,
+    zero_mul, SpecialLinearGroup.transvection_coeff_zero]
 
 def actingTransvection {i j : Index} (hij : i ≠ j) (n : ℕ) : K :=
   ⟨integralOrbitTransvection hij n, integralOrbitTransvection_mem_K hij n⟩
@@ -31449,7 +31725,9 @@ theorem pi₂_actingTransvection {i j : Index} (hij : i ≠ j) (n : ℕ) :
   rw [integralOrbitTransvection, specialLinear_map_transvection]
   apply congrArg (Matrix.SpecialLinearGroup.transvection hij)
   have hthree : (3 : ZMod 2) = 1 := by decide
-  simp [modTwoPolynomial]
+  simp only [modTwoPolynomial, eq_intCast, Int.cast_ofNat, Polynomial.coe_mapRingHom,
+    Polynomial.map_mul, Polynomial.map_ofNat, Polynomial.map_pow, Polynomial.map_X, ne_eq,
+    pow_eq_zero_iff', Polynomial.X_ne_zero, false_and, not_false_eq_true, mul_eq_right₀]
   change Polynomial.C (3 : ZMod 2) = Polynomial.C 1
   exact congrArg (Polynomial.C : ZMod 2 →+* R) hthree
 
@@ -31457,16 +31735,17 @@ theorem transvection_smul_apply
     {i j : Index} (hij : i ≠ j) (f : R) (v : V) :
     (Matrix.SpecialLinearGroup.transvection hij f • v) i =
       v i + f * v j := by
-  simp [Matrix.SpecialLinearGroup.smul_def,
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.add_mulVec, Matrix.single_mulVec_eq]
+  simp only [Matrix.SpecialLinearGroup.smul_def, SpecialLinearGroup.transvection_coe,
+    smul_eq_mulVec, add_mulVec, one_mulVec, single_mulVec_eq, Pi.add_apply, Pi.smul_apply,
+    Pi.single_eq_same, smul_eq_mul, mul_one]
 
 theorem x_pow_mul_injective (p : R) (hp : p ≠ 0) :
     Function.Injective (fun n : ℕ ↦ (Polynomial.X : R) ^ n * p) := by
   intro m n h
   have hpowers : (Polynomial.X : R) ^ m = (Polynomial.X : R) ^ n :=
     mul_right_cancel₀ hp h
-  simpa using congrArg Polynomial.natDegree hpowers
+  simpa only [Polynomial.natDegree_pow, Polynomial.natDegree_X,
+    mul_one] using congrArg Polynomial.natDegree hpowers
 
 theorem binaryTransvection_smul_injective
     {i j : Index} (hij : i ≠ j) (v : V) (hvj : v j ≠ 0) :
@@ -31504,9 +31783,11 @@ theorem transvection_linear_apply_coordinate
     (Matrix.SpecialLinearGroup.toLin'
       (Matrix.SpecialLinearGroup.transvection hij f) v) k =
       v k + if k = i then f * v j else 0 := by
-  simp [Matrix.SpecialLinearGroup.toLin',
-    Matrix.SpecialLinearGroup.transvection_coe,
-    Matrix.single_mulVec_eq, Pi.single_apply]
+  simp only [SpecialLinearGroup.toLin', Matrix.SpecialLinearGroup.coe_inv, MonoidHom.coe_mk,
+    OneHom.coe_mk, SpecialLinearGroup.transvection_coe, map_add, toLin'_one,
+    LinearEquiv.ofLinear_apply, LinearMap.add_apply, LinearMap.id_coe, id_eq, toLin'_apply,
+    single_mulVec_eq, Pi.add_apply, Pi.smul_apply, Pi.single_apply, smul_eq_mul, mul_ite, mul_one,
+    mul_zero]
 
 def transvectionTensor {i j : Index} (hij : i ≠ j) (f : R) : T ≃ₗ[F] T :=
   TensorProduct.congr
@@ -31522,11 +31803,12 @@ theorem tensorCoords_transvection
         (TensorProduct.map (LinearMap.mulLeft F f) LinearMap.id)
           (tensorCoords w j k) := by
   induction w using TensorProduct.induction_on with
-  | zero => simp
+  | zero => simp only [map_zero, Pi.zero_apply, add_zero]
   | tmul u v =>
-      simp [transvectionTensor, tensorCoords_tmul,
-        transvection_linear_apply_coordinate, hik.symm,
-        TensorProduct.add_tmul]
+      simp only [transvectionTensor, TensorProduct.congr_tmul, LinearEquiv.restrictScalars_apply,
+        tensorCoords_tmul, transvection_linear_apply_coordinate, ↓reduceIte, hik.symm, add_zero,
+        TensorProduct.add_tmul, TensorProduct.map_tmul, LinearMap.mulLeft_apply, LinearMap.id_coe,
+        id_eq]
   | add u v hu hv =>
       simp only [map_add, Pi.add_apply]
       rw [hu, hv]
@@ -31563,7 +31845,7 @@ theorem k_tensor_orbit_infinite (w : T) (hw : w ≠ 0) :
   obtain ⟨j, k, r, hr⟩ := exists_tensor_blockCoefficient_ne_zero hw
   have hz : tensorCoords w j k ≠ 0 := by
     intro hzero
-    simp [hzero] at hr
+    simp only [hzero, map_zero, Finsupp.coe_zero, Pi.zero_apply, ne_eq, not_true_eq_false] at hr
   obtain ⟨i, hij, hik⟩ :=
     Fin.exists_ne_and_ne_of_two_lt j k (by decide : 2 < 4)
   have hinjective :
@@ -31636,7 +31918,7 @@ theorem isICC_of_split_quotient
   haveI : Infinite H := hH_infinite
   have hsection_injective : Function.Injective section_ := by
     intro a b hab
-    simpa [hsection] using congrArg projection hab
+    simpa only [hsection] using congrArg projection hab
   refine ⟨Infinite.of_injective section_ hsection_injective, ?_⟩
   intro x hx
   by_cases hprojection : projection x = 1
@@ -31647,7 +31929,7 @@ theorem isICC_of_split_quotient
     apply (hH_conjugacy (projection x) hprojection).mono
     rintro y ⟨h, rfl⟩
     refine ⟨section_ h * x * (section_ h)⁻¹, ⟨section_ h, rfl⟩, ?_⟩
-    simp [hsection]
+    simp only [map_mul, hsection, map_inv]
 
 def semidirectCountableGroup
     (A H : CountableDiscreteGroup.{u}) (action : H →* MulAut A) :
@@ -31685,15 +31967,15 @@ theorem semidirect_isICC
   have hxkernel : x = SemidirectProduct.inl x.left := by
     apply SemidirectProduct.ext
     · rfl
-    · simpa using hright
+    · simpa only [SemidirectProduct.right_inl] using hright
   rw [hxkernel]
   apply SemidirectProduct.ext
   · change
       (1 * action h x.left) * action (h * 1) (action h⁻¹ 1⁻¹) =
         action h x.left
-    simp
+    simp only [one_mul, mul_one, map_inv, inv_one, map_one]
   · change (h * 1) * h⁻¹ = 1
-    simp
+    simp only [mul_one, mul_inv_cancel]
 
 end
 
@@ -31757,7 +32039,7 @@ theorem kEAddAction_orbit_infinite_of_exact
     have hvzero : v ≠ 0 := by
       intro hzero
       apply hη
-      simpa [hzero] using hv.symm
+      simpa only [hzero, map_zero] using hv.symm
     rw [← hv]
     exact kEAddAction_iota_orbit_infinite n v hvzero
   · apply Set.Infinite.of_image sigma
@@ -31901,13 +32183,13 @@ variable (hfour : ∀ x : E, (4 : ℕ) • x = 0)
 def doubleIntoTwoTorsion : E →+ twoTorsion E where
   toFun x :=
     ⟨(2 : ℕ) • x, (mem_twoTorsion E _).2 <| by
-      simpa [← mul_nsmul] using hfour x⟩
+      simpa only [← mul_nsmul, Nat.reduceMul] using hfour x⟩
   map_zero' := by
     apply Subtype.ext
-    simp
+    simp only [nsmul_zero, ZeroMemClass.coe_zero]
   map_add' x y := by
     apply Subtype.ext
-    simp
+    simp only [smul_add, AddMemClass.mk_add_mk]
 
 @[simp] theorem doubleIntoTwoTorsion_val (x : E) :
     (doubleIntoTwoTorsion E hfour x : E) = (2 : ℕ) • x := rfl
@@ -31937,11 +32219,11 @@ variable {E : Type u} {E' : Type v} [AddCommGroup E] [AddCommGroup E']
 def twoTorsionEquiv (e : E ≃+ E') : twoTorsion E ≃+ twoTorsion E' where
   toFun x :=
     ⟨e x, (mem_twoTorsion E' _).2 <| by
-      simpa [two_nsmul] using
+      simpa only [two_nsmul, map_add, map_zero] using
         congrArg e ((mem_twoTorsion E _).1 x.property)⟩
   invFun y :=
     ⟨e.symm y, (mem_twoTorsion E _).2 <| by
-      simpa [two_nsmul] using
+      simpa only [two_nsmul, map_add, map_zero] using
         congrArg e.symm ((mem_twoTorsion E' _).1 y.property)⟩
   left_inv x := by
     apply Subtype.ext
@@ -31969,22 +32251,23 @@ theorem twoTorsionEquiv_map_doubled
     apply (mem_doubledWithinTwoTorsion E' hfour' y).2
     refine ⟨e z, ?_⟩
     calc
-      (2 : ℕ) • e z = e ((2 : ℕ) • z) := by simp [two_nsmul]
+      (2 : ℕ) • e z = e ((2 : ℕ) • z) := by simp only [two_nsmul, map_add]
       _ = e (x : E) := congrArg e hz
       _ = (y : E') := congrArg Subtype.val hxy
   · intro hy
     obtain ⟨z, hz⟩ := (mem_doubledWithinTwoTorsion E' hfour' y).1 hy
     let x : twoTorsion E := (twoTorsionEquiv e).symm y
-    refine ⟨x, ?_, by simp [x]⟩
+    refine ⟨x, ?_, by simp only [AddEquiv.toAddMonoidHom_eq_coe, AddMonoidHom.coe_coe,
+                        AddEquiv.apply_symm_apply, x]⟩
     apply (mem_doubledWithinTwoTorsion E hfour x).2
     refine ⟨e.symm z, ?_⟩
     apply e.injective
     calc
-      e ((2 : ℕ) • e.symm z) = (2 : ℕ) • z := by simp
+      e ((2 : ℕ) • e.symm z) = (2 : ℕ) • z := by simp only [map_nsmul, AddEquiv.apply_symm_apply]
       _ = (y : E') := hz
       _ = e (x : E) := by
         change (y : E') = e (e.symm (y : E'))
-        simp
+        simp only [AddEquiv.apply_symm_apply]
 
 def twoTorsionQuotientEquiv
     (e : E ≃+ E')
@@ -32045,9 +32328,9 @@ theorem mem_twoTorsion_iff (x : E) :
   · intro h
     apply F.shift_injective
     apply F.iota_injective
-    simpa using h
+    simpa only [map_zero] using h
   · intro h
-    simp [h]
+    simp only [h, map_zero]
 
 theorem doubledSubgroup_eq_iota_shift_range :
     doubledSubgroup E = F.shift.range.map F.iota := by
@@ -32071,7 +32354,7 @@ theorem doubledSubgroup_eq_iota_shift_range :
 
 def iotaIntoTwoTorsion : P →+ twoTorsion E where
   toFun v :=
-    ⟨F.iota v, (F.mem_twoTorsion_iff _).2 <| by simp⟩
+    ⟨F.iota v, (F.mem_twoTorsion_iff _).2 <| by simp only [sigma_iota, map_zero]⟩
   map_zero' := Subtype.ext (F.iota.map_zero)
   map_add' x y := Subtype.ext (F.iota.map_add x y)
 
@@ -32108,7 +32391,7 @@ variable (K : Type u) (E : Type v)
 instance twoTorsionDistribMulAction : DistribMulAction K (twoTorsion E) where
   smul k x :=
     ⟨k • (x : E), (mem_twoTorsion E _).2 <| by
-      simpa [two_nsmul] using
+      simpa only [two_nsmul, smul_add, smul_zero] using
         congrArg (fun y : E => k • y) ((mem_twoTorsion E _).1 x.property)⟩
   one_smul x := Subtype.ext (one_smul K (x : E))
   mul_smul k l x := Subtype.ext (mul_smul k l (x : E))
@@ -32126,7 +32409,7 @@ theorem smul_mem_doubledWithinTwoTorsion
   obtain ⟨y, hy⟩ := (mem_doubledWithinTwoTorsion E hfour x).1 hx
   apply (mem_doubledWithinTwoTorsion E hfour (k • x)).2
   refine ⟨k • y, ?_⟩
-  simpa [two_nsmul] using congrArg (fun z : E => k • z) hy
+  simpa only [two_nsmul, twoTorsion_smul_val, smul_add] using congrArg (fun z : E => k • z) hy
 
 def twoTorsionQuotientSmulAddHom (k : K) :
     twoTorsionQuotient E hfour →+ twoTorsionQuotient E hfour :=
@@ -32160,7 +32443,7 @@ variable (K : Type u) (A : Type v)
 def finiteOrbitSubgroup : AddSubgroup A where
   carrier := {a | (MulAction.orbit K a).Finite}
   zero_mem' := by
-    simp [MulAction.orbit]
+    simp only [MulAction.orbit, Set.mem_setOf_eq, smul_zero, Set.range_const, Set.finite_singleton]
   add_mem' := by
     intro x y hx hy
     refine (hx.image2 (· + ·) hy).subset ?_
@@ -32195,7 +32478,7 @@ theorem orbit_image_eq_of_equivariant
     refine ⟨(φ.symm k) • a, ⟨φ.symm k, rfl⟩, ?_⟩
     calc
       e (φ.symm k • a) = φ (φ.symm k) • e a := he (φ.symm k) a
-      _ = k • e a := by simp
+      _ = k • e a := by simp only [MulEquiv.apply_symm_apply]
       _ = b := hk
 
 theorem finiteOrbit_iff_of_equivariant
@@ -32471,7 +32754,8 @@ noncomputable def shiftedQuotientToKernelEquiv
     rw [hshift, ← LinearMap.range_toAddSubgroup, shiftVector_range]
   let e : ShiftedQuotient n ≃+ (V ⧸ D.shift.range) :=
     QuotientAddGroup.congr (shiftedSubmodule n).toAddSubgroup D.shift.range
-      (AddEquiv.refl V) (by simpa using hrange.symm)
+      (AddEquiv.refl V) (by simpa only [AddEquiv.coe_addMonoidHom_refl,
+                              AddSubgroup.map_id] using hrange.symm)
   exact e.trans D.quotientIotaKernelEquiv
 
 def quotientSigmaToB : twoTorsionQuotient E D.exponent_four →+ B₀ :=
@@ -32552,12 +32836,12 @@ theorem mulEquiv_map_involutionGenerated (e : G ≃* H) :
   · rintro ⟨x, hx, rfl⟩
     change x ^ (2 : ℕ) = 1 at hx
     change e x ^ (2 : ℕ) = 1
-    simpa using congrArg e hx
+    simpa only [map_pow, map_one] using congrArg e hx
   · intro hy
     change y ^ (2 : ℕ) = 1 at hy
     refine ⟨e.symm y, ?_, e.apply_symm_apply y⟩
     change e.symm y ^ (2 : ℕ) = 1
-    simpa using congrArg e.symm hy
+    simpa only [map_pow, map_one] using congrArg e.symm hy
 
 theorem mulEquiv_map_torsionSquareGenerated (e : G ≃* H) :
     (torsionSquareGenerated G).map e.toMonoidHom =
@@ -32568,11 +32852,12 @@ theorem mulEquiv_map_torsionSquareGenerated (e : G ≃* H) :
   constructor
   · rintro ⟨x, hx, rfl⟩
     rcases hx with ⟨z, hz, rfl⟩
-    exact ⟨e z, e.toMonoidHom.isOfFinOrder hz, by simp⟩
+    exact ⟨e z, e.toMonoidHom.isOfFinOrder hz, by simp only [MulEquiv.toMonoidHom_eq_coe,
+                                                    MonoidHom.coe_coe, map_pow]⟩
   · rintro ⟨z, hz, rfl⟩
     refine ⟨(e.symm z) ^ (2 : ℕ), ?_, ?_⟩
     · exact ⟨e.symm z, e.symm.toMonoidHom.isOfFinOrder hz, rfl⟩
-    · simp
+    · simp only [MulEquiv.toMonoidHom_eq_coe, MonoidHom.coe_coe, map_pow, MulEquiv.apply_symm_apply]
 
 theorem involutionGenerated_characteristic (G : Type u) [Group G] :
     (involutionGenerated G).Characteristic :=
@@ -32619,7 +32904,7 @@ theorem intrinsicDenominator_conj_map
     refine ⟨(MulAut.conjNormal g).symm x, ?_, ?_⟩
     · change (↑((MulAut.conjNormal g).symm x) : G) ∈ D
       rw [MulAut.conjNormal_symm_apply]
-      simpa using (inferInstance : D.Normal).conj_mem (x : G) hx g⁻¹
+      simpa only [inv_inv] using (inferInstance : D.Normal).conj_mem (x : G) hx g⁻¹
     · exact (MulAut.conjNormal g).apply_symm_apply x
 
 abbrev intrinsicSubquotient (I D : Subgroup G) :=
@@ -32705,7 +32990,7 @@ theorem intrinsicRestrictedEquiv_map_denominator
           exact congrArg Subtype.val
             ((intrinsicRestrictedEquiv e hI).apply_symm_apply x)
         _ = e z := heq.symm
-    simpa [hy] using hz
+    simpa only [hy, SetLike.mem_coe] using hz
 
 def intrinsicSubquotientEquiv
     {I D : Subgroup G} {I' D' : Subgroup H}
@@ -32746,7 +33031,7 @@ theorem intrinsicSubquotientEquiv_conjugation
         (MulAut.conjNormal (e g) (intrinsicRestrictedEquiv e hI x))
     congr 1
     apply Subtype.ext
-    simp [MulAut.conjNormal_apply]
+    simp only [intrinsicRestrictedEquiv_apply_val, MulAut.conjNormal_apply, map_mul, map_inv]
 
 def HasFiniteIntrinsicOrbit
     (I D : Subgroup G) [I.Normal] [D.Normal]
@@ -32768,7 +33053,7 @@ theorem intrinsic_conjugation_orbit_image
   · rintro ⟨h, rfl⟩
     refine ⟨intrinsicConjugationAction I D (e.symm h) q,
       ⟨e.symm h, rfl⟩, ?_⟩
-    simpa using intrinsicSubquotientEquiv_conjugation e hI hD (e.symm h) q
+    simpa only [MulEquiv.apply_symm_apply] using intrinsicSubquotientEquiv_conjugation e hI hD (e.symm h) q
   · rintro ⟨_, ⟨g, rfl⟩, rfl⟩
     exact ⟨e g,
       (intrinsicSubquotientEquiv_conjugation e hI hD g q).symm⟩
@@ -32863,7 +33148,7 @@ def intrinsicFiniteOrbitCarrierEquivFiniteOrbitSubgroup
     (hasFiniteIntrinsicOrbit_iff_finiteOrbit
       projection hprojection e he _).mpr <| by
       have ha : (MulAction.orbit K (a : A)).Finite := a.property
-      simpa using ha⟩
+      simpa only [MulEquiv.apply_symm_apply, toAdd_ofAdd] using ha⟩
   left_inv q := by
     apply Subtype.ext
     exact e.symm_apply_apply q.val
@@ -32897,7 +33182,7 @@ theorem involutionGenerated_semidirect_eq
     have hrepr : x = SemidirectProduct.inl x.left := by
       apply SemidirectProduct.ext
       · rfl
-      · simpa using hright
+      · simpa only [SemidirectProduct.right_inl] using hright
     have hleft : x.left ^ (2 : ℕ) = 1 := by
       apply SemidirectProduct.inl_injective (φ := φ)
       calc
@@ -32911,7 +33196,7 @@ theorem involutionGenerated_semidirect_eq
           (map_one (SemidirectProduct.inl : Multiplicative E →*
             Multiplicative E ⋊[φ] K)).symm
     have htwo : (2 : ℕ) • Multiplicative.toAdd x.left = 0 := by
-      simpa using congrArg Multiplicative.toAdd hleft
+      simpa only [toAdd_pow, toAdd_one] using congrArg Multiplicative.toAdd hleft
     refine ⟨x.left, ?_, hrepr.symm⟩
     exact (mem_twoTorsion E _).2 htwo
   · intro x hx
@@ -32924,8 +33209,8 @@ theorem involutionGenerated_semidirect_eq
       (mem_twoTorsion E _).1 ha
     have hone : a ^ (2 : ℕ) = 1 := by
       apply Multiplicative.toAdd.injective
-      simpa using ha'
-    simp [hone]
+      simpa only [toAdd_pow, toAdd_one] using ha'
+    simp only [hone, map_one]
 
 theorem torsionSquareGenerated_semidirect_eq
     (hfour : ∀ x : E, (4 : ℕ) • x = 0)
@@ -32943,12 +33228,12 @@ theorem torsionSquareGenerated_semidirect_eq
     have hrepr : z = SemidirectProduct.inl z.left := by
       apply SemidirectProduct.ext
       · rfl
-      · simpa using hright
+      · simpa only [SemidirectProduct.right_inl] using hright
     refine ⟨z.left ^ (2 : ℕ), ?_, ?_⟩
     · change Multiplicative.toAdd (z.left ^ (2 : ℕ)) ∈
         doubledSubgroup E
       apply (mem_doubledSubgroup E _).2
-      exact ⟨Multiplicative.toAdd z.left, by simp⟩
+      exact ⟨Multiplicative.toAdd z.left, by simp only [toAdd_pow]⟩
     · calc
         SemidirectProduct.inl (z.left ^ (2 : ℕ)) =
             (SemidirectProduct.inl z.left :
@@ -32966,11 +33251,11 @@ theorem torsionSquareGenerated_semidirect_eq
       apply isOfFinOrder_iff_pow_eq_one.mpr
       refine ⟨4, by decide, ?_⟩
       apply Multiplicative.toAdd.injective
-      simpa using hfour y
+      simpa only [toAdd_pow, toAdd_ofAdd, toAdd_one] using hfour y
     · rw [← map_pow]
       congr 1
       apply Multiplicative.toAdd.injective
-      simpa using hy.symm
+      simpa only [toAdd_pow, toAdd_ofAdd] using hy.symm
 
 def semidirectTwoTorsionInl :
     Multiplicative (twoTorsion E) →*
@@ -33235,9 +33520,12 @@ theorem semidirectIntrinsicSubquotientEquiv_conjugation
           (φ g.right
             (Multiplicative.ofAdd (Multiplicative.toAdd y).val))
       apply SemidirectProduct.ext
-      · simp [SemidirectProduct.mul_left, SemidirectProduct.inv_left,
-          mul_assoc, mul_comm]
-      · simp
+      · simp only [mul_assoc, SemidirectProduct.mul_left, SemidirectProduct.left_inl,
+          SemidirectProduct.right_inl, map_one, SemidirectProduct.inv_left, map_inv,
+          MulAut.inv_apply, MulAut.one_apply, mul_comm, map_mul, MulEquiv.apply_symm_apply,
+          mul_inv_cancel_left]
+      · simp only [SemidirectProduct.mul_right, SemidirectProduct.right_inl, mul_one,
+          SemidirectProduct.inv_right, mul_inv_cancel]
     change Multiplicative.toAdd
         (semidirectIntrinsicSubquotientEquiv φ hfour I D hI hD
           (QuotientGroup.mk' (intrinsicDenominator I D)
@@ -33359,7 +33647,7 @@ theorem gamma_detectors_ne (n : ℕ) :
     change (2 : ℕ) • iota n e = 0
     calc
       (2 : ℕ) • iota n e = iota n (e + e) := by
-        simp [two_nsmul]
+        simp only [two_nsmul, map_add]
       _ = 0 := by rw [add_self_eq_zero]; exact map_zero _
   have hquadratic : (2 : ℕ) • epsilon n e = 0 := by
     change (2 : ℕ) • gammaQuadraticDetector n = 0
@@ -33404,14 +33692,14 @@ theorem gammaCharacter_pow_four (n : ℕ)
   have hη : (Multiplicative.ofAdd η) ^ (4 : ℕ) =
       (1 : Multiplicative (E n)) := by
     apply Multiplicative.toAdd.injective
-    simpa using E_four_nsmul n η
+    simpa only [toAdd_pow, toAdd_ofAdd, toAdd_one] using E_four_nsmul n η
   rw [hη, map_one]
 
 theorem gammaFourthRootEnergy_lower_bound (z : Circle) (hz : z ^ 4 = 1)
     (hne : z ≠ 1) : (2 : ℝ) ≤ ‖(z : ℂ) - 1‖ ^ 2 := by
   have hz' : (z : ℂ) ^ 4 = 1 := congrArg (fun w : Circle => (w : ℂ)) hz
   have hsq : ((z : ℂ) ^ 2) ^ 2 = 1 := by
-    simpa [← pow_mul] using hz'
+    simpa only [← pow_mul, Nat.reduceMul] using hz'
   rcases sq_eq_one_iff.mp hsq with hplus | hminus
   · have hne' : (z : ℂ) ≠ 1 := by
       intro h
@@ -33423,7 +33711,7 @@ theorem gammaFourthRootEnergy_lower_bound (z : Circle) (hz : z ^ 4 = 1)
     norm_num
   · have hnorm : Complex.normSq (z : ℂ) = 1 := by
       rw [Complex.normSq_eq_norm_sq]
-      simp
+      simp only [norm_eq_of_mem_sphere, one_pow]
     have hre : (z : ℂ).re = 0 := by
       have hreal := congrArg Complex.re hminus
       simp only [pow_two, Complex.mul_re, Complex.neg_re,
@@ -33431,7 +33719,8 @@ theorem gammaFourthRootEnergy_lower_bound (z : Circle) (hz : z ^ 4 = 1)
       rw [Complex.normSq_apply] at hnorm
       nlinarith [sq_nonneg (z : ℂ).re]
     rw [Complex.sq_norm, Complex.normSq_apply]
-    simp [hre]
+    simp only [Complex.sub_re, hre, Complex.one_re, zero_sub, mul_neg, mul_one, neg_neg,
+      Complex.sub_im, Complex.one_im, sub_zero, ge_iff_le]
     rw [Complex.normSq_apply] at hnorm
     nlinarith
 
@@ -33440,8 +33729,11 @@ theorem gammaCharacterEnergy_indicator_le (n : ℕ)
     (gammaDetectionSet n η).indicator (fun _ ↦ (2 : ℝ)) χ ≤
       ‖((χ (Multiplicative.ofAdd η) : Circle) : ℂ) - 1‖ ^ 2 := by
   by_cases h : χ (Multiplicative.ofAdd η) = 1
-  · simp [gammaDetectionSet, h]
-  · simpa [gammaDetectionSet, h] using
+  · simp only [gammaDetectionSet, ne_eq, Set.mem_setOf_eq, h, not_true_eq_false, not_false_eq_true,
+      Set.indicator_of_notMem, Circle.coe_one, sub_self, norm_zero, OfNat.ofNat_ne_zero, zero_pow,
+      Std.le_refl]
+  · simpa only [gammaDetectionSet, ne_eq, Set.mem_setOf_eq, h, not_false_eq_true,
+      Set.indicator_of_mem] using
       gammaFourthRootEnergy_lower_bound (χ (Multiplicative.ofAdd η))
         (gammaCharacter_pow_four n χ η) h
 
@@ -33467,7 +33759,7 @@ theorem gammaCharacterEnergy_integrable (n : ℕ)
         ‖((χ (Multiplicative.ofAdd η) : Circle) : ℂ) - 1‖ ^ 2) :=
     ((hcomplex.sub (continuous_const : Continuous
       (fun _ : DiscreteCharacterSpace (E n) ↦ (1 : ℂ)))).norm).pow 2
-  simpa using hcont.continuousOn.integrableOn_compact
+  simpa only [integrableOn_univ] using hcont.continuousOn.integrableOn_compact
     (μ := (μ : Measure (DiscreteCharacterSpace (E n)))) isCompact_univ
 
 theorem gammaTwoMulDetectedMass_le_energy (n : ℕ)
@@ -33488,7 +33780,7 @@ theorem gammaTwoMulDetectedMass_le_energy (n : ℕ)
         (gammaDetectionSet n η) =
       ∫ χ, S.indicator (fun _ ↦ (2 : ℝ)) χ ∂μ' := by
         rw [integral_indicator_const _ hs]
-        simp [μ', S, mul_comm]
+        simp only [ProbabilityMeasure.measureReal_eq_coe_coeFn, smul_eq_mul, mul_comm, μ', S]
     _ ≤ ∫ χ : DiscreteCharacterSpace (E n),
           ‖((χ (Multiplicative.ofAdd η) : Circle) : ℂ) - 1‖ ^ 2 ∂μ' := by
       exact integral_mono hindicator henergy
@@ -33515,7 +33807,7 @@ theorem gammaTwoMulDetectedUnionMass_le_energy (n : ℕ)
     (gammaDetectionSet n (gammaQuadraticDetector n))
   change (μ : Measure (DiscreteCharacterSpace (E n))).real
     (gammaDetectedSet n) ≤ _ at hunion
-  nlinarith
+  linarith
 
 theorem gamma_hasFiniteSpectralDetection_of_measureGap (n : ℕ)
     (hgap : ∀ μ : ProbabilityMeasure (DiscreteCharacterSpace (E n)),
@@ -33531,8 +33823,9 @@ theorem gamma_hasFiniteSpectralDetection_of_measureGap (n : ℕ)
   have hcombined : (2 / 7 : ℝ) * (1 - spectralTrivialAtom μ) ≤
       spectralDetectionEnergy μ (gammaLinearDetector n) +
         spectralDetectionEnergy μ (gammaQuadraticDetector n) := by
-    nlinarith
-  simpa [gamma_detectors_ne n] using hcombined
+    linarith
+  simpa only [Finset.mem_singleton, gamma_detectors_ne n, not_false_eq_true, Finset.sum_insert,
+    Finset.sum_singleton, ge_iff_le] using hcombined
 
 end
 
@@ -33573,7 +33866,7 @@ theorem card_monicPolynomial (N : ℕ) :
 theorem card_binaryPolynomialVector (N : ℕ) :
     Fintype.card (BinaryPolynomialVector N) = 2 ^ (4 * N) := by
   rw [Fintype.card_fun, Fintype.card_fin, card_boundedPolynomial]
-  simp [pow_mul, Nat.mul_comm]
+  simp only [Nat.mul_comm, pow_mul]
 
 def countingScale (N : ℕ) : ℕ := 2 ^ (4 * N - 3)
 
@@ -33583,7 +33876,7 @@ theorem eight_mul_countingScale (N : ℕ) (hN : 0 < N) :
   have hexp : 4 * N - 3 + 3 = 4 * N := by omega
   calc
     8 * 2 ^ (4 * N - 3) = 2 ^ (4 * N - 3) * 2 ^ 3 := by
-      simp [Nat.mul_comm]
+      simp only [Nat.mul_comm, Nat.reducePow]
     _ = 2 ^ (4 * N - 3 + 3) := by rw [pow_add]
     _ = 2 ^ (4 * N) := by rw [hexp]
 
@@ -33593,7 +33886,7 @@ theorem two_mul_previous_box (N : ℕ) (hN : 0 < N) :
   have hexp : 4 * (N - 1) + 1 = 4 * N - 3 := by omega
   calc
     2 * 2 ^ (4 * (N - 1)) = 2 ^ (4 * (N - 1)) * 2 ^ 1 := by
-      simp [Nat.mul_comm]
+      simp only [Nat.mul_comm, pow_one]
     _ = 2 ^ (4 * (N - 1) + 1) := by rw [pow_add]
     _ = 2 ^ (4 * N - 3) := by rw [hexp]
 
@@ -33601,11 +33894,11 @@ def primitiveCount (N : ℕ) : ℕ :=
   if N = 0 then 0 else 7 * countingScale N + 1
 
 @[simp] theorem primitiveCount_zero : primitiveCount 0 = 0 := by
-  simp [primitiveCount]
+  simp only [primitiveCount, ↓reduceIte]
 
 theorem primitiveCount_eq (N : ℕ) (hN : 0 < N) :
     primitiveCount N = 7 * 2 ^ (4 * N - 3) + 1 := by
-  simp [primitiveCount, countingScale, Nat.ne_of_gt hN]
+  simp only [primitiveCount, Nat.ne_of_gt hN, ↓reduceIte, countingScale]
 
 theorem primitiveCount_subtraction (N : ℕ) (hN : 0 < N) :
     (2 ^ (4 * N) - 1) - 2 * (2 ^ (4 * (N - 1)) - 1) =
@@ -33695,11 +33988,11 @@ theorem isPrimitiveVector_iff_coordinateIdeal_eq_top (v : V) :
 @[simp] theorem vectorGCD_eq_zero_iff (v : V) :
     vectorGCD v = 0 ↔ v = 0 := by
   rw [vectorGCD, Finset.gcd_eq_zero_iff]
-  simp [funext_iff]
+  simp only [Finset.mem_univ, forall_const, funext_iff, Pi.zero_apply]
 
 theorem vectorGCD_ne_zero {v : V} (hv : v ≠ 0) :
     vectorGCD v ≠ 0 := by
-  simpa [vectorGCD_eq_zero_iff] using hv
+  simpa only [ne_eq, vectorGCD_eq_zero_iff] using hv
 
 theorem vectorGCD_monic {v : V} (hv : v ≠ 0) :
     (vectorGCD v).Monic := by
@@ -33739,17 +34032,19 @@ theorem mem_degreeLT_of_natDegree_lt {N : ℕ} (p : R)
   · exact (Polynomial.degreeLT F N).zero_mem
   · apply Polynomial.mem_degreeLT.mpr
     by_cases hpzero : p = 0
-    · simp [hpzero]
+    · simp only [hpzero, Polynomial.degree_zero, WithBot.bot_lt_natCast]
     · exact (Polynomial.natDegree_lt_iff_degree_lt hpzero).mp hp
 
 @[simp] theorem divX_X_mul_add_C (h : R) (b : F) :
     (Polynomial.X * h + Polynomial.C b).divX = h := by
   ext n
-  simp [Polynomial.coeff_divX, Polynomial.coeff_X_mul]
+  simp only [Polynomial.coeff_divX, Polynomial.coeff_add, Polynomial.coeff_X_mul,
+    Polynomial.coeff_C_succ, add_zero]
 
 @[simp] theorem coeff_zero_X_mul_add_C (h : R) (b : F) :
     (Polynomial.X * h + Polynomial.C b).coeff 0 = b := by
-  simp
+  simp only [Polynomial.coeff_add, Polynomial.mul_coeff_zero, Polynomial.coeff_X_zero, zero_mul,
+    Polynomial.coeff_C_zero, zero_add]
 
 theorem card_eq_sum_card_fibers {α β : Type*} [Fintype α] [Fintype β]
     [DecidableEq β] (f : α → β) :
@@ -33796,7 +34091,7 @@ theorem vectorGCD_natDegree_lt {N : ℕ}
     intro hzero
     apply hi
     apply Subtype.ext
-    simpa using hzero
+    simpa only [ne_eq, ZeroMemClass.coe_zero, ZeroMemClass.coe_eq_zero] using hzero
   exact lt_of_le_of_lt
     (Polynomial.natDegree_le_of_dvd (vectorGCD_dvd _ i) hi')
     (bounded_natDegree_lt (v.val i) hi')
@@ -33833,7 +34128,7 @@ theorem quotient_mem_degreeLT {N : ℕ} {d : Fin N}
   · right
     have hp : p ≠ 0 := by
       intro hzero
-      simp [hzero] at hq
+      simp only [hzero, EuclideanDomain.zero_div, not_true_eq_false] at hq
     have hpbound : p.natDegree < N := bounded_natDegree_lt (v.val.val i) hp
     have hg_le : g.natDegree ≤ p.natDegree :=
       Polynomial.natDegree_le_of_dvd (vectorGCD_dvd _ i) hp
@@ -33868,7 +34163,7 @@ theorem product_mem_degreeLT {N : ℕ} (d : Fin N)
     x.1.val * (x.2.val i : R) ∈ Polynomial.degreeLT F N := by
   apply mem_degreeLT_of_natDegree_lt
   by_cases hw : (x.2.val i : R) = 0
-  · exact Or.inl (by simp [hw])
+  · exact Or.inl (by simp only [hw, mul_zero])
   · right
     have hwbound := bounded_natDegree_lt (x.2.val i) hw
     have hdegree := x.1.property.1.natDegree_mul' hw
@@ -33989,7 +34284,7 @@ theorem primitive_convolution_shift (P : ℕ → ℕ) (n : ℕ) :
     omega
   simp_rw [hterm, pow_succ]
   rw [Finset.mul_sum]
-  simp [Nat.mul_left_comm, Nat.mul_comm, Nat.add_comm]
+  simp only [Nat.mul_comm, Nat.add_comm, Nat.mul_left_comm]
 
 theorem primitive_card_of_convolution (P : ℕ → ℕ)
     (hP : ∀ N : ℕ, 2 ^ (4 * N) - 1 =
@@ -34020,7 +34315,7 @@ theorem binaryPolynomial_unit_eq_one {p : R} (hp : IsUnit p) : p = 1 := by
     fin_cases a
     · exact (ha.ne_zero rfl).elim
     · rfl
-  simpa [ha'] using hpa.symm
+  simpa only [ha', map_one] using hpa.symm
 
 theorem primitiveVector_specialLinear_completion_of_coordinateIdeal (v : V)
     (hv : Ideal.span (Set.range v) = ⊤) :
@@ -34087,7 +34382,7 @@ theorem e_isPrimitiveVector : IsPrimitiveVector e := by
     (x := (1 : R))
   · have h : e (0 : Fin 4) ∈ coordinateIdeal e :=
       Ideal.mem_span_range_self
-    simpa [e] using h
+    simpa only [e, Fin.isValue, ↓reduceIte] using h
   · exact isUnit_one
 
 theorem primitiveVector_actingGroup_completion_of_surjective
@@ -34150,8 +34445,8 @@ theorem binary_quadratic_support_quarter_direct
       (hsurj : Function.Surjective (cover u v)) :
       Fintype.card W ≤ 4 * support.card := by
     have hcard := Fintype.card_le_of_surjective (cover u v) hsurj
-    simpa [Fintype.card_prod, Fintype.card_coe, Nat.mul_comm, Nat.mul_left_comm,
-      Nat.mul_assoc] using hcard
+    simpa only [ge_iff_le, Fintype.card_prod, Fintype.card_coe, Fintype.card_fin, Nat.reduceMul,
+      Nat.mul_comm] using hcard
   change Fintype.card W ≤ 4 * support.card
   by_cases hb : ∃ u v : W, b u v ≠ 0
   · obtain ⟨u, v, huv⟩ := hb
@@ -34169,25 +34464,32 @@ theorem binary_quadratic_support_quarter_direct
     apply hcover_card u v
     intro x
     by_cases hx : f x ≠ 0
-    · exact ⟨(⟨x, by simpa [support] using hx⟩, (0, 0)), by simp [cover, offset]⟩
+    · exact ⟨(⟨x, by simpa only [ne_eq, Finset.mem_filter, Finset.mem_univ, true_and,
+                       support] using hx⟩, (0, 0)), by simp only [Fin.isValue, ↓reduceIte,
+                                                               add_zero, cover, offset]⟩
     by_cases hxu : f (x + u) ≠ 0
-    · refine ⟨(⟨x + u, by simpa [support] using hxu⟩, (1, 0)), ?_⟩
-      simp [cover, offset, add_assoc, add_self_eq_zero]
+    · refine ⟨(⟨x + u, by simpa only [ne_eq, Finset.mem_filter, Finset.mem_univ, true_and,
+                            support] using hxu⟩, (1, 0)), ?_⟩
+      simp only [Fin.isValue, one_ne_zero, ↓reduceIte, add_zero, add_assoc, add_self_eq_zero, cover,
+        offset]
     by_cases hxv : f (x + v) ≠ 0
-    · refine ⟨(⟨x + v, by simpa [support] using hxv⟩, (0, 1)), ?_⟩
-      simp [cover, offset, add_assoc, add_self_eq_zero]
+    · refine ⟨(⟨x + v, by simpa only [ne_eq, Finset.mem_filter, Finset.mem_univ, true_and,
+                            support] using hxv⟩, (0, 1)), ?_⟩
+      simp only [Fin.isValue, ↓reduceIte, one_ne_zero, zero_add, add_assoc, add_self_eq_zero,
+        add_zero, cover, offset]
     have hxuv : f ((x + u) + v) ≠ 0 := by
       intro hz
       have hsq := hsquare x
       rw [not_ne_iff.mp hx, not_ne_iff.mp hxu, not_ne_iff.mp hxv, hz] at hsq
-      simp [hone] at hsq
-    refine ⟨(⟨(x + u) + v, by simpa [support] using hxuv⟩, (1, 1)), ?_⟩
+      simp only [add_zero, hone, zero_ne_one] at hsq
+    refine ⟨(⟨(x + u) + v, by simpa only [ne_eq, Finset.mem_filter, Finset.mem_univ, true_and,
+                                support] using hxuv⟩, (1, 1)), ?_⟩
     change ((x + u) + v) + (u + v) = x
     have hu : u + u = 0 := add_self_eq_zero u
     have hv : v + v = 0 := add_self_eq_zero v
     calc
       ((x + u) + v) + (u + v) = x + (u + u) + (v + v) := by abel
-      _ = x := by rw [hu, hv]; simp
+      _ = x := by rw [hu, hv]; simp only [add_zero]
   · have hbzero : ∀ u v : W, b u v = 0 := by
       intro u v
       by_contra h
@@ -34198,12 +34500,16 @@ theorem binary_quadratic_support_quarter_direct
     apply hcover_card u 0
     intro x
     by_cases hx : f x ≠ 0
-    · exact ⟨(⟨x, by simpa [support] using hx⟩, (0, 0)), by simp [cover, offset]⟩
+    · exact ⟨(⟨x, by simpa only [ne_eq, Finset.mem_filter, Finset.mem_univ, true_and,
+                       support] using hx⟩, (0, 0)), by simp only [Fin.isValue, ↓reduceIte,
+                                                               add_zero, cover, offset]⟩
     have hxu : f (x + u) ≠ 0 := by
       rw [hadd x u, not_ne_iff.mp hx, hbzero]
-      simp [hone]
-    refine ⟨(⟨x + u, by simpa [support] using hxu⟩, (1, 0)), ?_⟩
-    simp [cover, offset, add_assoc, add_self_eq_zero]
+      simp only [hone, zero_add, add_zero, ne_eq, one_ne_zero, not_false_eq_true]
+    refine ⟨(⟨x + u, by simpa only [ne_eq, Finset.mem_filter, Finset.mem_univ, true_and,
+                          support] using hxu⟩, (1, 0)), ?_⟩
+    simp only [Fin.isValue, one_ne_zero, ↓reduceIte, add_zero, add_assoc, add_self_eq_zero, cover,
+      offset]
 
 theorem polarization_add_left_direct (u v w : V) :
     polarization (u + v) w = polarization u w + polarization v w := by
@@ -34242,7 +34548,7 @@ theorem divided_square_truncated_support_quarter_direct
   · change q (diagonal 0) = 0
     have hd : diagonal (0 : V) = 0 := by
       apply Subtype.ext
-      simp [square]
+      simp only [diagonal_val, square, TensorProduct.tmul_zero, ZeroMemClass.coe_zero]
     rw [hd, map_zero]
   · intro x y
     change q (diagonal (j (x + y))) =
@@ -34280,8 +34586,8 @@ theorem character_truncated_detection_quarter_direct
         rw [show polynomialVectorVal (u + v) =
           polynomialVectorVal u + polynomialVectorVal v from
             (boundedVectorLinearDirect N).map_add u v, map_add]
-        simp)
-      (by simp)
+        simp only [add_zero])
+      (by simp only [add_zero, implies_true])
       ⟨x, hx⟩
     have hsubset :
         ((Finset.univ : Finset (BinaryPolynomialVector N)).filter
@@ -34319,7 +34625,7 @@ noncomputable def primitiveTruncationFinset (N : ℕ) :
     v ∈ primitiveTruncationFinset N ↔
       IsPrimitiveVector (polynomialVectorVal v) := by
   classical
-  simp [primitiveTruncationFinset]
+  simp only [primitiveTruncationFinset, Finset.mem_filter, Finset.mem_univ, true_and]
 
 theorem primitiveTruncationFinset_card (N : ℕ) (hN : 0 < N) :
     (primitiveTruncationFinset N).card =
@@ -34366,7 +34672,8 @@ theorem character_truncated_detection_primitive_seventh
         (fun x ↦ z.1 (polynomialVectorVal x) ≠ 0 ∨
           z.2 (diagonal (polynomialVectorVal x)) ≠ 0) := by
     ext x
-    simp [detecting, and_comm]
+    simp only [ne_eq, Finset.mem_inter, Finset.mem_filter, Finset.mem_univ, true_and,
+      mem_primitiveTruncationFinset, and_comm, detecting]
   rwa [hset] at hbound
 
 end
@@ -34399,8 +34706,10 @@ theorem measure_detection_gap_of_uniform_primitive_counts
     · have hcard : (primitive.card : ℝ≥0∞) ≤
           7 * ((primitive.filter (fun v ↦ x ∈ detect v)).card : ℝ≥0∞) := by
         exact_mod_cast hpointwise x hx
-      simpa [Set.indicator_apply, hx, Finset.sum_boole] using hcard
-    · simp [Set.indicator_apply, hx]
+      simpa only [hx, indicator_of_mem, Pi.one_apply, mul_one, indicator_apply, Finset.sum_boole,
+        ge_iff_le] using hcard
+    · simp only [hx, not_false_eq_true, indicator_of_notMem, mul_zero, indicator_apply,
+        Pi.one_apply, Finset.sum_boole, zero_le]
   have hweighted := lintegral_mono (μ := μ) hpoint
   rw [lintegral_const_mul (primitive.card : ℝ≥0∞)
       (measurable_one.indicator hactive)] at hweighted
@@ -34424,14 +34733,14 @@ theorem measure_detection_gap_of_uniform_primitive_counts
         apply Finset.sum_congr rfl
         intro v hv
         exact huniform v hv
-      _ = (primitive.card : ℝ≥0∞) * μ (detect e) := by simp
+      _ = (primitive.card : ℝ≥0∞) * μ (detect e) := by simp only [Finset.sum_const, nsmul_eq_mul]
   rw [hsum] at hweighted
   have hcardzero : (primitive.card : ℝ≥0∞) ≠ 0 := by
     exact_mod_cast Finset.card_ne_zero.mpr ⟨e, he⟩
   have hcardtop : (primitive.card : ℝ≥0∞) ≠ ∞ :=
     ENNReal.natCast_ne_top _
   apply (ENNReal.mul_le_mul_iff_left hcardzero hcardtop).mp
-  simpa [mul_assoc, mul_left_comm, mul_comm] using hweighted
+  simpa only [mul_comm, mul_left_comm] using hweighted
 
 theorem measureReal_detection_gap_of_uniform_primitive_counts
     {α ι : Type*} [MeasurableSpace α]
@@ -34451,7 +34760,7 @@ theorem measureReal_detection_gap_of_uniform_primitive_counts
     exact ENNReal.mul_ne_top ENNReal.ofNat_ne_top (measure_ne_top μ _)
   have hreal :=
     (ENNReal.toReal_le_toReal (measure_ne_top μ _) hfinite).2 hgap
-  simpa [measureReal_def, ENNReal.toReal_mul] using hreal
+  simpa only [measureReal_def, ge_iff_le, ENNReal.toReal_mul, ENNReal.toReal_ofNat] using hreal
 
 theorem measureReal_iUnion_le_of_monotone
     {α : Type*} [MeasurableSpace α]
@@ -34477,7 +34786,7 @@ theorem probability_detection_gap_of_exhaustion
   have h := measureReal_iUnion_le_of_monotone
     (μ : Measure α) U hmono hbound
   rw [hunion, measureReal_compl hzero, probReal_univ] at h
-  nlinarith
+  linarith
 
 local instance dualProductMeasurable : MeasurableSpace (X × Y) :=
   borel (X × Y)
@@ -34597,13 +34906,13 @@ theorem dualPair_eq_zero_of_no_detection (z : X × Y)
     apply LinearMap.ext
     intro v
     have hv := h v
-    simp [dualDetects] at hv
+    simp only [dualDetects, ne_eq, not_or, Decidable.not_not] at hv
     exact hv.1
   have hquadratic : z.2 = 0 := by
     apply linearMap_ext_on_diagonal
     intro v
     have hv := h v
-    simp [dualDetects] at hv
+    simp only [dualDetects, ne_eq, not_or, Decidable.not_not] at hv
     exact hv.2
   exact Prod.ext hlinear hquadratic
 
@@ -34612,13 +34921,13 @@ theorem iUnion_boxDetectionSet :
   ext z
   constructor
   · intro hz hzero
-    have hzzero : z = (0, 0) := by simpa using hzero
+    have hzzero : z = (0, 0) := by simpa only [mem_singleton_iff] using hzero
     obtain ⟨N, hzN⟩ := Set.mem_iUnion.mp hz
     obtain ⟨v, hv⟩ := Set.mem_iUnion.mp hzN
     change dualDetects z (polynomialVectorVal v) at hv
-    simp [dualDetects, hzzero] at hv
+    simp only [dualDetects, hzzero, LinearMap.zero_apply, ne_eq, not_true_eq_false, or_self] at hv
   · intro hz
-    have hne : z ≠ (0, 0) := by simpa using hz
+    have hne : z ≠ (0, 0) := by simpa only [ne_eq, mem_compl_iff, mem_singleton_iff] using hz
     have hexists : ∃ v : V, dualDetects z v := by
       by_contra hnone
       push Not at hnone
@@ -34636,8 +34945,8 @@ def boundedStandardVector (N : ℕ) (hN : 0 < N) :
   refine ⟨e i, ?_⟩
   apply Polynomial.mem_degreeLT.mpr
   by_cases hi : i = 0
-  · simp [e, hi, hN]
-  · simp [e, hi]
+  · simp only [e, hi, Fin.isValue, ↓reduceIte, Polynomial.degree_one, Nat.cast_pos, hN]
+  · simp only [e, Fin.isValue, hi, ↓reduceIte, Polynomial.degree_zero, WithBot.bot_lt_natCast]
 
 @[simp] theorem polynomialVectorVal_boundedStandardVector
     (N : ℕ) (hN : 0 < N) :
@@ -34763,7 +35072,7 @@ theorem homeomorphPushProbability_measureReal_singleton
     (measurableSet_singleton (e x))]
   congr 1
   ext y
-  simp
+  simp only [Set.mem_preimage, Set.mem_singleton_iff, EmbeddingLike.apply_eq_iff_eq]
 
 end
 
@@ -35147,7 +35456,9 @@ theorem semidirectFubini_leftRegular_apply
           GroupL2 (SemidirectProduct A K φ) →L[ℂ]
             GroupL2 (SemidirectProduct A K φ)) ξ) k a =
       semidirectFubini φ ξ k (b⁻¹ * a) := by
-  simpa using semidirectFubini_leftRegular_apply φ
+  simpa only [semidirectFubini_apply, leftRegularUnitary_apply, SemidirectProduct.mk_eq_inl_mul_inr,
+    map_mul, map_inv, SemidirectProduct.right_inl, inv_one, one_mul, SemidirectProduct.left_inl,
+    map_one, MulAut.one_apply] using semidirectFubini_leftRegular_apply φ
     (SemidirectProduct.inl b) ξ k a
 
 @[simp] theorem semidirectFubini_leftRegular_inr_apply
@@ -35160,7 +35471,9 @@ theorem semidirectFubini_leftRegular_apply
           GroupL2 (SemidirectProduct A K φ) →L[ℂ]
             GroupL2 (SemidirectProduct A K φ)) ξ) k a =
       semidirectFubini φ ξ (h⁻¹ * k) (φ h⁻¹ a) := by
-  simpa using semidirectFubini_leftRegular_apply φ
+  simpa only [semidirectFubini_apply, leftRegularUnitary_apply, SemidirectProduct.mk_eq_inl_mul_inr,
+    map_inv, MulAut.inv_apply, map_mul, SemidirectProduct.right_inr, SemidirectProduct.left_inr,
+    inv_one, one_mul] using semidirectFubini_leftRegular_apply φ
     (SemidirectProduct.inr h) ξ k a
 
 theorem semidirectFubini_conj_leftRegular_apply
@@ -35187,7 +35500,10 @@ theorem semidirectFubini_conj_leftRegular_apply
           GroupL2 (SemidirectProduct A K φ) →L[ℂ]
             GroupL2 (SemidirectProduct A K φ))) ξ k a =
       ξ k (b⁻¹ * a) := by
-  simpa using semidirectFubini_conj_leftRegular_apply φ
+  simpa only [LinearIsometryEquiv.conjStarAlgEquiv_apply_apply, semidirectFubini_apply,
+    leftRegularUnitary_apply, SemidirectProduct.mk_eq_inl_mul_inr, SemidirectProduct.right_inl,
+    inv_one, one_mul, SemidirectProduct.left_inl, map_one,
+    MulAut.one_apply] using semidirectFubini_conj_leftRegular_apply φ
     (SemidirectProduct.inl b) ξ k a
 
 @[simp] theorem semidirectFubini_leftRegular_inr
@@ -35200,7 +35516,10 @@ theorem semidirectFubini_conj_leftRegular_apply
           GroupL2 (SemidirectProduct A K φ) →L[ℂ]
             GroupL2 (SemidirectProduct A K φ))) ξ k a =
       ξ (h⁻¹ * k) (φ h⁻¹ a) := by
-  simpa using semidirectFubini_conj_leftRegular_apply φ
+  simpa only [LinearIsometryEquiv.conjStarAlgEquiv_apply_apply, semidirectFubini_apply,
+    leftRegularUnitary_apply, SemidirectProduct.mk_eq_inl_mul_inr, map_inv, MulAut.inv_apply,
+    SemidirectProduct.right_inr, SemidirectProduct.left_inr, inv_one,
+    one_mul] using semidirectFubini_conj_leftRegular_apply φ
     (SemidirectProduct.inr h) ξ k a
 
 end
@@ -35382,7 +35701,7 @@ theorem splitFourierEquiv_single_smul [DecidableEq D]
   classical
   have hsingle : lp.single (E := fun _ : D => ℂ) 2 d c =
       c • lp.single (E := fun _ : D => ℂ) 2 d (1 : ℂ) := by
-    simpa using (lp.single_smul (E := fun _ : D => ℂ) 2 d c (1 : ℂ))
+    simpa only [smul_eq_mul, mul_one] using (lp.single_smul (E := fun _ : D => ℂ) 2 d c (1 : ℂ))
   rw [hsingle, map_smul, splitFourierEquiv_single]
 
 theorem splitCharacterL2_zero :
@@ -35415,7 +35734,7 @@ theorem splitFourierEquiv_kDLinear (k : K) (ξ : GroupL2 D) :
     (crossedActionL2Equiv paperSplitHaarAction k).toContinuousLinearEquiv.toContinuousLinearMap.comp
       splitFourierEquiv.toContinuousLinearEquiv.toContinuousLinearMap
   have h : left = right := by
-    apply lp.ext_continuousLinearMap (by simp)
+    apply lp.ext_continuousLinearMap (by simp only [ne_eq, ENNReal.ofNat_ne_top, not_false_eq_true])
     intro d
     apply ContinuousLinearMap.ext
     intro c
@@ -35747,14 +36066,14 @@ private theorem starAlgEquiv_isNormal
     refine ⟨hp.1.map e, ?_, ?_⟩
     · rintro q ⟨r, hr, rfl⟩
       refine ⟨(hp.2.1 r hr).1.map e, ?_⟩
-      simpa [ProjectionLE] using congrArg e (hp.2.1 r hr).2
+      simpa only [ProjectionLE, map_mul] using congrArg e (hp.2.1 r hr).2
     · intro r hr hupper
       have hr' : IsStarProjection (e.symm r) := hr.map e.symm
       have hbound : ∀ q ∈ S, ProjectionLE q (e.symm r) := by
         intro q hq
         have h := hupper (e q) ⟨q, hq, rfl⟩
-        simpa [ProjectionLE] using congrArg e.symm h
-      simpa [ProjectionLE] using
+        simpa only [ProjectionLE, map_mul, StarAlgEquiv.symm_apply_apply] using congrArg e.symm h
+      simpa only [ProjectionLE, map_mul, StarAlgEquiv.apply_symm_apply] using
         congrArg e (hp.2.2 (e.symm r) hr' hbound)
   refine ⟨hforward, ?_⟩
   intro S p hp
@@ -35766,14 +36085,14 @@ private theorem starAlgEquiv_isNormal
       refine ⟨hq.1.map e.symm, ?_, ?_⟩
       · rintro r ⟨s, hs, rfl⟩
         refine ⟨(hq.2.1 s hs).1.map e.symm, ?_⟩
-        simpa [ProjectionLE] using congrArg e.symm (hq.2.1 s hs).2
+        simpa only [ProjectionLE, map_mul] using congrArg e.symm (hq.2.1 s hs).2
       · intro r hr hupper
         have hr' : IsStarProjection (e r) := hr.map e
         have hbound : ∀ s ∈ T, ProjectionLE s (e r) := by
           intro s hs
           have hs' := hupper (e.symm s) ⟨s, hs, rfl⟩
-          simpa [ProjectionLE] using congrArg e hs'
-        simpa [ProjectionLE] using
+          simpa only [ProjectionLE, map_mul, StarAlgEquiv.apply_symm_apply] using congrArg e hs'
+        simpa only [ProjectionLE, map_mul, StarAlgEquiv.symm_apply_apply] using
           congrArg e.symm (hq.2.2 (e r) hr' hbound)) S p hp
   exact h
 
@@ -36042,20 +36361,27 @@ theorem groupFactorUnitary_vacuum
                 (1 : ℂ)) 1) =
           lp.single 2 (0 : A) (1 : ℂ) := by
       ext a
-      simp [l2Reindex_apply, semidirectFubini_apply, lp.single_apply,
-        Pi.single_apply, SemidirectProduct.ext_iff]
+      simp only [l2Reindex_apply, Multiplicative.toAdd_symm_eq, semidirectFubini_apply,
+        lp.single_apply, SemidirectProduct.mk_eq_inl_mul_inr, map_one, mul_one, Pi.single_apply,
+        SemidirectProduct.ext_iff, SemidirectProduct.left_inl, SemidirectProduct.one_left,
+        ofAdd_eq_one, SemidirectProduct.right_inl, SemidirectProduct.one_right, and_true]
     rw [hcoord, hF]
-    simp [crossedVacuum, lp.single_apply]
+    simp only [crossedVacuum, lp.single_apply, Pi.single_eq_same]
   · have hcoord :
         l2Reindex (Multiplicative.toAdd : Multiplicative A ≃ A)
             (semidirectFubini φ
               (lp.single 2 (1 : SemidirectProduct (Multiplicative A) H φ)
                 (1 : ℂ)) h) = 0 := by
       ext a
-      simp [l2Reindex_apply, semidirectFubini_apply, lp.single_apply,
-        SemidirectProduct.ext_iff, hh]
+      simp only [l2Reindex_apply, Multiplicative.toAdd_symm_eq, semidirectFubini_apply,
+        lp.single_apply, SemidirectProduct.mk_eq_inl_mul_inr, ne_eq, SemidirectProduct.ext_iff,
+        SemidirectProduct.mul_left, SemidirectProduct.left_inl, SemidirectProduct.right_inl,
+        map_one, SemidirectProduct.left_inr, mul_one, SemidirectProduct.one_left, ofAdd_eq_one,
+        SemidirectProduct.mul_right, SemidirectProduct.right_inr, one_mul,
+        SemidirectProduct.one_right, hh, and_false, not_false_eq_true, Pi.single_eq_of_ne,
+        ZeroMemClass.coe_zero, PreLp.zero_apply]
     rw [hcoord, map_zero]
-    simp [crossedVacuum, lp.single_apply, hh]
+    simp only [crossedVacuum, lp.single_apply, ne_eq, hh, not_false_eq_true, Pi.single_eq_of_ne]
 
 theorem gammaGroupFactorUnitary_vacuum (n : ℕ) :
     gammaGroupFactorUnitary n (delta (gammaGroup n) 1) =
@@ -36138,7 +36464,7 @@ theorem lambdaGroupFactorUnitary_vacuum :
           apply hd
           have hleft := congrArg
             (fun g : Lambda => Multiplicative.toAdd g.left) hpoint
-          simpa using hleft
+          simpa only [toAdd_ofAdd, SemidirectProduct.one_left, toAdd_one] using hleft
         rw [if_neg hpoint]
         exact (lp.single_apply_ne (E := fun _ : D => ℂ)
           2 (0 : D) (1 : ℂ) hd).symm
@@ -36157,7 +36483,7 @@ theorem lambdaGroupFactorUnitary_vacuum :
           (⟨Multiplicative.ofAdd d, k⟩ : Lambda) ≠ 1 := by
         intro hpoint
         apply hk
-        simpa using congrArg SemidirectProduct.right hpoint
+        simpa only [SemidirectProduct.one_right] using congrArg SemidirectProduct.right hpoint
       rw [if_neg hpoint]
     rw [hfiber, map_zero]
     rw [splitVacuum_apply, if_neg hk]
@@ -36315,14 +36641,14 @@ theorem orderOf_eq_four_iff {G : Type u} [Group G] (g : G) :
   constructor
   · intro hg
     refine ⟨?_, ?_⟩
-    · simpa [hg] using pow_orderOf_eq_one g
+    · simpa only [hg] using pow_orderOf_eq_one g
     · intro hsquare
       have hdiv : orderOf g ∣ 2 := orderOf_dvd_of_pow_eq_one hsquare
       norm_num [hg] at hdiv
   · rintro ⟨hfour, hsquare⟩
-    simpa using
+    simpa only [Nat.reduceAdd, Nat.reducePow] using
       (orderOf_eq_prime_pow (p := 2) (n := 1)
-        (by simpa using hsquare) (by simpa using hfour))
+        (by simpa only [pow_one, ne_eq] using hsquare) (by simpa only [Nat.reduceAdd, Nat.reducePow] using hfour))
 
 theorem mem_ker_of_pow_four_eq_one_of_no_nontrivial_torsion
     {G : Type u} {Q : Type v} [Group G] [Group Q]
@@ -36334,7 +36660,7 @@ theorem mem_ker_of_pow_four_eq_one_of_no_nontrivial_torsion
   apply hQ
   apply isOfFinOrder_iff_pow_eq_one.mpr
   refine ⟨4, by norm_num, ?_⟩
-  simpa using congrArg π hg
+  simpa only [map_pow, map_one] using congrArg π hg
 
 theorem hasNoOrderFour_of_quotient_without_nontrivial_torsion
     {G : Type u} {Q : Type v} [Group G] [Group Q]
@@ -36358,7 +36684,7 @@ theorem hasNoOrderFour_of_quotient_without_nontrivial_torsion_of_kernel_le_range
   intro g hg
   obtain ⟨n, hn⟩ := hker hg
   subst g
-  simpa using congrArg ι (hN n)
+  simpa only [map_pow, map_one] using congrArg ι (hN n)
 
 theorem semidirect_hasNoOrderFour_of_no_nontrivial_torsion_of_exponentTwo
     {N : Type u} {Q : Type v} [Group N] [Group Q]
@@ -36402,7 +36728,7 @@ theorem pairDualHomeomorph_zero :
   intro d
   change ZMod.toCircle ((0 : X) (Multiplicative.toAdd d).1 +
     (0 : Y) (Multiplicative.toAdd d).2) = 1
-  simp
+  simp only [LinearMap.zero_apply, add_zero, AddChar.map_zero_eq_one]
 
 theorem spectralPairAction_equivariance
     (k : K) (χ : DiscreteCharacterSpace D) :
@@ -36489,12 +36815,12 @@ theorem spectralDetectedSet_preimage :
   have hlinear :
       (dualToPair χ).1 e ≠ 0 ↔
         χ (Multiplicative.ofAdd (e, 0)) ≠ 1 := by
-    simpa using
+    simpa only [dualToPair_linear_apply, ne_eq, pairToDual_dualToPair] using
       (pairToDual_linear_ne_one_iff (dualToPair χ) e).symm
   have hquadratic :
       (dualToPair χ).2 (diagonal e) ≠ 0 ↔
         χ (Multiplicative.ofAdd (0, diagonal e)) ≠ 1 := by
-    simpa using
+    simpa only [dualToPair_quadratic_apply, ne_eq, pairToDual_dualToPair] using
       (pairToDual_quadratic_ne_one_iff
         (dualToPair χ) (diagonal e)).symm
   exact or_congr hlinear hquadratic
@@ -36644,14 +36970,17 @@ theorem lambdaCharacterEnergy_eq_indicator
     ‖((χ (Multiplicative.ofAdd d) : Circle) : ℂ) - 1‖ ^ 2 =
       (lambdaDetectionSet d).indicator (fun _ ↦ (4 : ℝ)) χ := by
   by_cases h : χ (Multiplicative.ofAdd d) = 1
-  · simp [lambdaDetectionSet, h]
+  · simp only [h, Circle.coe_one, sub_self, norm_zero, ne_eq, OfNat.ofNat_ne_zero,
+      not_false_eq_true, zero_pow, lambdaDetectionSet, Set.mem_setOf_eq, not_true_eq_false,
+      Set.indicator_of_notMem]
   · have hne : (χ (Multiplicative.ofAdd d) : ℂ) ≠ 1 := by
       intro heq
       apply h
       exact Subtype.ext heq
     have hneg : (χ (Multiplicative.ofAdd d) : ℂ) = -1 :=
       (sq_eq_one_iff.mp (lambdaCharacter_sq χ d)).resolve_left hne
-    simp [lambdaDetectionSet, h, hneg]
+    simp only [hneg, lambdaDetectionSet, ne_eq, Set.mem_setOf_eq, h, not_false_eq_true,
+      Set.indicator_of_mem]
     norm_num [Complex.norm_def]
 
 theorem lambdaSpectralEnergy_eq_four_mul_measure
@@ -36662,7 +36991,7 @@ theorem lambdaSpectralEnergy_eq_four_mul_measure
   unfold spectralDetectionEnergy
   simp_rw [lambdaCharacterEnergy_eq_indicator]
   rw [integral_indicator_const _ (lambdaDetectionSet_measurable d)]
-  simp [mul_comm]
+  simp only [ProbabilityMeasure.measureReal_eq_coe_coeFn, smul_eq_mul, mul_comm]
 
 def lambdaDetectedSet : Set (DiscreteCharacterSpace D) :=
   lambdaDetectionSet lambdaLinearDetector ∪
@@ -36690,7 +37019,8 @@ theorem lambdaFourMulDetectedMass_le_energy
     4 * (μ : Measure (DiscreteCharacterSpace D)).real lambdaDetectedSet =
         ∫ χ, (S₁ ∪ S₂).indicator (fun _ ↦ (4 : ℝ)) χ ∂μ' := by
           rw [integral_indicator_const _ (hs₁.union hs₂)]
-          simp [lambdaDetectedSet, S₁, S₂, μ', mul_comm]
+          simp only [lambdaDetectedSet, ProbabilityMeasure.measureReal_eq_coe_coeFn, smul_eq_mul,
+            mul_comm, μ', S₁, S₂]
     _ ≤ ∫ χ, S₁.indicator (fun _ ↦ (4 : ℝ)) χ +
           S₂.indicator (fun _ ↦ (4 : ℝ)) χ ∂μ' := by
           apply integral_mono hu (h₁.add h₂)
@@ -36704,7 +37034,7 @@ theorem lambdaFourMulDetectedMass_le_energy
             integral_indicator_const _ hs₂,
             lambdaSpectralEnergy_eq_four_mul_measure,
             lambdaSpectralEnergy_eq_four_mul_measure]
-          simp [μ', S₁, S₂, mul_comm]
+          simp only [ProbabilityMeasure.measureReal_eq_coe_coeFn, smul_eq_mul, mul_comm, μ', S₁, S₂]
 
 theorem lambda_spectral_detection_gap
     (μ : ProbabilityMeasure (DiscreteCharacterSpace D))
@@ -36727,8 +37057,9 @@ theorem lambda_hasFiniteSpectralDetection :
       (4 / 7 : ℝ) * (1 - spectralTrivialAtom μ) ≤
         spectralDetectionEnergy μ lambdaLinearDetector +
           spectralDetectionEnergy μ lambdaQuadraticDetector := by
-    nlinarith
-  simpa [lambda_detectors_ne] using hcombined
+    linarith
+  simpa only [Finset.mem_singleton, lambda_detectors_ne, not_false_eq_true, Finset.sum_insert,
+    Finset.sum_singleton, ge_iff_le] using hcombined
 
 theorem lambda_hasKazhdanPropertyT_unconditional
     (hUniversalLattice : ErshovJaikinUniversalLatticePropertyT) :
@@ -36774,7 +37105,7 @@ instance paperVectorDistribMulAction : DistribMulAction K V where
   smul k v := kLinear k v
   one_smul v := by
     change kLinear 1 v = v
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq]
   mul_smul k l v := by
     change kLinear (k * l) v = kLinear k (kLinear l v)
     rw [map_mul]
@@ -36791,7 +37122,7 @@ instance paperDividedSquareDistribMulAction : DistribMulAction K B where
   smul k b := kDividedSquareLinear k b
   one_smul b := by
     change kDividedSquareLinear 1 b = b
-    simp
+    simp only [map_one, LinearEquiv.coe_one, id_eq]
   mul_smul k l b := by
     change kDividedSquareLinear (k * l) b =
       kDividedSquareLinear k (kDividedSquareLinear l b)
@@ -36852,7 +37183,8 @@ abbrev paperFiniteOrbitSubgroup (n : ℕ) :=
 
 theorem paperDividedSquare_orbit_infinite (b : B) (hb : b ≠ 0) :
     ¬(MulAction.orbit K b).Finite := by
-  simpa [MulAction.orbit] using k_dividedSquare_orbit_infinite b hb
+  simpa only [MulAction.orbit, paperDividedSquare_smul,
+    Set.not_finite] using k_dividedSquare_orbit_infinite b hb
 
 def paperExponentFourExtension (n : ℕ) : ExponentFourExtension V (E n) B where
   iota := iota n

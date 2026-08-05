@@ -6779,24 +6779,9 @@ theorem prefixInsertionHom_injective (a : List (Fin 2)) :
       (Matrix.uniqueRingEquiv (m := Fin 1)
         (A := BinaryLeavitt)).symm.toMulEquiv).injective
 
-theorem leavittCylinder_isIdempotent (a : List (Fin 2)) :
-    IsIdempotentElem (leavittCylinder a) := by
-  change
-    (leavittWordS a * leavittWordT a) *
-        (leavittWordS a * leavittWordT a) =
-      leavittWordS a * leavittWordT a
-  calc
-    (leavittWordS a * leavittWordT a) *
-        (leavittWordS a * leavittWordT a) =
-      leavittWordS a *
-        (leavittWordT a * leavittWordS a) * leavittWordT a := by
-          noncomm_ring
-    _ = leavittWordS a * leavittWordT a := by
-      rw [leavittWordT_mul_wordS_self]
-      simp only [mul_one]
 
 def cylinderCornerGroup (a : List (Fin 2)) : Subgroup BinaryLeavittˣ :=
-  (idempotentCornerUnitExtension (leavittCylinder_isIdempotent a)).range
+  (idempotentCornerUnitExtension (ThompsonPrefixLocal.leavittCylinder_isIdempotent a)).range
 
 theorem cylinderCornerGroup_eq_source (a : List (Fin 2)) :
     cylinderCornerGroup a = ThompsonPrefixLocal.cylinderCornerGroup a := by
@@ -6815,7 +6800,7 @@ theorem prefixInsertionHom_mem_cylinderCorner
         (fun i => leavittWordS ((singletonPrefixCode a).word i))
         (fun i => leavittWordT ((singletonPrefixCode a).word i)), he⟩ :
           {e : BinaryLeavitt // IsIdempotentElem e}) =
-        ⟨leavittCylinder a, leavittCylinder_isIdempotent a⟩ :=
+        ⟨leavittCylinder a, ThompsonPrefixLocal.leavittCylinder_isIdempotent a⟩ :=
     Subtype.ext (singletonPrefixCode_codeIdempotent a)
   have hcorner := congrArg
     (fun p : {e : BinaryLeavitt // IsIdempotentElem e} =>
@@ -18673,28 +18658,6 @@ theorem hasAlmostCentralizerImprovement_zero
   · simpa only [nonpos_iff_eq_zero, mul_zero] using hp
   · simp only [permutationDistance_self, mul_zero, zero_le]
 
-theorem boundary_complement
-    {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
-    (σ : ι → Equiv.Perm V) (A : Finset V) :
-    SoficGroups.boundary σ (Finset.univ \ A) =
-      SoficGroups.boundary σ A := by
-  classical
-  unfold SoficGroups.boundary
-  apply Finset.sum_congr rfl
-  intro i _
-  calc
-    ((Finset.univ \ A).filter
-        (fun x => σ i x ∉ Finset.univ \ A)).card =
-        (Finset.univ.filter
-          (fun x => x ∉ A ∧ σ i x ∈ A)).card := by
-      congr 1
-      ext x
-      simp only [Finset.mem_filter, Finset.mem_sdiff,
-        Finset.mem_univ, true_and]
-      grind
-    _ = (A.filter fun x => σ i x ∉ A).card :=
-      SoficGroups.KunThomFiberCoarea.card_entering_eq_card_exiting
-        (σ i) A
 
 theorem boundary_expansion_of_half
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -18732,7 +18695,7 @@ theorem boundary_expansion_of_half
       linarith
     rw [min_eq_right (by linarith)]
     rw [hCreal] at hC
-    simpa [C, boundary_complement] using hC
+    simpa [C, KunResidualExpanderDecomposition.boundary_complement] using hC
 
 theorem inducedBoundary_le_completed_boundary
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -22855,49 +22818,7 @@ namespace SourceGeneratedWordCrossing
 open Filter Topology
 open scoped BigOperators
 
-theorem mem_partitionWordCrossing_univ
-    {V : Type*} [Fintype V] [DecidableEq V]
-    (Q : Finpartition (Finset.univ : Finset V))
-    (p : Equiv.Perm V) (x : V) :
-    x ∈ SoficGroups.partitionWordCrossing Q p ↔
-      Q.part x ≠ Q.part (p x) := by
-  simp only [SoficGroups.partitionWordCrossing, Finset.mem_filter,
-    Finset.mem_univ, true_and]
-  rw [Q.mem_part_iff_part_eq_part (Finset.mem_univ _)
-    (Finset.mem_univ _)]
-  simp only [eq_comm, ne_eq]
 
-theorem card_partitionWordCrossing_le_add_distance
-    {V : Type*} [Fintype V] [DecidableEq V]
-    (Q : Finpartition (Finset.univ : Finset V))
-    (p q : Equiv.Perm V) :
-    (SoficGroups.partitionWordCrossing Q p).card ≤
-      (SoficGroups.partitionWordCrossing Q q).card +
-        SoficGroups.permutationDistance p q := by
-  classical
-  have hsub :
-      SoficGroups.partitionWordCrossing Q p ⊆
-        SoficGroups.partitionWordCrossing Q q ∪
-          Finset.univ.filter (fun x : V => p x ≠ q x) := by
-    intro x hx
-    by_cases heq : p x = q x
-    · apply Finset.mem_union_left
-      apply (mem_partitionWordCrossing_univ Q q x).2
-      have hp := (mem_partitionWordCrossing_univ Q p x).1 hx
-      simpa only [ne_eq, heq] using hp
-    · apply Finset.mem_union_right
-      exact Finset.mem_filter.2 ⟨Finset.mem_univ x, heq⟩
-  calc
-    (SoficGroups.partitionWordCrossing Q p).card ≤
-        (SoficGroups.partitionWordCrossing Q q ∪
-          Finset.univ.filter (fun x : V => p x ≠ q x)).card :=
-      Finset.card_le_card hsub
-    _ ≤ (SoficGroups.partitionWordCrossing Q q).card +
-        (Finset.univ.filter (fun x : V => p x ≠ q x)).card :=
-      Finset.card_union_le _ _
-    _ = (SoficGroups.partitionWordCrossing Q q).card +
-        SoficGroups.permutationDistance p q := by
-      simp only [ne_eq, permutationDistance, hammingDist]
 
 theorem card_partitionWordCrossing_mul_le
     {V : Type*} [Fintype V] [DecidableEq V]
@@ -22913,13 +22834,13 @@ theorem card_partitionWordCrossing_mul_le
           (SoficGroups.partitionWordCrossing Q p).map
             q.symm.toEmbedding := by
     intro x hx
-    have hpq := (mem_partitionWordCrossing_univ Q (p * q) x).1 hx
+    have hpq := (SourceCompressionTransportCrossing.mem_partitionWordCrossing_univ Q (p * q) x).1 hx
     by_cases hq : Q.part x ≠ Q.part (q x)
     · exact Finset.mem_union_left _
-        ((mem_partitionWordCrossing_univ Q q x).2 hq)
+        ((SourceCompressionTransportCrossing.mem_partitionWordCrossing_univ Q q x).2 hq)
     · apply Finset.mem_union_right
       apply Finset.mem_map.2
-      refine ⟨q x, (mem_partitionWordCrossing_univ Q p (q x)).2 ?_,
+      refine ⟨q x, (SourceCompressionTransportCrossing.mem_partitionWordCrossing_univ Q p (q x)).2 ?_,
         by simp only [Function.Embedding.coeFn_mk, Equiv.symm_apply_apply]⟩
       intro heq
       apply hpq
@@ -23163,7 +23084,7 @@ theorem crossing_density_tendsto_zero_of_normalizedHamming
     simpa only [add_zero] using hq.add hdist
   refine squeeze_zero (fun n => by positivity) ?_ hupper
   intro n
-  have hnat := card_partitionWordCrossing_le_add_distance
+  have hnat := SourceCompressionTransportCrossing.card_partitionWordCrossing_le_add_distance
     (Q n) (p n) (q n)
   have hreal :
       ((SoficGroups.partitionWordCrossing (Q n) (p n)).card : ℝ) ≤
@@ -24389,21 +24310,6 @@ namespace CompletedChosenWordLocalRoot
 open Filter Topology
 open scoped BigOperators
 
-theorem normalizedHamming_mul_le
-    {V : Type*} [Fintype V] [DecidableEq V]
-    (p p' q q' : Equiv.Perm V) :
-    SoficGroups.normalizedHamming (p * q) (p' * q') ≤
-      SoficGroups.normalizedHamming p p' +
-        SoficGroups.normalizedHamming q q' := by
-  calc
-    SoficGroups.normalizedHamming (p * q) (p' * q') ≤
-        SoficGroups.normalizedHamming (p * q) (p' * q) +
-          SoficGroups.normalizedHamming (p' * q) (p' * q') :=
-      SoficGroups.normalizedHamming_triangle _ _ _
-    _ = SoficGroups.normalizedHamming p p' +
-        SoficGroups.normalizedHamming q q' := by
-      rw [SoficGroups.normalizedHamming_mul_right,
-        SoficGroups.normalizedHamming_mul_left]
 
 theorem list_permutation_hamming_tendsto
     (V : ℕ → Type*)
@@ -24434,7 +24340,7 @@ theorem list_permutation_hamming_tendsto
       refine squeeze_zero
         (fun n => SoficGroups.normalizedHamming_nonneg _ _) ?_ hupper
       intro n
-      exact normalizedHamming_mul_le
+      exact KunActualSoficRootRadius.normalizedHamming_mul_le
         (σ n i) (τ n i)
         ((l.map (σ n)).prod) ((l.map (τ n)).prod)
 
@@ -24640,7 +24546,7 @@ theorem chosenWordEvaluation_multiplicative_tendsto
         (SoficGroups.normalizedHamming (p n a) (φ n a) +
           SoficGroups.normalizedHamming (p n g) (φ n g))) := by
       gcongr
-      exact normalizedHamming_mul_le
+      exact KunActualSoficRootRadius.normalizedHamming_mul_le
         (p n a) (φ n a) (p n g) (φ n g)
 
 end CompletedChosenWordLocalRoot

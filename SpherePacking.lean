@@ -83,23 +83,18 @@ def normalizedCost {d : ℕ} (f : Admissible d) : ℝ :=
 def normalizedProgram (d : ℕ) : ℝ :=
   sInf (Set.range (normalizedCost (d := d)))
 
-def criticalRadius : ℝ := (Real.pi)⁻¹
-
 def criticalPackingBase : ℝ :=
   Real.sqrt (Real.exp 1 / (2 * Real.pi))
 
 def criticalBinaryExponent : ℝ :=
   (1 / 2 : ℝ) * Real.logb 2 (2 * Real.pi / Real.exp 1)
 
-theorem criticalRadius_pos : 0 < criticalRadius := by
-  exact inv_pos.mpr Real.pi_pos
-
 theorem criticalPackingBase_pos : 0 < criticalPackingBase := by
   unfold criticalPackingBase
   positivity
 
 def SharpQuotientAsymptotic : Prop :=
-  Tendsto normalizedProgram atTop (nhds criticalRadius)
+  Tendsto normalizedProgram atTop (nhds Real.pi⁻¹)
 
 def SharpLogAsymptotic : Prop :=
   Tendsto (fun d : ℕ => Real.log (linearProgram d) / (d : ℝ))
@@ -113,46 +108,33 @@ end
 
 noncomputable section
 
-def shortCutoff (ε : ℝ) : ℝ := ε ^ 3
-
-def shortEndpoint (ε : ℝ) : ℝ := 10 * Real.log (1 / ε)
-
-def shellLocation (ε : ℝ) : ℝ := ε⁻¹ ^ 3
-
 def shellWeight (ε : ℝ) : ℝ :=
-  Real.exp (-(3 : ℝ) * ε * shellLocation ε / 8)
-
-def shortMargin (ε a : ℝ) : ℝ := 1 - 10 * ε * (1 + a)
-
-def beta (ε : ℝ) : ℝ := ε / 4
+  Real.exp (-(3 : ℝ) * ε * (ε⁻¹ ^ 3) / 8)
 
 def plusPolynomial (ε : ℝ) (z : ℂ) : ℂ :=
-  1 + z ^ 2 + (beta ε : ℂ) + Complex.I * z * (1 + z ^ 2)
+  1 + z ^ 2 + ((ε / 4 : ℝ) : ℂ) + Complex.I * z * (1 + z ^ 2)
 
 def minusPolynomial (ε : ℝ) (z : ℂ) : ℂ :=
-  1 + z ^ 2 + (beta ε : ℂ) - Complex.I * z * (1 + z ^ 2)
+  1 + z ^ 2 + ((ε / 4 : ℝ) : ℂ) - Complex.I * z * (1 + z ^ 2)
 
 theorem shellWeight_pos (ε : ℝ) : 0 < shellWeight ε := by
   exact Real.exp_pos _
 
-theorem beta_pos {ε : ℝ} (hε : 0 < ε) : 0 < beta ε := by
-  exact div_pos hε (by norm_num)
-
 theorem plusPolynomial_imaginary (ε u : ℝ) :
     plusPolynomial ε (Complex.I * (u : ℂ)) =
-      ((beta ε + (1 - u) ^ 2 * (1 + u) : ℝ) : ℂ) := by
+      (((ε / 4) + (1 - u) ^ 2 * (1 + u) : ℝ) : ℂ) := by
   push_cast
   try dsimp [plusPolynomial]
   ring_nf
-  simp only [Complex.I_sq, neg_mul, one_mul, Complex.I_pow_four, add_left_inj]; ring
+  simp only [Complex.I_sq, neg_mul, one_mul, Complex.I_pow_four]; push_cast; ring
 
 theorem minusPolynomial_imaginary (ε u : ℝ) :
     minusPolynomial ε (Complex.I * (u : ℂ)) =
-      ((beta ε + (1 - u) * (1 + u) ^ 2 : ℝ) : ℂ) := by
+      (((ε / 4) + (1 - u) * (1 + u) ^ 2 : ℝ) : ℂ) := by
   push_cast
   try dsimp [minusPolynomial]
   ring_nf
-  simp only [Complex.I_sq, neg_mul, one_mul, sub_neg_eq_add, Complex.I_pow_four, add_left_inj, sub_left_inj]; ring
+  simp only [Complex.I_sq, neg_mul, one_mul, sub_neg_eq_add, Complex.I_pow_four]; push_cast; ring
 
 theorem plusPolynomial_imaginary_re_pos {ε u : ℝ}
     (hε : 0 < ε) (hu : -1 < u) :
@@ -160,7 +142,7 @@ theorem plusPolynomial_imaginary_re_pos {ε u : ℝ}
   have hs : 0 ≤ (1 - u) ^ 2 * (1 + u) :=
     mul_nonneg (sq_nonneg _) (by linarith)
   rw [plusPolynomial_imaginary, Complex.ofReal_re]
-  exact add_pos_of_pos_of_nonneg (beta_pos hε) hs
+  exact add_pos_of_pos_of_nonneg (div_pos hε four_pos) hs
 
 theorem minusPolynomial_imaginary_re_neg {ε u : ℝ}
     (hε : 0 < ε) (hu : 1 + ε / 4 ≤ u) :
@@ -175,7 +157,6 @@ theorem minusPolynomial_imaginary_re_neg {ε u : ℝ}
       ε = (ε / 4) * 4 := by ring
       _ ≤ (u - 1) * (1 + u) ^ 2 :=
         mul_le_mul ht hs (by norm_num) (by linarith)
-  unfold beta
   linarith
 
 end
@@ -387,7 +368,7 @@ structure AntiFourierWitness (d : ℕ) (R : ℝ) where
     ∀ x : Euclidean d, R ≤ ‖x‖ → 0 ≤ (function x).re
 
 def UniformAntiFourierSignRadius : Prop :=
-  ∀ c : ℝ, 0 < c → c < criticalRadius →
+  ∀ c : ℝ, 0 < c → c < Real.pi⁻¹ →
     ∀ᶠ d : ℕ in atTop,
       IsEmpty (AntiFourierWitness d (c * Real.sqrt (d : ℝ)))
 
@@ -2217,19 +2198,19 @@ def positiveShellDensity (ε a : ℝ) : ℝ :=
   shellWeight ε / Real.cosh a
 
 def positiveShellDamping (ε ℓ δ T : ℝ) : ℝ :=
-  ℓ * ∫ a in shellLocation ε..shellLocation ε + 1,
+  ℓ * ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * Real.cosh ((1 + δ) * a) *
       (1 - Real.cos (a * T))
 
 theorem positiveShellDamping_lower_bound {ε ℓ δ T : ℝ}
     (hε : 0 < ε) (hℓ : 0 ≤ ℓ) (hδ : 0 ≤ δ) :
     ℓ / 50 * shellWeight ε *
-        Real.exp (δ * shellLocation ε) * min (T ^ 2) 1 ≤
+        Real.exp (δ * (ε⁻¹ ^ 3)) * min (T ^ 2) 1 ≤
       positiveShellDamping ε ℓ δ T := by
-  let B : ℝ := shellLocation ε
+  let B : ℝ := (ε⁻¹ ^ 3)
   let C : ℝ := shellWeight ε * Real.exp (δ * B) / 2
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have hQ : 0 < shellWeight ε := shellWeight_pos ε
   have hC : 0 ≤ C := by
@@ -2306,20 +2287,20 @@ theorem positiveShellDamping_lower_bound {ε ℓ δ T : ℝ}
       gcongr
 
 def positiveShellRadiusContribution (ε : ℝ) : ℝ :=
-  ∫ a in shellLocation ε..shellLocation ε + 1,
+  ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * a *
       Real.sinh ((1 + ε / 4) * a)
 
 theorem positiveShellRadiusContribution_bounds {ε : ℝ} (hε : 0 < ε) :
     0 ≤ positiveShellRadiusContribution ε ∧
       positiveShellRadiusContribution ε ≤
-        (shellLocation ε + 1) * shellWeight ε *
-          Real.exp ((ε / 4) * (shellLocation ε + 1)) := by
-  let B : ℝ := shellLocation ε
+        ((ε⁻¹ ^ 3) + 1) * shellWeight ε *
+          Real.exp ((ε / 4) * ((ε⁻¹ ^ 3) + 1)) := by
+  let B : ℝ := (ε⁻¹ ^ 3)
   let δ : ℝ := ε / 4
   let K : ℝ := (B + 1) * shellWeight ε * Real.exp (δ * (B + 1))
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have hδ : 0 ≤ δ := by
     try dsimp [δ]
@@ -2388,14 +2369,14 @@ theorem positiveShellRadiusContribution_bounds {ε : ℝ} (hε : 0 < ε) :
     simpa only [ge_iff_le, intervalIntegral.integral_const, add_sub_cancel_left, smul_eq_mul, one_mul] using! hmono
 
 def shortShellDensity (ε a : ℝ) : ℝ :=
-  -(shortMargin ε a * Real.exp (-2 * a) /
+  -((1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) /
     (2 * a ^ 2 * Real.cosh a))
 
 def mellinShellPhase (ε : ℝ) (z : ℂ) : ℂ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     (shortShellDensity ε a : ℂ) *
       (Complex.cos ((a : ℂ) * z) - 1)) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     (positiveShellDensity ε a : ℂ) *
       (Complex.cos ((a : ℂ) * z) - 1))
 
@@ -2411,15 +2392,15 @@ theorem mellinShellPhase_neg (ε : ℝ) (z : ℂ) :
     simp only [mul_neg, Complex.cos_neg]
 
 def realOscillatoryShellPhase (ε t : ℝ) : ℝ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     shortShellDensity ε a * (Real.cos (a * t) - 1)) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * (Real.cos (a * t) - 1))
 
 def realHyperbolicShellPhase (ε u : ℝ) : ℝ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     shortShellDensity ε a * (Real.cosh (a * u) - 1)) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * (Real.cosh (a * u) - 1))
 
 theorem mellinShellPhase_ofReal (ε t : ℝ) :
@@ -2429,10 +2410,10 @@ theorem mellinShellPhase_ofReal (ε t : ℝ) :
   push_cast
   congr 1
   · calc
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (shortShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * (t : ℂ)) - 1)) =
-          ∫ a in shortCutoff ε..shortEndpoint ε,
+          ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             (↑(shortShellDensity ε a *
               (Real.cos (a * t) - 1)) : ℂ) := by
               apply intervalIntegral.integral_congr
@@ -2445,14 +2426,14 @@ theorem mellinShellPhase_ofReal (ε t : ℝ) :
                 ← Complex.ofReal_cos]
               push_cast
               rfl
-      _ = (↑(∫ a in shortCutoff ε..shortEndpoint ε,
+      _ = (↑(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             shortShellDensity ε a * (Real.cos (a * t) - 1)) : ℂ) :=
           intervalIntegral.integral_ofReal
   · calc
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         (positiveShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * (t : ℂ)) - 1)) =
-          ∫ a in shellLocation ε..shellLocation ε + 1,
+          ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             (↑(positiveShellDensity ε a *
               (Real.cos (a * t) - 1)) : ℂ) := by
               apply intervalIntegral.integral_congr
@@ -2465,7 +2446,7 @@ theorem mellinShellPhase_ofReal (ε t : ℝ) :
                 ← Complex.ofReal_cos]
               push_cast
               rfl
-      _ = (↑(∫ a in shellLocation ε..shellLocation ε + 1,
+      _ = (↑(∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             positiveShellDensity ε a * (Real.cos (a * t) - 1)) : ℂ) :=
           intervalIntegral.integral_ofReal
 
@@ -2476,10 +2457,10 @@ theorem mellinShellPhase_imaginary (ε u : ℝ) :
   push_cast
   congr 1
   · calc
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (shortShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * (Complex.I * (u : ℂ))) - 1)) =
-          ∫ a in shortCutoff ε..shortEndpoint ε,
+          ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             (↑(shortShellDensity ε a *
               (Real.cosh (a * u) - 1)) : ℂ) := by
               apply intervalIntegral.integral_congr
@@ -2492,14 +2473,14 @@ theorem mellinShellPhase_imaginary (ε u : ℝ) :
                 Complex.cos_mul_I, ← Complex.ofReal_cosh]
               push_cast
               rfl
-      _ = (↑(∫ a in shortCutoff ε..shortEndpoint ε,
+      _ = (↑(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             shortShellDensity ε a * (Real.cosh (a * u) - 1)) : ℂ) :=
           intervalIntegral.integral_ofReal
   · calc
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         (positiveShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * (Complex.I * (u : ℂ))) - 1)) =
-          ∫ a in shellLocation ε..shellLocation ε + 1,
+          ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             (↑(positiveShellDensity ε a *
               (Real.cosh (a * u) - 1)) : ℂ) := by
               apply intervalIntegral.integral_congr
@@ -2512,7 +2493,7 @@ theorem mellinShellPhase_imaginary (ε u : ℝ) :
                 Complex.cos_mul_I, ← Complex.ofReal_cosh]
               push_cast
               rfl
-      _ = (↑(∫ a in shellLocation ε..shellLocation ε + 1,
+      _ = (↑(∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             positiveShellDensity ε a * (Real.cosh (a * u) - 1)) : ℂ) :=
           intervalIntegral.integral_ofReal
 
@@ -2542,12 +2523,11 @@ theorem positiveShellDensity_continuous (ε : ℝ) :
 
 theorem shortShellDensity_intervalIntegrable {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     IntervalIntegrable (shortShellDensity ε) volume
-      (shortCutoff ε) (shortEndpoint ε) := by
+      (ε ^ 3) (10 * Real.log (1 / ε)) := by
   have hn : Continuous (fun a : ℝ =>
-      shortMargin ε a * Real.exp (-2 * a)) := by
-    unfold shortMargin
+      (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a)) := by
     fun_prop
   have hd : Continuous (fun a : ℝ =>
       2 * a ^ 2 * Real.cosh a) := by
@@ -2556,34 +2536,31 @@ theorem shortShellDensity_intervalIntegrable {ε : ℝ}
   unfold shortShellDensity
   apply (hn.continuousOn.div hd.continuousOn ?_).neg
   intro a ha
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
   have ha0 : 0 < a := hcutoff.trans_le ha.1
   positivity
 
 theorem shortShellOscillatoryIntegral_continuous {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (fun t : ℝ =>
-      ∫ a in shortCutoff ε..shortEndpoint ε,
+      ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * (Real.cos (a * t) - 1)) := by
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
   let w : ℝ → ℝ := fun a =>
-    shortShellDensity ε (max a (shortCutoff ε))
-  have hmax (a : ℝ) : 0 < max a (shortCutoff ε) :=
+    shortShellDensity ε (max a (ε ^ 3))
+  have hmax (a : ℝ) : 0 < max a (ε ^ 3) :=
     hcutoff.trans_le (le_max_right _ _)
   have hw : Continuous w := by
     have hn : Continuous (fun a : ℝ =>
-        shortMargin ε (max a (shortCutoff ε)) *
-          Real.exp (-2 * max a (shortCutoff ε))) := by
-      unfold shortMargin
+        (1 - 10 * ε * (1 + (max a (ε ^ 3)))) *
+          Real.exp (-2 * max a (ε ^ 3))) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
-        2 * (max a (shortCutoff ε)) ^ 2 *
-          Real.cosh (max a (shortCutoff ε))) := by
+        2 * (max a (ε ^ 3)) ^ 2 *
+          Real.cosh (max a (ε ^ 3))) := by
       fun_prop
     try dsimp [w]
     unfold shortShellDensity
@@ -2594,13 +2571,13 @@ theorem shortShellOscillatoryIntegral_continuous {ε : ℝ}
     try dsimp [F, Function.uncurry]
     exact (hw.comp continuous_snd).mul (by fun_prop)
   have hparam : Continuous (fun t : ℝ =>
-      ∫ a in Set.Icc (shortCutoff ε) (shortEndpoint ε), F t a) :=
+      ∫ a in Set.Icc (ε ^ 3) (10 * Real.log (1 / ε)), F t a) :=
     continuous_parametric_integral_of_continuous
       (μ := volume) hF isCompact_Icc
   have hident (t : ℝ) :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * (Real.cos (a * t) - 1)) =
-      (∫ a in Set.Icc (shortCutoff ε) (shortEndpoint ε), F t a) := by
+      (∫ a in Set.Icc (ε ^ 3) (10 * Real.log (1 / ε)), F t a) := by
     rw [intervalIntegral.integral_of_le horder,
       ← integral_Icc_eq_integral_Ioc]
     apply setIntegral_congr_fun measurableSet_Icc
@@ -2611,7 +2588,7 @@ theorem shortShellOscillatoryIntegral_continuous {ε : ℝ}
 
 theorem positiveShellOscillatoryIntegral_continuous (ε : ℝ) :
     Continuous (fun t : ℝ =>
-      ∫ a in shellLocation ε..shellLocation ε + 1,
+      ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * (Real.cos (a * t) - 1)) := by
   let F : ℝ → ℝ → ℝ := fun t a =>
     positiveShellDensity ε a * (Real.cos (a * t) - 1)
@@ -2620,15 +2597,15 @@ theorem positiveShellOscillatoryIntegral_continuous (ε : ℝ) :
     exact ((positiveShellDensity_continuous ε).comp continuous_snd).mul
       (by fun_prop)
   have hparam : Continuous (fun t : ℝ =>
-      ∫ a in Set.Icc (shellLocation ε) (shellLocation ε + 1), F t a) :=
+      ∫ a in Set.Icc (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1), F t a) :=
     continuous_parametric_integral_of_continuous
       (μ := volume) hF isCompact_Icc
-  have horder : shellLocation ε ≤ shellLocation ε + 1 := by
+  have horder : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hident (t : ℝ) :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * (Real.cos (a * t) - 1)) =
-      (∫ a in Set.Icc (shellLocation ε) (shellLocation ε + 1),
+      (∫ a in Set.Icc (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1),
         F t a) := by
     rw [intervalIntegral.integral_of_le horder,
       ← integral_Icc_eq_integral_Ioc]
@@ -2636,7 +2613,7 @@ theorem positiveShellOscillatoryIntegral_continuous (ε : ℝ) :
 
 theorem realOscillatoryShellPhase_continuous {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (realOscillatoryShellPhase ε) := by
   unfold realOscillatoryShellPhase
   exact (shortShellOscillatoryIntegral_continuous hε horder).add
@@ -2746,30 +2723,28 @@ theorem complexShellInterval_differentiable
 
 theorem mellinShellPhase_continuous {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (mellinShellPhase ε) := by
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
   let w : ℝ → ℝ := fun a =>
-    shortShellDensity ε (max a (shortCutoff ε))
-  have hmax (a : ℝ) : 0 < max a (shortCutoff ε) :=
+    shortShellDensity ε (max a (ε ^ 3))
+  have hmax (a : ℝ) : 0 < max a (ε ^ 3) :=
     hcutoff.trans_le (le_max_right _ _)
   have hw : Continuous w := by
     have hn : Continuous (fun a : ℝ =>
-        shortMargin ε (max a (shortCutoff ε)) *
-          Real.exp (-2 * max a (shortCutoff ε))) := by
-      unfold shortMargin
+        (1 - 10 * ε * (1 + (max a (ε ^ 3)))) *
+          Real.exp (-2 * max a (ε ^ 3))) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
-        2 * (max a (shortCutoff ε)) ^ 2 *
-          Real.cosh (max a (shortCutoff ε))) := by
+        2 * (max a (ε ^ 3)) ^ 2 *
+          Real.cosh (max a (ε ^ 3))) := by
       fun_prop
     try dsimp [w]
     unfold shortShellDensity
     exact (hn.div hd (fun a => by positivity [hmax a])).neg
   have hshort : Continuous (fun z : ℂ =>
-      ∫ a in shortCutoff ε..shortEndpoint ε,
+      ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (shortShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * z) - 1)) := by
     apply (complexShellInterval_continuous w hw horder).congr
@@ -2779,10 +2754,10 @@ theorem mellinShellPhase_continuous {ε : ℝ}
     rw [uIcc_of_le horder] at ha
     try dsimp [w]
     rw [max_eq_left ha.1]
-  have hremote : shellLocation ε ≤ shellLocation ε + 1 := by
+  have hremote : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hpositive : Continuous (fun z : ℂ =>
-      ∫ a in shellLocation ε..shellLocation ε + 1,
+      ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         (positiveShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * z) - 1)) :=
     complexShellInterval_continuous (positiveShellDensity ε)
@@ -2791,35 +2766,33 @@ theorem mellinShellPhase_continuous {ε : ℝ}
 
 theorem mellinShellPhase_differentiable {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Differentiable ℂ (mellinShellPhase ε) := by
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
   let w : ℝ → ℝ := fun a =>
-    shortShellDensity ε (max a (shortCutoff ε))
-  have hmax (a : ℝ) : 0 < max a (shortCutoff ε) :=
+    shortShellDensity ε (max a (ε ^ 3))
+  have hmax (a : ℝ) : 0 < max a (ε ^ 3) :=
     hcutoff.trans_le (le_max_right _ _)
   have hw : Continuous w := by
     have hn : Continuous (fun a : ℝ =>
-        shortMargin ε (max a (shortCutoff ε)) *
-          Real.exp (-2 * max a (shortCutoff ε))) := by
-      unfold shortMargin
+        (1 - 10 * ε * (1 + (max a (ε ^ 3)))) *
+          Real.exp (-2 * max a (ε ^ 3))) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
-        2 * (max a (shortCutoff ε)) ^ 2 *
-          Real.cosh (max a (shortCutoff ε))) := by
+        2 * (max a (ε ^ 3)) ^ 2 *
+          Real.cosh (max a (ε ^ 3))) := by
       fun_prop
     try dsimp [w]
     unfold shortShellDensity
     exact (hn.div hd (fun a => by positivity [hmax a])).neg
   have hshort_eq :
       (fun z : ℂ =>
-        ∫ a in shortCutoff ε..shortEndpoint ε,
+        ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (shortShellDensity ε a : ℂ) *
             (Complex.cos ((a : ℂ) * z) - 1)) =
       (fun z : ℂ =>
-        ∫ a in shortCutoff ε..shortEndpoint ε,
+        ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (w a : ℂ) *
             (Complex.cos ((a : ℂ) * z) - 1)) := by
     funext z
@@ -2829,15 +2802,15 @@ theorem mellinShellPhase_differentiable {ε : ℝ}
     try dsimp [w]
     rw [max_eq_left ha.1]
   have hshort : Differentiable ℂ (fun z : ℂ =>
-      ∫ a in shortCutoff ε..shortEndpoint ε,
+      ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (shortShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * z) - 1)) := by
     rw [hshort_eq]
     exact complexShellInterval_differentiable w hw horder
-  have hremote : shellLocation ε ≤ shellLocation ε + 1 := by
+  have hremote : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hpositive : Differentiable ℂ (fun z : ℂ =>
-      ∫ a in shellLocation ε..shellLocation ε + 1,
+      ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         (positiveShellDensity ε a : ℂ) *
           (Complex.cos ((a : ℂ) * z) - 1)) :=
     complexShellInterval_differentiable
@@ -2847,20 +2820,20 @@ theorem mellinShellPhase_differentiable {ε : ℝ}
 
 theorem mellinShellPhase_analyticOnNhd {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     AnalyticOnNhd ℂ (mellinShellPhase ε) Set.univ :=
   Complex.analyticOnNhd_univ_iff_differentiable.mpr
     (mellinShellPhase_differentiable hε horder)
 
 def saddleShellTotalVariation (ε : ℝ) : ℝ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     |shortShellDensity ε a|) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     |positiveShellDensity ε a|)
 
 theorem abs_realOscillatoryShellPhase_le {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (t : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (t : ℝ) :
     |realOscillatoryShellPhase ε t| ≤
       2 * saddleShellTotalVariation ε := by
   have hcos (a : ℝ) : |Real.cos (a * t) - 1| ≤ 2 := by
@@ -2872,21 +2845,21 @@ theorem abs_realOscillatoryShellPhase_le {ε : ℝ}
     fun_prop
   have hs := shortShellDensity_intervalIntegrable hε horder
   have hp : IntervalIntegrable (positiveShellDensity ε) volume
-      (shellLocation ε) (shellLocation ε + 1) :=
+      (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1) :=
     (positiveShellDensity_continuous ε).intervalIntegrable
-      (shellLocation ε) (shellLocation ε + 1)
+      (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1)
   have hshort :
-      |∫ a in shortCutoff ε..shortEndpoint ε,
+      |∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * (Real.cos (a * t) - 1)| ≤
-          2 * ∫ a in shortCutoff ε..shortEndpoint ε,
+          2 * ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             |shortShellDensity ε a| := by
     calc
-      |∫ a in shortCutoff ε..shortEndpoint ε,
+      |∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a * (Real.cos (a * t) - 1)|
-        ≤ ∫ a in shortCutoff ε..shortEndpoint ε,
+        ≤ ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             |shortShellDensity ε a * (Real.cos (a * t) - 1)| :=
               intervalIntegral.abs_integral_le_integral_abs horder
-      _ ≤ ∫ a in shortCutoff ε..shortEndpoint ε,
+      _ ≤ ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             2 * |shortShellDensity ε a| := by
               apply intervalIntegral.integral_mono_on horder
                 (hs.mul_continuousOn hosc.continuousOn).abs
@@ -2900,23 +2873,23 @@ theorem abs_realOscillatoryShellPhase_le {ε : ℝ}
                       gcongr
                       exact hcos a
                 _ = 2 * |shortShellDensity ε a| := by ring
-      _ = 2 * ∫ a in shortCutoff ε..shortEndpoint ε,
+      _ = 2 * ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             |shortShellDensity ε a| := by
               rw [intervalIntegral.integral_const_mul]
   have hpositive :
-      |∫ a in shellLocation ε..shellLocation ε + 1,
+      |∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * (Real.cos (a * t) - 1)| ≤
-          2 * ∫ a in shellLocation ε..shellLocation ε + 1,
+          2 * ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             |positiveShellDensity ε a| := by
-    have hB : shellLocation ε ≤ shellLocation ε + 1 := by
+    have hB : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
       linarith
     calc
-      |∫ a in shellLocation ε..shellLocation ε + 1,
+      |∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           positiveShellDensity ε a * (Real.cos (a * t) - 1)|
-        ≤ ∫ a in shellLocation ε..shellLocation ε + 1,
+        ≤ ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             |positiveShellDensity ε a * (Real.cos (a * t) - 1)| :=
               intervalIntegral.abs_integral_le_integral_abs hB
-      _ ≤ ∫ a in shellLocation ε..shellLocation ε + 1,
+      _ ≤ ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             2 * |positiveShellDensity ε a| := by
               apply intervalIntegral.integral_mono_on hB
                 (hp.mul_continuousOn hosc.continuousOn).abs
@@ -2930,28 +2903,28 @@ theorem abs_realOscillatoryShellPhase_le {ε : ℝ}
                       gcongr
                       exact hcos a
                 _ = 2 * |positiveShellDensity ε a| := by ring
-      _ = 2 * ∫ a in shellLocation ε..shellLocation ε + 1,
+      _ = 2 * ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             |positiveShellDensity ε a| := by
               rw [intervalIntegral.integral_const_mul]
   unfold realOscillatoryShellPhase saddleShellTotalVariation
   calc
-    |(∫ a in shortCutoff ε..shortEndpoint ε,
+    |(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * (Real.cos (a * t) - 1)) +
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * (Real.cos (a * t) - 1))|
-      ≤ |∫ a in shortCutoff ε..shortEndpoint ε,
+      ≤ |∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a * (Real.cos (a * t) - 1)| +
-        |∫ a in shellLocation ε..shellLocation ε + 1,
+        |∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           positiveShellDensity ε a * (Real.cos (a * t) - 1)| :=
           abs_add_le _ _
-    _ ≤ 2 * (∫ a in shortCutoff ε..shortEndpoint ε,
+    _ ≤ 2 * (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           |shortShellDensity ε a|) +
-        2 * (∫ a in shellLocation ε..shellLocation ε + 1,
+        2 * (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           |positiveShellDensity ε a|) :=
           add_le_add hshort hpositive
-    _ = 2 * ((∫ a in shortCutoff ε..shortEndpoint ε,
+    _ = 2 * ((∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           |shortShellDensity ε a|) +
-        (∫ a in shellLocation ε..shellLocation ε + 1,
+        (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           |positiveShellDensity ε a|)) := by ring
 
 theorem mellinShellPhase_real_conj (ε t : ℝ) :
@@ -3000,7 +2973,7 @@ theorem saddleVerticalGamma_continuous {ℓ : ℝ} (hℓ : 0 < ℓ) :
 
 theorem saddleShellPhase_continuous {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Continuous (fun t : ℝ =>
       mellinShellPhase ε ((t : ℂ) / (ℓ : ℂ))) := by
   have hreal : Continuous (fun t : ℝ =>
@@ -3018,7 +2991,7 @@ theorem saddleShellPhase_continuous {ε : ℝ}
 
 theorem saddleEnvelope_continuous {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (saddleEnvelope ε ℓ) := by
   have hunit : Continuous (fun t : ℝ =>
       Complex.exp
@@ -3035,7 +3008,7 @@ theorem saddleEnvelope_continuous {ε ℓ : ℝ}
 
 theorem plusSaddleSpectrum_continuous {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (plusSaddleSpectrum ε ℓ) := by
   have hp : Continuous (fun t : ℝ =>
       plusPolynomial ε ((t : ℂ) / (ℓ : ℂ))) := by
@@ -3045,7 +3018,7 @@ theorem plusSaddleSpectrum_continuous {ε ℓ : ℝ}
 
 theorem minusSaddleSpectrum_continuous {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (minusSaddleSpectrum ε ℓ) := by
   have hp : Continuous (fun t : ℝ =>
       minusPolynomial ε ((t : ℂ) / (ℓ : ℂ))) := by
@@ -3055,12 +3028,12 @@ theorem minusSaddleSpectrum_continuous {ε ℓ : ℝ}
 
 def saddleOriginValue (ε ℓ : ℝ) : ℝ :=
   2 * Real.pi ^ (ℓ / 2) *
-    Real.exp (ℓ * realHyperbolicShellPhase ε 1) * beta ε
+    Real.exp (ℓ * realHyperbolicShellPhase ε 1) * (ε / 4)
 
 theorem saddleOriginValue_pos {ε : ℝ} (hε : 0 < ε) (ℓ : ℝ) :
     0 < saddleOriginValue ε ℓ := by
   unfold saddleOriginValue
-  positivity [beta_pos hε, Real.pi_pos]
+  positivity [div_pos hε four_pos, Real.pi_pos]
 
 def saddleMellinEnvelope (ε ℓ : ℝ) (z : ℂ) : ℂ :=
   Complex.exp
@@ -3117,7 +3090,7 @@ theorem minusSaddleMellinData_eq_gamma_mul_regular
 
 theorem saddleRegularMellinFactor_continuous {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Continuous (saddleRegularMellinFactor ε ℓ) := by
   have hpi : Continuous (fun z : ℂ =>
       Complex.exp
@@ -3137,7 +3110,7 @@ theorem saddleRegularMellinFactor_continuous {ε : ℝ}
 
 theorem saddleRegularMellinFactor_differentiable {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Differentiable ℂ (saddleRegularMellinFactor ε ℓ) := by
   have hpi : Differentiable ℂ (fun z : ℂ =>
       Complex.exp
@@ -3157,7 +3130,7 @@ theorem saddleRegularMellinFactor_differentiable {ε : ℝ}
 
 theorem plusSaddleRegularMellinFactor_differentiable {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Differentiable ℂ (plusSaddleRegularMellinFactor ε ℓ) := by
   have hp : Differentiable ℂ (fun z : ℂ =>
       plusPolynomial ε
@@ -3169,7 +3142,7 @@ theorem plusSaddleRegularMellinFactor_differentiable {ε : ℝ}
 
 theorem minusSaddleRegularMellinFactor_differentiable {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Differentiable ℂ (minusSaddleRegularMellinFactor ε ℓ) := by
   have hp : Differentiable ℂ (fun z : ℂ =>
       minusPolynomial ε
@@ -3181,14 +3154,14 @@ theorem minusSaddleRegularMellinFactor_differentiable {ε : ℝ}
 
 theorem plusSaddleRegularMellinFactor_analyticOnNhd {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     AnalyticOnNhd ℂ (plusSaddleRegularMellinFactor ε ℓ) Set.univ :=
   Complex.analyticOnNhd_univ_iff_differentiable.mpr
     (plusSaddleRegularMellinFactor_differentiable hε horder ℓ)
 
 theorem minusSaddleRegularMellinFactor_analyticOnNhd {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     AnalyticOnNhd ℂ (minusSaddleRegularMellinFactor ε ℓ) Set.univ :=
   Complex.analyticOnNhd_univ_iff_differentiable.mpr
     (minusSaddleRegularMellinFactor_differentiable hε horder ℓ)
@@ -3206,7 +3179,7 @@ theorem saddleMellinGamma_meromorphic :
 
 theorem plusSaddleMellinData_meromorphic {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Meromorphic (plusSaddleMellinData ε ℓ) := by
   have hregular : Meromorphic (plusSaddleRegularMellinFactor ε ℓ) :=
     meromorphicOn_univ.mp
@@ -3223,7 +3196,7 @@ theorem plusSaddleMellinData_meromorphic {ε : ℝ}
 
 theorem minusSaddleMellinData_meromorphic {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     Meromorphic (minusSaddleMellinData ε ℓ) := by
   have hregular : Meromorphic (minusSaddleRegularMellinFactor ε ℓ) :=
     meromorphicOn_univ.mp
@@ -3260,7 +3233,7 @@ theorem saddleMellinGamma_differentiableOn_rightHalfPlane :
 
 theorem plusSaddleMellinData_differentiableOn_rightHalfPlane
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     DifferentiableOn ℂ (plusSaddleMellinData ε ℓ)
       {z : ℂ | 0 < z.re} := by
   rw [show plusSaddleMellinData ε ℓ =
@@ -3274,7 +3247,7 @@ theorem plusSaddleMellinData_differentiableOn_rightHalfPlane
 
 theorem minusSaddleMellinData_differentiableOn_rightHalfPlane
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (ℓ : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (ℓ : ℝ) :
     DifferentiableOn ℂ (minusSaddleMellinData ε ℓ)
       {z : ℂ | 0 < z.re} := by
   rw [show minusSaddleMellinData ε ℓ =
@@ -3316,12 +3289,12 @@ theorem mellinShellPhase_neg_I (ε : ℝ) :
           simpa only [Complex.ofReal_one, mul_one] using! mellinShellPhase_imaginary ε 1
 
 theorem plusPolynomial_neg_I (ε : ℝ) :
-    plusPolynomial ε (-Complex.I) = (beta ε : ℂ) := by
+    plusPolynomial ε (-Complex.I) = ((ε / 4 : ℝ) : ℂ) := by
   simpa only [Complex.ofReal_neg, Complex.ofReal_one, mul_neg, mul_one, sub_neg_eq_add, add_neg_cancel,
     mul_zero, add_zero] using! plusPolynomial_imaginary ε (-1)
 
 theorem minusPolynomial_neg_I (ε : ℝ) :
-    minusPolynomial ε (-Complex.I) = (beta ε : ℂ) := by
+    minusPolynomial ε (-Complex.I) = ((ε / 4 : ℝ) : ℂ) := by
   simpa only [Complex.ofReal_neg, Complex.ofReal_one, mul_neg, mul_one, sub_neg_eq_add, add_neg_cancel, ne_eq,
     OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero, add_zero] using! minusPolynomial_imaginary ε (-1)
 
@@ -3743,7 +3716,7 @@ def minusSaddleNthPoleNumerator
 
 theorem plusSaddleNthPoleNumerator_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (n : ℕ) :
     DifferentiableOn ℂ (plusSaddleNthPoleNumerator ε ℓ n)
       (saddlePoleStrip n) := by
@@ -3754,7 +3727,7 @@ theorem plusSaddleNthPoleNumerator_differentiableOn
 
 theorem minusSaddleNthPoleNumerator_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (n : ℕ) :
     DifferentiableOn ℂ (minusSaddleNthPoleNumerator ε ℓ n)
       (saddlePoleStrip n) := by
@@ -3843,7 +3816,7 @@ def minusSaddleNthPoleRegularPart
 
 theorem plusSaddleNthPoleRegularPart_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (n : ℕ) :
     DifferentiableOn ℂ (plusSaddleNthPoleRegularPart ε ℓ n)
       (saddlePoleStrip n) := by
@@ -3856,7 +3829,7 @@ theorem plusSaddleNthPoleRegularPart_differentiableOn
 
 theorem minusSaddleNthPoleRegularPart_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (n : ℕ) :
     DifferentiableOn ℂ (minusSaddleNthPoleRegularPart ε ℓ n)
       (saddlePoleStrip n) := by
@@ -3978,7 +3951,7 @@ theorem saddleMellinGamma_differentiableAt_of_not_pole
 
 theorem plusSaddleMellinData_differentiableAt_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) {z : ℂ}
     (hz : ∀ n : ℕ,
       z ≠ (-((2 * n : ℕ) : ℂ))) :
@@ -3994,7 +3967,7 @@ theorem plusSaddleMellinData_differentiableAt_of_not_pole
 
 theorem minusSaddleMellinData_differentiableAt_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) {z : ℂ}
     (hz : ∀ n : ℕ,
       z ≠ (-((2 * n : ℕ) : ℂ))) :
@@ -4024,7 +3997,7 @@ def minusSaddleFinitePoleSubtraction
 
 theorem plusSaddleFinitePoleSubtraction_meromorphic
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     Meromorphic (plusSaddleFinitePoleSubtraction ε ℓ N) := by
   have hsum : Meromorphic
@@ -4040,7 +4013,7 @@ theorem plusSaddleFinitePoleSubtraction_meromorphic
 
 theorem minusSaddleFinitePoleSubtraction_meromorphic
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     Meromorphic (minusSaddleFinitePoleSubtraction ε ℓ N) := by
   have hsum : Meromorphic
@@ -4084,7 +4057,7 @@ theorem minusSaddleFinitePoleRegularPart_meromorphicNFOn
 
 theorem plusSaddleFinitePoleRegularPart_eq_on_punctured
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N) :
     plusSaddleFinitePoleRegularPart ε ℓ N =ᶠ[𝓝[≠] z]
@@ -4096,7 +4069,7 @@ theorem plusSaddleFinitePoleRegularPart_eq_on_punctured
 
 theorem minusSaddleFinitePoleRegularPart_eq_on_punctured
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N) :
     minusSaddleFinitePoleRegularPart ε ℓ N =ᶠ[𝓝[≠] z]
@@ -4180,7 +4153,7 @@ theorem minusSaddleFinitePoleRemaining_differentiableAt_pole
 
 theorem plusSaddleFinitePoleSubtraction_differentiableAt_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : ∀ n : ℕ,
       z ≠ (-((2 * n : ℕ) : ℂ))) :
@@ -4208,7 +4181,7 @@ theorem plusSaddleFinitePoleSubtraction_differentiableAt_of_not_pole
 
 theorem minusSaddleFinitePoleSubtraction_differentiableAt_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : ∀ n : ℕ,
       z ≠ (-((2 * n : ℕ) : ℂ))) :
@@ -4312,7 +4285,7 @@ theorem minusSaddleFinitePoleSubtraction_eventually_eq_poleRegular
 
 theorem plusSaddleFinitePoleSubtraction_tendsto_at_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N n : ℕ) (hn : n ≤ N) :
     Tendsto (plusSaddleFinitePoleSubtraction ε ℓ N)
       (𝓝[≠] (-((2 * n : ℕ) : ℂ)))
@@ -4349,7 +4322,7 @@ theorem plusSaddleFinitePoleSubtraction_tendsto_at_pole
 
 theorem minusSaddleFinitePoleSubtraction_tendsto_at_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N n : ℕ) (hn : n ≤ N) :
     Tendsto (minusSaddleFinitePoleSubtraction ε ℓ N)
       (𝓝[≠] (-((2 * n : ℕ) : ℂ)))
@@ -4386,7 +4359,7 @@ theorem minusSaddleFinitePoleSubtraction_tendsto_at_pole
 
 theorem plusSaddleFinitePoleSubtraction_tendsto_of_mem
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N) :
     ∃ c : ℂ,
@@ -4416,7 +4389,7 @@ theorem plusSaddleFinitePoleSubtraction_tendsto_of_mem
 
 theorem minusSaddleFinitePoleSubtraction_tendsto_of_mem
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N) :
     ∃ c : ℂ,
@@ -4446,7 +4419,7 @@ theorem minusSaddleFinitePoleSubtraction_tendsto_of_mem
 
 theorem plusSaddleFinitePoleRegularPart_analyticOnNhd
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     AnalyticOnNhd ℂ
       (plusSaddleFinitePoleRegularPart ε ℓ N)
@@ -4470,7 +4443,7 @@ theorem plusSaddleFinitePoleRegularPart_analyticOnNhd
 
 theorem minusSaddleFinitePoleRegularPart_analyticOnNhd
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     AnalyticOnNhd ℂ
       (minusSaddleFinitePoleRegularPart ε ℓ N)
@@ -4494,7 +4467,7 @@ theorem minusSaddleFinitePoleRegularPart_analyticOnNhd
 
 theorem plusSaddleFinitePoleRegularPart_eq_subtraction_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N)
     (hpole : ∀ n : ℕ,
@@ -4515,7 +4488,7 @@ theorem plusSaddleFinitePoleRegularPart_eq_subtraction_of_not_pole
 
 theorem minusSaddleFinitePoleRegularPart_eq_subtraction_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N)
     (hpole : ∀ n : ℕ,
@@ -4536,7 +4509,7 @@ theorem minusSaddleFinitePoleRegularPart_eq_subtraction_of_not_pole
 
 theorem plusSaddleFinitePoleRegularPart_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     DifferentiableOn ℂ
       (plusSaddleFinitePoleRegularPart ε ℓ N)
@@ -4546,7 +4519,7 @@ theorem plusSaddleFinitePoleRegularPart_differentiableOn
 
 theorem minusSaddleFinitePoleRegularPart_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     DifferentiableOn ℂ
       (minusSaddleFinitePoleRegularPart ε ℓ N)
@@ -4658,7 +4631,7 @@ def minusSaddleFiniteRapidPoleRegularPart
 
 theorem plusSaddleFiniteRapidPoleRegularPart_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     DifferentiableOn ℂ
       (plusSaddleFiniteRapidPoleRegularPart ε ℓ N)
@@ -4680,7 +4653,7 @@ theorem plusSaddleFiniteRapidPoleRegularPart_differentiableOn
 
 theorem minusSaddleFiniteRapidPoleRegularPart_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) :
     DifferentiableOn ℂ
       (minusSaddleFiniteRapidPoleRegularPart ε ℓ N)
@@ -4702,7 +4675,7 @@ theorem minusSaddleFiniteRapidPoleRegularPart_differentiableOn
 
 theorem plusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N)
     (hpole : ∀ n : ℕ,
@@ -4741,7 +4714,7 @@ theorem plusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
 
 theorem minusSaddleFiniteRapidPoleRegularPart_eq_subtraction_of_not_pole
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {z : ℂ}
     (hz : z ∈ saddleFinitePoleHalfPlane N)
     (hpole : ∀ n : ℕ,
@@ -4790,7 +4763,7 @@ def minusSaddleFiniteRapidContourIntegrand
 
 theorem plusSaddleFiniteRapidContourIntegrand_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {r : ℝ} (hr : 0 < r) :
     DifferentiableOn ℂ
       (plusSaddleFiniteRapidContourIntegrand ε ℓ N r)
@@ -4802,7 +4775,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_differentiableOn
 
 theorem minusSaddleFiniteRapidContourIntegrand_differentiableOn
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {r : ℝ} (hr : 0 < r) :
     DifferentiableOn ℂ
       (minusSaddleFiniteRapidContourIntegrand ε ℓ N r)
@@ -4814,7 +4787,7 @@ theorem minusSaddleFiniteRapidContourIntegrand_differentiableOn
 
 theorem plusSaddleFiniteRapidContourIntegrand_boundary_rectangle
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {r : ℝ} (hr : 0 < r)
     (z w : ℂ)
     (hz : z ∈ saddleFinitePoleHalfPlane N)
@@ -4841,7 +4814,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_boundary_rectangle
 
 theorem minusSaddleFiniteRapidContourIntegrand_boundary_rectangle
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (N : ℕ) {r : ℝ} (hr : 0 < r)
     (z w : ℂ)
     (hz : z ∈ saddleFinitePoleHalfPlane N)
@@ -4977,7 +4950,7 @@ theorem minusPolynomial_conj (ε : ℝ) (z : ℂ) :
 
 theorem norm_plusPolynomial_le (ε : ℝ) (z : ℂ) :
     ‖plusPolynomial ε z‖ ≤
-      (1 + |beta ε|) * (1 + ‖z‖) ^ 3 := by
+      (1 + |(ε / 4)|) * (1 + ‖z‖) ^ 3 := by
   have hz : 0 ≤ ‖z‖ := norm_nonneg _
   have hbase : ‖(1 : ℂ) + z ^ 2‖ ≤ 1 + ‖z‖ ^ 2 := by
     calc
@@ -4990,39 +4963,39 @@ theorem norm_plusPolynomial_le (ε : ℝ) (z : ℂ) :
     one_le_pow₀ (by linarith)
   unfold plusPolynomial
   calc
-    ‖1 + z ^ 2 + (beta ε : ℂ) +
+    ‖1 + z ^ 2 + ((ε / 4 : ℝ) : ℂ) +
       Complex.I * z * (1 + z ^ 2)‖
-      ≤ ‖1 + z ^ 2 + (beta ε : ℂ)‖ +
+      ≤ ‖1 + z ^ 2 + ((ε / 4 : ℝ) : ℂ)‖ +
           ‖Complex.I * z * (1 + z ^ 2)‖ :=
             norm_add_le _ _
-    _ ≤ (1 + ‖z‖ ^ 2 + |beta ε|) +
+    _ ≤ (1 + ‖z‖ ^ 2 + |(ε / 4)|) +
           ‖z‖ * (1 + ‖z‖ ^ 2) := by
             have hfirst :
-                ‖1 + z ^ 2 + (beta ε : ℂ)‖ ≤
-                  1 + ‖z‖ ^ 2 + |beta ε| := by
+                ‖1 + z ^ 2 + ((ε / 4 : ℝ) : ℂ)‖ ≤
+                  1 + ‖z‖ ^ 2 + |(ε / 4)| := by
               calc
-                ‖1 + z ^ 2 + (beta ε : ℂ)‖ ≤
-                    ‖1 + z ^ 2‖ + ‖(beta ε : ℂ)‖ :=
+                ‖1 + z ^ 2 + ((ε / 4 : ℝ) : ℂ)‖ ≤
+                    ‖1 + z ^ 2‖ + ‖((ε / 4 : ℝ) : ℂ)‖ :=
                       norm_add_le _ _
-                _ ≤ 1 + ‖z‖ ^ 2 + |beta ε| := by
-                      simpa only [Complex.norm_real, Real.norm_eq_abs, add_le_add_iff_right, add_le_add_iff_left] using! add_le_add_right hbase |beta ε|
+                _ ≤ 1 + ‖z‖ ^ 2 + |(ε / 4)| := by
+                      simpa only [Complex.norm_real, Real.norm_eq_abs, add_le_add_iff_right, add_le_add_iff_left] using! add_le_add_right hbase |(ε / 4)|
             have hsecond :
                 ‖Complex.I * z * (1 + z ^ 2)‖ ≤
                   ‖z‖ * (1 + ‖z‖ ^ 2) := by
               rw [norm_mul, norm_mul, Complex.norm_I, one_mul]
               gcongr
             exact add_le_add hfirst hsecond
-    _ ≤ (1 + ‖z‖) ^ 2 + |beta ε| +
+    _ ≤ (1 + ‖z‖) ^ 2 + |(ε / 4)| +
           ‖z‖ * (1 + ‖z‖) ^ 2 := by
             gcongr
-    _ = (1 + ‖z‖) ^ 3 + |beta ε| := by ring
-    _ ≤ (1 + |beta ε|) * (1 + ‖z‖) ^ 3 := by
+    _ = (1 + ‖z‖) ^ 3 + |(ε / 4)| := by ring
+    _ ≤ (1 + |(ε / 4)|) * (1 + ‖z‖) ^ 3 := by
           linarith [mul_le_mul_of_nonneg_left hcube
-            (abs_nonneg (beta ε))]
+            (abs_nonneg (ε / 4))]
 
 theorem norm_minusPolynomial_le (ε : ℝ) (z : ℂ) :
     ‖minusPolynomial ε z‖ ≤
-      (1 + |beta ε|) * (1 + ‖z‖) ^ 3 := by
+      (1 + |(ε / 4)|) * (1 + ‖z‖) ^ 3 := by
   have h := norm_plusPolynomial_le ε (starRingEnd ℂ z)
   rw [RCLike.norm_conj] at h
   have hconj := plusPolynomial_conj ε (starRingEnd ℂ z)
@@ -5201,14 +5174,14 @@ theorem norm_complexCos_le_cosh_im (z : ℂ) :
             neg_neg, add_comm]
 
 def saddleHorizontalShellVariation (ε H : ℝ) : ℝ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     |shortShellDensity ε a| * (Real.cosh (a * H) + 1)) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     |positiveShellDensity ε a| * (Real.cosh (a * H) + 1))
 
 theorem saddleHorizontalShellVariation_mono
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {H K : ℝ} (hH : 0 ≤ H) (hHK : H ≤ K) :
     saddleHorizontalShellVariation ε H ≤
       saddleHorizontalShellVariation ε K := by
@@ -5226,10 +5199,10 @@ theorem saddleHorizontalShellVariation_mono
       abs_of_nonneg hK]
     exact mul_le_mul_of_nonneg_left hHK (abs_nonneg a)
   have hshort :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         |shortShellDensity ε a| *
           (Real.cosh (a * H) + 1)) ≤
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         |shortShellDensity ε a| *
           (Real.cosh (a * K) + 1)) := by
     apply intervalIntegral.integral_mono_on horder
@@ -5240,17 +5213,17 @@ theorem saddleHorizontalShellVariation_mono
     intro a _
     gcongr
     exact hcos a
-  have hB : shellLocation ε ≤ shellLocation ε + 1 := by
+  have hB : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hp : IntervalIntegrable (positiveShellDensity ε) volume
-      (shellLocation ε) (shellLocation ε + 1) :=
+      (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1) :=
     (positiveShellDensity_continuous ε).intervalIntegrable
-      (shellLocation ε) (shellLocation ε + 1)
+      (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1)
   have hpositive :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         |positiveShellDensity ε a| *
           (Real.cosh (a * H) + 1)) ≤
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         |positiveShellDensity ε a| *
           (Real.cosh (a * K) + 1)) := by
     apply intervalIntegral.integral_mono_on hB
@@ -5263,16 +5236,14 @@ theorem saddleHorizontalShellVariation_mono
 
 theorem norm_mellinShellPhase_le_horizontalVariation
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {z : ℂ} {H : ℝ} (hstrip : |z.im| ≤ H) :
     ‖mellinShellPhase ε z‖ ≤
       saddleHorizontalShellVariation ε H := by
   have hH : 0 ≤ H := (abs_nonneg z.im).trans hstrip
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
-  have hlocation : 0 < shellLocation ε := by
-    unfold shellLocation
+  have hlocation : 0 < (ε⁻¹ ^ 3) := by
     positivity
   have hcosh : Continuous
       (fun a : ℝ => Real.cosh (a * H) + 1) := by
@@ -5299,10 +5270,10 @@ theorem norm_mellinShellPhase_le_horizontalVariation
             gcongr
             exact Real.cosh_le_cosh.mpr him
   have hshort :
-      ‖∫ a in shortCutoff ε..shortEndpoint ε,
+      ‖∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (shortShellDensity ε a : ℂ) *
             (Complex.cos ((a : ℂ) * z) - 1)‖ ≤
-        ∫ a in shortCutoff ε..shortEndpoint ε,
+        ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           |shortShellDensity ε a| *
             (Real.cosh (a * H) + 1) := by
     apply intervalIntegral.norm_integral_le_of_norm_le horder
@@ -5313,13 +5284,13 @@ theorem norm_mellinShellPhase_le_horizontalVariation
           (abs_nonneg (shortShellDensity ε a)))
     · exact (shortShellDensity_intervalIntegrable
         hε horder).abs.mul_continuousOn hcosh.continuousOn
-  have hB : shellLocation ε ≤ shellLocation ε + 1 := by
+  have hB : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hpositive :
-      ‖∫ a in shellLocation ε..shellLocation ε + 1,
+      ‖∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           (positiveShellDensity ε a : ℂ) *
             (Complex.cos ((a : ℂ) * z) - 1)‖ ≤
-        ∫ a in shellLocation ε..shellLocation ε + 1,
+        ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           |positiveShellDensity ε a| *
             (Real.cosh (a * H) + 1) := by
     apply intervalIntegral.norm_integral_le_of_norm_le hB
@@ -5329,14 +5300,14 @@ theorem norm_mellinShellPhase_le_horizontalVariation
           (hcos a (hlocation.le.trans ha.1.le))
           (abs_nonneg (positiveShellDensity ε a)))
     · exact ((positiveShellDensity_continuous ε).intervalIntegrable
-        (shellLocation ε) (shellLocation ε + 1)).abs.mul_continuousOn
+        (ε⁻¹ ^ 3) ((ε⁻¹ ^ 3) + 1)).abs.mul_continuousOn
           hcosh.continuousOn
   unfold mellinShellPhase saddleHorizontalShellVariation
   exact (norm_add_le _ _).trans (add_le_add hshort hpositive)
 
 theorem norm_saddleShellExponential_horizontal_le
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ) (z : ℂ) :
     ‖Complex.exp ((ℓ : ℂ) * mellinShellPhase ε z)‖ ≤
       Real.exp
@@ -5383,7 +5354,7 @@ theorem saddleMellinPiFactor_shiftedLine_norm
 
 theorem norm_saddleShellExponential_shiftedLine_le
     {ε ℓ : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (a t : ℝ) :
     ‖Complex.exp
       ((ℓ : ℂ) * mellinShellPhase ε
@@ -5458,16 +5429,16 @@ theorem norm_plusPolynomial_shiftedLine_le
       (Complex.I *
         (((a : ℂ) + (t : ℂ) * Complex.I) -
           (ℓ : ℂ)) / (ℓ : ℂ))‖ ≤
-      (1 + |beta ε|) *
+      (1 + |(ε / 4)|) *
         (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3 *
           |t| ^ 3 := by
   calc
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
       (1 + ‖Complex.I *
         (((a : ℂ) + (t : ℂ) * Complex.I) -
           (ℓ : ℂ)) / (ℓ : ℂ)‖) ^ 3 :=
       norm_plusPolynomial_le ε _
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
       ((1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) * |t|) ^ 3 := by
       gcongr
       exact saddleMellinShellArgument_shiftedLine_linear_le
@@ -5483,16 +5454,16 @@ theorem norm_minusPolynomial_shiftedLine_le
       (Complex.I *
         (((a : ℂ) + (t : ℂ) * Complex.I) -
           (ℓ : ℂ)) / (ℓ : ℂ))‖ ≤
-      (1 + |beta ε|) *
+      (1 + |(ε / 4)|) *
         (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3 *
           |t| ^ 3 := by
   calc
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
       (1 + ‖Complex.I *
         (((a : ℂ) + (t : ℂ) * Complex.I) -
           (ℓ : ℂ)) / (ℓ : ℂ)‖) ^ 3 :=
       norm_minusPolynomial_le ε _
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
       ((1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) * |t|) ^ 3 := by
       gcongr
       exact saddleMellinShellArgument_shiftedLine_linear_le
@@ -5503,7 +5474,7 @@ theorem norm_minusPolynomial_shiftedLine_le
 
 def saddleShiftedLineMajorant
     (ε ℓ a : ℝ) (k m : ℕ) : ℝ :=
-  ((1 + |beta ε|) *
+  ((1 + |(ε / 4)|) *
       (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3) *
     ((2 : ℝ) ^ (k + (m + 3)) *
       Real.Gamma
@@ -5528,7 +5499,7 @@ theorem saddleShiftedLineMajorant_nonneg
 
 theorem plusSaddleMellinData_shiftedLine_polynomial_bound
     {ε ℓ : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (a : ℝ) {t : ℝ} (ht : 1 ≤ |t|)
     (k m : ℕ) (hshift : 0 < a / 2 + (k : ℝ)) :
     |t| ^ m *
@@ -5539,7 +5510,7 @@ theorem plusSaddleMellinData_shiftedLine_polynomial_bound
   let q : ℂ :=
     Complex.I * (z - (ℓ : ℂ)) / (ℓ : ℂ)
   let C : ℝ :=
-    (1 + |beta ε|) *
+    (1 + |(ε / 4)|) *
       (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3
   let G : ℝ :=
     (2 : ℝ) ^ (k + (m + 3)) *
@@ -5640,7 +5611,7 @@ theorem plusSaddleMellinData_shiftedLine_polynomial_bound
 
 theorem minusSaddleMellinData_shiftedLine_polynomial_bound
     {ε ℓ : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (a : ℝ) {t : ℝ} (ht : 1 ≤ |t|)
     (k m : ℕ) (hshift : 0 < a / 2 + (k : ℝ)) :
     |t| ^ m *
@@ -5651,7 +5622,7 @@ theorem minusSaddleMellinData_shiftedLine_polynomial_bound
   let q : ℂ :=
     Complex.I * (z - (ℓ : ℂ)) / (ℓ : ℂ)
   let C : ℝ :=
-    (1 + |beta ε|) *
+    (1 + |(ε / 4)|) *
       (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3
   let G : ℝ :=
     (2 : ℝ) ^ (k + (m + 3)) *
@@ -5781,7 +5752,7 @@ theorem saddleHorizontalStripHeight_bound
 
 def saddleFixedStripMajorant
     (ε ℓ H a : ℝ) (k m : ℕ) : ℝ :=
-  ((1 + |beta ε|) *
+  ((1 + |(ε / 4)|) *
       (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3) *
     ((2 : ℝ) ^ (k + (m + 3)) *
       Real.Gamma
@@ -5792,7 +5763,7 @@ def saddleFixedStripMajorant
 
 theorem saddleShiftedLineMajorant_le_fixedStrip
     {ε ℓ a H : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hH : |(a - ℓ) / ℓ| ≤ H)
     (k m : ℕ) (hshift : 0 < a / 2 + (k : ℝ)) :
     saddleShiftedLineMajorant ε ℓ a k m ≤
@@ -5844,7 +5815,7 @@ theorem saddleFixedStripMajorant_continuousOn
       (Set.Icc A B) := by
   have hpoly : ContinuousOn
       (fun a : ℝ =>
-        (1 + |beta ε|) *
+        (1 + |(ε / 4)|) *
           (1 + ℓ⁻¹ + |(a - ℓ) / ℓ|) ^ 3)
       (Set.Icc A B) :=
     (continuous_const.mul ((continuous_const.add
@@ -5872,7 +5843,7 @@ theorem saddleFixedStripMajorant_continuousOn
 
 theorem plusSaddleMellinData_horizontalStrip_polynomial_bound
     {ε ℓ : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {A B : ℝ} (hAB : A ≤ B) (m : ℕ) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ a ∈ Set.Icc A B, ∀ t : ℝ,
@@ -5922,7 +5893,7 @@ theorem plusSaddleMellinData_horizontalStrip_polynomial_bound
 
 theorem minusSaddleMellinData_horizontalStrip_polynomial_bound
     {ε ℓ : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {A B : ℝ} (hAB : A ≤ B) (m : ℕ) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ a ∈ Set.Icc A B, ∀ t : ℝ,
@@ -6001,7 +5972,7 @@ theorem saddleEnvelope_conj (ε ℓ t : ℝ) :
 
 theorem norm_saddleShellExponential_le {ε ℓ : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (t : ℝ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (t : ℝ) :
     ‖Complex.exp
         ((ℓ : ℂ) * mellinShellPhase ε
           ((t : ℂ) / (ℓ : ℂ)))‖ ≤
@@ -6027,7 +5998,7 @@ theorem norm_saddleShellExponential_le {ε ℓ : ℝ}
 
 theorem saddleEnvelope_vertical_polynomial_bound {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (t : ℝ) (k : ℕ) :
     |t| ^ k * ‖saddleEnvelope ε ℓ t‖ ≤
       (2 : ℝ) ^ k * Real.Gamma (ℓ / 2 + k) *
@@ -6076,7 +6047,7 @@ theorem saddleEnvelope_vertical_polynomial_bound {ε ℓ : ℝ}
 theorem norm_plusPolynomial_scaled_le {ε ℓ t : ℝ}
     (hℓ : 0 < ℓ) (ht : 1 ≤ |t|) :
     ‖plusPolynomial ε ((t : ℂ) / (ℓ : ℂ))‖ ≤
-      (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
+      (1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
   have hnorm : ‖(t : ℂ) / (ℓ : ℂ)‖ = |t| / ℓ := by
     rw [norm_div]
     simp only [Complex.norm_real, Real.norm_eq_abs, abs_of_pos hℓ]
@@ -6087,21 +6058,21 @@ theorem norm_plusPolynomial_scaled_le {ε ℓ t : ℝ}
     nlinarith
   calc
     ‖plusPolynomial ε ((t : ℂ) / (ℓ : ℂ))‖
-      ≤ (1 + |beta ε|) *
+      ≤ (1 + |(ε / 4)|) *
         (1 + ‖(t : ℂ) / (ℓ : ℂ)‖) ^ 3 :=
           norm_plusPolynomial_le ε _
-    _ = (1 + |beta ε|) * (1 + |t| / ℓ) ^ 3 := by
+    _ = (1 + |(ε / 4)|) * (1 + |t| / ℓ) ^ 3 := by
           rw [hnorm]
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
         ((1 + ℓ⁻¹) * |t|) ^ 3 := by
           gcongr
-    _ = (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
+    _ = (1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
           ring
 
 theorem norm_minusPolynomial_scaled_le {ε ℓ t : ℝ}
     (hℓ : 0 < ℓ) (ht : 1 ≤ |t|) :
     ‖minusPolynomial ε ((t : ℂ) / (ℓ : ℂ))‖ ≤
-      (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
+      (1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
   have hnorm : ‖(t : ℂ) / (ℓ : ℂ)‖ = |t| / ℓ := by
     rw [norm_div]
     simp only [Complex.norm_real, Real.norm_eq_abs, abs_of_pos hℓ]
@@ -6112,23 +6083,23 @@ theorem norm_minusPolynomial_scaled_le {ε ℓ t : ℝ}
     nlinarith
   calc
     ‖minusPolynomial ε ((t : ℂ) / (ℓ : ℂ))‖
-      ≤ (1 + |beta ε|) *
+      ≤ (1 + |(ε / 4)|) *
         (1 + ‖(t : ℂ) / (ℓ : ℂ)‖) ^ 3 :=
           norm_minusPolynomial_le ε _
-    _ = (1 + |beta ε|) * (1 + |t| / ℓ) ^ 3 := by
+    _ = (1 + |(ε / 4)|) * (1 + |t| / ℓ) ^ 3 := by
           rw [hnorm]
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
         ((1 + ℓ⁻¹) * |t|) ^ 3 := by
           gcongr
-    _ = (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
+    _ = (1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3 := by
           ring
 
 theorem plusSaddleSpectrum_vertical_polynomial_bound {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {t : ℝ} (ht : 1 ≤ |t|) (k : ℕ) :
     |t| ^ k * ‖plusSaddleSpectrum ε ℓ t‖ ≤
-      ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+      ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
         ((2 : ℝ) ^ (k + 3) *
           Real.Gamma (ℓ / 2 + (k + 3)) *
           Real.exp (2 * |ℓ| * saddleShellTotalVariation ε)) := by
@@ -6144,27 +6115,27 @@ theorem plusSaddleSpectrum_vertical_polynomial_bound {ε ℓ : ℝ}
             rw [norm_mul]
             ring
     _ ≤ |t| ^ k * ‖saddleEnvelope ε ℓ t‖ *
-          ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3) := by
+          ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3) := by
             gcongr
-    _ = ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+    _ = ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
           (|t| ^ (k + 3) * ‖saddleEnvelope ε ℓ t‖) := by
             rw [pow_add]
             ring
-    _ ≤ ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+    _ ≤ ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
         ((2 : ℝ) ^ (k + 3) *
           Real.Gamma (ℓ / 2 + (k + 3)) *
           Real.exp (2 * |ℓ| * saddleShellTotalVariation ε)) := by
             simpa only [Nat.cast_add, Nat.cast_ofNat] using!
               (mul_le_mul_of_nonneg_left hgamma
-                (show 0 ≤ (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 by
+                (show 0 ≤ (1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 by
                   positivity))
 
 theorem minusSaddleSpectrum_vertical_polynomial_bound {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {t : ℝ} (ht : 1 ≤ |t|) (k : ℕ) :
     |t| ^ k * ‖minusSaddleSpectrum ε ℓ t‖ ≤
-      ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+      ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
         ((2 : ℝ) ^ (k + 3) *
           Real.Gamma (ℓ / 2 + (k + 3)) *
           Real.exp (2 * |ℓ| * saddleShellTotalVariation ε)) := by
@@ -6180,19 +6151,19 @@ theorem minusSaddleSpectrum_vertical_polynomial_bound {ε ℓ : ℝ}
             rw [norm_mul]
             ring
     _ ≤ |t| ^ k * ‖saddleEnvelope ε ℓ t‖ *
-          ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3) := by
+          ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 * |t| ^ 3) := by
             gcongr
-    _ = ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+    _ = ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
           (|t| ^ (k + 3) * ‖saddleEnvelope ε ℓ t‖) := by
             rw [pow_add]
             ring
-    _ ≤ ((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+    _ ≤ ((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
         ((2 : ℝ) ^ (k + 3) *
           Real.Gamma (ℓ / 2 + (k + 3)) *
           Real.exp (2 * |ℓ| * saddleShellTotalVariation ε)) := by
             simpa only [Nat.cast_add, Nat.cast_ofNat] using!
               (mul_le_mul_of_nonneg_left hgamma
-                (show 0 ≤ (1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3 by
+                (show 0 ≤ (1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3 by
                   positivity))
 
 theorem integrable_of_continuous_polynomial_decay
@@ -6284,7 +6255,7 @@ theorem saddleShiftedLine_ne_pole
 
 theorem plusSaddleMellinData_shiftedLine_continuous
     {ε a : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ)
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ)) :
     Continuous (fun t : ℝ =>
@@ -6306,7 +6277,7 @@ theorem plusSaddleMellinData_shiftedLine_continuous
 
 theorem minusSaddleMellinData_shiftedLine_continuous
     {ε a : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ : ℝ)
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ)) :
     Continuous (fun t : ℝ =>
@@ -6328,7 +6299,7 @@ theorem minusSaddleMellinData_shiftedLine_continuous
 
 theorem plusSaddleMellinData_shiftedLine_moment_integrable
     {ε ℓ a : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
     (j : ℕ) :
     Integrable (fun t : ℝ =>
@@ -6349,7 +6320,7 @@ theorem plusSaddleMellinData_shiftedLine_moment_integrable
 
 theorem minusSaddleMellinData_shiftedLine_moment_integrable
     {ε ℓ a : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
     (j : ℕ) :
     Integrable (fun t : ℝ =>
@@ -6388,7 +6359,7 @@ theorem saddleMellinInversePower_shiftedLine_continuous
 
 theorem plusSaddleMellinData_shiftedLine_weighted_moment_integrable
     {ε ℓ a r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
     (hr : 0 < r) (j : ℕ) :
     Integrable (fun t : ℝ =>
@@ -6409,7 +6380,7 @@ theorem plusSaddleMellinData_shiftedLine_weighted_moment_integrable
 
 theorem minusSaddleMellinData_shiftedLine_weighted_moment_integrable
     {ε ℓ a r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
     (hr : 0 < r) (j : ℕ) :
     Integrable (fun t : ℝ =>
@@ -6430,7 +6401,7 @@ theorem minusSaddleMellinData_shiftedLine_weighted_moment_integrable
 
 theorem plusSaddleMellinData_shiftedLine_weighted_integrable
     {ε ℓ a r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
     (hr : 0 < r) :
     Integrable (fun t : ℝ =>
@@ -6444,7 +6415,7 @@ theorem plusSaddleMellinData_shiftedLine_weighted_integrable
 
 theorem minusSaddleMellinData_shiftedLine_weighted_integrable
     {ε ℓ a r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
     (hr : 0 < r) :
     Integrable (fun t : ℝ =>
@@ -6579,7 +6550,7 @@ theorem saddleGaussianPoleRepresentative_shiftedLine_weighted_integrable
 
 theorem plusSaddleFiniteRapidContourIntegrand_shiftedLine_integrable
     {ε ℓ a r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < a)
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
@@ -6624,7 +6595,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_shiftedLine_integrable
 
 theorem minusSaddleFiniteRapidContourIntegrand_shiftedLine_integrable
     {ε ℓ a r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < a)
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ))
@@ -6690,7 +6661,7 @@ theorem saddleMellinInversePower_horizontalStrip_bounded
 
 theorem plusSaddleMellinData_weighted_horizontalStrip_polynomial_bound
     {ε ℓ r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     {A B : ℝ} (hAB : A ≤ B) (m : ℕ) :
     ∃ C : ℝ, 0 ≤ C ∧
@@ -6728,7 +6699,7 @@ theorem plusSaddleMellinData_weighted_horizontalStrip_polynomial_bound
 
 theorem minusSaddleMellinData_weighted_horizontalStrip_polynomial_bound
     {ε ℓ r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     {A B : ℝ} (hAB : A ≤ B) (m : ℕ) :
     ∃ C : ℝ, 0 ≤ C ∧
@@ -6801,7 +6772,7 @@ theorem saddleHorizontalIntegral_tendsto_zero
 
 theorem plusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
     {ε ℓ r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     {A B : ℝ} (hAB : A ≤ B)
     (s : ℝ) (hs : |s| = 1) :
@@ -6825,7 +6796,7 @@ theorem plusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
 
 theorem minusSaddleMellinData_weighted_horizontalIntegral_tendsto_zero
     {ε ℓ r : ℝ} (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     {A B : ℝ} (hAB : A ≤ B)
     (s : ℝ) (hs : |s| = 1) :
@@ -7010,7 +6981,7 @@ theorem saddleNonzeroFrequency_ne_pole
 theorem plusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B) :
@@ -7084,7 +7055,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
 theorem minusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B) :
@@ -7158,7 +7129,7 @@ theorem minusSaddleFiniteRapidContourIntegrand_horizontalStrip_bound
 theorem plusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B)
@@ -7179,7 +7150,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
 theorem minusSaddleFiniteRapidContourIntegrand_horizontalIntegral_tendsto_zero
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B)
@@ -7380,7 +7351,7 @@ theorem saddleInfiniteRectangle_vertical_integral_eq
 theorem plusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B)
@@ -7439,7 +7410,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
 theorem minusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B)
@@ -7497,13 +7468,13 @@ theorem minusSaddleFiniteRapidContourIntegrand_vertical_integral_eq
 
 theorem plusSaddleSpectrum_moment_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (k : ℕ) :
     Integrable (fun t : ℝ =>
       (t : ℂ) ^ k * plusSaddleSpectrum ε ℓ t) := by
   apply integrable_of_continuous_polynomial_decay
     (plusSaddleSpectrum_continuous hε hℓ horder)
   intro j
-  refine ⟨((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+  refine ⟨((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
     ((2 : ℝ) ^ (j + 3) *
       Real.Gamma (ℓ / 2 + (j + 3)) *
       Real.exp (2 * |ℓ| * saddleShellTotalVariation ε)), ?_, ?_⟩
@@ -7516,13 +7487,13 @@ theorem plusSaddleSpectrum_moment_integrable {ε ℓ : ℝ}
 
 theorem minusSaddleSpectrum_moment_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (k : ℕ) :
     Integrable (fun t : ℝ =>
       (t : ℂ) ^ k * minusSaddleSpectrum ε ℓ t) := by
   apply integrable_of_continuous_polynomial_decay
     (minusSaddleSpectrum_continuous hε hℓ horder)
   intro j
-  refine ⟨((1 + |beta ε|) * (1 + ℓ⁻¹) ^ 3) *
+  refine ⟨((1 + |(ε / 4)|) * (1 + ℓ⁻¹) ^ 3) *
     ((2 : ℝ) ^ (j + 3) *
       Real.Gamma (ℓ / 2 + (j + 3)) *
       Real.exp (2 * |ℓ| * saddleShellTotalVariation ε)), ?_, ?_⟩
@@ -7535,7 +7506,7 @@ theorem minusSaddleSpectrum_moment_integrable {ε ℓ : ℝ}
 
 theorem plusSaddleSpectrum_norm_moment_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (k : ℕ) :
     Integrable (fun t : ℝ =>
       |t| ^ k * ‖plusSaddleSpectrum ε ℓ t‖) := by
   simpa only [Complex.norm_mul, norm_pow, Complex.norm_real, Real.norm_eq_abs] using!
@@ -7544,7 +7515,7 @@ theorem plusSaddleSpectrum_norm_moment_integrable {ε ℓ : ℝ}
 
 theorem minusSaddleSpectrum_norm_moment_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (k : ℕ) :
     Integrable (fun t : ℝ =>
       |t| ^ k * ‖minusSaddleSpectrum ε ℓ t‖) := by
   simpa only [Complex.norm_mul, norm_pow, Complex.norm_real, Real.norm_eq_abs] using!
@@ -7588,7 +7559,7 @@ theorem integrable_scaled_norm_moment
 
 theorem plusSaddleFourierData_norm_moment_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (k : ℕ) :
     Integrable (fun y : ℝ =>
       ‖y‖ ^ k * ‖plusSaddleFourierData ε ℓ y‖) := by
   let c : ℝ := -(2 * Real.pi)
@@ -7608,7 +7579,7 @@ theorem plusSaddleFourierData_norm_moment_integrable {ε ℓ : ℝ}
 
 theorem minusSaddleFourierData_norm_moment_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) (k : ℕ) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) (k : ℕ) :
     Integrable (fun y : ℝ =>
       ‖y‖ ^ k * ‖minusSaddleFourierData ε ℓ y‖) := by
   let c : ℝ := -(2 * Real.pi)
@@ -7628,7 +7599,7 @@ theorem minusSaddleFourierData_norm_moment_integrable {ε ℓ : ℝ}
 
 theorem plusSaddleFourierData_fourier_contDiff {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ ∞ (𝓕 (plusSaddleFourierData ε ℓ)) := by
   exact Real.contDiff_fourier (N := ⊤) (fun n _ =>
     plusSaddleFourierData_norm_moment_integrable
@@ -7636,7 +7607,7 @@ theorem plusSaddleFourierData_fourier_contDiff {ε ℓ : ℝ}
 
 theorem minusSaddleFourierData_fourier_contDiff {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ ∞ (𝓕 (minusSaddleFourierData ε ℓ)) := by
   exact Real.contDiff_fourier (N := ⊤) (fun n _ =>
     minusSaddleFourierData_norm_moment_integrable
@@ -7712,7 +7683,7 @@ theorem minusSaddleProfile_eq_fourier (ε ℓ : ℝ)
 
 theorem plusSaddleProfile_contDiffOn {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiffOn ℝ ∞ (plusSaddleProfile ε ℓ) (Set.Ioi 0) := by
   have hpow : ContDiffOn ℝ ∞
       (fun r : ℝ => r ^ (-ℓ)) (Set.Ioi 0) :=
@@ -7735,7 +7706,7 @@ theorem plusSaddleProfile_contDiffOn {ε ℓ : ℝ}
 
 theorem minusSaddleProfile_contDiffOn {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiffOn ℝ ∞ (minusSaddleProfile ε ℓ) (Set.Ioi 0) := by
   have hpow : ContDiffOn ℝ ∞
       (fun r : ℝ => r ^ (-ℓ)) (Set.Ioi 0) :=
@@ -7758,7 +7729,7 @@ theorem minusSaddleProfile_contDiffOn {ε ℓ : ℝ}
 
 theorem plusSaddleFunction_contDiffOn {ε : ℝ}
     (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiffOn ℝ ∞ (plusSaddleFunction ε d)
       ({0}ᶜ : Set (Euclidean d)) := by
   have hdimension : 0 < (d : ℝ) / 2 := by
@@ -7784,7 +7755,7 @@ theorem plusSaddleFunction_contDiffOn {ε : ℝ}
 
 theorem minusSaddleFunction_contDiffOn {ε : ℝ}
     (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiffOn ℝ ∞ (minusSaddleFunction ε d)
       ({0}ᶜ : Set (Euclidean d)) := by
   have hdimension : 0 < (d : ℝ) / 2 := by
@@ -9029,7 +9000,7 @@ theorem saddleFiniteGaussianPoleWeighted_shiftedLine_integral
 theorem plusSaddleFiniteRapidContourIntegrand_shiftedLine_integral_eq
     {ε ℓ a r : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < a)
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ)) :
@@ -9117,7 +9088,7 @@ theorem plusSaddleFiniteRapidContourIntegrand_shiftedLine_integral_eq
 theorem minusSaddleFiniteRapidContourIntegrand_shiftedLine_integral_eq
     {ε ℓ a r : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < a)
     (hpole : ∀ n : ℕ, a ≠ -((2 * n : ℕ) : ℝ)) :
@@ -9275,7 +9246,7 @@ theorem saddleFiniteGaussianPoleWeighted_vertical_integral_jump
 theorem plusSaddleMellinData_vertical_integral_residue_expansion
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B)
@@ -9352,7 +9323,7 @@ theorem plusSaddleMellinData_vertical_integral_residue_expansion
 theorem minusSaddleMellinData_vertical_integral_residue_expansion
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ)
     (hhalf : -(2 * ((N : ℝ) + 1)) < A)
     (hAB : A ≤ B)
@@ -9552,7 +9523,7 @@ theorem minusSaddlePoleResidue_zero
 theorem plusSaddleProfile_eq_residue_sum_add_remainder
     {ε ℓ r : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ) :
     plusSaddleProfile ε ℓ r =
       (∑ n ∈ Finset.range (N + 1),
@@ -9581,7 +9552,7 @@ theorem plusSaddleProfile_eq_residue_sum_add_remainder
 theorem minusSaddleProfile_eq_residue_sum_add_remainder
     {ε ℓ r : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ) :
     minusSaddleProfile ε ℓ r =
       (∑ n ∈ Finset.range (N + 1),
@@ -9650,20 +9621,11 @@ noncomputable section
 open Filter
 open scoped Topology
 
-def wallisProduct (n : ℕ) : ℝ := Real.Wallis.W n
-
-theorem wallisProduct_pos (n : ℕ) : 0 < wallisProduct n :=
-  Real.Wallis.W_pos n
-
-theorem tendsto_wallisProduct :
-    Tendsto wallisProduct atTop (nhds (Real.pi / 2)) :=
-  Real.Wallis.tendsto_W_nhds_pi_div_two
-
 theorem tendsto_log_wallisProduct :
-    Tendsto (fun n : ℕ => Real.log (wallisProduct n))
+    Tendsto (fun n : ℕ => Real.log (Real.Wallis.W n))
       atTop (nhds (Real.log (Real.pi / 2))) := by
   exact (Real.continuousAt_log (by positivity)).tendsto.comp
-    tendsto_wallisProduct
+    Real.Wallis.tendsto_W_nhds_pi_div_two
 
 end
 
@@ -9834,9 +9796,9 @@ theorem wallisPairFactor_pos (n : ℕ) : 0 < wallisPairFactor n := by
   positivity
 
 theorem wallisProduct_succ (n : ℕ) :
-    wallisProduct (n + 1) =
-      wallisProduct n * wallisPairFactor n := by
-  simpa only [wallisProduct, wallisPairFactor] using! Real.Wallis.W_succ n
+    Real.Wallis.W (n + 1) =
+      Real.Wallis.W n * wallisPairFactor n := by
+  simpa only [wallisPairFactor] using! Real.Wallis.W_succ n
 
 def wallisPartialKernel (n : ℕ) (x : ℝ) : ℝ :=
   ∑ k ∈ Finset.range n, wallisPairKernel k x
@@ -9848,10 +9810,10 @@ theorem wallisPartialKernel_integrable (n : ℕ) :
 
 theorem integral_wallisPartialKernel (n : ℕ) :
     (∫ x : ℝ in Ioi 0, wallisPartialKernel n x) =
-      Real.log (wallisProduct n) := by
+      Real.log (Real.Wallis.W n) := by
   induction n with
   | zero =>
-      simp only [wallisPartialKernel, Finset.range_zero, Finset.sum_empty, integral_zero, wallisProduct,
+      simp only [wallisPartialKernel, Finset.range_zero, Finset.sum_empty, integral_zero,
         Real.Wallis.W, Finset.prod_empty, Real.log_one]
   | succ n ih =>
       have hpartial :
@@ -9863,7 +9825,7 @@ theorem integral_wallisPartialKernel (n : ℕ) :
       rw [hpartial, integral_add (wallisPartialKernel_integrable n)
         (wallisPairKernel_integrable n), ih,
         integral_wallisPairKernel, wallisProduct_succ,
-        Real.log_mul (wallisProduct_pos n).ne'
+        Real.log_mul (Real.Wallis.W_pos n).ne'
           (wallisPairFactor_pos n).ne']
 
 def wallisLaplaceKernel (x : ℝ) : ℝ :=
@@ -10044,14 +10006,14 @@ theorem tendsto_cubic_gaussian_atTop :
       (by linarith : 0 ≤ x - 1)]
 
 def shellRadiusMajorant (ε : ℝ) : ℝ :=
-  (shellLocation ε + 1) * shellWeight ε *
-    Real.exp ((ε / 4) * (shellLocation ε + 1))
+  ((ε⁻¹ ^ 3) + 1) * shellWeight ε *
+    Real.exp ((ε / 4) * ((ε⁻¹ ^ 3) + 1))
 
 theorem shellRadiusMajorant_inv {x : ℝ} (hx : x ≠ 0) :
     shellRadiusMajorant x⁻¹ =
       ((x ^ 3 + 1) * Real.exp (-(x ^ 2) / 8)) *
         Real.exp (x⁻¹ / 4) := by
-  unfold shellRadiusMajorant shellWeight shellLocation
+  unfold shellRadiusMajorant shellWeight
   simp only [inv_inv]
   simp only [mul_assoc]
   congr 1
@@ -10127,7 +10089,7 @@ theorem tendsto_shortShellRadiusIntegrand {a : ℝ} (ha : 0 < a) :
     Tendsto (fun ε : ℝ => shortShellRadiusIntegrand ε a)
       (𝓝[>] (0 : ℝ)) (nhds (wallisRadiusIntegrand a)) := by
   have hc : Continuous (fun ε : ℝ => shortShellRadiusIntegrand ε a) := by
-    unfold shortShellRadiusIntegrand shortShellDensity shortMargin
+    unfold shortShellRadiusIntegrand shortShellDensity
     fun_prop
   have ht :
       Tendsto (fun ε : ℝ => shortShellRadiusIntegrand ε a)
@@ -10136,7 +10098,7 @@ theorem tendsto_shortShellRadiusIntegrand {a : ℝ} (ha : 0 < a) :
       (nhdsWithin_le_nhds (s := Set.Ioi (0 : ℝ)))
   have hvalue : shortShellRadiusIntegrand 0 a =
       wallisRadiusIntegrand a := by
-    unfold shortShellRadiusIntegrand shortShellDensity shortMargin
+    unfold shortShellRadiusIntegrand shortShellDensity
       wallisRadiusIntegrand
     rw [Real.tanh_eq_sinh_div_cosh]
     field_simp [ha.ne', (Real.cosh_pos a).ne']
@@ -10145,10 +10107,10 @@ theorem tendsto_shortShellRadiusIntegrand {a : ℝ} (ha : 0 < a) :
 
 theorem shortMargin_abs_le_exp {ε a : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε ≤ 1) (ha : 0 ≤ a) :
-    |shortMargin ε a| ≤ 11 * Real.exp a := by
+    |(1 - 10 * ε * (1 + a))| ≤ 11 * Real.exp a := by
   have hterm : 0 ≤ 10 * ε * (1 + a) := by positivity
   calc
-    |shortMargin ε a| = |1 - 10 * ε * (1 + a)| := rfl
+    |(1 - 10 * ε * (1 + a))| = |1 - 10 * ε * (1 + a)| := rfl
     _ ≤ |(1 : ℝ)| + |10 * ε * (1 + a)| := abs_sub _ _
     _ = 1 + 10 * ε * (1 + a) := by
       rw [abs_of_pos (by norm_num : (0 : ℝ) < 1),
@@ -10183,7 +10145,7 @@ theorem shortShellHyperbolicRatio_le {ε a : ℝ}
 
 theorem shortShellRadiusIntegrand_eq_ratio {ε a : ℝ} (ha : a ≠ 0) :
     shortShellRadiusIntegrand ε a =
-      -(shortMargin ε a * Real.exp (-2 * a) *
+      -((1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) *
         (Real.sinh ((1 + ε / 4) * a) / Real.cosh a) /
           (2 * a)) := by
   unfold shortShellRadiusIntegrand shortShellDensity
@@ -10203,7 +10165,7 @@ theorem shortShellRadiusIntegrand_abs_le {ε a : ℝ}
     abs_of_pos (Real.exp_pos (-2 * a)), abs_of_nonneg hratio0,
     abs_of_pos (by positivity : 0 < (2 : ℝ) * a)]
   calc
-    |shortMargin ε a| * Real.exp (-2 * a) *
+    |(1 - 10 * ε * (1 + a))| * Real.exp (-2 * a) *
         (Real.sinh ((1 + ε / 4) * a) / Real.cosh a) / (2 * a)
       ≤ (11 * Real.exp a) * Real.exp (-2 * a) *
           ((5 / 4 : ℝ) * a * Real.exp (a / 4)) / (2 * a) := by
@@ -10235,8 +10197,7 @@ theorem shortShellRadiusMajorant_integrable :
 theorem shortShellRadiusIntegrand_measurable (ε : ℝ) :
     Measurable (shortShellRadiusIntegrand ε) := by
   have hn : Measurable (fun a : ℝ =>
-      shortMargin ε a * Real.exp (-2 * a)) := by
-    unfold shortMargin
+      (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a)) := by
     fun_prop
   have hd : Measurable (fun a : ℝ =>
       2 * a ^ 2 * Real.cosh a) := by
@@ -10247,14 +10208,14 @@ theorem shortShellRadiusIntegrand_measurable (ε : ℝ) :
   exact ((hn.div hd).neg.mul measurable_id).mul hs
 
 theorem tendsto_shortCutoff :
-    Tendsto shortCutoff (𝓝[>] (0 : ℝ)) (nhds 0) := by
+    Tendsto (fun ε : ℝ => ε ^ 3) (𝓝[>] (0 : ℝ)) (nhds 0) := by
   have ht : Tendsto (fun ε : ℝ => ε)
       (𝓝[>] (0 : ℝ)) (nhds 0) :=
     tendsto_id.mono_left (nhdsWithin_le_nhds (s := Set.Ioi (0 : ℝ)))
   simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow] using! ht.pow 3
 
 theorem tendsto_shortEndpoint :
-    Tendsto shortEndpoint (𝓝[>] (0 : ℝ)) atTop := by
+    Tendsto (fun ε : ℝ => 10 * Real.log (1 / ε)) (𝓝[>] (0 : ℝ)) atTop := by
   have ht : Tendsto (fun ε : ℝ => Real.log ε⁻¹)
       (𝓝[>] (0 : ℝ)) atTop :=
     Real.tendsto_log_atTop.comp tendsto_inv_nhdsGT_zero
@@ -10264,11 +10225,11 @@ theorem tendsto_shortEndpoint :
     ht.const_mul_atTop (by norm_num : (0 : ℝ) < 10)
 
 def shortShellRadiusContribution (ε : ℝ) : ℝ :=
-  ∫ a in shortCutoff ε..shortEndpoint ε,
+  ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     shortShellRadiusIntegrand ε a
 
 def supportedShortShellRadiusIntegrand (ε a : ℝ) : ℝ :=
-  (Set.Ioc (shortCutoff ε) (shortEndpoint ε)).indicator
+  (Set.Ioc (ε ^ 3) (10 * Real.log (1 / ε))).indicator
     (shortShellRadiusIntegrand ε) a
 
 theorem supportedShortShellRadiusIntegrand_measurable (ε : ℝ) :
@@ -10284,7 +10245,7 @@ theorem tendsto_supportedShortShellRadiusIntegrand {a : ℝ} (ha : 0 < a) :
     [tendsto_shortCutoff.eventually (Iio_mem_nhds ha),
       tendsto_shortEndpoint.eventually_ge_atTop a]
     with ε hlower hupper
-  have hmem : a ∈ Set.Ioc (shortCutoff ε) (shortEndpoint ε) :=
+  have hmem : a ∈ Set.Ioc (ε ^ 3) (10 * Real.log (1 / ε)) :=
     ⟨hlower, hupper⟩
   simp only [supportedShortShellRadiusIntegrand, Set.indicator_of_mem hmem]
 
@@ -10305,7 +10266,7 @@ theorem tendsto_supportedShortShellRadiusIntegral :
           (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))]
       with ε hε hsmall
     filter_upwards [ae_restrict_mem measurableSet_Ioi] with a ha
-    by_cases hmem : a ∈ Set.Ioc (shortCutoff ε) (shortEndpoint ε)
+    by_cases hmem : a ∈ Set.Ioc (ε ^ 3) (10 * Real.log (1 / ε))
     · rw [show supportedShortShellRadiusIntegrand ε a =
         shortShellRadiusIntegrand ε a by
           exact Set.indicator_of_mem hmem (shortShellRadiusIntegrand ε)]
@@ -10322,15 +10283,14 @@ theorem tendsto_supportedShortShellRadiusIntegral :
 
 theorem shortShellRadiusContribution_eq_supported {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     shortShellRadiusContribution ε =
       ∫ a in Set.Ioi (0 : ℝ),
         supportedShortShellRadiusIntegrand ε a := by
-  have hcutoff : 0 ≤ shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 ≤ (ε ^ 3) := by
     positivity
   have hsubset :
-      Set.Ioc (shortCutoff ε) (shortEndpoint ε) ⊆
+      Set.Ioc (ε ^ 3) (10 * Real.log (1 / ε)) ⊆
         Set.Ioi (0 : ℝ) := by
     intro a ha
     exact lt_of_le_of_lt hcutoff ha.1
@@ -10350,7 +10310,7 @@ theorem tendsto_shortShellRadiusContribution :
         (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1)),
       tendsto_shortEndpoint.eventually_ge_atTop (1 : ℝ)]
     with ε hε hcutoff hendpoint
-  have horder : shortCutoff ε ≤ shortEndpoint ε :=
+  have horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)) :=
     hcutoff.le.trans hendpoint
   exact (shortShellRadiusContribution_eq_supported hε horder).symm
 
@@ -10435,7 +10395,7 @@ theorem tendsto_limitingSaddleRadius_wallisIntegral :
 theorem saddleRadius_wallis_constant :
     Real.sqrt (1 / (2 * Real.pi)) *
       Real.exp (-(1 / 2 : ℝ) * Real.log (Real.pi / 2)) =
-        criticalRadius := by
+        Real.pi⁻¹ := by
   have hhalfpi : 0 < Real.pi / 2 := by positivity
   have hexpsq :
       (Real.exp (-(1 / 2 : ℝ) * Real.log (Real.pi / 2))) ^ 2 =
@@ -10463,12 +10423,11 @@ theorem saddleRadius_wallis_constant :
         Real.exp (-(1 / 2 : ℝ) * Real.log (Real.pi / 2)) := by
     positivity
   have hright : 0 ≤ Real.pi⁻¹ := (inv_pos.mpr Real.pi_pos).le
-  unfold criticalRadius
   nlinarith
 
 theorem tendsto_limitingSaddleRadius :
     Tendsto limitingSaddleRadius (𝓝[>] (0 : ℝ))
-      (nhds criticalRadius) := by
+      (nhds Real.pi⁻¹) := by
   have h := tendsto_limitingSaddleRadius_wallisIntegral
   rw [integral_wallisRadiusIntegrand] at h
   simpa only [saddleRadius_wallis_constant] using! h
@@ -19039,11 +18998,11 @@ theorem saddle_one_add_abs_cube_le (T : ℝ) :
 
 theorem plusPolynomial_imaginary_norm_ge_beta
     {ε u : ℝ} (hε : 0 < ε) (hu : -1 ≤ u) :
-    beta ε ≤ ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-  have hb : 0 < beta ε := beta_pos hε
+    (ε / 4) ≤ ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ := by
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
   have hterm : 0 ≤ (1 - u) ^ 2 * (1 + u) :=
     mul_nonneg (sq_nonneg _) (by linarith)
-  have hvalue : 0 < beta ε + (1 - u) ^ 2 * (1 + u) :=
+  have hvalue : 0 < (ε / 4) + (1 - u) ^ 2 * (1 + u) :=
     add_pos_of_pos_of_nonneg hb hterm
   rw [plusPolynomial_imaginary, Complex.norm_real,
     Real.norm_eq_abs, abs_of_pos hvalue]
@@ -19052,11 +19011,11 @@ theorem plusPolynomial_imaginary_norm_ge_beta
 theorem plusPolynomial_imaginary_cubic_growth_le
     {ε u : ℝ} (hε : 0 < ε) (hu : -1 ≤ u) :
     (1 + |u|) ^ 3 ≤
-      (27 / beta ε + 9) *
+      (27 / (ε / 4) + 9) *
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-  have hb : 0 < beta ε := beta_pos hε
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
   have hnorm :
-      beta ε ≤ ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
+      (ε / 4) ≤ ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
     plusPolynomial_imaginary_norm_ge_beta hε hu
   by_cases hbounded : u ≤ 2
   · have habs : |u| ≤ 2 := by
@@ -19069,12 +19028,12 @@ theorem plusPolynomial_imaginary_cubic_growth_le
       exact hpow
     calc
       (1 + |u|) ^ 3 ≤ 27 := hcube
-      _ = (27 / beta ε) * beta ε := by
+      _ = (27 / (ε / 4)) * (ε / 4) := by
         field_simp [hb.ne']
-      _ ≤ (27 / beta ε) *
+      _ ≤ (27 / (ε / 4)) *
           ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
         mul_le_mul_of_nonneg_left hnorm (by positivity)
-      _ ≤ (27 / beta ε + 9) *
+      _ ≤ (27 / (ε / 4) + 9) *
           ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ := by
         have hnonnegative :=
           norm_nonneg (plusPolynomial ε (Complex.I * (u : ℂ)))
@@ -19083,7 +19042,7 @@ theorem plusPolynomial_imaginary_cubic_growth_le
     have habs : |u| = u := abs_of_pos (by linarith)
     have hvalue :
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ =
-          beta ε + (1 - u) ^ 2 * (1 + u) := by
+          (ε / 4) + (1 - u) ^ 2 * (1 + u) := by
       rw [plusPolynomial_imaginary, Complex.norm_real,
         Real.norm_eq_abs]
       apply abs_of_pos
@@ -19108,36 +19067,35 @@ theorem plusPolynomial_imaginary_cubic_growth_le
           (Complex.I * (u : ℂ))‖ := by
         rw [hvalue]
         linarith
-      _ ≤ (27 / beta ε + 9) *
+      _ ≤ (27 / (ε / 4) + 9) *
           ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ := by
         have hnonnegative :=
           norm_nonneg (plusPolynomial ε (Complex.I * (u : ℂ)))
-        have hcoefficient : 0 ≤ 27 / beta ε := by
+        have hcoefficient : 0 ≤ 27 / (ε / 4) := by
           positivity
         linarith [mul_nonneg hcoefficient hnonnegative]
 
 theorem minusPolynomial_imaginary_norm_ge_three_beta
     {ε u : ℝ} (hε : 0 < ε)
     (hu : 1 + ε / 4 ≤ u) :
-    3 * beta ε ≤
+    3 * (ε / 4) ≤
       ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-  have hb : 0 < beta ε := beta_pos hε
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
   have hone : 1 ≤ u := by linarith
-  have hbeta : beta ε ≤ u - 1 := by
-    unfold beta
+  have hbeta : (ε / 4) ≤ u - 1 := by
     linarith
   have hsquare : (4 : ℝ) ≤ (1 + u) ^ 2 := by
     linarith [sq_nonneg (u - 1)]
   have hproduct :
-      4 * beta ε ≤ (u - 1) * (1 + u) ^ 2 := by
+      4 * (ε / 4) ≤ (u - 1) * (1 + u) ^ 2 := by
     calc
-      4 * beta ε = beta ε * 4 := by ring
+      4 * (ε / 4) = (ε / 4) * 4 := by ring
       _ ≤ (u - 1) * (1 + u) ^ 2 :=
         mul_le_mul hbeta hsquare (by norm_num) (by linarith)
   have hnegative := minusPolynomial_imaginary_re_neg hε hu
   rw [minusPolynomial_imaginary, Complex.norm_real,
     Real.norm_eq_abs]
-  have harg : beta ε + (1 - u) * (1 + u) ^ 2 < 0 := by
+  have harg : (ε / 4) + (1 - u) * (1 + u) ^ 2 < 0 := by
     rw [minusPolynomial_imaginary, Complex.ofReal_re]
       at hnegative
     exact hnegative
@@ -19148,12 +19106,11 @@ theorem minusPolynomial_imaginary_cubic_growth_le
     {ε u : ℝ} (hε : 0 < ε)
     (hu : 1 + ε / 4 ≤ u) :
     (1 + |u|) ^ 3 ≤
-      (9 / beta ε + 6) *
+      (9 / (ε / 4) + 6) *
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-  have hb : 0 < beta ε := beta_pos hε
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
   have hone : 1 ≤ u := by linarith
-  have hbeta : beta ε ≤ u - 1 := by
-    unfold beta
+  have hbeta : (ε / 4) ≤ u - 1 := by
     linarith
   have habs : |u| = u := abs_of_pos (by linarith)
   have hnorm := minusPolynomial_imaginary_norm_ge_three_beta
@@ -19169,12 +19126,12 @@ theorem minusPolynomial_imaginary_cubic_growth_le
       exact hpow
     calc
       (1 + |u|) ^ 3 ≤ 27 := hcube
-      _ = (9 / beta ε) * (3 * beta ε) := by
+      _ = (9 / (ε / 4)) * (3 * (ε / 4)) := by
         field_simp [hb.ne']; norm_num
-      _ ≤ (9 / beta ε) *
+      _ ≤ (9 / (ε / 4)) *
           ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ :=
         mul_le_mul_of_nonneg_left hnorm (by positivity)
-      _ ≤ (9 / beta ε + 6) *
+      _ ≤ (9 / (ε / 4) + 6) *
           ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
         have hnonnegative :=
           norm_nonneg (minusPolynomial ε
@@ -19184,10 +19141,10 @@ theorem minusPolynomial_imaginary_cubic_growth_le
     have hnegative := minusPolynomial_imaginary_re_neg hε hu
     have hvalue :
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ =
-          (u - 1) * (1 + u) ^ 2 - beta ε := by
+          (u - 1) * (1 + u) ^ 2 - (ε / 4) := by
       rw [minusPolynomial_imaginary, Complex.norm_real,
         Real.norm_eq_abs]
-      have harg : beta ε + (1 - u) * (1 + u) ^ 2 < 0 := by
+      have harg : (ε / 4) + (1 - u) * (1 + u) ^ 2 < 0 := by
         rw [minusPolynomial_imaginary, Complex.ofReal_re]
           at hnegative
         exact hnegative
@@ -19196,10 +19153,10 @@ theorem minusPolynomial_imaginary_cubic_growth_le
     have hsquare : (4 : ℝ) ≤ (1 + u) ^ 2 := by
       linarith [sq_nonneg (u - 1)]
     have hterm :
-        2 * beta ε ≤ (u - 1) * (1 + u) ^ 2 := by
+        2 * (ε / 4) ≤ (u - 1) * (1 + u) ^ 2 := by
       calc
-        2 * beta ε ≤ 4 * beta ε := by linarith
-        _ = beta ε * 4 := by ring
+        2 * (ε / 4) ≤ 4 * (ε / 4) := by linarith
+        _ = (ε / 4) * 4 := by ring
         _ ≤ (u - 1) * (1 + u) ^ 2 :=
           mul_le_mul hbeta hsquare (by norm_num) (by linarith)
     have hlinear : 1 + u ≤ 3 * (u - 1) := by
@@ -19218,12 +19175,12 @@ theorem minusPolynomial_imaginary_cubic_growth_le
           (Complex.I * (u : ℂ))‖ := by
         rw [hvalue]
         linarith
-      _ ≤ (9 / beta ε + 6) *
+      _ ≤ (9 / (ε / 4) + 6) *
           ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
         have hnonnegative :=
           norm_nonneg (minusPolynomial ε
             (Complex.I * (u : ℂ)))
-        have hcoefficient : 0 ≤ 9 / beta ε := by
+        have hcoefficient : 0 ≤ 9 / (ε / 4) := by
           positivity
         linarith [mul_nonneg hcoefficient hnonnegative]
 
@@ -19244,8 +19201,8 @@ theorem exists_plusPolynomial_uniform_norm_ratio
             ((T : ℂ) + Complex.I * (u : ℂ))‖ /
           ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ ≤
             C * (1 + |T| ^ 3) := by
-  have hb : 0 < beta ε := beta_pos hε
-  refine ⟨4 * (1 + beta ε) * (27 / beta ε + 9),
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
+  refine ⟨4 * (1 + (ε / 4)) * (27 / (ε / 4) + 9),
     by positivity, ?_⟩
   intro u hu T
   let z : ℂ := (T : ℂ) + Complex.I * (u : ℂ)
@@ -19267,23 +19224,23 @@ theorem exists_plusPolynomial_uniform_norm_ratio
   have hheight := plusPolynomial_imaginary_cubic_growth_le
     hε hu
   change ‖plusPolynomial ε z‖ / D ≤
-    (4 * (1 + beta ε) * (27 / beta ε + 9)) *
+    (4 * (1 + (ε / 4)) * (27 / (ε / 4) + 9)) *
       (1 + |T| ^ 3)
   apply (div_le_iff₀ hD).2
   calc
     ‖plusPolynomial ε z‖ ≤
-        (1 + beta ε) * (1 + ‖z‖) ^ 3 := hbase
-    _ ≤ (1 + beta ε) *
+        (1 + (ε / 4)) * (1 + ‖z‖) ^ 3 := hbase
+    _ ≤ (1 + (ε / 4)) *
         ((1 + |T|) * (1 + |u|)) ^ 3 := by
       gcongr
-    _ = (1 + beta ε) * (1 + |T|) ^ 3 *
+    _ = (1 + (ε / 4)) * (1 + |T|) ^ 3 *
         (1 + |u|) ^ 3 := by
       ring
-    _ ≤ (1 + beta ε) *
+    _ ≤ (1 + (ε / 4)) *
         (4 * (1 + |T| ^ 3)) *
-          ((27 / beta ε + 9) * D) := by
+          ((27 / (ε / 4) + 9) * D) := by
       gcongr
-    _ = ((4 * (1 + beta ε) * (27 / beta ε + 9)) *
+    _ = ((4 * (1 + (ε / 4)) * (27 / (ε / 4) + 9)) *
         (1 + |T| ^ 3)) * D := by
       ring
 
@@ -19295,8 +19252,8 @@ theorem exists_minusPolynomial_uniform_norm_ratio
             ((T : ℂ) + Complex.I * (u : ℂ))‖ /
           ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ ≤
             C * (1 + |T| ^ 3) := by
-  have hb : 0 < beta ε := beta_pos hε
-  refine ⟨4 * (1 + beta ε) * (9 / beta ε + 6),
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
+  refine ⟨4 * (1 + (ε / 4)) * (9 / (ε / 4) + 6),
     by positivity, ?_⟩
   intro u hu T
   let z : ℂ := (T : ℂ) + Complex.I * (u : ℂ)
@@ -19304,7 +19261,7 @@ theorem exists_minusPolynomial_uniform_norm_ratio
   have hD : 0 < D := by
     have h := minusPolynomial_imaginary_norm_ge_three_beta
       hε hu
-    change 3 * beta ε ≤ D at h
+    change 3 * (ε / 4) ≤ D at h
     linarith
   have htriangle :
       1 + ‖z‖ ≤ (1 + |T|) * (1 + |u|) := by
@@ -19321,23 +19278,23 @@ theorem exists_minusPolynomial_uniform_norm_ratio
   have hheight := minusPolynomial_imaginary_cubic_growth_le
     hε hu
   change ‖minusPolynomial ε z‖ / D ≤
-    (4 * (1 + beta ε) * (9 / beta ε + 6)) *
+    (4 * (1 + (ε / 4)) * (9 / (ε / 4) + 6)) *
       (1 + |T| ^ 3)
   apply (div_le_iff₀ hD).2
   calc
     ‖minusPolynomial ε z‖ ≤
-        (1 + beta ε) * (1 + ‖z‖) ^ 3 := hbase
-    _ ≤ (1 + beta ε) *
+        (1 + (ε / 4)) * (1 + ‖z‖) ^ 3 := hbase
+    _ ≤ (1 + (ε / 4)) *
         ((1 + |T|) * (1 + |u|)) ^ 3 := by
       gcongr
-    _ = (1 + beta ε) * (1 + |T|) ^ 3 *
+    _ = (1 + (ε / 4)) * (1 + |T|) ^ 3 *
         (1 + |u|) ^ 3 := by
       ring
-    _ ≤ (1 + beta ε) *
+    _ ≤ (1 + (ε / 4)) *
         (4 * (1 + |T| ^ 3)) *
-          ((9 / beta ε + 6) * D) := by
+          ((9 / (ε / 4) + 6) * D) := by
       gcongr
-    _ = ((4 * (1 + beta ε) * (9 / beta ε + 6)) *
+    _ = ((4 * (1 + (ε / 4)) * (9 / (ε / 4) + 6)) *
         (1 + |T| ^ 3)) * D := by
       ring
 
@@ -19580,8 +19537,8 @@ theorem exists_plusPolynomial_uniform_difference_ratio
             plusPolynomial ε (Complex.I * (u : ℂ))‖ /
           ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ ≤
             C * (|T| + |T| ^ 3) := by
-  have hb : 0 < beta ε := beta_pos hε
-  refine ⟨9 * (27 / beta ε + 9), by positivity, ?_⟩
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
+  refine ⟨9 * (27 / (ε / 4) + 9), by positivity, ?_⟩
   intro u hu T
   let D : ℝ := ‖plusPolynomial ε (Complex.I * (u : ℂ))‖
   let S : ℝ := |T| + |T| ^ 3
@@ -19598,13 +19555,13 @@ theorem exists_plusPolynomial_uniform_difference_ratio
   have hgrowth := plusPolynomial_imaginary_cubic_growth_le
     hε hu
   have hquadratic :
-      (1 + |u|) ^ 2 ≤ (27 / beta ε + 9) * D :=
+      (1 + |u|) ^ 2 ≤ (27 / (ε / 4) + 9) * D :=
     hsquare.trans hgrowth
   change
     ‖plusPolynomial ε
           ((T : ℂ) + Complex.I * (u : ℂ)) -
         plusPolynomial ε (Complex.I * (u : ℂ))‖ / D ≤
-      (9 * (27 / beta ε + 9)) * S
+      (9 * (27 / (ε / 4) + 9)) * S
   apply (div_le_iff₀ hD).2
   calc
     ‖plusPolynomial ε
@@ -19612,9 +19569,9 @@ theorem exists_plusPolynomial_uniform_difference_ratio
         plusPolynomial ε (Complex.I * (u : ℂ))‖ ≤
       9 * (1 + |u|) ^ 2 * S :=
         plusPolynomial_translation_norm_le ε u T
-    _ ≤ 9 * ((27 / beta ε + 9) * D) * S := by
+    _ ≤ 9 * ((27 / (ε / 4) + 9) * D) * S := by
       gcongr
-    _ = ((9 * (27 / beta ε + 9)) * S) * D := by
+    _ = ((9 * (27 / (ε / 4) + 9)) * S) * D := by
       ring
 
 theorem exists_minusPolynomial_uniform_difference_ratio
@@ -19626,15 +19583,15 @@ theorem exists_minusPolynomial_uniform_difference_ratio
             minusPolynomial ε (Complex.I * (u : ℂ))‖ /
           ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ ≤
             C * (|T| + |T| ^ 3) := by
-  have hb : 0 < beta ε := beta_pos hε
-  refine ⟨9 * (9 / beta ε + 6), by positivity, ?_⟩
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
+  refine ⟨9 * (9 / (ε / 4) + 6), by positivity, ?_⟩
   intro u hu T
   let D : ℝ := ‖minusPolynomial ε (Complex.I * (u : ℂ))‖
   let S : ℝ := |T| + |T| ^ 3
   have hD : 0 < D := by
     have h := minusPolynomial_imaginary_norm_ge_three_beta
       hε hu
-    change 3 * beta ε ≤ D at h
+    change 3 * (ε / 4) ≤ D at h
     linarith
   have hS : 0 ≤ S := by
     try dsimp [S]
@@ -19647,13 +19604,13 @@ theorem exists_minusPolynomial_uniform_difference_ratio
   have hgrowth := minusPolynomial_imaginary_cubic_growth_le
     hε hu
   have hquadratic :
-      (1 + |u|) ^ 2 ≤ (9 / beta ε + 6) * D :=
+      (1 + |u|) ^ 2 ≤ (9 / (ε / 4) + 6) * D :=
     hsquare.trans hgrowth
   change
     ‖minusPolynomial ε
           ((T : ℂ) + Complex.I * (u : ℂ)) -
         minusPolynomial ε (Complex.I * (u : ℂ))‖ / D ≤
-      (9 * (9 / beta ε + 6)) * S
+      (9 * (9 / (ε / 4) + 6)) * S
   apply (div_le_iff₀ hD).2
   calc
     ‖minusPolynomial ε
@@ -19661,9 +19618,9 @@ theorem exists_minusPolynomial_uniform_difference_ratio
         minusPolynomial ε (Complex.I * (u : ℂ))‖ ≤
       9 * (1 + |u|) ^ 2 * S :=
         minusPolynomial_translation_norm_le ε u T
-    _ ≤ 9 * ((9 / beta ε + 6) * D) * S := by
+    _ ≤ 9 * ((9 / (ε / 4) + 6) * D) * S := by
       gcongr
-    _ = ((9 * (9 / beta ε + 6)) * S) * D := by
+    _ = ((9 * (9 / (ε / 4) + 6)) * S) * D := by
       ring
 
 def upperNegativeHalfGammaArgument (N : ℕ) (s : ℝ) : ℂ :=
@@ -19692,7 +19649,7 @@ theorem upperNegativeHalfGammaArgument_succ_add_one
   ring
 
 theorem tendsto_upper_shortEndpoint_scaled :
-    Tendsto (fun ε : ℝ => ε * shortEndpoint ε)
+    Tendsto (fun ε : ℝ => ε * (10 * Real.log (1 / ε)))
       (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) := by
   have hlog := tendsto_log_mul_rpow_nhdsGT_zero
     (by norm_num : (0 : ℝ) < 1)
@@ -19700,13 +19657,12 @@ theorem tendsto_upper_shortEndpoint_scaled :
   have hscaled := hlog.const_mul (-10 : ℝ)
   convert! hscaled using 1
   · ext ε
-    unfold shortEndpoint
     rw [one_div, Real.log_inv]
     ring
   · norm_num
 
 theorem tendsto_upper_one_add_shortEndpoint_scaled :
-    Tendsto (fun ε : ℝ => ε * (1 + shortEndpoint ε))
+    Tendsto (fun ε : ℝ => ε * (1 + (10 * Real.log (1 / ε))))
       (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) := by
   have hid : Tendsto (fun ε : ℝ => ε)
       (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) :=
@@ -19718,11 +19674,11 @@ theorem tendsto_upper_one_add_shortEndpoint_scaled :
 
 theorem eventually_upper_shortMargin_positive :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
-      ∀ a ∈ Set.Icc (shortCutoff ε) (shortEndpoint ε),
-        (1 / 2 : ℝ) ≤ shortMargin ε a := by
+      ∀ a ∈ Set.Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+        (1 / 2 : ℝ) ≤ (1 - 10 * ε * (1 + a)) := by
   have hscaled :
       Tendsto (fun ε : ℝ =>
-        10 * (ε * (1 + shortEndpoint ε)))
+        10 * (ε * (1 + (10 * Real.log (1 / ε)))))
         (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) := by
     convert! tendsto_upper_one_add_shortEndpoint_scaled.const_mul
       (10 : ℝ) using 1; norm_num
@@ -19731,57 +19687,55 @@ theorem eventually_upper_shortMargin_positive :
   filter_upwards [self_mem_nhdsWithin, hsmall]
     with ε hε hbound a ha
   change 0 < ε at hε
-  unfold shortMargin
   have hcompare :
-      ε * (1 + a) ≤ ε * (1 + shortEndpoint ε) :=
+      ε * (1 + a) ≤ ε * (1 + (10 * Real.log (1 / ε))) :=
     mul_le_mul_of_nonneg_left (by linarith [ha.2]) hε.le
-  change 10 * (ε * (1 + shortEndpoint ε)) < 1 / 2
+  change 10 * (ε * (1 + (10 * Real.log (1 / ε)))) < 1 / 2
     at hbound
   linarith
 
 theorem eventually_upper_shellLocation_gt_shortEndpoint :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
-      shortEndpoint ε + 1 < shellLocation ε := by
+      (10 * Real.log (1 / ε)) + 1 < (ε⁻¹ ^ 3) := by
   have hid : Tendsto (fun ε : ℝ => ε)
       (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) :=
     tendsto_id.mono_left nhdsWithin_le_nhds
   have hpow :
       Tendsto (fun ε : ℝ =>
-        ε ^ 2 * (ε * (1 + shortEndpoint ε)))
+        ε ^ 2 * (ε * (1 + (10 * Real.log (1 / ε)))))
         (𝓝[>] (0 : ℝ)) (𝓝 (0 : ℝ)) := by
     simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero] using! (hid.pow 2).mul
       tendsto_upper_one_add_shortEndpoint_scaled
   have hsmall :
       ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
-        ε ^ 3 * (shortEndpoint ε + 1) < 1 := by
+        ε ^ 3 * ((10 * Real.log (1 / ε)) + 1) < 1 := by
     have hevent := hpow.eventually
       (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
     filter_upwards [hevent] with ε hε
-    change ε ^ 2 * (ε * (1 + shortEndpoint ε)) < 1
+    change ε ^ 2 * (ε * (1 + (10 * Real.log (1 / ε)))) < 1
       at hε
     linarith
   filter_upwards [self_mem_nhdsWithin, hsmall]
     with ε hε hbound
   change 0 < ε at hε
   have hcube : 0 < ε ^ 3 := pow_pos hε 3
-  have hinv : ε ^ 3 * shellLocation ε = 1 := by
-    unfold shellLocation
+  have hinv : ε ^ 3 * (ε⁻¹ ^ 3) = 1 := by
     field_simp [hε.ne']
   have hmul :
-      ε ^ 3 * (shortEndpoint ε + 1) <
-        ε ^ 3 * shellLocation ε := by
+      ε ^ 3 * ((10 * Real.log (1 / ε)) + 1) <
+        ε ^ 3 * (ε⁻¹ ^ 3) := by
     rw [hinv]
     exact hbound
   nlinarith [hmul]
 
 def upperShellShortCoefficient (ε : ℝ) : ℝ :=
-  shortEndpoint ε + (shortCutoff ε)⁻¹
+  (10 * Real.log (1 / ε)) + (ε ^ 3)⁻¹
 
 def upperShellMarginRatio (ε : ℝ) : ℝ :=
   5000 * upperShellShortCoefficient ε *
-      Real.exp ((ε / 2) * shortEndpoint ε) /
+      Real.exp ((ε / 2) * (10 * Real.log (1 / ε))) /
     (shellWeight ε *
-      Real.exp ((ε / 2) * shellLocation ε))
+      Real.exp ((ε / 2) * (ε⁻¹ ^ 3)))
 
 theorem upperShellMarginRatio_inv
     {x : ℝ} (hx : x ≠ 0) :
@@ -19789,12 +19743,12 @@ theorem upperShellMarginRatio_inv
       5000 * (10 * Real.log x + x ^ 3) *
         Real.exp (-(x ^ 2) / 8) *
           Real.exp (5 * Real.log x / x) := by
-  have hshort : shortEndpoint x⁻¹ = 10 * Real.log x := by
-    simp only [shortEndpoint, div_inv_eq_mul, one_mul]
-  have hcutoff : (shortCutoff x⁻¹)⁻¹ = x ^ 3 := by
-    simp only [shortCutoff, inv_pow, inv_inv]
-  have hlocation : shellLocation x⁻¹ = x ^ 3 := by
-    simp only [shellLocation, inv_inv]
+  have hshort : (10 * Real.log (1 / x⁻¹)) = 10 * Real.log x := by
+    simp only [div_inv_eq_mul, one_mul]
+  have hcutoff : ((x⁻¹ ^ 3))⁻¹ = x ^ 3 := by
+    simp only [inv_pow, inv_inv]
+  have hlocation : (x⁻¹⁻¹ ^ 3) = x ^ 3 := by
+    simp only [inv_inv]
   have hweight :
       shellWeight x⁻¹ = Real.exp (-(3 : ℝ) * x ^ 2 / 8) := by
     unfold shellWeight
@@ -19907,22 +19861,22 @@ theorem tendsto_upperShellMarginRatio :
 theorem eventually_upper_shell_parameter_margin :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
       upperShellShortCoefficient ε *
-          Real.exp ((ε / 2) * shortEndpoint ε) ≤
+          Real.exp ((ε / 2) * (10 * Real.log (1 / ε))) ≤
         (1 / 5000 : ℝ) * shellWeight ε *
-          Real.exp ((ε / 2) * shellLocation ε) := by
+          Real.exp ((ε / 2) * (ε⁻¹ ^ 3)) := by
   have hratio := tendsto_upperShellMarginRatio.eventually
     (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
   filter_upwards [hratio] with ε hε
   unfold upperShellMarginRatio at hε
   have hden :
       0 < shellWeight ε *
-        Real.exp ((ε / 2) * shellLocation ε) :=
+        Real.exp ((ε / 2) * (ε⁻¹ ^ 3)) :=
     mul_pos (shellWeight_pos ε) (Real.exp_pos _)
   have hscaled :
       5000 * upperShellShortCoefficient ε *
-        Real.exp ((ε / 2) * shortEndpoint ε) <
+        Real.exp ((ε / 2) * (10 * Real.log (1 / ε))) <
           shellWeight ε *
-            Real.exp ((ε / 2) * shellLocation ε) := by
+            Real.exp ((ε / 2) * (ε⁻¹ ^ 3)) := by
     exact (div_lt_one hden).mp hε
   linarith
 
@@ -19946,7 +19900,7 @@ theorem upper_min_frequency_inverse_sq_le
     linarith
 
 def upperShortShellDamping (ε ℓ δ T : ℝ) : ℝ :=
-  ℓ * ∫ a in shortCutoff ε..shortEndpoint ε,
+  ℓ * ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     (-shortShellDensity ε a) *
       Real.cosh ((1 + δ) * a) *
         (1 - Real.cos (a * T))
@@ -19979,15 +19933,14 @@ theorem upper_shortShellDensity_damping_le
     {ε δ a A : ℝ}
     (hε : 0 < ε) (hδ : 0 ≤ δ)
     (ha : 0 < a) (haA : a ≤ A)
-    (hmargin : 0 ≤ shortMargin ε a)
+    (hmargin : 0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ) :
     (-shortShellDensity ε a) *
         Real.cosh ((1 + δ) * a) *
           (1 - Real.cos (a * T)) ≤
       Real.exp (δ * A) * min (T ^ 2) 1 *
         (1 + (a ^ 2)⁻¹) := by
-  have hmarginone : shortMargin ε a ≤ 1 := by
-    unfold shortMargin at hmargin ⊢
+  have hmarginone : (1 - 10 * ε * (1 + a)) ≤ 1 := by
     linarith [mul_nonneg hε.le (show 0 ≤ 1 + a by linarith)]
   have hnegativeexp : Real.exp (-2 * a) ≤ 1 := by
     exact Real.exp_le_one_iff.mpr (by linarith)
@@ -20004,9 +19957,9 @@ theorem upper_shortShellDensity_damping_le
       (sub_nonneg.mpr (Real.cos_le_one _))
       (by positivity)
   have hratio_scaled :
-      shortMargin ε a * Real.exp (-2 * a) *
+      (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) *
           (Real.cosh ((1 + δ) * a) / Real.cosh a) ≤
-        shortMargin ε a * Real.exp (-2 * a) *
+        (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) *
           Real.exp (δ * A) :=
     mul_le_mul_of_nonneg_left hratio
       (mul_nonneg hmargin (Real.exp_pos _).le)
@@ -20014,17 +19967,17 @@ theorem upper_shortShellDensity_damping_le
       (-shortShellDensity ε a) *
           Real.cosh ((1 + δ) * a) *
             (1 - Real.cos (a * T)) =
-        shortMargin ε a * Real.exp (-2 * a) *
+        (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) *
           (Real.cosh ((1 + δ) * a) / Real.cosh a) *
             ((1 - Real.cos (a * T)) / (2 * a ^ 2)) := by
     unfold shortShellDensity
     field_simp [ha.ne', (Real.cosh_pos a).ne']
   rw [hidentity]
   calc
-    shortMargin ε a * Real.exp (-2 * a) *
+    (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) *
         (Real.cosh ((1 + δ) * a) / Real.cosh a) *
           ((1 - Real.cos (a * T)) / (2 * a ^ 2)) ≤
-      (shortMargin ε a * Real.exp (-2 * a) *
+      ((1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) *
         Real.exp (δ * A)) *
           ((1 - Real.cos (a * T)) / (2 * a ^ 2)) :=
       mul_le_mul_of_nonneg_right hratio_scaled hosc_nonneg
@@ -20069,18 +20022,18 @@ theorem upper_intervalIntegral_one_add_inv_sq
 theorem upperShortShellDamping_global_bound
     {ε ℓ δ T : ℝ}
     (hε : 0 < ε) (hℓ : 0 ≤ ℓ) (hδ : 0 ≤ δ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Set.Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Set.Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a))) :
     upperShortShellDamping ε ℓ δ T ≤
       ℓ * upperShellShortCoefficient ε *
-        Real.exp (δ * shortEndpoint ε) *
+        Real.exp (δ * (10 * Real.log (1 / ε))) *
           min (T ^ 2) 1 := by
-  let a₀ : ℝ := shortCutoff ε
-  let A : ℝ := shortEndpoint ε
+  let a₀ : ℝ := (ε ^ 3)
+  let A : ℝ := (10 * Real.log (1 / ε))
   let K : ℝ := Real.exp (δ * A) * min (T ^ 2) 1
   have ha₀ : 0 < a₀ := by
-    try dsimp [a₀, shortCutoff]
+    try dsimp [a₀]
     positivity
   have hA : 0 < A := ha₀.trans_le horder
   have hK : 0 ≤ K := by
@@ -20090,8 +20043,7 @@ theorem upperShortShellDamping_global_bound
   have hshort :
       ContinuousOn (shortShellDensity ε) (Set.Icc a₀ A) := by
     have hn : Continuous (fun a : ℝ =>
-      shortMargin ε a * Real.exp (-2 * a)) := by
-      unfold shortMargin
+      (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a)) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
       2 * a ^ 2 * Real.cosh a) := by
@@ -20179,7 +20131,7 @@ theorem upperShortShellDamping_global_bound
 
 theorem eventually_upper_shortCutoff_le_shortEndpoint :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
-      shortCutoff ε ≤ shortEndpoint ε := by
+      (ε ^ 3) ≤ (10 * Real.log (1 / ε)) := by
   have hlower := tendsto_shortCutoff.eventually
     (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
   have hupper := tendsto_shortEndpoint.eventually_ge_atTop
@@ -20190,52 +20142,52 @@ theorem eventually_upper_shortCutoff_le_shortEndpoint :
 theorem upper_shell_parameter_margin_propagate
     {ε δ : ℝ}
     (hδ : ε / 2 ≤ δ)
-    (hseparation : shortEndpoint ε ≤ shellLocation ε)
+    (hseparation : (10 * Real.log (1 / ε)) ≤ (ε⁻¹ ^ 3))
     (hmargin :
       upperShellShortCoefficient ε *
-          Real.exp ((ε / 2) * shortEndpoint ε) ≤
+          Real.exp ((ε / 2) * (10 * Real.log (1 / ε))) ≤
         (1 / 5000 : ℝ) * shellWeight ε *
-          Real.exp ((ε / 2) * shellLocation ε)) :
+          Real.exp ((ε / 2) * (ε⁻¹ ^ 3))) :
     upperShellShortCoefficient ε *
-        Real.exp (δ * shortEndpoint ε) ≤
+        Real.exp (δ * (10 * Real.log (1 / ε))) ≤
       (1 / 5000 : ℝ) * shellWeight ε *
-        Real.exp (δ * shellLocation ε) := by
+        Real.exp (δ * (ε⁻¹ ^ 3)) := by
   let q : ℝ := δ - ε / 2
   have hq : 0 ≤ q := by
     try dsimp [q]
     linarith
   have hexp :
-      Real.exp (q * shortEndpoint ε) ≤
-        Real.exp (q * shellLocation ε) :=
+      Real.exp (q * (10 * Real.log (1 / ε))) ≤
+        Real.exp (q * (ε⁻¹ ^ 3)) :=
     Real.exp_le_exp.mpr
       (mul_le_mul_of_nonneg_left hseparation hq)
   have hfactor :
       0 ≤ (1 / 5000 : ℝ) * shellWeight ε *
-        Real.exp ((ε / 2) * shellLocation ε) := by
+        Real.exp ((ε / 2) * (ε⁻¹ ^ 3)) := by
     exact mul_nonneg
       (mul_nonneg (by norm_num) (shellWeight_pos ε).le)
       (Real.exp_pos _).le
   calc
     upperShellShortCoefficient ε *
-        Real.exp (δ * shortEndpoint ε) =
+        Real.exp (δ * (10 * Real.log (1 / ε))) =
       (upperShellShortCoefficient ε *
-        Real.exp ((ε / 2) * shortEndpoint ε)) *
-          Real.exp (q * shortEndpoint ε) := by
+        Real.exp ((ε / 2) * (10 * Real.log (1 / ε)))) *
+          Real.exp (q * (10 * Real.log (1 / ε))) := by
       rw [mul_assoc, ← Real.exp_add]
       congr 2
       try dsimp [q]
       ring
     _ ≤ ((1 / 5000 : ℝ) * shellWeight ε *
-        Real.exp ((ε / 2) * shellLocation ε)) *
-          Real.exp (q * shortEndpoint ε) :=
+        Real.exp ((ε / 2) * (ε⁻¹ ^ 3))) *
+          Real.exp (q * (10 * Real.log (1 / ε))) :=
       mul_le_mul_of_nonneg_right hmargin
         (Real.exp_pos _).le
     _ ≤ ((1 / 5000 : ℝ) * shellWeight ε *
-        Real.exp ((ε / 2) * shellLocation ε)) *
-          Real.exp (q * shellLocation ε) :=
+        Real.exp ((ε / 2) * (ε⁻¹ ^ 3))) *
+          Real.exp (q * (ε⁻¹ ^ 3)) :=
       mul_le_mul_of_nonneg_left hexp hfactor
     _ = (1 / 5000 : ℝ) * shellWeight ε *
-        Real.exp (δ * shellLocation ε) := by
+        Real.exp (δ * (ε⁻¹ ^ 3)) := by
       rw [mul_assoc, ← Real.exp_add]
       congr 2
       try dsimp [q]
@@ -20263,7 +20215,7 @@ theorem eventually_upper_shortShell_domination :
   have hshort :
       upperShortShellDamping ε ℓ δ T ≤
         ℓ * upperShellShortCoefficient ε *
-          Real.exp (δ * shortEndpoint ε) *
+          Real.exp (δ * (10 * Real.log (1 / ε))) *
             min (T ^ 2) 1 :=
     upperShortShellDamping_global_bound
       hε hℓ hδnonneg horder
@@ -20282,17 +20234,17 @@ theorem eventually_upper_shortShell_domination :
   calc
     upperShortShellDamping ε ℓ δ T ≤
         ℓ * upperShellShortCoefficient ε *
-          Real.exp (δ * shortEndpoint ε) *
+          Real.exp (δ * (10 * Real.log (1 / ε))) *
             min (T ^ 2) 1 := hshort
     _ ≤ ℓ * ((1 / 5000 : ℝ) * shellWeight ε *
-          Real.exp (δ * shellLocation ε)) *
+          Real.exp (δ * (ε⁻¹ ^ 3))) *
             min (T ^ 2) 1 := by
       convert! mul_le_mul_of_nonneg_right
         (mul_le_mul_of_nonneg_left hpropagate hℓ)
           hfreq using 1; ring
     _ = (1 / 100 : ℝ) *
         (ℓ / 50 * shellWeight ε *
-          Real.exp (δ * shellLocation ε) *
+          Real.exp (δ * (ε⁻¹ ^ 3)) *
             min (T ^ 2) 1) := by
       ring
     _ ≤ (1 / 100 : ℝ) *
@@ -20301,27 +20253,27 @@ theorem eventually_upper_shortShell_domination :
         (by norm_num)
 
 def upperPositiveShellVariance (ε δ : ℝ) : ℝ :=
-  ∫ a in shellLocation ε..shellLocation ε + 1,
+  ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * a ^ 2 *
       Real.cosh ((1 + δ) * a)
 
 theorem upperPositiveShellVariance_bounds
     {ε δ : ℝ} (hε : 0 < ε) (hδ : 0 ≤ δ) :
-    (1 / 2 : ℝ) * (shellLocation ε) ^ 2 *
+    (1 / 2 : ℝ) * (ε⁻¹ ^ 3) ^ 2 *
         shellWeight ε *
-          Real.exp (δ * shellLocation ε) ≤
+          Real.exp (δ * (ε⁻¹ ^ 3)) ≤
       upperPositiveShellVariance ε δ ∧
     upperPositiveShellVariance ε δ ≤
-      (shellLocation ε + 1) ^ 2 *
+      ((ε⁻¹ ^ 3) + 1) ^ 2 *
         shellWeight ε *
-          Real.exp (δ * (shellLocation ε + 1)) := by
-  let B : ℝ := shellLocation ε
+          Real.exp (δ * ((ε⁻¹ ^ 3) + 1)) := by
+  let B : ℝ := (ε⁻¹ ^ 3)
   let lo : ℝ := (1 / 2 : ℝ) * B ^ 2 *
     shellWeight ε * Real.exp (δ * B)
   let hi : ℝ := (B + 1) ^ 2 *
     shellWeight ε * Real.exp (δ * (B + 1))
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have hQ : 0 < shellWeight ε := shellWeight_pos ε
   have horder : B ≤ B + 1 := by linarith
@@ -20414,7 +20366,7 @@ theorem upperPositiveShellVariance_bounds
       one_mul] using! hupper
 
 def upperShortShellVariance (ε δ : ℝ) : ℝ :=
-  ∫ a in shortCutoff ε..shortEndpoint ε,
+  ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     (-shortShellDensity ε a) * a ^ 2 *
       Real.cosh ((1 + δ) * a)
 
@@ -20425,8 +20377,7 @@ theorem upper_shortShellDensity_variance_le
     (-shortShellDensity ε a) * a ^ 2 *
         Real.cosh ((1 + δ) * a) ≤
       (1 / 2 : ℝ) * Real.exp (δ * A) := by
-  have hmargin : shortMargin ε a ≤ 1 := by
-    unfold shortMargin
+  have hmargin : (1 - 10 * ε * (1 + a)) ≤ 1 := by
     linarith [mul_nonneg hε.le
       (show 0 ≤ 1 + a by linarith)]
   have hexp : Real.exp (-2 * a) ≤ 1 :=
@@ -20440,7 +20391,7 @@ theorem upper_shortShellDensity_variance_le
   have hidentity :
       (-shortShellDensity ε a) * a ^ 2 *
         Real.cosh ((1 + δ) * a) =
-          (1 / 2 : ℝ) * shortMargin ε a *
+          (1 / 2 : ℝ) * (1 - 10 * ε * (1 + a)) *
             Real.exp (-2 * a) *
               (Real.cosh ((1 + δ) * a) /
                 Real.cosh a) := by
@@ -20448,7 +20399,7 @@ theorem upper_shortShellDensity_variance_le
     field_simp [ha.ne', (Real.cosh_pos a).ne']
   rw [hidentity]
   calc
-    (1 / 2 : ℝ) * shortMargin ε a *
+    (1 / 2 : ℝ) * (1 - 10 * ε * (1 + a)) *
         Real.exp (-2 * a) *
           (Real.cosh ((1 + δ) * a) /
             Real.cosh a) ≤
@@ -20461,15 +20412,15 @@ theorem upper_shortShellDensity_variance_le
 theorem upperShortShellVariance_global_bound
     {ε δ : ℝ}
     (hε : 0 < ε) (hδ : 0 ≤ δ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     upperShortShellVariance ε δ ≤
       (1 / 2 : ℝ) * upperShellShortCoefficient ε *
-        Real.exp (δ * shortEndpoint ε) := by
-  let a₀ : ℝ := shortCutoff ε
-  let A : ℝ := shortEndpoint ε
+        Real.exp (δ * (10 * Real.log (1 / ε))) := by
+  let a₀ : ℝ := (ε ^ 3)
+  let A : ℝ := (10 * Real.log (1 / ε))
   let K : ℝ := (1 / 2 : ℝ) * Real.exp (δ * A)
   have ha₀ : 0 < a₀ := by
-    try dsimp [a₀, shortCutoff]
+    try dsimp [a₀]
     positivity
   have hA : 0 < A := ha₀.trans_le horder
   have hK : 0 ≤ K := by
@@ -20478,8 +20429,7 @@ theorem upperShortShellVariance_global_bound
   have hshort :
       ContinuousOn (shortShellDensity ε) (Set.Icc a₀ A) := by
     have hn : Continuous (fun a : ℝ =>
-      shortMargin ε a * Real.exp (-2 * a)) := by
-      unfold shortMargin
+      (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a)) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
       2 * a ^ 2 * Real.cosh a) := by
@@ -20538,20 +20488,19 @@ theorem upperShortShellVariance_global_bound
 theorem upperShortShellVariance_nonneg
     {ε δ : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Set.Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Set.Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a))) :
     0 ≤ upperShortShellVariance ε δ := by
   unfold upperShortShellVariance
   apply intervalIntegral.integral_nonneg horder
   intro a ha
-  have ha₀ : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have ha₀ : 0 < (ε ^ 3) := by
     positivity
   have hapos : 0 < a := ha₀.trans_le ha.1
   have hdensity : 0 ≤ -shortShellDensity ε a := by
     unfold shortShellDensity
-    have hn : 0 ≤ shortMargin ε a * Real.exp (-2 * a) :=
+    have hn : 0 ≤ (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) :=
       mul_nonneg (hmargin a ha) (Real.exp_pos _).le
     have hd : 0 < 2 * a ^ 2 * Real.cosh a := by
       positivity
@@ -20562,10 +20511,9 @@ theorem upperShortShellVariance_nonneg
 
 theorem upper_shellLocation_one_le
     {ε : ℝ} (hε : 0 < ε) (hεone : ε ≤ 1) :
-    1 ≤ shellLocation ε := by
+    1 ≤ (ε⁻¹ ^ 3) := by
   have hinv : 1 ≤ ε⁻¹ :=
     (one_le_inv₀ hε).mpr hεone
-  unfold shellLocation
   convert! pow_le_pow_left₀
     (show (0 : ℝ) ≤ 1 by norm_num) hinv 3 using 1; norm_num
 
@@ -20590,10 +20538,10 @@ theorem eventually_upper_shortShellVariance_domination :
   intro δ hδ
   have hδnonneg : 0 ≤ δ := by
     linarith
-  have hB : 1 ≤ shellLocation ε :=
+  have hB : 1 ≤ (ε⁻¹ ^ 3) :=
     upper_shellLocation_one_le hε hεone.le
-  have hBsq : 1 ≤ (shellLocation ε) ^ 2 := by
-    linarith [sq_nonneg (shellLocation ε - 1)]
+  have hBsq : 1 ≤ (ε⁻¹ ^ 3) ^ 2 := by
+    linarith [sq_nonneg ((ε⁻¹ ^ 3) - 1)]
   have hpropagate :=
     upper_shell_parameter_margin_propagate
       hδ (by linarith [hseparation]) hmargin
@@ -20604,23 +20552,23 @@ theorem eventually_upper_shortShellVariance_domination :
     (upperPositiveShellVariance_bounds hε hδnonneg).1
   have hqexp :
       0 ≤ shellWeight ε *
-        Real.exp (δ * shellLocation ε) :=
+        Real.exp (δ * (ε⁻¹ ^ 3)) :=
     mul_nonneg (shellWeight_pos ε).le
       (Real.exp_pos _).le
   calc
     upperShortShellVariance ε δ ≤
       (1 / 2 : ℝ) * upperShellShortCoefficient ε *
-        Real.exp (δ * shortEndpoint ε) := hvariance
+        Real.exp (δ * (10 * Real.log (1 / ε))) := hvariance
     _ ≤ (1 / 2 : ℝ) *
         ((1 / 5000 : ℝ) * shellWeight ε *
-          Real.exp (δ * shellLocation ε)) := by
+          Real.exp (δ * (ε⁻¹ ^ 3))) := by
       convert! mul_le_mul_of_nonneg_left
         hpropagate (by norm_num : (0 : ℝ) ≤ 1 / 2)
         using 1; ring
     _ ≤ (1 / 100 : ℝ) *
-        ((1 / 2 : ℝ) * (shellLocation ε) ^ 2 *
+        ((1 / 2 : ℝ) * (ε⁻¹ ^ 3) ^ 2 *
           shellWeight ε *
-            Real.exp (δ * shellLocation ε)) := by
+            Real.exp (δ * (ε⁻¹ ^ 3))) := by
       have hscaled :=
         mul_le_mul_of_nonneg_right hBsq hqexp
       linarith
@@ -20659,18 +20607,18 @@ theorem eventually_upper_netShellVariance_bounds :
   constructor <;> linarith
 
 def upperPositiveShellThirdMoment (ε δ : ℝ) : ℝ :=
-  ∫ a in shellLocation ε..shellLocation ε + 1,
+  ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * a ^ 3 *
       Real.cosh ((1 + δ) * a)
 
 theorem upperPositiveShellThirdMoment_le
     {ε δ : ℝ} (hε : 0 < ε) :
     upperPositiveShellThirdMoment ε δ ≤
-      (shellLocation ε + 1) *
+      ((ε⁻¹ ^ 3) + 1) *
         upperPositiveShellVariance ε δ := by
-  let B : ℝ := shellLocation ε
+  let B : ℝ := (ε⁻¹ ^ 3)
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have horder : B ≤ B + 1 := by
     linarith
@@ -20725,28 +20673,27 @@ theorem upperPositiveShellThirdMoment_le
     intervalIntegral.integral_const_mul] using! hmono
 
 def upperShortShellThirdMoment (ε δ : ℝ) : ℝ :=
-  ∫ a in shortCutoff ε..shortEndpoint ε,
+  ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     (-shortShellDensity ε a) * a ^ 3 *
       Real.cosh ((1 + δ) * a)
 
 theorem upperShortShellThirdMoment_le
     {ε δ : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Set.Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Set.Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a))) :
     upperShortShellThirdMoment ε δ ≤
-      shortEndpoint ε * upperShortShellVariance ε δ := by
-  let a₀ : ℝ := shortCutoff ε
-  let A : ℝ := shortEndpoint ε
+      (10 * Real.log (1 / ε)) * upperShortShellVariance ε δ := by
+  let a₀ : ℝ := (ε ^ 3)
+  let A : ℝ := (10 * Real.log (1 / ε))
   have ha₀ : 0 < a₀ := by
-    try dsimp [a₀, shortCutoff]
+    try dsimp [a₀]
     positivity
   have hshort :
       ContinuousOn (shortShellDensity ε) (Set.Icc a₀ A) := by
     have hn : Continuous (fun a : ℝ =>
-      shortMargin ε a * Real.exp (-2 * a)) := by
-      unfold shortMargin
+      (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a)) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
       2 * a ^ 2 * Real.cosh a) := by
@@ -20783,12 +20730,12 @@ theorem upperShortShellThirdMoment_le
             Real.cosh ((1 + δ) * a)) := by
     intro a ha
     have hapos : 0 < a := ha₀.trans_le ha.1
-    have hmargin' : 0 ≤ shortMargin ε a := by
+    have hmargin' : 0 ≤ (1 - 10 * ε * (1 + a)) := by
       apply hmargin
       exact ha
     have hdensity : 0 ≤ -shortShellDensity ε a := by
       unfold shortShellDensity
-      have hn : 0 ≤ shortMargin ε a * Real.exp (-2 * a) :=
+      have hn : 0 ≤ (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a) :=
         mul_nonneg hmargin' (Real.exp_pos _).le
       have hd : 0 < 2 * a ^ 2 * Real.cosh a := by
         positivity
@@ -20821,7 +20768,7 @@ theorem eventually_upper_shortShellThirdMoment_domination :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
       ∀ δ : ℝ, ε / 2 ≤ δ →
         upperShortShellThirdMoment ε δ ≤
-          (shortEndpoint ε / 100) *
+          ((10 * Real.log (1 / ε)) / 100) *
             upperPositiveShellVariance ε δ := by
   filter_upwards
     [self_mem_nhdsWithin,
@@ -20831,10 +20778,9 @@ theorem eventually_upper_shortShellThirdMoment_domination :
     with ε hε horder hmargin hdom
   change 0 < ε at hε
   intro δ hδ
-  have ha₀ : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have ha₀ : 0 < (ε ^ 3) := by
     positivity
-  have hA : 0 ≤ shortEndpoint ε :=
+  have hA : 0 ≤ (10 * Real.log (1 / ε)) :=
     (ha₀.trans_le horder).le
   have hthird := upperShortShellThirdMoment_le
     (δ := δ) hε horder
@@ -20843,12 +20789,12 @@ theorem eventually_upper_shortShellThirdMoment_domination :
       linarith)
   calc
     upperShortShellThirdMoment ε δ ≤
-      shortEndpoint ε * upperShortShellVariance ε δ := hthird
-    _ ≤ shortEndpoint ε *
+      (10 * Real.log (1 / ε)) * upperShortShellVariance ε δ := hthird
+    _ ≤ (10 * Real.log (1 / ε)) *
       ((1 / 100 : ℝ) *
         upperPositiveShellVariance ε δ) :=
       mul_le_mul_of_nonneg_left (hdom δ hδ) hA
-    _ = (shortEndpoint ε / 100) *
+    _ = ((10 * Real.log (1 / ε)) / 100) *
       upperPositiveShellVariance ε δ := by
         ring
 
@@ -20860,7 +20806,7 @@ theorem eventually_upper_netShellThirdMoment_bound :
     ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
       ∀ δ : ℝ, ε / 2 ≤ δ →
         upperNetShellThirdMoment ε δ ≤
-          (shellLocation ε + 1 + shortEndpoint ε / 100) *
+          ((ε⁻¹ ^ 3) + 1 + (10 * Real.log (1 / ε)) / 100) *
             upperPositiveShellVariance ε δ := by
   filter_upwards
     [self_mem_nhdsWithin,
@@ -21341,15 +21287,15 @@ theorem plusPolynomial_negative_imaginary_residue
     (ε s : ℝ) :
     plusPolynomial ε
         (Complex.I * ((-(1 + s) : ℝ) : ℂ)) =
-      ((beta ε - s * (2 + s) ^ 2 : ℝ) : ℂ) := by
+      (((ε / 4) - s * (2 + s) ^ 2 : ℝ) : ℂ) := by
   rw [plusPolynomial_imaginary]
   push_cast
   ring
 
 def saddleShellDerivativeOne (ε : ℝ) : ℝ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     shortShellDensity ε a * a * Real.sinh a) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * a * Real.sinh a)
 
 def saddleSmallRadiusVariable (ε r : ℝ) : ℝ :=
@@ -21363,9 +21309,9 @@ def plusSaddleSmallRadiusCoefficient
           (1 + 2 * (n : ℝ) / ℓ) -
             realHyperbolicShellPhase ε 1) -
         2 * (n : ℝ) * saddleShellDerivativeOne ε) *
-    ((beta ε - (2 * (n : ℝ) / ℓ) *
+    (((ε / 4) - (2 * (n : ℝ) / ℓ) *
         (2 + 2 * (n : ℝ) / ℓ) ^ 2) /
-      beta ε)
+      (ε / 4))
 
 theorem plusSaddlePoleResidue_explicit_real
     {ε ℓ : ℝ} (hℓ : 0 < ℓ) (n : ℕ) :
@@ -21375,7 +21321,7 @@ theorem plusSaddlePoleResidue_explicit_real
           Real.exp
             (ℓ * realHyperbolicShellPhase ε
               (1 + 2 * (n : ℝ) / ℓ))) *
-        (beta ε - (2 * (n : ℝ) / ℓ) *
+        ((ε / 4) - (2 * (n : ℝ) / ℓ) *
           (2 + 2 * (n : ℝ) / ℓ) ^ 2) : ℝ) : ℂ) := by
   unfold plusSaddlePoleResidue
   rw [plusSaddleRegularMellinFactor_neg_even hℓ n,
@@ -21449,7 +21395,7 @@ theorem plusSaddlePoleResidue_mul_pow_eq_smallCoefficient
         ((-saddleSmallRadiusVariable ε r) ^ n /
           (n.factorial : ℝ)) *
         plusSaddleSmallRadiusCoefficient ε ℓ n : ℝ) : ℂ) := by
-  have hb : beta ε ≠ 0 := (beta_pos hε).ne'
+  have hb : (ε / 4) ≠ 0 := (div_pos hε four_pos).ne'
   have hfac : (n.factorial : ℝ) ≠ 0 := by
     exact_mod_cast (Nat.factorial_ne_zero n)
   have hpi :
@@ -21469,7 +21415,7 @@ theorem plusSaddlePoleResidue_mul_pow_eq_smallCoefficient
 theorem plusSaddleProfile_eq_small_radius_residue_series
     {ε ℓ r : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ) :
     plusSaddleProfile ε ℓ r =
       (saddleOriginValue ε ℓ : ℂ) *
@@ -21494,7 +21440,7 @@ theorem plusSaddleProfile_eq_small_radius_residue_series
 theorem plusSaddleProfile_div_origin_eq_small_radius_residue_series
     {ε ℓ r : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (N : ℕ) :
     plusSaddleProfile ε ℓ r /
         (saddleOriginValue ε ℓ : ℂ) =
@@ -21513,7 +21459,7 @@ theorem plusSaddleProfile_div_origin_eq_small_radius_residue_series
 theorem realHyperbolicShellPhase_contDiff
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (n : WithTop ℕ∞) :
     ContDiff ℝ n (realHyperbolicShellPhase ε) := by
   have hcomplex : ContDiff ℝ n (mellinShellPhase ε) :=
@@ -21623,38 +21569,36 @@ theorem realHyperbolicShellInterval_hasDerivAt
 theorem realHyperbolicShellPhase_hasDerivAt
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (u : ℝ) :
     HasDerivAt (realHyperbolicShellPhase ε)
-      ((∫ a in shortCutoff ε..shortEndpoint ε,
+      ((∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a * a * Real.sinh (a * u)) +
-       (∫ a in shellLocation ε..shellLocation ε + 1,
+       (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           positiveShellDensity ε a * a * Real.sinh (a * u))) u := by
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
   let w : ℝ → ℝ := fun a =>
-    shortShellDensity ε (max a (shortCutoff ε))
-  have hmax (a : ℝ) : 0 < max a (shortCutoff ε) :=
+    shortShellDensity ε (max a (ε ^ 3))
+  have hmax (a : ℝ) : 0 < max a (ε ^ 3) :=
     hcutoff.trans_le (le_max_right _ _)
   have hw : Continuous w := by
     have hn : Continuous (fun a : ℝ =>
-        shortMargin ε (max a (shortCutoff ε)) *
-          Real.exp (-2 * max a (shortCutoff ε))) := by
-      unfold shortMargin
+        (1 - 10 * ε * (1 + (max a (ε ^ 3)))) *
+          Real.exp (-2 * max a (ε ^ 3))) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
-        2 * (max a (shortCutoff ε)) ^ 2 *
-          Real.cosh (max a (shortCutoff ε))) := by
+        2 * (max a (ε ^ 3)) ^ 2 *
+          Real.cosh (max a (ε ^ 3))) := by
       fun_prop
     try dsimp [w]
     unfold shortShellDensity
     exact (hn.div hd (fun a => by positivity [hmax a])).neg
   have hshortfun :
-      (fun v : ℝ => ∫ a in shortCutoff ε..shortEndpoint ε,
+      (fun v : ℝ => ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a *
           (Real.cosh (a * v) - 1)) =
-      (fun v : ℝ => ∫ a in shortCutoff ε..shortEndpoint ε,
+      (fun v : ℝ => ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         w a * (Real.cosh (a * v) - 1)) := by
     funext v
     apply intervalIntegral.integral_congr
@@ -21663,9 +21607,9 @@ theorem realHyperbolicShellPhase_hasDerivAt
     try dsimp [w]
     rw [max_eq_left ha.1]
   have hshortderiv :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * a * Real.sinh (a * u)) =
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         w a * a * Real.sinh (a * u)) := by
     apply intervalIntegral.integral_congr
     intro a ha
@@ -21674,15 +21618,15 @@ theorem realHyperbolicShellPhase_hasDerivAt
     rw [max_eq_left ha.1]
   have hshort :
       HasDerivAt
-        (fun v : ℝ => ∫ a in shortCutoff ε..shortEndpoint ε,
+        (fun v : ℝ => ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a *
             (Real.cosh (a * v) - 1))
-        (∫ a in shortCutoff ε..shortEndpoint ε,
+        (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a * a * Real.sinh (a * u)) u := by
     rw [hshortfun, hshortderiv]
     exact realHyperbolicShellInterval_hasDerivAt
       w hw horder u
-  have hremote : shellLocation ε ≤ shellLocation ε + 1 := by
+  have hremote : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hpositive := realHyperbolicShellInterval_hasDerivAt
     (positiveShellDensity ε)
@@ -21692,7 +21636,7 @@ theorem realHyperbolicShellPhase_hasDerivAt
 theorem realHyperbolicShellPhase_hasDerivAt_one
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     HasDerivAt (realHyperbolicShellPhase ε)
       (saddleShellDerivativeOne ε) 1 := by
   simpa only [saddleShellDerivativeOne, mul_one] using!
@@ -21701,7 +21645,7 @@ theorem realHyperbolicShellPhase_hasDerivAt_one
 theorem exists_realHyperbolicShellPhase_quadratic_remainder
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧ ∀ x ∈ Set.Icc (1 : ℝ) 2,
       |realHyperbolicShellPhase ε x -
           realHyperbolicShellPhase ε 1 -
@@ -21755,7 +21699,7 @@ theorem exists_realHyperbolicShellPhase_quadratic_remainder
 theorem exists_plusSaddleSmallRadiusPhase_error
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ (ℓ : ℝ), 0 < ℓ →
         ∀ n : ℕ, 2 * (n : ℝ) ≤ ℓ →
@@ -21812,11 +21756,11 @@ theorem plusSaddleSmallRadiusPolynomial_error
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
     (n : ℕ) (hn : 2 * (n : ℝ) ≤ ℓ) :
-    |((beta ε - (2 * (n : ℝ) / ℓ) *
+    |(((ε / 4) - (2 * (n : ℝ) / ℓ) *
           (2 + 2 * (n : ℝ) / ℓ) ^ 2) /
-        beta ε) - 1| ≤
-      (18 / beta ε) * ((n : ℝ) / ℓ) := by
-  have hb : 0 < beta ε := beta_pos hε
+        (ε / 4)) - 1| ≤
+      (18 / (ε / 4)) * ((n : ℝ) / ℓ) := by
+  have hb : 0 < (ε / 4) := div_pos hε four_pos
   let s : ℝ := 2 * (n : ℝ) / ℓ
   have hs : 0 ≤ s := by
     try dsimp [s]
@@ -21830,20 +21774,20 @@ theorem plusSaddleSmallRadiusPolynomial_error
       (show 0 ≤ 3 + (2 + s) by linarith)]
   have hnumerator : 0 ≤ s * (2 + s) ^ 2 :=
     mul_nonneg hs (sq_nonneg _)
-  change |(beta ε - s * (2 + s) ^ 2) /
-      beta ε - 1| ≤ (18 / beta ε) *
+  change |((ε / 4) - s * (2 + s) ^ 2) /
+      (ε / 4) - 1| ≤ (18 / (ε / 4)) *
         ((n : ℝ) / ℓ)
   have hid :
-      (beta ε - s * (2 + s) ^ 2) / beta ε - 1 =
-        -(s * (2 + s) ^ 2) / beta ε := by
+      ((ε / 4) - s * (2 + s) ^ 2) / (ε / 4) - 1 =
+        -(s * (2 + s) ^ 2) / (ε / 4) := by
     field_simp; ring
   rw [hid, abs_div, abs_neg,
     abs_of_nonneg hnumerator, abs_of_pos hb]
   calc
-    s * (2 + s) ^ 2 / beta ε ≤
-        s * 9 / beta ε := by
+    s * (2 + s) ^ 2 / (ε / 4) ≤
+        s * 9 / (ε / 4) := by
           gcongr
-    _ = (18 / beta ε) * ((n : ℝ) / ℓ) := by
+    _ = (18 / (ε / 4)) * ((n : ℝ) / ℓ) := by
       try dsimp [s]
       field_simp; ring
 
@@ -21893,7 +21837,7 @@ theorem plusSaddleSmallRadiusCoefficient_error_of_phase
         C * (n : ℝ) ^ 2 / ℓ) :
     |plusSaddleSmallRadiusCoefficient ε ℓ n - 1| ≤
       (C * (n : ℝ) ^ 2 / ℓ +
-        (18 / beta ε) * ((n : ℝ) / ℓ)) *
+        (18 / (ε / 4)) * ((n : ℝ) / ℓ)) *
           Real.exp (C * (n : ℝ) ^ 2 / ℓ) := by
   let E : ℝ :=
     ℓ * (realHyperbolicShellPhase ε
@@ -21901,16 +21845,16 @@ theorem plusSaddleSmallRadiusCoefficient_error_of_phase
         realHyperbolicShellPhase ε 1) -
       2 * (n : ℝ) * saddleShellDerivativeOne ε
   let P : ℝ :=
-    (beta ε - (2 * (n : ℝ) / ℓ) *
-      (2 + 2 * (n : ℝ) / ℓ) ^ 2) / beta ε
+    ((ε / 4) - (2 * (n : ℝ) / ℓ) *
+      (2 + 2 * (n : ℝ) / ℓ) ^ 2) / (ε / 4)
   let q : ℝ := C * (n : ℝ) ^ 2 / ℓ
-  let k : ℝ := (18 / beta ε) * ((n : ℝ) / ℓ)
+  let k : ℝ := (18 / (ε / 4)) * ((n : ℝ) / ℓ)
   have hq : 0 ≤ q := by
     try dsimp [q]
     positivity
   have hk : 0 ≤ k := by
     try dsimp [k]
-    positivity [beta_pos hε]
+    positivity [div_pos hε four_pos]
   have hE : |E| ≤ q := by
     simpa only  using! hphase
   have hP : |P - 1| ≤ k := by
@@ -21946,7 +21890,7 @@ theorem plusSaddleSmallRadiusCoefficient_error_of_phase
 theorem exists_plusSaddleSmallRadiusCoefficient_error
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ (ℓ : ℝ), 0 < ℓ →
         ∀ n : ℕ, 2 * (n : ℝ) ≤ ℓ →
@@ -21955,10 +21899,10 @@ theorem exists_plusSaddleSmallRadiusCoefficient_error
               Real.exp (C * (n : ℝ) ^ 2 / ℓ) := by
   obtain ⟨C, hC, hphase⟩ :=
     exists_plusSaddleSmallRadiusPhase_error hε horder
-  let K : ℝ := 18 / beta ε
+  let K : ℝ := 18 / (ε / 4)
   have hK : 0 ≤ K := by
     try dsimp [K]
-    positivity [beta_pos hε]
+    positivity [div_pos hε four_pos]
   refine ⟨C + K, add_nonneg hC hK, ?_⟩
   intro ℓ hℓ n hn
   have hsource := plusSaddleSmallRadiusCoefficient_error_of_phase
@@ -22084,7 +22028,7 @@ theorem saddleExpSeries_polynomialMoment_sum_range_le
 theorem exists_plusSaddleSmallRadius_weightedCoefficient_error
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ (ℓ : ℝ), 0 < ℓ →
         ∀ N : ℕ, 2 * (N : ℝ) ≤ ℓ →
@@ -22276,7 +22220,7 @@ theorem saddleExpSeries_alternating_tail_bound
 theorem exists_plusSaddleSmallRadius_finiteResidue_error
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ (ℓ : ℝ), 0 < ℓ →
         ∀ N : ℕ, 2 * (N : ℝ) ≤ ℓ →
@@ -22379,7 +22323,7 @@ theorem exists_plusSaddleSmallRadius_finiteResidue_error
 theorem exists_plusSaddleSmallRadius_relativeFiniteResidue_error
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ (ℓ : ℝ), 0 < ℓ →
         ∀ N : ℕ, 2 * (N : ℝ) ≤ ℓ →
@@ -22728,16 +22672,15 @@ theorem eventually_upperSaddleVariance_bounds
 theorem upperPositiveShellVariance_pos
     {ε δ : ℝ} (hε : 0 < ε) (hδ : 0 ≤ δ) :
     0 < upperPositiveShellVariance ε δ := by
-  have hB : 0 < shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 < (ε⁻¹ ^ 3) := by
     positivity
   have hlower :=
     (upperPositiveShellVariance_bounds hε hδ).1
   have hpositive :
       0 < (1 / 2 : ℝ) *
-        (shellLocation ε) ^ 2 *
+        (ε⁻¹ ^ 3) ^ 2 *
           shellWeight ε *
-            Real.exp (δ * shellLocation ε) := by
+            Real.exp (δ * (ε⁻¹ ^ 3)) := by
     exact mul_pos
       (mul_pos
         (mul_pos (by norm_num)
@@ -22814,7 +22757,7 @@ theorem upperGammaThirdMoment_le_two_mul_variance
       linarith
 
 def upperSaddleShellThirdCoefficient (ε : ℝ) : ℝ :=
-  shellLocation ε + 1 + shortEndpoint ε / 100
+  (ε⁻¹ ^ 3) + 1 + (10 * Real.log (1 / ε)) / 100
 
 theorem eventually_upperSaddleThirdMoment_le_variance
     : ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
@@ -22855,13 +22798,11 @@ theorem eventually_upperSaddleThirdMoment_le_variance
     have hpositive : 0 < 1 / (2 * (2 + δ)) := by
       positivity
     exact hpositive.le.trans h
-  have hshortEndpoint : 0 ≤ shortEndpoint ε := by
-    have hcutoff : 0 < shortCutoff ε := by
-      unfold shortCutoff
+  have hshortEndpoint : 0 ≤ (10 * Real.log (1 / ε)) := by
+    have hcutoff : 0 < (ε ^ 3) := by
       positivity
     exact (hcutoff.trans_le horder).le
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have hC : 0 ≤ upperSaddleShellThirdCoefficient ε := by
     unfold upperSaddleShellThirdCoefficient
@@ -22897,16 +22838,16 @@ theorem upperShortMargin_mul_exp_antitone
     {ε : ℝ} (hε : 0 < ε) :
     AntitoneOn
       (fun a : ℝ =>
-        shortMargin ε a * Real.exp (ε * a))
+        (1 - 10 * ε * (1 + a)) * Real.exp (ε * a))
       (Ici (0 : ℝ)) := by
   let f : ℝ → ℝ := fun a =>
-    shortMargin ε a * Real.exp (ε * a)
+    (1 - 10 * ε * (1 + a)) * Real.exp (ε * a)
   have hderiv (a : ℝ) :
       HasDerivAt f
         (ε * Real.exp (ε * a) *
-          (shortMargin ε a - 10)) a := by
+          ((1 - 10 * ε * (1 + a)) - 10)) a := by
     have hmargin : HasDerivAt
-        (fun x : ℝ => shortMargin ε x)
+        (fun x : ℝ => (1 - 10 * ε * (1 + x)))
         (-(10 * ε)) a := by
       have h :=
         (hasDerivAt_const a (1 : ℝ)).sub
@@ -22925,7 +22866,6 @@ theorem upperShortMargin_mul_exp_antitone
     (convex_Ici (0 : ℝ))
   · have hc : Continuous f := by
       try dsimp [f]
-      unfold shortMargin
       fun_prop
     exact hc.continuousOn
   · intro a ha
@@ -22935,8 +22875,7 @@ theorem upperShortMargin_mul_exp_antitone
     have ha0 : 0 ≤ a := by
       have h := interior_subset ha
       exact h
-    have hmargin : shortMargin ε a ≤ 1 := by
-      unfold shortMargin
+    have hmargin : (1 - 10 * ε * (1 + a)) ≤ 1 := by
       linarith [mul_nonneg hε.le
         (show 0 ≤ 1 + a by linarith)]
     exact mul_nonpos_of_nonneg_of_nonpos
@@ -22945,26 +22884,25 @@ theorem upperShortMargin_mul_exp_antitone
 
 theorem upperShortMargin_mul_exp_le_zero_value
     {ε a : ℝ} (hε : 0 < ε) (ha : 0 ≤ a) :
-    shortMargin ε a * Real.exp (ε * a) ≤
+    (1 - 10 * ε * (1 + a)) * Real.exp (ε * a) ≤
       1 - 10 * ε := by
   have h := upperShortMargin_mul_exp_antitone hε
     (show (0 : ℝ) ∈ Ici 0 by simp only [mem_Ici, Std.le_refl])
     (show a ∈ Ici 0 from ha) ha
-  simpa only [shortMargin, ge_iff_le, add_zero, mul_one, mul_zero, Real.exp_zero] using! h
+  simpa only [ge_iff_le, add_zero, mul_one, mul_zero, Real.exp_zero] using! h
 
 theorem upperFirstBranch_shortRatio_le
     {ε u a : ℝ}
     (hε : 0 < ε) (ha : 0 ≤ a)
     (hulower : -1 ≤ u)
     (huupper : u ≤ 1 + ε / 2)
-    (hmargin : 0 ≤ shortMargin ε a) :
-    shortMargin ε a *
+    (hmargin : 0 ≤ (1 - 10 * ε * (1 + a))) :
+    (1 - 10 * ε * (1 + a)) *
         Real.exp ((u - 1) * a) *
           (Real.cosh (u * a) / Real.cosh a) ≤
       1 - 4 * ε := by
   have hmarginupper :
-      shortMargin ε a ≤ 1 - 10 * ε := by
-    unfold shortMargin
+      (1 - 10 * ε * (1 + a)) ≤ 1 - 10 * ε := by
     linarith [mul_nonneg hε.le ha]
   by_cases hubounded : u ≤ 1
   · have huexp :
@@ -22983,12 +22921,12 @@ theorem upperFirstBranch_shortRatio_le
         Real.cosh (u * a) / Real.cosh a ≤ 1 := by
       exact (div_le_one (Real.cosh_pos a)).mpr hcosh
     calc
-      shortMargin ε a *
+      (1 - 10 * ε * (1 + a)) *
           Real.exp ((u - 1) * a) *
             (Real.cosh (u * a) / Real.cosh a) ≤
-        shortMargin ε a * 1 * 1 := by
+        (1 - 10 * ε * (1 + a)) * 1 * 1 := by
           gcongr
-      _ = shortMargin ε a := by ring
+      _ = (1 - 10 * ε * (1 + a)) := by ring
       _ ≤ 1 - 10 * ε := hmarginupper
       _ ≤ 1 - 4 * ε := by linarith
   · have hugreater : 1 ≤ u :=
@@ -23006,19 +22944,19 @@ theorem upperFirstBranch_shortRatio_le
         (show 0 ≤ ε - 2 * (u - 1) by linarith)
         ha]
     calc
-      shortMargin ε a *
+      (1 - 10 * ε * (1 + a)) *
           Real.exp ((u - 1) * a) *
             (Real.cosh (u * a) / Real.cosh a) ≤
-        shortMargin ε a *
+        (1 - 10 * ε * (1 + a)) *
           Real.exp ((u - 1) * a) *
             Real.exp ((u - 1) * a) := by
           gcongr
-      _ = shortMargin ε a *
+      _ = (1 - 10 * ε * (1 + a)) *
           Real.exp (2 * (u - 1) * a) := by
         rw [mul_assoc, ← Real.exp_add]
         congr 1
         ring_nf
-      _ ≤ shortMargin ε a *
+      _ ≤ (1 - 10 * ε * (1 + a)) *
           Real.exp (ε * a) :=
         mul_le_mul_of_nonneg_left hdouble hmargin
       _ ≤ 1 - 10 * ε :=
@@ -23032,7 +22970,7 @@ theorem upperFirstBranch_shortMeasure_pointwise
     (hℓ : 0 < ℓ) (ha : 0 < a)
     (hulower : -1 ≤ u)
     (huupper : u ≤ 1 + ε / 2)
-    (hmargin : 0 ≤ shortMargin ε a) :
+    (hmargin : 0 ≤ (1 - 10 * ε * (1 + a))) :
     ℓ * (-shortShellDensity ε a) * Real.cosh (u * a) ≤
       (1 - 4 * ε) *
         upperGammaMeasureDensity ℓ (1 + u) a := by
@@ -23057,7 +22995,7 @@ theorem upperFirstBranch_shortMeasure_pointwise
   have hidentity :
       ℓ * (-shortShellDensity ε a) *
           Real.cosh (u * a) =
-        (shortMargin ε a *
+        ((1 - 10 * ε * (1 + a)) *
           Real.exp ((u - 1) * a) *
             (Real.cosh (u * a) / Real.cosh a)) *
           ((ℓ / 2) * Real.exp (-(1 + u) * a) /
@@ -23065,7 +23003,7 @@ theorem upperFirstBranch_shortMeasure_pointwise
     have hexp :
         Real.exp (a * (u - 1)) *
           Real.exp (-(a * (1 + u))) =
-            Real.exp (-(2 * a)) := by
+            Real.exp (-(a * 2)) := by
       rw [← Real.exp_add]
       congr 1
       ring
@@ -23075,7 +23013,7 @@ theorem upperFirstBranch_shortMeasure_pointwise
     ring
   rw [hidentity]
   calc
-    (shortMargin ε a *
+    ((1 - 10 * ε * (1 + a)) *
         Real.exp ((u - 1) * a) *
           (Real.cosh (u * a) / Real.cosh a)) *
         ((ℓ / 2) * Real.exp (-(1 + u) * a) /
@@ -23094,20 +23032,20 @@ theorem upperFirstBranch_shortDamping_le_gamma
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ) :
     upperShortShellDamping ε ℓ (u - 1) T ≤
       (1 - 4 * ε) * upperGammaDamping ℓ (1 + u) T := by
-  let a₀ : ℝ := shortCutoff ε
-  let A : ℝ := shortEndpoint ε
+  let a₀ : ℝ := (ε ^ 3)
+  let A : ℝ := (10 * Real.log (1 / ε))
   let η : ℝ := 1 + u
   have hη : 0 < η := by
     try dsimp [η]
     linarith
   have ha₀ : 0 < a₀ := by
-    try dsimp [a₀, shortCutoff]
+    try dsimp [a₀]
     positivity
   have hfactor : 0 ≤ 1 - 4 * ε := by
     linarith
@@ -23230,7 +23168,7 @@ theorem positiveShellDamping_nonneg
   unfold positiveShellDamping
   apply mul_nonneg hℓ
   apply intervalIntegral.integral_nonneg
-    (show shellLocation ε ≤ shellLocation ε + 1 by linarith)
+    (show (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 by linarith)
   intro a ha
   unfold positiveShellDensity
   exact mul_nonneg
@@ -23252,9 +23190,9 @@ theorem upperFirstBranchSaddleDamping_lower_bound
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ) :
     4 * ε * upperGammaDamping ℓ (1 + u) T ≤
       upperFirstBranchSaddleDamping ε ℓ u T := by
@@ -23338,11 +23276,10 @@ theorem saddle_complexShellInterval_re
 theorem shortShellDensity_continuousOn_support
     {ε : ℝ} (hε : 0 < ε) :
     ContinuousOn (shortShellDensity ε)
-      (Icc (shortCutoff ε) (shortEndpoint ε)) := by
+      (Icc (ε ^ 3) (10 * Real.log (1 / ε))) := by
   have hn : Continuous
       (fun a : ℝ =>
-        shortMargin ε a * Real.exp (-2 * a)) := by
-    unfold shortMargin
+        (1 - 10 * ε * (1 + a)) * Real.exp (-2 * a)) := by
     fun_prop
   have hd : Continuous
       (fun a : ℝ =>
@@ -23351,22 +23288,21 @@ theorem shortShellDensity_continuousOn_support
   unfold shortShellDensity
   exact (hn.continuousOn.div hd.continuousOn
     (fun a ha => by
-      have hcutoff : 0 < shortCutoff ε := by
-        unfold shortCutoff
+      have hcutoff : 0 < (ε ^ 3) := by
         positivity
       have ha0 : 0 < a := hcutoff.trans_le ha.1
       positivity)).neg
 
 theorem mellinShellPhase_shifted_re
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (T u : ℝ) :
     (mellinShellPhase ε
       ((T : ℂ) + Complex.I * (u : ℂ))).re =
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a *
           (Real.cos (a * T) * Real.cosh (a * u) - 1)) +
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a *
           (Real.cos (a * T) * Real.cosh (a * u) - 1)) := by
   unfold mellinShellPhase
@@ -23377,7 +23313,7 @@ theorem mellinShellPhase_shifted_re
       (shortShellDensity_continuousOn_support hε) T u
   · exact saddle_complexShellInterval_re
       (positiveShellDensity ε)
-      (show shellLocation ε ≤ shellLocation ε + 1 by
+      (show (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 by
         linarith)
       (positiveShellDensity_continuous ε).continuousOn T u
 
@@ -23420,7 +23356,7 @@ theorem saddle_shellInterval_hyperbolic_sub_oscillatory
 
 theorem saddleShellPhase_damping_identity
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ T u : ℝ) :
     ℓ *
       (realHyperbolicShellPhase ε u -
@@ -23435,7 +23371,7 @@ theorem saddleShellPhase_damping_identity
   have hpositive :=
     saddle_shellInterval_hyperbolic_sub_oscillatory
       (positiveShellDensity ε)
-      (show shellLocation ε ≤ shellLocation ε + 1 by
+      (show (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 by
         linarith)
       (positiveShellDensity_continuous ε).continuousOn T u
   rw [mellinShellPhase_shifted_re hε horder T u]
@@ -23444,11 +23380,11 @@ theorem saddleShellPhase_damping_identity
   have hu : 1 + (u - 1) = u := by ring
   simp only [hu]
   have hshortNormalized :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (-shortShellDensity ε a) *
           Real.cosh (u * a) *
             (1 - Real.cos (a * T))) =
-        -(∫ a in shortCutoff ε..shortEndpoint ε,
+        -(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a *
             Real.cosh (a * u) *
               (1 - Real.cos (a * T))) := by
@@ -23463,11 +23399,11 @@ theorem saddleShellPhase_damping_identity
     rw [mul_comm u a]
     ring
   have hpositiveNormalized :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a *
           Real.cosh (u * a) *
             (1 - Real.cos (a * T))) =
-        ∫ a in shellLocation ε..shellLocation ε + 1,
+        ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           positiveShellDensity ε a *
             Real.cosh (a * u) *
               (1 - Real.cos (a * T)) := by
@@ -23558,7 +23494,7 @@ theorem radialMellinFrequency_eq_criticalLogFourier {d : ℕ}
 
 theorem plusSaddleFourierData_continuous {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (plusSaddleFourierData ε ℓ) := by
   unfold plusSaddleFourierData
   exact (plusSaddleSpectrum_continuous hε hℓ horder).comp
@@ -23566,7 +23502,7 @@ theorem plusSaddleFourierData_continuous {ε ℓ : ℝ}
 
 theorem minusSaddleFourierData_continuous {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (minusSaddleFourierData ε ℓ) := by
   unfold minusSaddleFourierData
   exact (minusSaddleSpectrum_continuous hε hℓ horder).comp
@@ -23574,7 +23510,7 @@ theorem minusSaddleFourierData_continuous {ε ℓ : ℝ}
 
 theorem plusSaddleFourierData_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Integrable (plusSaddleFourierData ε ℓ) := by
   have hnorm : Integrable
       (fun y : ℝ => ‖plusSaddleFourierData ε ℓ y‖) := by
@@ -23586,7 +23522,7 @@ theorem plusSaddleFourierData_integrable {ε ℓ : ℝ}
 
 theorem minusSaddleFourierData_integrable {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Integrable (minusSaddleFourierData ε ℓ) := by
   have hnorm : Integrable
       (fun y : ℝ => ‖minusSaddleFourierData ε ℓ y‖) := by
@@ -23683,7 +23619,7 @@ theorem minusSaddleFourierData_fourier_integrable_of_source
 
 theorem plusSaddle_radialMellinFrequency_of_source
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (f : TestFunction d)
     (hf : ∀ x : Euclidean d, f x = plusSaddleFunction ε d x)
     (t : ℝ) :
@@ -23707,7 +23643,7 @@ theorem plusSaddle_radialMellinFrequency_of_source
 
 theorem minusSaddle_radialMellinFrequency_of_source
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (f : TestFunction d)
     (hf : ∀ x : Euclidean d, f x = minusSaddleFunction ε d x)
     (t : ℝ) :
@@ -23832,7 +23768,7 @@ theorem minusSaddle_real_of_source {ε : ℝ} {d : ℕ}
 
 theorem saddleSource_fourier_minus_eq_plus
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (fminus fplus : TestFunction d)
     (hminus : ∀ x : Euclidean d,
       fminus x = minusSaddleFunction ε d x)
@@ -23888,7 +23824,7 @@ theorem saddleSource_zero_eq {ε : ℝ} {d : ℕ}
 
 def saddleSourceAdmissible
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {R : ℝ} (hR : 0 < R)
     (fminus fplus : TestFunction d)
     (hminus : ∀ x : Euclidean d,
@@ -23940,7 +23876,7 @@ def saddleSourceAdmissible
 
 @[simp] theorem saddleSourceAdmissible_function
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {R : ℝ} (hR : 0 < R)
     (fminus fplus : TestFunction d)
     (hminus : ∀ x : Euclidean d,
@@ -23958,7 +23894,7 @@ def saddleSourceAdmissible
 
 theorem saddleSourceAdmissible_quotient
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {R : ℝ} (hR : 0 < R)
     (fminus fplus : TestFunction d)
     (hminus : ∀ x : Euclidean d,
@@ -23994,7 +23930,7 @@ theorem saddleSourceAdmissible_quotient
 
 theorem saddleSourceAdmissible_normalizedCost
     {ε : ℝ} (hε : 0 < ε) {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {R : ℝ} (hR : 0 < R)
     (fminus fplus : TestFunction d)
     (hminus : ∀ x : Euclidean d,
@@ -24030,9 +23966,9 @@ def saddleDigamma (x : ℝ) : ℝ :=
 def saddleLogRadius (ε : ℝ) (d : ℕ) (u : ℝ) : ℝ :=
   -(Real.log Real.pi) / 2 +
     saddleDigamma (((d : ℝ) / 2) * (1 + u) / 2) / 2 +
-    (∫ a in shortCutoff ε..shortEndpoint ε,
+    (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
       shortShellDensity ε a * a * Real.sinh (u * a)) +
-    (∫ a in shellLocation ε..shellLocation ε + 1,
+    (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
       positiveShellDensity ε a * a * Real.sinh (u * a))
 
 def saddleSourceRadius (ε : ℝ) (d : ℕ) : ℝ :=
@@ -24291,7 +24227,7 @@ theorem saddleSourceMellinContour_gammaArgument
 
 theorem norm_saddleShellExponential_eq_exp_neg_damping
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ℓ T u : ℝ) :
     ‖Complex.exp
       ((ℓ : ℂ) * mellinShellPhase ε
@@ -24310,9 +24246,9 @@ theorem norm_saddleShellExponential_eq_exp_neg_damping
   linarith
 
 def saddleSourceShellDerivative (ε u : ℝ) : ℝ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     shortShellDensity ε a * a * Real.sinh (u * a)) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     positiveShellDensity ε a * a * Real.sinh (u * a))
 
 theorem saddleSourceShellDerivative_one (ε : ℝ) :
@@ -24326,10 +24262,10 @@ theorem saddleSourceShellDerivative_neg
       -saddleSourceShellDerivative ε u := by
   unfold saddleSourceShellDerivative
   have hshort :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * a *
           Real.sinh (-u * a)) =
-        -(∫ a in shortCutoff ε..shortEndpoint ε,
+        -(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a * a *
             Real.sinh (u * a)) := by
     rw [← intervalIntegral.integral_neg]
@@ -24341,10 +24277,10 @@ theorem saddleSourceShellDerivative_neg
     rw [neg_mul, Real.sinh_neg]
     ring
   have hpositive :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * a *
           Real.sinh (-u * a)) =
-        -(∫ a in shellLocation ε..shellLocation ε + 1,
+        -(∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           positiveShellDensity ε a * a *
             Real.sinh (u * a)) := by
     rw [← intervalIntegral.integral_neg]
@@ -24396,7 +24332,7 @@ theorem saddleSmallRadiusStar_gammaArgument
 
 theorem saddleSourceShellDerivative_eq_deriv
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (u : ℝ) :
     saddleSourceShellDerivative ε u =
       deriv (realHyperbolicShellPhase ε) u := by
@@ -24408,7 +24344,7 @@ theorem saddleSourceShellDerivative_eq_deriv
 
 theorem saddleSourceShellDerivative_contDiff_one
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ (1 : WithTop ℕ∞)
       (saddleSourceShellDerivative ε) := by
   have hphase :
@@ -24470,7 +24406,7 @@ theorem saddleSourceShellDerivative_neg_one
 
 theorem exists_saddleSourceShellDerivative_endpoint_bound
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ u ∈ Icc (-1 : ℝ) 0,
         |saddleShellDerivativeOne ε +
@@ -24539,7 +24475,7 @@ theorem saddle_log_sq_le_four_mul
 
 theorem exists_saddleSmallRadiusStar_coordinate_bound
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ d : ℕ,
         8 < Real.log ((d : ℝ) / 2) →
@@ -24682,7 +24618,7 @@ theorem exists_saddleSmallRadiusStar_coordinate_bound
 
 theorem exists_eventually_y_star_le_log_eighth_add
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 ≤ C ∧
       ∀ᶠ d : ℕ in atTop,
         ∀ r : ℝ, 0 ≤ r →
@@ -25189,7 +25125,7 @@ theorem tendsto_saddleSmallResidueRelativeErrorMajorant
 theorem eventually_plusSaddleSmallRadius_relativeFiniteResidue_lt_half
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {C : ℝ} (hC : 0 ≤ C) :
     ∀ᶠ ℓ : ℝ in atTop,
       ∀ y : ℝ,
@@ -25272,7 +25208,7 @@ theorem tendsto_saddleResidue_dimension_half :
 theorem eventually_plusSaddleSmallRadius_relativeFiniteResidue_lt_half_on_star
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∀ᶠ d : ℕ in atTop,
       ∀ r : ℝ,
         0 ≤ r → r ≤ saddleSmallRadiusStar ε d →
@@ -26153,7 +26089,7 @@ theorem plusSaddleProfile_re_pos_of_relative_residue_bounds
     {ε ℓ r : ℝ}
     (hε : 0 < ε)
     (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     (N : ℕ)
     (hfinite :
@@ -26305,14 +26241,13 @@ theorem upperNegativeContour_shortMeasure_pointwise
     (hℓ : 0 < ℓ) (hκ : 1 ≤ κ)
     (hη : 0 < η) (hκη : κ + η ≤ 3)
     (ha : 0 < a)
-    (hmargin : 0 ≤ shortMargin ε a) :
+    (hmargin : 0 ≤ (1 - 10 * ε * (1 + a))) :
     ℓ * (-shortShellDensity ε a) * Real.cosh (κ * a) ≤
       (1 - 4 * ε) * upperGammaMeasureDensity ℓ η a := by
   have hfactor : 0 ≤ 1 - 4 * ε := by
     apply (mul_nonneg_iff_of_pos_right hη).mp
     exact mul_nonneg (by linarith [hεsmall]) hη.le
-  have hmargintop : shortMargin ε a ≤ 1 - 10 * ε := by
-    unfold shortMargin
+  have hmargintop : (1 - 10 * ε * (1 + a)) ≤ 1 - 10 * ε := by
     linarith [mul_nonneg hε.le ha.le]
   have hbase :
       (ℓ / 2) * Real.exp (-η * a) / a ^ 2 ≤
@@ -26337,25 +26272,25 @@ theorem upperNegativeContour_shortMeasure_pointwise
     linarith [mul_nonneg
       (show 0 ≤ 3 - (κ + η) by linarith) ha.le]
   have hcoefficient :
-      shortMargin ε a * Real.exp ((η - 2) * a) *
+      (1 - 10 * ε * (1 + a)) * Real.exp ((η - 2) * a) *
           (Real.cosh (κ * a) / Real.cosh a) ≤
         1 - 4 * ε := by
     calc
-      shortMargin ε a * Real.exp ((η - 2) * a) *
+      (1 - 10 * ε * (1 + a)) * Real.exp ((η - 2) * a) *
           (Real.cosh (κ * a) / Real.cosh a) ≤
-        shortMargin ε a * Real.exp ((η - 2) * a) *
+        (1 - 10 * ε * (1 + a)) * Real.exp ((η - 2) * a) *
           Real.exp ((κ - 1) * a) := by
           gcongr
-      _ = shortMargin ε a *
+      _ = (1 - 10 * ε * (1 + a)) *
           (Real.exp ((η - 2) * a) *
             Real.exp ((κ - 1) * a)) := by ring
-      _ ≤ shortMargin ε a := by
+      _ ≤ (1 - 10 * ε * (1 + a)) := by
           simpa only [mul_one] using! mul_le_mul_of_nonneg_left hexp hmargin
       _ ≤ 1 - 10 * ε := hmargintop
       _ ≤ 1 - 4 * ε := by linarith
   have hidentity :
       ℓ * (-shortShellDensity ε a) * Real.cosh (κ * a) =
-        (shortMargin ε a * Real.exp ((η - 2) * a) *
+        ((1 - 10 * ε * (1 + a)) * Real.exp ((η - 2) * a) *
           (Real.cosh (κ * a) / Real.cosh a)) *
           ((ℓ / 2) * Real.exp (-η * a) / a ^ 2) := by
     have he : Real.exp ((η - 2) * a) *
@@ -26366,21 +26301,21 @@ theorem upperNegativeContour_shortMeasure_pointwise
     unfold shortShellDensity
     field_simp [ha.ne', (Real.cosh_pos a).ne']
     calc
-      shortMargin ε a * Real.exp (-(2 * a)) =
-          shortMargin ε a *
+      (1 - 10 * ε * (1 + a)) * Real.exp (-(a * 2)) =
+          (1 - 10 * ε * (1 + a)) *
             (Real.exp ((η - 2) * a) *
               Real.exp (-η * a)) := by
             rw [he]
             congr 1
             ring_nf
-      _ = shortMargin ε a * Real.exp (a * (η - 2)) *
+      _ = (1 - 10 * ε * (1 + a)) * Real.exp (a * (η - 2)) *
             Real.exp (-(a * η)) := by
             rw [show a * (η - 2) = (η - 2) * a by ring,
               show -(a * η) = -η * a by ring]
             ring
   rw [hidentity]
   calc
-    (shortMargin ε a * Real.exp ((η - 2) * a) *
+    ((1 - 10 * ε * (1 + a)) * Real.exp ((η - 2) * a) *
         (Real.cosh (κ * a) / Real.cosh a)) *
         ((ℓ / 2) * Real.exp (-η * a) / a ^ 2) ≤
       (1 - 4 * ε) *
@@ -26394,16 +26329,16 @@ theorem upperNegativeContour_shortDamping_le_gamma
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (hκ : 1 ≤ κ)
     (hη : 0 < η) (hκη : κ + η ≤ 3)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ) :
     upperShortShellDamping ε ℓ (-κ - 1) T ≤
       (1 - 4 * ε) * upperGammaDamping ℓ η T := by
-  let a₀ : ℝ := shortCutoff ε
-  let A : ℝ := shortEndpoint ε
+  let a₀ : ℝ := (ε ^ 3)
+  let A : ℝ := (10 * Real.log (1 / ε))
   have ha₀ : 0 < a₀ := by
-    try dsimp [a₀, shortCutoff]
+    try dsimp [a₀]
     positivity
   have hfactor : 0 ≤ 1 - 4 * ε := by linarith
   have hsubset : Ioc a₀ A ⊆ Ioi (0 : ℝ) := by
@@ -26810,9 +26745,9 @@ theorem upperNegativeContour_gamma_mul_exp_short_le
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (N : ℕ)
     (hN : 2 * (((N + 1 : ℕ) : ℝ)) ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (s : ℝ) :
     ‖Complex.Gamma (upperNegativeHalfGammaArgument N s)‖ *
       Real.exp
@@ -26982,9 +26917,9 @@ theorem upperNegativeContour_gamma_mul_shellExponential_le
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (N : ℕ)
     (hN : 2 * (((N + 1 : ℕ) : ℝ)) ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (s : ℝ) :
     ‖Complex.Gamma
         (((saddleTaylorContour N : ℂ) +
@@ -27101,7 +27036,7 @@ theorem norm_plusPolynomial_negativeContour_le
         (((saddleTaylorContour N : ℂ) +
           (s : ℂ) * Complex.I) - (ℓ : ℂ)) /
             (ℓ : ℂ))‖ ≤
-      27 * (1 + |beta ε|) * (1 + |s|) ^ 3 := by
+      27 * (1 + |(ε / 4)|) * (1 + |s|) ^ 3 := by
   let κ : ℝ := saddleNegativeContourOrdinate ℓ N
   have hκ : 1 ≤ κ :=
     one_le_saddleNegativeContourOrdinate hℓ N
@@ -27137,14 +27072,14 @@ theorem norm_plusPolynomial_negativeContour_le
     ‖plusPolynomial ε
         (((-s / ℓ : ℝ) : ℂ) +
           Complex.I * (((-κ : ℝ) : ℂ)))‖ ≤
-      (1 + |beta ε|) *
+      (1 + |(ε / 4)|) *
         (1 + ‖((-s / ℓ : ℝ) : ℂ) +
           Complex.I * (((-κ : ℝ) : ℂ))‖) ^ 3 :=
       norm_plusPolynomial_le ε _
-    _ ≤ (1 + |beta ε|) *
+    _ ≤ (1 + |(ε / 4)|) *
         (3 * (1 + |s|)) ^ 3 := by
       gcongr
-    _ = 27 * (1 + |beta ε|) * (1 + |s|) ^ 3 := by
+    _ = 27 * (1 + |(ε / 4)|) * (1 + |s|) ^ 3 := by
       ring
 
 theorem saddleNegativeContour_piExponential_norm
@@ -27165,7 +27100,7 @@ theorem saddleNegativeContour_piExponential_norm
 
 def saddleNegativeMellinMajorantCoefficient
     (ε ℓ : ℝ) (N : ℕ) : ℝ :=
-  27 * (1 + |beta ε|) *
+  27 * (1 + |(ε / 4)|) *
     Real.exp (2 * ε * Real.log 2) *
     (Real.pi / Real.Gamma ((N : ℝ) + 3 / 2)) *
     Real.exp
@@ -27180,9 +27115,9 @@ theorem plusSaddleMellinData_negativeContour_norm_le
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (N : ℕ)
     (hN : 2 * (((N + 1 : ℕ) : ℝ)) ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (s : ℝ) :
     ‖plusSaddleMellinData ε ℓ
         ((saddleTaylorContour N : ℂ) +
@@ -27229,7 +27164,7 @@ theorem plusSaddleMellinData_negativeContour_norm_le
           ((Real.pi / Real.Gamma ((N : ℝ) + 3 / 2)) *
             Real.exp (2 * ε * Real.log 2) *
               Real.exp (-ε * Real.pi * |s|))) *
-          (27 * (1 + |beta ε|) * (1 + |s|) ^ 3) := by
+          (27 * (1 + |(ε / 4)|) * (1 + |s|) ^ 3) := by
       have hfactor' :
           ‖Complex.Gamma (z / 2) *
             Complex.exp ((ℓ : ℂ) * mellinShellPhase ε q)‖ ≤
@@ -27242,7 +27177,7 @@ theorem plusSaddleMellinData_negativeContour_norm_le
         simpa only [Complex.norm_mul, neg_mul, z, q] using! hfactor
       have hpoly' :
           ‖plusPolynomial ε q‖ ≤
-            27 * (1 + |beta ε|) * (1 + |s|) ^ 3 := by
+            27 * (1 + |(ε / 4)|) * (1 + |s|) ^ 3 := by
         simpa only [q, z] using! hpoly
       have hpi' :
           ‖Complex.exp
@@ -27276,9 +27211,9 @@ theorem plusSaddleMellinData_negativeContour_integral_norm_le
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (N : ℕ)
     (hN : 2 * (((N + 1 : ℕ) : ℝ)) ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a))) :
     (∫ s : ℝ,
       ‖plusSaddleMellinData ε ℓ
         ((saddleTaylorContour N : ℂ) +
@@ -27322,9 +27257,9 @@ theorem plusSaddleTaylorRemainder_negativeContour_bound
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (N : ℕ)
     (hN : 2 * (((N + 1 : ℕ) : ℝ)) ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     {r : ℝ} (hr : 0 < r) :
     ‖plusSaddleTaylorRemainder ε ℓ N r‖ ≤
       (1 / (2 * Real.pi)) * r ^ (2 * N + 1) *
@@ -27562,9 +27497,9 @@ theorem saddleNegativeContour_sourceNormalizationFactor
     _ = _ := by ring
 
 def saddleNegativeRelativeCoefficient (ε : ℝ) : ℝ :=
-  27 * (1 + |beta ε|) *
+  27 * (1 + |(ε / 4)|) *
     Real.exp (2 * ε * Real.log 2) *
-      saddleNegativeFrequencyMass ε / (4 * beta ε)
+      saddleNegativeFrequencyMass ε / (4 * (ε / 4))
 
 theorem saddleNegativeRelativeCoefficient_nonneg
     {ε : ℝ} (hε : 0 < ε) :
@@ -27577,7 +27512,7 @@ theorem saddleNegativeRelativeCoefficient_nonneg
           (by positivity))
         (Real.exp_pos _).le)
       (saddleNegativeFrequencyMass_nonneg ε))
-    (mul_pos (by norm_num) (beta_pos hε)).le
+    (mul_pos (by norm_num) (div_pos hε four_pos)).le
 
 theorem saddleNegativeContour_normalizedMajorant_eq
     {ε : ℝ} (hε : 0 < ε)
@@ -27591,7 +27526,7 @@ theorem saddleNegativeContour_normalizedMajorant_eq
         saddleSmallRadiusVariable ε r ^ N /
           Real.Gamma ((N : ℝ) + 3 / 2) *
             Real.exp (saddleNegativeContourPhaseError ε ℓ N) := by
-  have hb : beta ε ≠ 0 := (beta_pos hε).ne'
+  have hb : (ε / 4) ≠ 0 := (div_pos hε four_pos).ne'
   have hΓ : Real.Gamma ((N : ℝ) + 3 / 2) ≠ 0 := by
     apply (Real.Gamma_pos_of_pos (by positivity)).ne'
   have horigin :
@@ -27599,7 +27534,7 @@ theorem saddleNegativeContour_normalizedMajorant_eq
         2 *
           (Real.exp ((ℓ / 2) * Real.log Real.pi) *
             Real.exp (ℓ * realHyperbolicShellPhase ε 1)) *
-          beta ε := by
+          (ε / 4) := by
     unfold saddleOriginValue
     rw [Real.rpow_def_of_pos Real.pi_pos]
     rw [show Real.log Real.pi * (ℓ / 2) =
@@ -27648,9 +27583,9 @@ theorem plusSaddleTaylorRemainder_negativeContour_relative_bound
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
     (hℓ : 0 < ℓ) (N : ℕ)
     (hN : 2 * (((N + 1 : ℕ) : ℝ)) ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     {r : ℝ} (hr : 0 < r) :
     ‖plusSaddleTaylorRemainder ε ℓ N r /
       (saddleOriginValue ε ℓ : ℂ)‖ ≤
@@ -27681,7 +27616,7 @@ theorem plusSaddleTaylorRemainder_negativeContour_relative_bound
 
 theorem exists_saddleNegativeContourPhaseError_bound
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ K : ℝ, 0 ≤ K ∧
       ∀ (ℓ : ℝ), 0 < ℓ →
         ∀ N : ℕ,
@@ -27734,9 +27669,9 @@ theorem exists_saddleNegativeContourPhaseError_bound
 theorem eventually_plusSaddleTaylorRemainder_relative_lt_half_on_star
     {ε : ℝ}
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a))) :
     ∀ᶠ d : ℕ in atTop,
       ∀ r : ℝ, 0 < r → r ≤ saddleSmallRadiusStar ε d →
         let ℓ : ℝ := (d : ℝ) / 2
@@ -27806,9 +27741,9 @@ theorem eventually_plusSaddleTaylorRemainder_relative_lt_half_on_star
 theorem eventually_plusSaddleProfile_re_pos_on_star_fixed
     {ε : ℝ}
     (hε : 0 < ε) (hεsmall : ε ≤ 1 / 4)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a))) :
     ∀ᶠ d : ℕ in atTop,
       ∀ r : ℝ, 0 ≤ r → r ≤ saddleSmallRadiusStar ε d →
         0 < (plusSaddleProfile ε ((d : ℝ) / 2) r).re := by
@@ -28399,7 +28334,7 @@ theorem minusSaddleTaylorRemainder_eq_squared
 theorem plusSaddleSquaredRemainder_contDiffOn
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (n N : ℕ)
     (hshift : (n : ℝ) + 1 <
       -(saddleTaylorContour N) / 2) :
@@ -28425,7 +28360,7 @@ theorem plusSaddleSquaredRemainder_contDiffOn
 theorem minusSaddleSquaredRemainder_contDiffOn
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (n N : ℕ)
     (hshift : (n : ℝ) + 1 <
       -(saddleTaylorContour N) / 2) :
@@ -28498,7 +28433,7 @@ theorem saddleSquaredResiduePolynomial_contDiff
 theorem plusSaddleProfile_eq_squaredTaylor
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (N : ℕ) {r : ℝ} (hr : 0 ≤ r) :
     plusSaddleProfile ε ℓ r =
       saddleSquaredResiduePolynomial
@@ -28523,7 +28458,7 @@ theorem plusSaddleProfile_eq_squaredTaylor
 theorem minusSaddleProfile_eq_squaredTaylor
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (N : ℕ) {r : ℝ} (hr : 0 ≤ r) :
     minusSaddleProfile ε ℓ r =
       saddleSquaredResiduePolynomial
@@ -28555,7 +28490,7 @@ theorem saddleTaylorContour_smoothShift (n : ℕ) :
 theorem plusSaddleFunction_contDiff_nat
     {ε : ℝ} (hε : 0 < ε)
     {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (n : ℕ) :
     ContDiff ℝ n (plusSaddleFunction ε d) := by
   have hdimension : 0 < (d : ℝ) / 2 :=
@@ -28617,7 +28552,7 @@ theorem plusSaddleFunction_contDiff_nat
 theorem minusSaddleFunction_contDiff_nat
     {ε : ℝ} (hε : 0 < ε)
     {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (n : ℕ) :
     ContDiff ℝ n (minusSaddleFunction ε d) := by
   have hdimension : 0 < (d : ℝ) / 2 :=
@@ -28679,7 +28614,7 @@ theorem minusSaddleFunction_contDiff_nat
 theorem plusSaddleFunction_contDiff
     {ε : ℝ} (hε : 0 < ε)
     {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ ∞ (plusSaddleFunction ε d) := by
   exact contDiff_infty.mpr
     (fun n => plusSaddleFunction_contDiff_nat
@@ -28688,7 +28623,7 @@ theorem plusSaddleFunction_contDiff
 theorem minusSaddleFunction_contDiff
     {ε : ℝ} (hε : 0 < ε)
     {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ ∞ (minusSaddleFunction ε d) := by
   exact contDiff_infty.mpr
     (fun n => minusSaddleFunction_contDiff_nat
@@ -28749,7 +28684,7 @@ theorem saddleRightHalfPlane_boundary_rectangle
 theorem plusSaddleMellinData_positive_vertical_integral_eq
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     (hA : 0 < A) (hB : 0 < B) (hAB : A ≤ B) :
     (∫ t : ℝ,
@@ -28809,7 +28744,7 @@ theorem plusSaddleMellinData_positive_vertical_integral_eq
 theorem minusSaddleMellinData_positive_vertical_integral_eq
     {ε ℓ r A B : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r)
     (hA : 0 < A) (hB : 0 < B) (hAB : A ≤ B) :
     (∫ t : ℝ,
@@ -28869,7 +28804,7 @@ theorem minusSaddleMellinData_positive_vertical_integral_eq
 theorem plusSaddleProfile_eq_positive_contour
     {ε ℓ r a : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (ha : 0 < a) :
     plusSaddleProfile ε ℓ r =
       ((1 / (2 * Real.pi) : ℝ) : ℂ) *
@@ -28891,7 +28826,7 @@ theorem plusSaddleProfile_eq_positive_contour
 theorem minusSaddleProfile_eq_positive_contour
     {ε ℓ r a : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (ha : 0 < a) :
     minusSaddleProfile ε ℓ r =
       ((1 / (2 * Real.pi) : ℝ) : ℂ) *
@@ -28929,7 +28864,7 @@ def minusSaddlePositiveSquaredContour
 theorem plusSaddleProfile_eq_positive_squaredContour
     {ε ℓ r a : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (ha : 0 < a) :
     plusSaddleProfile ε ℓ r =
       plusSaddlePositiveSquaredContour ε ℓ a (r ^ 2) := by
@@ -28954,7 +28889,7 @@ theorem plusSaddleProfile_eq_positive_squaredContour
 theorem minusSaddleProfile_eq_positive_squaredContour
     {ε ℓ r a : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (ha : 0 < a) :
     minusSaddleProfile ε ℓ r =
       minusSaddlePositiveSquaredContour ε ℓ a (r ^ 2) := by
@@ -29285,7 +29220,7 @@ theorem saddlePositiveContourMoment_norm_le
 theorem plusSaddlePositiveSquaredContour_contDiffOn
     {ε ℓ a : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ha : 0 < a) :
     ContDiffOn ℝ ∞
       (plusSaddlePositiveSquaredContour ε ℓ a)
@@ -29302,7 +29237,7 @@ theorem plusSaddlePositiveSquaredContour_contDiffOn
 theorem minusSaddlePositiveSquaredContour_contDiffOn
     {ε ℓ a : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ha : 0 < a) :
     ContDiffOn ℝ ∞
       (minusSaddlePositiveSquaredContour ε ℓ a)
@@ -29319,7 +29254,7 @@ theorem minusSaddlePositiveSquaredContour_contDiffOn
 theorem plusSaddlePositiveSquaredContour_eq_of_pos
     {ε ℓ a b u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ha : 0 < a) (hb : 0 < b) (hu : 0 < u) :
     plusSaddlePositiveSquaredContour ε ℓ a u =
       plusSaddlePositiveSquaredContour ε ℓ b u := by
@@ -29343,7 +29278,7 @@ theorem plusSaddlePositiveSquaredContour_eq_of_pos
 theorem minusSaddlePositiveSquaredContour_eq_of_pos
     {ε ℓ a b u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ha : 0 < a) (hb : 0 < b) (hu : 0 < u) :
     minusSaddlePositiveSquaredContour ε ℓ a u =
       minusSaddlePositiveSquaredContour ε ℓ b u := by
@@ -29385,7 +29320,7 @@ def minusSaddleOuterSquaredProfile (ε ℓ u : ℝ) : ℂ :=
 theorem plusSaddleOuterSquaredProfile_contDiff
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ ∞ (plusSaddleOuterSquaredProfile ε ℓ) := by
   apply contDiff_iff_contDiffAt.mpr
   intro u
@@ -29414,7 +29349,7 @@ theorem plusSaddleOuterSquaredProfile_contDiff
 theorem minusSaddleOuterSquaredProfile_contDiff
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ContDiff ℝ ∞ (minusSaddleOuterSquaredProfile ε ℓ) := by
   apply contDiff_iff_contDiffAt.mpr
   intro u
@@ -29457,7 +29392,7 @@ theorem minusSaddleOuterSquaredProfile_eq_zero
 theorem plusSaddleOuterSquaredProfile_eq_positiveContour
     {ε ℓ a u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ha : 0 < a) (hu : 3 < u) :
     plusSaddleOuterSquaredProfile ε ℓ u =
       plusSaddlePositiveSquaredContour ε ℓ a u := by
@@ -29472,7 +29407,7 @@ theorem plusSaddleOuterSquaredProfile_eq_positiveContour
 theorem minusSaddleOuterSquaredProfile_eq_positiveContour
     {ε ℓ a u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (ha : 0 < a) (hu : 3 < u) :
     minusSaddleOuterSquaredProfile ε ℓ u =
       minusSaddlePositiveSquaredContour ε ℓ a u := by
@@ -29609,7 +29544,7 @@ theorem saddleOuterSquaredProfile_schwartz_decay
 theorem plusSaddleOuterSquaredProfile_schwartz_decay
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (k n : ℕ) :
     ∃ C : ℝ, ∀ u : ℝ,
       ‖u‖ ^ k *
@@ -29636,7 +29571,7 @@ theorem plusSaddleOuterSquaredProfile_schwartz_decay
 theorem minusSaddleOuterSquaredProfile_schwartz_decay
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (k n : ℕ) :
     ∃ C : ℝ, ∀ u : ℝ,
       ‖u‖ ^ k *
@@ -29663,7 +29598,7 @@ theorem minusSaddleOuterSquaredProfile_schwartz_decay
 def plusSaddleOuterScalarSchwartz
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     𝓢(ℝ, ℂ) where
   toFun := plusSaddleOuterSquaredProfile ε ℓ
   smooth' := plusSaddleOuterSquaredProfile_contDiff
@@ -29674,7 +29609,7 @@ def plusSaddleOuterScalarSchwartz
 def minusSaddleOuterScalarSchwartz
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     𝓢(ℝ, ℂ) where
   toFun := minusSaddleOuterSquaredProfile ε ℓ
   smooth' := minusSaddleOuterSquaredProfile_contDiff
@@ -29695,7 +29630,7 @@ def saddleSquaredSchwartzPullback (d : ℕ) :
 def plusSaddleOuterSchwartz
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (d : ℕ) : TestFunction d :=
   saddleSquaredSchwartzPullback d
     (plusSaddleOuterScalarSchwartz hε hℓ horder)
@@ -29703,7 +29638,7 @@ def plusSaddleOuterSchwartz
 def minusSaddleOuterSchwartz
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (d : ℕ) : TestFunction d :=
   saddleSquaredSchwartzPullback d
     (minusSaddleOuterScalarSchwartz hε hℓ horder)
@@ -29711,7 +29646,7 @@ def minusSaddleOuterSchwartz
 @[simp] theorem plusSaddleOuterSchwartz_apply
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (d : ℕ) (x : Euclidean d) :
     plusSaddleOuterSchwartz hε hℓ horder d x =
       plusSaddleOuterSquaredProfile ε ℓ (‖x‖ ^ 2) := rfl
@@ -29719,7 +29654,7 @@ def minusSaddleOuterSchwartz
 @[simp] theorem minusSaddleOuterSchwartz_apply
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (d : ℕ) (x : Euclidean d) :
     minusSaddleOuterSchwartz hε hℓ horder d x =
       minusSaddleOuterSquaredProfile ε ℓ (‖x‖ ^ 2) := rfl
@@ -29727,7 +29662,7 @@ def minusSaddleOuterSchwartz
 theorem plusSaddleOuterDifference_hasCompactSupport
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (d : ℕ) :
     HasCompactSupport (fun x : Euclidean d =>
       plusSaddleProfile ε ℓ ‖x‖ -
@@ -29762,7 +29697,7 @@ theorem plusSaddleOuterDifference_hasCompactSupport
 theorem minusSaddleOuterDifference_hasCompactSupport
     {ε ℓ : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (d : ℕ) :
     HasCompactSupport (fun x : Euclidean d =>
       minusSaddleProfile ε ℓ ‖x‖ -
@@ -29797,7 +29732,7 @@ theorem minusSaddleOuterDifference_hasCompactSupport
 def plusSaddleSchwartz
     {ε : ℝ} (hε : 0 < ε)
     {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     TestFunction d where
   toFun := plusSaddleFunction ε d
   smooth' := plusSaddleFunction_contDiff hε hd horder
@@ -29838,7 +29773,7 @@ def plusSaddleSchwartz
 def minusSaddleSchwartz
     {ε : ℝ} (hε : 0 < ε)
     {d : ℕ} (hd : 0 < d)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     TestFunction d where
   toFun := minusSaddleFunction ε d
   smooth' := minusSaddleFunction_contDiff hε hd horder
@@ -29927,7 +29862,7 @@ theorem saddleSourceContour_gamma_norm
 theorem saddleSourceContour_shellExponential_norm
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (T : ℝ) :
     ‖Complex.exp
       ((ℓ : ℂ) * mellinShellPhase ε
@@ -29945,7 +29880,7 @@ theorem saddleSourceContour_shellExponential_norm
 theorem saddleSourceContour_mellinEnvelope_norm
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (T : ℝ) :
     ‖saddleMellinEnvelope ε ℓ
         (saddleSourceMellinContour ℓ u T)‖ =
@@ -29980,7 +29915,7 @@ def saddleSourceNormalizedEnvelope
 theorem saddleSourceNormalizedEnvelope_norm
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (T : ℝ) :
     ‖saddleSourceNormalizedEnvelope ε ℓ u T‖ =
       Real.exp (-saddleSourceContourDamping ε ℓ u T) := by
@@ -30003,7 +29938,7 @@ def saddleSourceCenteredEnvelope
 theorem saddleSourceCenteredEnvelope_norm
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v T : ℝ) :
     ‖saddleSourceCenteredEnvelope ε ℓ u v T‖ =
       Real.exp (-saddleSourceContourDamping ε ℓ u T) := by
@@ -30026,7 +29961,7 @@ def saddleSourceCenteredMinusIntegrand
 theorem saddleSourceCenteredPlusIntegrand_norm
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v T : ℝ) :
     ‖saddleSourceCenteredPlusIntegrand ε ℓ u v T‖ =
       Real.exp (-saddleSourceContourDamping ε ℓ u T) *
@@ -30039,7 +29974,7 @@ theorem saddleSourceCenteredPlusIntegrand_norm
 theorem saddleSourceCenteredMinusIntegrand_norm
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v T : ℝ) :
     ‖saddleSourceCenteredMinusIntegrand ε ℓ u v T‖ =
       Real.exp (-saddleSourceContourDamping ε ℓ u T) *
@@ -30118,7 +30053,7 @@ theorem saddleSourceMellinContour_integral_change
 theorem plusSaddleProfile_eq_sourceContourIntegral
     {ε ℓ r u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (hu : -1 < u) :
     plusSaddleProfile ε ℓ r =
       ((ℓ / (2 * Real.pi) : ℝ) : ℂ) *
@@ -30142,7 +30077,7 @@ theorem plusSaddleProfile_eq_sourceContourIntegral
 theorem minusSaddleProfile_eq_sourceContourIntegral
     {ε ℓ r u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hr : 0 < r) (hu : -1 < u) :
     minusSaddleProfile ε ℓ r =
       ((ℓ / (2 * Real.pi) : ℝ) : ℂ) *
@@ -30216,7 +30151,7 @@ theorem saddleSourceContour_envelope_eq_scale_mul_normalized
 theorem plusSaddleProfile_exp_eq_centeredIntegral
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v : ℝ) :
     plusSaddleProfile ε ℓ (Real.exp v) =
       (saddleSourceCenteredPrefactor ε ℓ u v : ℂ) *
@@ -30273,7 +30208,7 @@ theorem plusSaddleProfile_exp_eq_centeredIntegral
 theorem minusSaddleProfile_exp_eq_centeredIntegral
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v : ℝ) :
     minusSaddleProfile ε ℓ (Real.exp v) =
       (saddleSourceCenteredPrefactor ε ℓ u v : ℂ) *
@@ -30425,7 +30360,7 @@ theorem plusSaddleProfile_exp_re_pos_of_gaussian_error
     (hε : 0 < ε)
     (hℓ : 0 < ℓ)
     (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hV : 0 < saddleSourceGaussianVariance ε ℓ u)
     (herror :
       ‖(∫ T : ℝ,
@@ -30464,7 +30399,7 @@ theorem minusSaddleProfile_exp_re_neg_of_gaussian_error
     (hε : 0 < ε)
     (hℓ : 0 < ℓ)
     (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hV : 0 < saddleSourceGaussianVariance ε ℓ u)
     (herror :
       ‖(∫ T : ℝ,
@@ -30502,7 +30437,7 @@ theorem saddleSourcePositiveShellVariance_nonneg
     0 ≤ upperPositiveShellVariance ε δ := by
   unfold upperPositiveShellVariance
   apply intervalIntegral.integral_nonneg
-    (show shellLocation ε ≤ shellLocation ε + 1 by linarith)
+    (show (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 by linarith)
   intro a ha
   unfold positiveShellDensity
   exact mul_nonneg
@@ -30518,13 +30453,13 @@ theorem upperFirstBranch_shortVariance_le_gamma
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a))) :
     upperShortShellVariance ε (u - 1) ≤
       (1 - 4 * ε) * upperGammaVariance ℓ (1 + u) := by
-  let a₀ : ℝ := shortCutoff ε
-  let A : ℝ := shortEndpoint ε
+  let a₀ : ℝ := (ε ^ 3)
+  let A : ℝ := (10 * Real.log (1 / ε))
   let η : ℝ := 1 + u
   let γ : ℝ → ℝ := fun a =>
     a ^ 2 * upperGammaMeasureDensity ℓ η a
@@ -30532,7 +30467,7 @@ theorem upperFirstBranch_shortVariance_le_gamma
     try dsimp [η]
     linarith
   have ha₀ : 0 < a₀ := by
-    try dsimp [a₀, shortCutoff]
+    try dsimp [a₀]
     positivity
   have hfactor : 0 ≤ 1 - 4 * ε := by
     linarith
@@ -30647,9 +30582,9 @@ theorem upperFirstBranch_saddleSourceGaussianVariance_lower_bound
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a))) :
     4 * ε * upperGammaVariance ℓ (1 + u) ≤
       saddleSourceGaussianVariance ε ℓ u := by
   have hshort := upperFirstBranch_shortVariance_le_gamma
@@ -30742,7 +30677,7 @@ theorem saddleSourceCenteredMinusIntegrand_sourcePointwise
 theorem saddleSourceCenteredPlusIntegrand_integrable
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v : ℝ) :
     Integrable (saddleSourceCenteredPlusIntegrand ε ℓ u v) := by
   let a : ℝ := ℓ * (1 + u)
@@ -30797,7 +30732,7 @@ theorem saddleSourceCenteredPlusIntegrand_integrable
 theorem saddleSourceCenteredMinusIntegrand_integrable
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (v : ℝ) :
     Integrable (saddleSourceCenteredMinusIntegrand ε ℓ u v) := by
   let a : ℝ := ℓ * (1 + u)
@@ -31297,18 +31232,17 @@ theorem saddleSourceWeightedCosineQuadraticRemainder_norm_le
 theorem saddleSourcePositiveShellQuadraticRemainder_norm_le
     {ε : ℝ} (hε : 0 < ε)
     (u T : ℝ) :
-    ‖∫ a in shellLocation ε..shellLocation ε + 1,
+    ‖∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         (positiveShellDensity ε a : ℂ) *
           saddleSourceCosineQuadraticRemainder a u T‖ ≤
       (|T| ^ 3 / 6) *
         upperPositiveShellThirdMoment ε (u - 1) := by
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have hbound :=
     saddleSourceWeightedCosineQuadraticRemainder_norm_le
       (positiveShellDensity ε)
-      (show shellLocation ε ≤ shellLocation ε + 1 by linarith)
+      (show (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 by linarith)
       hB
       (positiveShellDensity_continuous ε).continuousOn
       (fun a ha => by
@@ -31325,32 +31259,30 @@ theorem saddleSourcePositiveShellQuadraticRemainder_norm_le
 
 theorem saddleSourceShortShellQuadraticRemainder_norm_le
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (u T : ℝ) :
-    ‖∫ a in shortCutoff ε..shortEndpoint ε,
+    ‖∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (shortShellDensity ε a : ℂ) *
           saddleSourceCosineQuadraticRemainder a u T‖ ≤
       (|T| ^ 3 / 6) *
         upperShortShellThirdMoment ε (u - 1) := by
-  have ha₀ : 0 ≤ shortCutoff ε := by
-    unfold shortCutoff
+  have ha₀ : 0 ≤ (ε ^ 3) := by
     positivity
   have hnegative :
       ContinuousOn (fun a : ℝ => -shortShellDensity ε a)
-        (Icc (shortCutoff ε) (shortEndpoint ε)) :=
+        (Icc (ε ^ 3) (10 * Real.log (1 / ε))) :=
     (shortShellDensity_continuousOn_support hε).neg
   have hnonnegative (a : ℝ)
-      (ha : a ∈ Icc (shortCutoff ε) (shortEndpoint ε)) :
+      (ha : a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε))) :
       0 ≤ -shortShellDensity ε a := by
     have hapos : 0 < a := by
-      have : 0 < shortCutoff ε := by
-        unfold shortCutoff
+      have : 0 < (ε ^ 3) := by
         positivity
       exact this.trans_le ha.1
     unfold shortShellDensity
-    have hm : 0 ≤ shortMargin ε a := hmargin a ha
+    have hm : 0 ≤ (1 - 10 * ε * (1 + a)) := hmargin a ha
     have hd : 0 < 2 * a ^ 2 * Real.cosh a := by
       positivity
     simpa only [neg_mul, neg_neg, ge_iff_le] using!
@@ -31362,17 +31294,17 @@ theorem saddleSourceShortShellQuadraticRemainder_norm_le
       (fun a : ℝ => -shortShellDensity ε a)
       horder ha₀ hnegative hnonnegative u T
   have hnorm :
-      ‖∫ a in shortCutoff ε..shortEndpoint ε,
+      ‖∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (shortShellDensity ε a : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T‖ =
-      ‖∫ a in shortCutoff ε..shortEndpoint ε,
+      ‖∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           ((-shortShellDensity ε a : ℝ) : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T‖ := by
     have heq :
-        (∫ a in shortCutoff ε..shortEndpoint ε,
+        (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           ((-shortShellDensity ε a : ℝ) : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T) =
-        -(∫ a in shortCutoff ε..shortEndpoint ε,
+        -(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (shortShellDensity ε a : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T) := by
       rw [← intervalIntegral.integral_neg]
@@ -31515,17 +31447,17 @@ def saddleSourceShellCenteredPhase
 
 def saddleSourceShellQuadraticRemainder
     (ε u T : ℝ) : ℂ :=
-  (∫ a in shortCutoff ε..shortEndpoint ε,
+  (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
     (shortShellDensity ε a : ℂ) *
       saddleSourceCosineQuadraticRemainder a u T) +
-  (∫ a in shellLocation ε..shellLocation ε + 1,
+  (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
     (positiveShellDensity ε a : ℂ) *
       saddleSourceCosineQuadraticRemainder a u T)
 
 theorem saddleSourceShellQuadraticRemainder_eq
     {ε : ℝ}
     (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (u T : ℝ) :
     saddleSourceShellQuadraticRemainder ε u T =
       mellinShellPhase ε
@@ -31536,30 +31468,30 @@ theorem saddleSourceShellQuadraticRemainder_eq
         ((T ^ 2 / 2 *
           upperNetShellVariance ε (u - 1) : ℝ) : ℂ) := by
   let Fs : ℂ :=
-    ∫ a in shortCutoff ε..shortEndpoint ε,
+    ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
       (shortShellDensity ε a : ℂ) *
         (Complex.cos
           ((a : ℂ) *
             ((T : ℂ) + Complex.I * (u : ℂ))) - 1)
   let Fp : ℂ :=
-    ∫ a in shellLocation ε..shellLocation ε + 1,
+    ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
       (positiveShellDensity ε a : ℂ) *
         (Complex.cos
           ((a : ℂ) *
             ((T : ℂ) + Complex.I * (u : ℂ))) - 1)
   let Hs : ℂ :=
-    ∫ a in shortCutoff ε..shortEndpoint ε,
+    ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
       (shortShellDensity ε a : ℂ) *
         ((Real.cosh (u * a) : ℂ) - 1)
   let Hp : ℂ :=
-    ∫ a in shellLocation ε..shellLocation ε + 1,
+    ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
       (positiveShellDensity ε a : ℂ) *
         ((Real.cosh (u * a) : ℂ) - 1)
   let Ls : ℝ :=
-    ∫ a in shortCutoff ε..shortEndpoint ε,
+    ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
       shortShellDensity ε a * a * Real.sinh (u * a)
   let Lp : ℝ :=
-    ∫ a in shellLocation ε..shellLocation ε + 1,
+    ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
       positiveShellDensity ε a * a * Real.sinh (u * a)
   let Vs : ℝ := upperShortShellVariance ε (u - 1)
   let Vp : ℝ := upperPositiveShellVariance ε (u - 1)
@@ -31570,19 +31502,19 @@ theorem saddleSourceShellQuadraticRemainder_eq
   have hpositive :=
     saddleSourceWeightedCosineQuadraticRemainder_integral_eq
       (positiveShellDensity ε)
-      (show shellLocation ε ≤ shellLocation ε + 1 by
+      (show (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 by
         linarith)
       (positiveShellDensity_continuous ε).continuousOn u T
   have hvariance :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * a ^ 2 *
           Real.cosh (u * a)) =
       -Vs := by
     change
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * a ^ 2 *
           Real.cosh (u * a)) =
-        -(∫ a in shortCutoff ε..shortEndpoint ε,
+        -(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (-shortShellDensity ε a) * a ^ 2 *
             Real.cosh ((1 + (u - 1)) * a))
     rw [← intervalIntegral.integral_neg]
@@ -31590,15 +31522,15 @@ theorem saddleSourceShellQuadraticRemainder_eq
     intro a ha
     ring_nf
   have hpositivevariance :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * a ^ 2 *
           Real.cosh (u * a)) =
       Vp := by
     change
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * a ^ 2 *
           Real.cosh (u * a)) =
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * a ^ 2 *
           Real.cosh ((1 + (u - 1)) * a))
     apply intervalIntegral.integral_congr
@@ -31643,7 +31575,7 @@ theorem saddleSourceShellQuadraticRemainder_eq
       rw [harg, Complex.cos_mul_I,
         ← Complex.ofReal_cosh]
   have hs :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         (shortShellDensity ε a : ℂ) *
           saddleSourceCosineQuadraticRemainder a u T) =
         Fs - Hs +
@@ -31653,7 +31585,7 @@ theorem saddleSourceShellQuadraticRemainder_eq
     change
       Fs - Hs + Complex.I * ((T * Ls : ℝ) : ℂ) +
           ((T ^ 2 / 2 *
-            (∫ a in shortCutoff ε..shortEndpoint ε,
+            (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
               shortShellDensity ε a * a ^ 2 *
                 Real.cosh (u * a)) : ℝ) : ℂ) =
         Fs - Hs + Complex.I * ((T * Ls : ℝ) : ℂ) -
@@ -31662,7 +31594,7 @@ theorem saddleSourceShellQuadraticRemainder_eq
     push_cast
     ring
   have hp :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         (positiveShellDensity ε a : ℂ) *
           saddleSourceCosineQuadraticRemainder a u T) =
         Fp - Hp +
@@ -31672,7 +31604,7 @@ theorem saddleSourceShellQuadraticRemainder_eq
     change
       Fp - Hp + Complex.I * ((T * Lp : ℝ) : ℂ) +
           ((T ^ 2 / 2 *
-            (∫ a in shellLocation ε..shellLocation ε + 1,
+            (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
               positiveShellDensity ε a * a ^ 2 *
                 Real.cosh (u * a)) : ℝ) : ℂ) =
         Fp - Hp + Complex.I * ((T * Lp : ℝ) : ℂ) +
@@ -31695,9 +31627,9 @@ theorem saddleSourceShellCenteredPhase_cubic_remainder_norm_le
     {ε ℓ : ℝ}
     (hε : 0 < ε)
     (hℓ : 0 ≤ ℓ)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (u T : ℝ) :
     ‖saddleSourceShellCenteredPhase ε ℓ u T +
         ((ℓ * upperNetShellVariance ε (u - 1) / 2 *
@@ -31717,16 +31649,16 @@ theorem saddleSourceShellCenteredPhase_cubic_remainder_norm_le
     unfold saddleSourceShellQuadraticRemainder
       upperNetShellThirdMoment
     calc
-      ‖(∫ a in shortCutoff ε..shortEndpoint ε,
+      ‖(∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (shortShellDensity ε a : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T) +
-        (∫ a in shellLocation ε..shellLocation ε + 1,
+        (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           (positiveShellDensity ε a : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T)‖ ≤
-        ‖∫ a in shortCutoff ε..shortEndpoint ε,
+        ‖∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           (shortShellDensity ε a : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T‖ +
-        ‖∫ a in shellLocation ε..shellLocation ε + 1,
+        ‖∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           (positiveShellDensity ε a : ℂ) *
             saddleSourceCosineQuadraticRemainder a u T‖ :=
           norm_add_le _ _
@@ -32808,9 +32740,9 @@ theorem saddleSourceCenteredPhase_cubic_remainder_norm_le
     (hε : 0 < ε)
     (hℓ : 0 < ℓ)
     (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ) :
     ‖saddleSourceCenteredPhase ε ℓ u T +
         ((ℓ * saddleSourceGaussianVariance ε ℓ u / 2 *
@@ -33022,9 +32954,9 @@ theorem saddleSourceCenteredEnvelope_stationary_gaussian_error_le
     (hε : 0 < ε)
     (hℓ : 0 < ℓ)
     (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ)
     (hsmall :
       (ℓ * upperSaddleThirdMoment ε ℓ (u - 1) / 6) *
@@ -33086,9 +33018,9 @@ open scoped Topology
 theorem saddleSourceCenteredPolynomial_centralGaussianError_le
     {ε ℓ u R q p : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (hV : 0 < saddleSourceGaussianVariance ε ℓ u)
     (hR : 0 ≤ R) (hq : 0 ≤ q) (hqone : q ≤ 1)
     (hp : 0 ≤ p)
@@ -33259,9 +33191,9 @@ theorem saddleSourceCenteredPolynomial_centralGaussianError_le
 theorem saddleSourceCenteredPlusIntegrand_centralGaussianError_le
     {ε ℓ u R q p : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (hV : 0 < saddleSourceGaussianVariance ε ℓ u)
     (hR : 0 ≤ R) (hq : 0 ≤ q) (hqone : q ≤ 1)
     (hp : 0 ≤ p)
@@ -33290,9 +33222,9 @@ theorem saddleSourceCenteredPlusIntegrand_centralGaussianError_le
 theorem saddleSourceCenteredMinusIntegrand_centralGaussianError_le
     {ε ℓ u R q p : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-      0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+      0 ≤ (1 - 10 * ε * (1 + a)))
     (hV : 0 < saddleSourceGaussianVariance ε ℓ u)
     (hR : 0 ≤ R) (hq : 0 ≤ q) (hqone : q ≤ 1)
     (hp : 0 ≤ p)
@@ -33708,9 +33640,9 @@ theorem upperPositiveShellVariance_firstBranch_le
     (huupper : u ≤ 1 + ε / 2) :
     upperPositiveShellVariance ε (u - 1) ≤
       upperPositiveShellVariance ε (ε / 2) := by
-  let B : ℝ := shellLocation ε
+  let B : ℝ := (ε⁻¹ ^ 3)
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have horder : B ≤ B + 1 := by linarith
   have huabs : |u| ≤ 1 + ε / 2 := by
@@ -33753,9 +33685,9 @@ theorem upperFirstBranch_saddleSourceGaussianVariance_upper_bound
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)))
     (hscale : 1 ≤ ℓ * (1 + u)) :
     saddleSourceGaussianVariance ε ℓ u ≤
       ((3 / 2 : ℝ) +
@@ -33837,7 +33769,7 @@ theorem saddle_exp_neg_mul_min_le_add
 theorem saddleSourceNormalizedEnvelope_continuous
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous (saddleSourceNormalizedEnvelope ε ℓ u) := by
   have harg : Continuous
       (fun T : ℝ => saddleSourceMellinContour ℓ u T) := by
@@ -33883,7 +33815,7 @@ theorem saddleSourceNormalizedEnvelope_continuous
 theorem saddleSourceDampingExponential_continuous
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous
       (fun T : ℝ =>
         Real.exp (-saddleSourceContourDamping ε ℓ u T)) := by
@@ -33898,7 +33830,7 @@ theorem saddleSourceDampingExponential_continuous
 theorem saddleSourceTailIntegrand_continuous
     {ε ℓ u : ℝ}
     (hε : 0 < ε) (hℓ : 0 < ℓ) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     Continuous
       (fun T : ℝ =>
         saddleGaussianTailWeight T *
@@ -33916,9 +33848,9 @@ theorem saddleSourceContourDamping_firstBranch_min_lower_bound
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)))
     (T : ℝ) :
     (ε * ℓ / (2 * Real.exp 1)) *
         min (T ^ 2 / (1 + u)) |T| ≤
@@ -33945,9 +33877,9 @@ theorem saddleSource_firstBranch_weighted_integrable
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a))) :
     Integrable
       (fun T : ℝ =>
         saddleGaussianTailWeight T *
@@ -34009,9 +33941,9 @@ theorem saddleSource_firstBranch_weighted_tail_le
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)))
     (hR : 0 ≤ R)
     (hquadratic :
       6 ≤ (ε * ℓ / (2 * Real.exp 1)) / (1 + u))
@@ -34210,9 +34142,9 @@ theorem saddleSource_firstBranch_normalized_tail_bound
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)))
     (hV : 0 < saddleSourceGaussianVariance ε ℓ u)
     (hC : 0 < C)
     (hupper :
@@ -34502,8 +34434,8 @@ theorem eventually_saddleSource_firstBranch_uniform_tail :
     try dsimp [V]
     exact hVbranch ℓ hℓ u hulower huupper
   have hmargin' :
-      ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-        0 ≤ shortMargin ε a := by
+      ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+        0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -34680,8 +34612,7 @@ open scoped Topology
 theorem saddleSourcePositiveShellThirdMoment_nonneg
     {ε : ℝ} (hε : 0 < ε) (δ : ℝ) :
     0 ≤ upperPositiveShellThirdMoment ε δ := by
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   unfold upperPositiveShellThirdMoment
   apply intervalIntegral.integral_nonneg (by linarith)
@@ -34701,9 +34632,9 @@ theorem upperPositiveShellThirdMoment_firstBranch_le
     (huupper : u ≤ 1 + ε / 2) :
     upperPositiveShellThirdMoment ε (u - 1) ≤
       upperPositiveShellThirdMoment ε (ε / 2) := by
-  let B : ℝ := shellLocation ε
+  let B : ℝ := (ε⁻¹ ^ 3)
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have horder : B ≤ B + 1 := by linarith
   have huabs : |u| ≤ 1 + ε / 2 := by
@@ -34782,7 +34713,7 @@ theorem upperGammaThirdMoment_firstBranch_scaled_le
 def saddleSourceFirstBranchThirdMomentCoefficient
     (ε : ℝ) : ℝ :=
   (5 / 2 : ℝ) +
-    (3 / 2 : ℝ) * shortEndpoint ε * (2 + ε / 2) +
+    (3 / 2 : ℝ) * (10 * Real.log (1 / ε)) * (2 + ε / 2) +
     (2 + ε / 2) ^ 2 *
       upperPositiveShellThirdMoment ε (ε / 2)
 
@@ -34792,9 +34723,9 @@ theorem upperFirstBranch_saddleSourceThirdMoment_scaled_le
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)))
     (hscale : 1 ≤ ℓ * (1 + u)) :
     (1 + u) ^ 2 * upperSaddleThirdMoment ε ℓ (u - 1) ≤
       saddleSourceFirstBranchThirdMomentCoefficient ε := by
@@ -34809,9 +34740,8 @@ theorem upperFirstBranch_saddleSourceThirdMoment_scaled_le
   have hηU : η ≤ U := by
     try dsimp [η, U]
     linarith
-  have hA : 0 ≤ shortEndpoint ε := by
-    have hcut : 0 < shortCutoff ε := by
-      unfold shortCutoff
+  have hA : 0 ≤ (10 * Real.log (1 / ε)) := by
+    have hcut : 0 < (ε ^ 3) := by
       positivity
     exact (hcut.trans_le horder).le
   have hgamma := upperGammaVariance_firstBranch_scaled_le
@@ -34833,23 +34763,23 @@ theorem upperFirstBranch_saddleSourceThirdMoment_scaled_le
     (δ := u - 1) hε horder hmargin
   have hshort :
       η ^ 2 * upperShortShellThirdMoment ε (u - 1) ≤
-        (3 / 2 : ℝ) * shortEndpoint ε * U := by
+        (3 / 2 : ℝ) * (10 * Real.log (1 / ε)) * U := by
     calc
       η ^ 2 * upperShortShellThirdMoment ε (u - 1) ≤
           η ^ 2 *
-            (shortEndpoint ε *
+            ((10 * Real.log (1 / ε)) *
               upperShortShellVariance ε (u - 1)) :=
         mul_le_mul_of_nonneg_left hshortthird (sq_nonneg η)
       _ ≤ η ^ 2 *
-          (shortEndpoint ε * upperGammaVariance ℓ η) := by
+          ((10 * Real.log (1 / ε)) * upperGammaVariance ℓ η) := by
         gcongr
-      _ = shortEndpoint ε * η *
+      _ = (10 * Real.log (1 / ε)) * η *
           (η * upperGammaVariance ℓ η) := by ring
-      _ ≤ shortEndpoint ε * η * (3 / 2 : ℝ) := by
+      _ ≤ (10 * Real.log (1 / ε)) * η * (3 / 2 : ℝ) := by
         gcongr
-      _ ≤ shortEndpoint ε * U * (3 / 2 : ℝ) := by
+      _ ≤ (10 * Real.log (1 / ε)) * U * (3 / 2 : ℝ) := by
         gcongr
-      _ = (3 / 2 : ℝ) * shortEndpoint ε * U := by
+      _ = (3 / 2 : ℝ) * (10 * Real.log (1 / ε)) * U := by
         ring
   have hremote :=
     upperPositiveShellThirdMoment_firstBranch_le
@@ -34877,19 +34807,19 @@ theorem upperFirstBranch_saddleSourceThirdMoment_scaled_le
         (upperPositiveShellThirdMoment ε (u - 1) +
           upperShortShellThirdMoment ε (u - 1))) ≤
     (5 / 2 : ℝ) +
-      (3 / 2 : ℝ) * shortEndpoint ε * U +
+      (3 / 2 : ℝ) * (10 * Real.log (1 / ε)) * U +
       U ^ 2 * upperPositiveShellThirdMoment ε (ε / 2)
   linarith
 
 def saddleSourceSecondBranchVarianceFloor (ε : ℝ) : ℝ :=
-  (99 / 200 : ℝ) * (shellLocation ε) ^ 2 *
+  (99 / 200 : ℝ) * (ε⁻¹ ^ 3) ^ 2 *
     shellWeight ε *
-      Real.exp ((ε / 2) * shellLocation ε)
+      Real.exp ((ε / 2) * (ε⁻¹ ^ 3))
 
 theorem saddleSourceSecondBranchVarianceFloor_pos
     {ε : ℝ} (hε : 0 < ε) :
     0 < saddleSourceSecondBranchVarianceFloor ε := by
-  unfold saddleSourceSecondBranchVarianceFloor shellLocation
+  unfold saddleSourceSecondBranchVarianceFloor
   have hweight := shellWeight_pos ε
   positivity
 
@@ -34905,11 +34835,10 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_floor :
   change 0 < ε at hε
   intro ℓ hℓ δ hδ
   have hδ0 : 0 ≤ δ := by linarith
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have hfactor :
-      0 ≤ (1 / 2 : ℝ) * (shellLocation ε) ^ 2 *
+      0 ≤ (1 / 2 : ℝ) * (ε⁻¹ ^ 3) ^ 2 *
         shellWeight ε := by
     have hweight := shellWeight_pos ε
     positivity
@@ -34917,8 +34846,8 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_floor :
     (upperPositiveShellVariance_bounds hε hδ0).1
   have hfull := (hvariance ℓ hℓ δ hδ).1
   have hmono :
-      Real.exp ((ε / 2) * shellLocation ε) ≤
-        Real.exp (δ * shellLocation ε) :=
+      Real.exp ((ε / 2) * (ε⁻¹ ^ 3)) ≤
+        Real.exp (δ * (ε⁻¹ ^ 3)) :=
     Real.exp_le_exp.mpr
       (mul_le_mul_of_nonneg_right hδ hB)
   have hfloor :
@@ -34929,16 +34858,16 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_floor :
       saddleSourceSecondBranchVarianceFloor ε =
           (99 / 100 : ℝ) *
             ((1 / 2 : ℝ) *
-              (shellLocation ε) ^ 2 *
+              (ε⁻¹ ^ 3) ^ 2 *
                 shellWeight ε *
-                  Real.exp ((ε / 2) * shellLocation ε)) := by
+                  Real.exp ((ε / 2) * (ε⁻¹ ^ 3))) := by
         unfold saddleSourceSecondBranchVarianceFloor
         ring
       _ ≤ (99 / 100 : ℝ) *
             ((1 / 2 : ℝ) *
-              (shellLocation ε) ^ 2 *
+              (ε⁻¹ ^ 3) ^ 2 *
                 shellWeight ε *
-                  Real.exp (δ * shellLocation ε)) := by
+                  Real.exp (δ * (ε⁻¹ ^ 3))) := by
         gcongr
       _ ≤ (99 / 100 : ℝ) *
             upperPositiveShellVariance ε δ := by
@@ -35017,7 +34946,7 @@ theorem exists_plusPolynomial_uniform_weighted_bound
   intro u hu T
   have hden : 0 <
       ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-    (beta_pos hε).trans_le
+    (div_pos hε four_pos).trans_le
       (plusPolynomial_imaginary_norm_ge_beta hε hu)
   exact (div_le_iff₀ hden).mp (hbound u hu T)
 
@@ -35035,7 +34964,7 @@ theorem exists_minusPolynomial_uniform_weighted_bound
   intro u hu T
   have hden : 0 <
       ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-    have hbeta := beta_pos hε
+    have hbeta := div_pos hε four_pos
     have hnorm :=
       minusPolynomial_imaginary_norm_ge_three_beta hε hu
     linarith
@@ -35056,7 +34985,7 @@ theorem exists_plusPolynomial_uniform_difference_bound
   intro u hu T
   have hden : 0 <
       ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-    (beta_pos hε).trans_le
+    (div_pos hε four_pos).trans_le
       (plusPolynomial_imaginary_norm_ge_beta hε hu)
   exact (div_le_iff₀ hden).mp (hbound u hu T)
 
@@ -35075,7 +35004,7 @@ theorem exists_minusPolynomial_uniform_difference_bound
   intro u hu T
   have hden : 0 <
       ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-    have hbeta := beta_pos hε
+    have hbeta := div_pos hε four_pos
     have hnorm :=
       minusPolynomial_imaginary_norm_ge_three_beta hε hu
     linarith
@@ -35313,9 +35242,9 @@ theorem upperFirstBranch_saddleSourceGaussianVariance_scaled_lower_bound
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a))) :
     2 * ε ≤ (1 + u) *
       saddleSourceGaussianVariance ε ℓ u := by
   have hη : 0 < 1 + u := by linarith
@@ -35337,12 +35266,11 @@ theorem upperFirstBranch_saddleSourceGaussianVariance_scaled_lower_bound
 
 theorem saddleSourceFirstBranchThirdMomentCoefficient_pos
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     0 < saddleSourceFirstBranchThirdMomentCoefficient ε := by
-  have hcut : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcut : 0 < (ε ^ 3) := by
     positivity
-  have hA : 0 ≤ shortEndpoint ε :=
+  have hA : 0 ≤ (10 * Real.log (1 / ε)) :=
     (hcut.trans_le horder).le
   have hremote :=
     saddleSourcePositiveShellThirdMoment_nonneg hε (ε / 2)
@@ -35355,9 +35283,9 @@ theorem saddleSourceFirstBranch_cubic_central_window_le
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)))
     (hscale : 1 ≤ ℓ * (1 + u))
     (hT : |T| ≤ saddleSourceFirstBranchCentralRadius ε ℓ u) :
     (ℓ * upperSaddleThirdMoment ε ℓ (u - 1) / 6) *
@@ -35423,13 +35351,11 @@ theorem eventually_saddleSourceSecondBranch_cubic_central_window_le :
   have hfloorpositive :=
     saddleSourceSecondBranchVarianceFloor_pos hε
   have hvariance := hfloor ℓ hℓpositive δ hδ
-  have hcut : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcut : 0 < (ε ^ 3) := by
     positivity
-  have hA : 0 ≤ shortEndpoint ε :=
+  have hA : 0 ≤ (10 * Real.log (1 / ε)) :=
     (hcut.trans_le horder).le
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have hC :
       0 ≤ 2 + (100 / 99 : ℝ) *
@@ -35539,9 +35465,9 @@ theorem saddleSourceFirstBranch_central_radius_le
     (hℓ : 0 < ℓ)
     (hulower : -1 < u)
     (huupper : u ≤ 1 + ε / 2)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
-    (hmargin : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
+    (hmargin : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a))) :
     saddleSourceFirstBranchCentralRadius ε ℓ u ≤
       ((2 + ε / 2) / Real.sqrt (2 * ε)) *
         (ℓ * (1 + u)) ^ (-(5 / 12 : ℝ)) := by
@@ -35623,8 +35549,8 @@ theorem eventually_saddleSourceFirstBranch_cubic_window :
     eventually_upper_shortMargin_positive]
     with ε hε hεsmall horder hmargin
   change 0 < ε at hε
-  have hmargin' : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a := by
+  have hmargin' : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -35706,8 +35632,8 @@ theorem eventually_saddleSourceFirstBranch_central_radius_lt :
     eventually_upper_shortMargin_positive]
     with ε hε hεsmall horder hmargin
   change 0 < ε at hε
-  have hmargin' : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a := by
+  have hmargin' : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -35806,8 +35732,8 @@ theorem eventually_saddleSourceFirstBranch_centralGaussianErrors :
     eventually_saddleSourceFirstBranch_central_radius_lt]
     with ε hε horder hmargin hvariance hcubic hradius
   change 0 < ε at hε
-  have hmargin' : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a := by
+  have hmargin' : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -35851,7 +35777,7 @@ theorem eventually_saddleSourceFirstBranch_centralGaussianErrors :
         (hT.trans (hsmallplus u hu huupper hstar).le)
     have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     have hcentral :=
       saddleSourceCenteredPlusIntegrand_centralGaussianError_le
@@ -35880,7 +35806,7 @@ theorem eventually_saddleSourceFirstBranch_centralGaussianErrors :
         (hT.trans (hsmallminus u hu huupper hstar).le)
     have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hbeta := beta_pos hε
+      have hbeta := div_pos hε four_pos
       have hbound :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -35941,8 +35867,8 @@ theorem eventually_saddleSourceSecondBranch_centralGaussianErrors :
     eventually_saddleSourceSecondBranch_central_radius_lt]
     with ε hε horder hmargin hvariance hcubic hradius
   change 0 < ε at hε
-  have hmargin' : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a := by
+  have hmargin' : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -35998,7 +35924,7 @@ theorem eventually_saddleSourceSecondBranch_centralGaussianErrors :
         (hT.trans (hsmallplus δ hδ).le)
     have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     have hcentral :=
       saddleSourceCenteredPlusIntegrand_centralGaussianError_le
@@ -36022,7 +35948,7 @@ theorem eventually_saddleSourceSecondBranch_centralGaussianErrors :
         (hT.trans (hsmallminus δ hδ).le)
     have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hbeta := beta_pos hε
+      have hbeta := div_pos hε four_pos
       have hbound :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -36043,12 +35969,12 @@ theorem eventually_saddleSourceSecondBranch_centralGaussianErrors :
 theorem upperPositiveShellDamping_local_variance_lower
     {ε ℓ δ T : ℝ}
     (hε : 0 < ε) (hℓ : 0 ≤ ℓ)
-    (hT : |T| ≤ 1 / (2 * (shellLocation ε + 1))) :
+    (hT : |T| ≤ 1 / (2 * ((ε⁻¹ ^ 3) + 1))) :
     (ℓ / 4) * upperPositiveShellVariance ε δ * T ^ 2 ≤
       positiveShellDamping ε ℓ δ T := by
-  let B : ℝ := shellLocation ε
+  let B : ℝ := (ε⁻¹ ^ 3)
   have hB : 0 ≤ B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have hB1 : 0 < B + 1 := by linarith
   have horder : B ≤ B + 1 := by linarith
@@ -36348,7 +36274,7 @@ theorem eventually_saddleSourceContourDamping_secondBranch_local_coercivity :
       ∀ ℓ : ℝ, 0 < ℓ →
         ∀ δ : ℝ, ε / 2 ≤ δ →
           ∀ T : ℝ,
-            |T| ≤ 1 / (2 * (shellLocation ε + 1)) →
+            |T| ≤ 1 / (2 * ((ε⁻¹ ^ 3) + 1)) →
               (ℓ / (100 * Real.exp 1)) *
                   saddleSourceGaussianVariance ε ℓ (1 + δ) *
                     T ^ 2 ≤
@@ -36364,12 +36290,11 @@ theorem eventually_saddleSourceContourDamping_secondBranch_local_coercivity :
     linarith
   have hη : 0 < 2 + δ := by
     linarith
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have hhalf :
-      1 / (2 * (shellLocation ε + 1)) ≤ (1 / 2 : ℝ) := by
-    have hb : 0 < 2 * (shellLocation ε + 1) := by
+      1 / (2 * ((ε⁻¹ ^ 3) + 1)) ≤ (1 / 2 : ℝ) := by
+    have hb : 0 < 2 * ((ε⁻¹ ^ 3) + 1) := by
       positivity
     apply (div_le_iff₀ hb).2
     linarith
@@ -36738,7 +36663,7 @@ theorem saddleExponential_weighted_integral_le_rescaled
           (show 0 < k / 2 by positivity)]
 
 def saddleSourceSecondBranchLocalFrequency (ε : ℝ) : ℝ :=
-  1 / (2 * (shellLocation ε + 1))
+  1 / (2 * ((ε⁻¹ ^ 3) + 1))
 
 def saddleSourceSecondBranchGaussianRate
     (ε ℓ δ : ℝ) : ℝ :=
@@ -36756,7 +36681,7 @@ def saddleSourceSecondBranchGammaLinearRate
 def saddleSourceSecondBranchOuterBarrier
     (ε ℓ δ : ℝ) : ℝ :=
   (99 / 5000 : ℝ) * ℓ * shellWeight ε *
-    Real.exp (δ * shellLocation ε) *
+    Real.exp (δ * (ε⁻¹ ^ 3)) *
       saddleSourceSecondBranchLocalFrequency ε ^ 2
 
 theorem eventually_saddleSource_secondBranch_pointwise_gaussian_plus_outer :
@@ -36800,8 +36725,7 @@ theorem eventually_saddleSource_secondBranch_pointwise_gaussian_plus_outer :
   have ha : 0 < a := by
     try dsimp [a]
     positivity
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have ht₀ : 0 < t₀ := by
     try dsimp [t₀, saddleSourceSecondBranchLocalFrequency]
@@ -36809,7 +36733,7 @@ theorem eventually_saddleSource_secondBranch_pointwise_gaussian_plus_outer :
   have ht₀one : t₀ ≤ 1 := by
     try dsimp [t₀, saddleSourceSecondBranchLocalFrequency]
     apply (div_le_iff₀
-      (show (0 : ℝ) < 2 * (shellLocation ε + 1) by
+      (show (0 : ℝ) < 2 * ((ε⁻¹ ^ 3) + 1) by
         positivity)).2
     linarith
   have hw : 0 ≤ saddleGaussianTailWeight T :=
@@ -36861,13 +36785,13 @@ theorem eventually_saddleSource_secondBranch_pointwise_gaussian_plus_outer :
         saddleSourceSecondBranchOuterBarrier ε ℓ δ =
             (99 / 100 : ℝ) *
               ((ℓ / 50) * shellWeight ε *
-                Real.exp (δ * shellLocation ε) *
+                Real.exp (δ * (ε⁻¹ ^ 3)) *
                   t₀ ^ 2) := by
               try dsimp [saddleSourceSecondBranchOuterBarrier, t₀]
               ring
         _ ≤ (99 / 100 : ℝ) *
               ((ℓ / 50) * shellWeight ε *
-                Real.exp (δ * shellLocation ε) *
+                Real.exp (δ * (ε⁻¹ ^ 3)) *
                   min (T ^ 2) 1) := by
               apply mul_le_mul_of_nonneg_left _ (by norm_num)
               exact mul_le_mul_of_nonneg_left hminimum
@@ -37528,7 +37452,7 @@ theorem saddleSourceSecondBranch_outerMoment_le
   linarith
 
 def saddleSourceSecondBranchVarianceCoefficient (ε : ℝ) : ℝ :=
-  2 + (shellLocation ε + 1) ^ 2 * shellWeight ε
+  2 + ((ε⁻¹ ^ 3) + 1) ^ 2 * shellWeight ε
 
 theorem saddleSourceSecondBranchVarianceCoefficient_pos
     (ε : ℝ) :
@@ -37543,7 +37467,7 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_upper :
           saddleSourceGaussianVariance ε ℓ (1 + δ) ≤
             saddleSourceSecondBranchVarianceCoefficient ε *
               Real.exp
-                ((shellLocation ε + 1) * δ) := by
+                (((ε⁻¹ ^ 3) + 1) * δ) := by
   filter_upwards [self_mem_nhdsWithin,
     eventually_upperSaddleVariance_bounds]
     with ε hε hvariance
@@ -37556,11 +37480,10 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_upper :
     try dsimp [η]
     linarith
   have hη : 0 < η := by linarith
-  have hB : 0 ≤ shellLocation ε := by
-    unfold shellLocation
+  have hB : 0 ≤ (ε⁻¹ ^ 3) := by
     positivity
   have hexp : 1 ≤
-      Real.exp ((shellLocation ε + 1) * δ) := by
+      Real.exp (((ε⁻¹ ^ 3) + 1) * δ) := by
     apply (Real.one_le_exp_iff).2
     positivity
   have hfirst : 1 / (2 * η) ≤ (1 : ℝ) := by
@@ -37585,9 +37508,9 @@ theorem eventually_saddleSourceGaussianVariance_secondBranch_upper :
     simpa only [saddleSourceGaussianVariance, add_sub_cancel_left, one_div, mul_inv_rev] using! hfull
   have hshell' :
       upperPositiveShellVariance ε δ ≤
-        (shellLocation ε + 1) ^ 2 *
+        ((ε⁻¹ ^ 3) + 1) ^ 2 *
           shellWeight ε *
-            Real.exp ((shellLocation ε + 1) * δ) := by
+            Real.exp (((ε⁻¹ ^ 3) + 1) * δ) := by
     convert! hshell using 1; ring_nf
   unfold saddleSourceSecondBranchVarianceCoefficient
   linarith
@@ -37603,7 +37526,7 @@ theorem eventually_saddleSource_secondBranch_sqrtVariance_le :
                 (saddleSourceSecondBranchVarianceCoefficient ε) *
               Real.sqrt ℓ *
                 Real.exp
-                  (((shellLocation ε + 1) / 2) * δ) := by
+                  ((((ε⁻¹ ^ 3) + 1) / 2) * δ) := by
   filter_upwards
     [eventually_saddleSourceGaussianVariance_secondBranch_upper]
     with ε hupper
@@ -37620,17 +37543,17 @@ theorem eventually_saddleSource_secondBranch_sqrtVariance_le :
         (ℓ * saddleSourceGaussianVariance ε ℓ (1 + δ)) ≤
       Real.sqrt
         (ℓ * (C * Real.exp
-          ((shellLocation ε + 1) * δ))) := by
+          (((ε⁻¹ ^ 3) + 1) * δ))) := by
         apply Real.sqrt_le_sqrt
         simpa only [C] using! hscaled
     _ = Real.sqrt C * Real.sqrt ℓ *
         Real.exp
-          (((shellLocation ε + 1) / 2) * δ) := by
+          ((((ε⁻¹ ^ 3) + 1) / 2) * δ) := by
       rw [Real.sqrt_mul hℓpositive.le,
         Real.sqrt_mul hC.le, ← Real.exp_half]
       have hargument :
-          ((shellLocation ε + 1) * δ) / 2 =
-            ((shellLocation ε + 1) / 2) * δ := by
+          (((ε⁻¹ ^ 3) + 1) * δ) / 2 =
+            (((ε⁻¹ ^ 3) + 1) / 2) * δ := by
         ring
       rw [hargument]
       ring
@@ -37689,7 +37612,7 @@ theorem eventually_saddleSource_secondBranch_uniform_tail :
     with ε hε htail hsqrt hfloor
   change 0 < ε at hε
   intro κ hκ
-  let B : ℝ := shellLocation ε
+  let B : ℝ := (ε⁻¹ ^ 3)
   let Q : ℝ := shellWeight ε
   let t₀ : ℝ := saddleSourceSecondBranchLocalFrequency ε
   let c : ℝ := (99 / 5000 : ℝ) * t₀ ^ 2
@@ -37698,7 +37621,7 @@ theorem eventually_saddleSource_secondBranch_uniform_tail :
   let K : ℝ :=
     Real.sqrt C * saddleSourceSecondBranchMomentCoefficient
   have hB : 0 < B := by
-    try dsimp [B, shellLocation]
+    try dsimp [B]
     positivity
   have hQ : 0 < Q := by
     try dsimp [Q]
@@ -38076,7 +37999,7 @@ theorem saddleSource_weighted_tail_integral_le
 
 theorem exists_saddleSourceCenteredPlusIntegrand_weighted_tail_integral_bound
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 < C ∧
       ∀ ℓ : ℝ, 0 < ℓ →
         ∀ u : ℝ, -1 < u →
@@ -38117,7 +38040,7 @@ theorem exists_saddleSourceCenteredPlusIntegrand_weighted_tail_integral_bound
 
 theorem exists_saddleSourceCenteredMinusIntegrand_weighted_tail_integral_bound
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε) :
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε))) :
     ∃ C : ℝ, 0 < C ∧
       ∀ ℓ : ℝ, 0 < ℓ →
         ∀ u : ℝ, 1 + ε / 4 ≤ u →
@@ -38457,8 +38380,8 @@ theorem eventually_saddleSource_firstBranch_uniform_gaussian_tail :
   have hV : 0 < V :=
     hvariance ℓ hℓ u hulower huupper
   have hmargin' :
-      ∀ a ∈ Icc (shortCutoff ε) (shortEndpoint ε),
-        0 ≤ shortMargin ε a := by
+      ∀ a ∈ Icc (ε ^ 3) (10 * Real.log (1 / ε)),
+        0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -38623,8 +38546,8 @@ theorem eventually_saddleSourceFirstBranch_sourceL1Tails :
     eventually_saddleSource_firstBranch_uniform_tail]
     with ε hε hεsmall horder hmargin hvariance htail
   change 0 < ε at hε
-  have hmargin' : ∀ a ∈ Icc (shortCutoff ε)
-      (shortEndpoint ε), 0 ≤ shortMargin ε a := by
+  have hmargin' : ∀ a ∈ Icc (ε ^ 3)
+      (10 * Real.log (1 / ε)), 0 ≤ (1 - 10 * ε * (1 + a)) := by
     intro a ha
     have h := hmargin a ha
     linarith
@@ -38664,7 +38587,7 @@ theorem eventually_saddleSourceFirstBranch_sourceL1Tails :
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     have hbound := hplus ℓ hℓ u hu v R hweighted
     change
@@ -38696,7 +38619,7 @@ theorem eventually_saddleSourceFirstBranch_sourceL1Tails :
   · intro huminus
     have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hb := beta_pos hε
+      have hb := div_pos hε four_pos
       have hnorm :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -38768,7 +38691,7 @@ theorem eventually_saddleSourceFirstBranch_gaussianL1Tails :
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     change s *
       (∫ T : ℝ in saddleGaussianTailSet R,
@@ -38779,7 +38702,7 @@ theorem eventually_saddleSourceFirstBranch_gaussianL1Tails :
   · intro huminus
     have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hb := beta_pos hε
+      have hb := div_pos hε four_pos
       have hnorm :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -38841,7 +38764,7 @@ theorem eventually_saddleSourceFirstBranch_fullGaussianErrors :
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     have hfull :=
       saddleGaussian_fullLine_error_lt_of_central_and_normalized_tails
@@ -38879,7 +38802,7 @@ theorem eventually_saddleSourceFirstBranch_fullGaussianErrors :
   · intro huminus
     have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hb := beta_pos hε
+      have hb := div_pos hε four_pos
       have hnorm :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -39019,7 +38942,7 @@ theorem eventually_saddleSourceSecondBranch_sourceL1Tails_of_uniform_tail
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     have hbound := hplus ℓ hℓ u hu v R hweighted'
     change
@@ -39050,7 +38973,7 @@ theorem eventually_saddleSourceSecondBranch_sourceL1Tails_of_uniform_tail
           field_simp [hCp.ne']
   · have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hb := beta_pos hε
+      have hb := div_pos hε four_pos
       have hnorm :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -39131,7 +39054,7 @@ theorem eventually_saddleSourceSecondBranch_gaussianL1Tails :
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     change s *
       (∫ T : ℝ in saddleGaussianTailSet R,
@@ -39141,7 +39064,7 @@ theorem eventually_saddleSourceSecondBranch_gaussianL1Tails :
     linarith [mul_lt_mul_of_pos_left hkernel hden]
   · have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hb := beta_pos hε
+      have hb := div_pos hε four_pos
       have hnorm :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -39241,7 +39164,7 @@ theorem eventually_saddleSourceSecondBranch_fullGaussianErrors_of_sourceL1
   constructor
   · have hden : 0 <
         ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ :=
-      (beta_pos hε).trans_le
+      (div_pos hε four_pos).trans_le
         (plusPolynomial_imaginary_norm_ge_beta hε hu.le)
     have hfull :=
       saddleGaussian_fullLine_error_lt_of_central_and_normalized_tails
@@ -39286,7 +39209,7 @@ theorem eventually_saddleSourceSecondBranch_fullGaussianErrors_of_sourceL1
         linarith [mul_pos hden hG]
   · have hden : 0 <
         ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ := by
-      have hb := beta_pos hε
+      have hb := div_pos hε four_pos
       have hnorm :=
         minusPolynomial_imaginary_norm_ge_three_beta
           hε huminus
@@ -39580,26 +39503,24 @@ theorem saddleSinhShellInterval_hasDerivAt
 
 theorem saddleSourceShellDerivative_hasDerivAt
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (u : ℝ) :
     HasDerivAt (saddleSourceShellDerivative ε)
       (upperNetShellVariance ε (u - 1)) u := by
-  have hcutoff : 0 < shortCutoff ε := by
-    unfold shortCutoff
+  have hcutoff : 0 < (ε ^ 3) := by
     positivity
   let w : ℝ → ℝ := fun a =>
-    shortShellDensity ε (max a (shortCutoff ε))
-  have hmax (a : ℝ) : 0 < max a (shortCutoff ε) :=
+    shortShellDensity ε (max a (ε ^ 3))
+  have hmax (a : ℝ) : 0 < max a (ε ^ 3) :=
     hcutoff.trans_le (le_max_right _ _)
   have hw : Continuous w := by
     have hn : Continuous (fun a : ℝ =>
-        shortMargin ε (max a (shortCutoff ε)) *
-          Real.exp (-2 * max a (shortCutoff ε))) := by
-      unfold shortMargin
+        (1 - 10 * ε * (1 + (max a (ε ^ 3)))) *
+          Real.exp (-2 * max a (ε ^ 3))) := by
       fun_prop
     have hd : Continuous (fun a : ℝ =>
-        2 * (max a (shortCutoff ε)) ^ 2 *
-          Real.cosh (max a (shortCutoff ε))) := by
+        2 * (max a (ε ^ 3)) ^ 2 *
+          Real.cosh (max a (ε ^ 3))) := by
       fun_prop
     try dsimp [w]
     unfold shortShellDensity
@@ -39608,10 +39529,10 @@ theorem saddleSourceShellDerivative_hasDerivAt
   have hshort :
       HasDerivAt
         (fun v : ℝ =>
-          ∫ a in shortCutoff ε..shortEndpoint ε,
+          ∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
             shortShellDensity ε a * a *
               Real.sinh (v * a))
-        (∫ a in shortCutoff ε..shortEndpoint ε,
+        (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
           shortShellDensity ε a * a ^ 2 *
             Real.cosh (u * a)) u := by
     have h := saddleSinhShellInterval_hasDerivAt
@@ -39632,15 +39553,15 @@ theorem saddleSourceShellDerivative_hasDerivAt
       rw [max_eq_left ha.1]
       congr 2
       ring
-  have hremote : shellLocation ε ≤ shellLocation ε + 1 := by
+  have hremote : (ε⁻¹ ^ 3) ≤ (ε⁻¹ ^ 3) + 1 := by
     linarith
   have hpositive :
       HasDerivAt
         (fun v : ℝ =>
-          ∫ a in shellLocation ε..shellLocation ε + 1,
+          ∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
             positiveShellDensity ε a * a *
               Real.sinh (v * a))
-        (∫ a in shellLocation ε..shellLocation ε + 1,
+        (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
           positiveShellDensity ε a * a ^ 2 *
             Real.cosh (u * a)) u := by
     have h := saddleSinhShellInterval_hasDerivAt
@@ -39656,7 +39577,7 @@ theorem saddleSourceShellDerivative_hasDerivAt
       intro a ha
       ring_nf
   have hshortvariance :
-      (∫ a in shortCutoff ε..shortEndpoint ε,
+      (∫ a in (ε ^ 3)..(10 * Real.log (1 / ε)),
         shortShellDensity ε a * a ^ 2 *
           Real.cosh (u * a)) =
         -upperShortShellVariance ε (u - 1) := by
@@ -39666,7 +39587,7 @@ theorem saddleSourceShellDerivative_hasDerivAt
     intro a ha
     ring_nf
   have hpositivevariance :
-      (∫ a in shellLocation ε..shellLocation ε + 1,
+      (∫ a in (ε⁻¹ ^ 3)..(ε⁻¹ ^ 3 + 1),
         positiveShellDensity ε a * a ^ 2 *
           Real.cosh (u * a)) =
         upperPositiveShellVariance ε (u - 1) := by
@@ -39711,16 +39632,16 @@ theorem eventually_saddleSourceShellDerivative_monotone_secondBranch :
       (upperPositiveShellVariance_bounds hε hδnonneg).1
     have hpositive : 0 ≤ upperPositiveShellVariance ε (u - 1) := by
       exact (show
-        0 ≤ (1 / 2 : ℝ) * shellLocation ε ^ 2 *
+        0 ≤ (1 / 2 : ℝ) * (ε⁻¹ ^ 3) ^ 2 *
           shellWeight ε *
-            Real.exp ((u - 1) * shellLocation ε) by
+            Real.exp ((u - 1) * (ε⁻¹ ^ 3)) by
           positivity [shellWeight_pos ε]).trans hvariance
     have hnetlower := (hnet (u - 1) hδ).1
     linarith
 
 theorem saddleLogRadius_continuousOn_Ici
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {d : ℕ} (hd : 0 < d)
     {u₀ : ℝ} (hu₀ : -1 < u₀) :
     ContinuousOn (saddleLogRadius ε d) (Ici u₀) := by
@@ -39782,13 +39703,13 @@ theorem tendsto_saddleGammaArgument_atTop
 
 theorem tendsto_saddleLogRadius_atTop_of_shell_monotone
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {d : ℕ} (hd : 0 < d)
     (hmono : MonotoneOn (saddleSourceShellDerivative ε)
       (Ici (1 + ε / 2))) :
     Tendsto (saddleLogRadius ε d) atTop atTop := by
   have _hε : 0 < ε := hε
-  have _horder : shortCutoff ε ≤ shortEndpoint ε := horder
+  have _horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)) := horder
   let U : ℝ := 1 + ε / 2
   let C : ℝ := saddleSourceShellDerivative ε U
   have hargument := tendsto_saddleDigamma_atTop.comp
@@ -39835,7 +39756,7 @@ theorem eventually_tendsto_saddleLogRadius_atTop :
 
 theorem saddleLogRadius_covers_Ici
     {ε : ℝ} (hε : 0 < ε)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     {d : ℕ} (hd : 0 < d)
     {u₀ : ℝ} (hu₀ : -1 < u₀)
     (htop : Tendsto (saddleLogRadius ε d) atTop atTop)
@@ -39951,20 +39872,20 @@ open Filter
 open scoped Topology
 
 def EventualLowerBound : Prop :=
-  ∀ c : ℝ, c < criticalRadius →
+  ∀ c : ℝ, c < Real.pi⁻¹ →
     ∀ᶠ d : ℕ in atTop, c ≤ normalizedProgram d
 
 def EventualUpperBound : Prop :=
-  ∀ c : ℝ, criticalRadius < c →
+  ∀ c : ℝ, Real.pi⁻¹ < c →
     ∀ᶠ d : ℕ in atTop, normalizedProgram d ≤ c
 
 def UniformAdmissibleLowerBound : Prop :=
-  ∀ c : ℝ, c < criticalRadius →
+  ∀ c : ℝ, c < Real.pi⁻¹ →
     ∀ᶠ d : ℕ in atTop,
       ∀ f : Admissible d, c ≤ normalizedCost f
 
 def ConstructivePrimalUpperBound : Prop :=
-  ∀ c : ℝ, criticalRadius < c →
+  ∀ c : ℝ, Real.pi⁻¹ < c →
     ∀ᶠ d : ℕ in atTop,
       ∃ f : Admissible d, normalizedCost f ≤ c
 
@@ -39984,8 +39905,8 @@ theorem eventualLowerBound_of_uniform_and_constructive
     (hlower : UniformAdmissibleLowerBound)
     (hupper : ConstructivePrimalUpperBound) : EventualLowerBound := by
   intro c hc
-  have haux : criticalRadius < criticalRadius + 1 := by linarith
-  filter_upwards [hlower c hc, hupper (criticalRadius + 1) haux]
+  have haux : Real.pi⁻¹ < Real.pi⁻¹ + 1 := by linarith
+  filter_upwards [hlower c hc, hupper (Real.pi⁻¹ + 1) haux]
     with d hcost ⟨f, _⟩
   unfold normalizedProgram
   refine le_csInf ⟨normalizedCost f, f, rfl⟩ ?_
@@ -39999,12 +39920,12 @@ theorem sharpQuotient_of_eventual_bounds
   unfold SharpQuotientAsymptotic
   refine tendsto_order.2 ⟨?_, ?_⟩
   · intro a ha
-    have hmid : (a + criticalRadius) / 2 < criticalRadius := by
+    have hmid : (a + Real.pi⁻¹) / 2 < Real.pi⁻¹ := by
       linarith
     filter_upwards [hlower _ hmid] with d hd
     linarith
   · intro b hb
-    have hmid : criticalRadius < (criticalRadius + b) / 2 := by
+    have hmid : Real.pi⁻¹ < (Real.pi⁻¹ + b) / 2 := by
       linarith
     filter_upwards [hupper _ hmid] with d hd
     linarith
@@ -40023,7 +39944,7 @@ structure OrderedEpsilonUpperConstruction where
   normalizedRadius : ℝ → ℕ → ℝ
   limitingRadius : ℝ → ℝ
   limitingRadius_tendsto :
-    Tendsto limitingRadius (𝓝[>] (0 : ℝ)) (𝓝 criticalRadius)
+    Tendsto limitingRadius (𝓝[>] (0 : ℝ)) (𝓝 Real.pi⁻¹)
   normalizedRadius_tendsto :
     ∀ ε : ℝ, 0 < ε → ε < epsilonBound →
       Tendsto (normalizedRadius ε) atTop (𝓝 (limitingRadius ε))
@@ -40076,7 +39997,7 @@ open scoped FourierTransform SchwartzMap Topology
 
 def SaddleSourceSchwartzRealization : Prop :=
   ∀ ε : ℝ, 0 < ε →
-    shortCutoff ε ≤ shortEndpoint ε →
+    (ε ^ 3) ≤ (10 * Real.log (1 / ε)) →
       ∀ d : ℕ, 0 < d →
         ∃ fminus fplus : TestFunction d,
           (∀ x : Euclidean d,
@@ -40099,7 +40020,7 @@ noncomputable def saddleOrderedUpperConstruction
     OrderedEpsilonUpperConstruction := by
   have heventually :
       ∀ᶠ ε : ℝ in 𝓝[>] (0 : ℝ),
-        shortCutoff ε ≤ shortEndpoint ε ∧
+        (ε ^ 3) ≤ (10 * Real.log (1 / ε)) ∧
           (∀ᶠ d : ℕ in atTop,
             (∀ x : Euclidean d,
               0 ≤ (plusSaddleFunction ε d x).re) ∧
@@ -40109,7 +40030,7 @@ noncomputable def saddleOrderedUpperConstruction
     eventually_upper_shortCutoff_le_shortEndpoint.and hsigns
   have hmembership :
       {ε : ℝ |
-        shortCutoff ε ≤ shortEndpoint ε ∧
+        (ε ^ 3) ≤ (10 * Real.log (1 / ε)) ∧
           (∀ᶠ d : ℕ in atTop,
             (∀ x : Euclidean d,
               0 ≤ (plusSaddleFunction ε d x).re) ∧
@@ -46235,8 +46156,7 @@ theorem uniformAntiFourierSignRadius_of_poisson_majorization
             (lowerStripPoissonMajorant ((d : ℝ) / 2) R σ s)) :
     UniformAntiFourierSignRadius := by
   intro c hc hcritical
-  have hsharp : c < Real.pi⁻¹ := by
-    simpa only [criticalRadius] using! hcritical
+  have hsharp : c < Real.pi⁻¹ := hcritical
   obtain ⟨σ, γ, C, hσpos, hσone, hγ, hC, hmajor⟩ :=
     exists_lowerStripPoissonMajorant_integrable_majorant hc hsharp
   let J : ℝ := lowerInverseQuadraticMass
@@ -47292,7 +47212,7 @@ theorem linearProgram_root_eq_geometric_mul_normalizedProgram_unconditional
 
 theorem geometricLimit_mul_criticalRadius :
     (Real.sqrt (2 * Real.pi * Real.exp 1) / 2) *
-        criticalRadius = criticalPackingBase := by
+        Real.pi⁻¹ = criticalPackingBase := by
   have hleft :
       (Real.sqrt (2 * Real.pi * Real.exp 1)) ^ 2 =
         2 * Real.pi * Real.exp 1 :=
@@ -47311,7 +47231,7 @@ theorem geometricLimit_mul_criticalRadius :
         0 ≤ 2 * Real.pi * Real.sqrt (Real.exp 1 / (2 * Real.pi)) := by
       positivity
     nlinarith
-  unfold criticalRadius criticalPackingBase
+  unfold criticalPackingBase
   rw [heq]
   field_simp
 
@@ -47332,7 +47252,7 @@ theorem eventually_linearProgram_pos_of_sharpQuotient
     (hquotient : SharpQuotientAsymptotic) :
     ∀ᶠ d : ℕ in atTop, 0 < linearProgram d := by
   have hnorm : ∀ᶠ d : ℕ in atTop, 0 < normalizedProgram d :=
-    hquotient.eventually (Ioi_mem_nhds criticalRadius_pos)
+    hquotient.eventually (Ioi_mem_nhds (inv_pos.mpr Real.pi_pos))
   filter_upwards [hnorm, eventually_gt_atTop (0 : ℕ)] with d hpositive hd
   have hnonneg := quotientInf_nonneg_unconditional d
   have hinf : 0 < sInf (quotientSet d) := by
@@ -47455,7 +47375,7 @@ theorem eventually_plusSaddleProfile_nonneg_on_star :
 theorem plusSaddleProfile_re_pos_at_sourceSaddle_of_gaussian_error
     {ε : ℝ} {d : ℕ} {u : ℝ}
     (hε : 0 < ε) (hd : 0 < d) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hV : 0 < saddleSourceGaussianVariance ε ((d : ℝ) / 2) u)
     (herror :
       ‖(∫ T : ℝ,
@@ -47474,7 +47394,7 @@ theorem plusSaddleProfile_re_pos_at_sourceSaddle_of_gaussian_error
 theorem minusSaddleProfile_re_neg_at_sourceSaddle_of_gaussian_error
     {ε : ℝ} {d : ℕ} {u : ℝ}
     (hε : 0 < ε) (hd : 0 < d) (hu : -1 < u)
-    (horder : shortCutoff ε ≤ shortEndpoint ε)
+    (horder : (ε ^ 3) ≤ (10 * Real.log (1 / ε)))
     (hV : 0 < saddleSourceGaussianVariance ε ((d : ℝ) / 2) u)
     (herror :
       ‖(∫ T : ℝ,
@@ -47496,7 +47416,7 @@ theorem saddleSourceGaussianPlusIntegrand_integral_re_eq_norm
     (∫ T : ℝ, saddleSourceGaussianPlusIntegrand ε ℓ u T).re =
       ‖plusPolynomial ε (Complex.I * (u : ℂ))‖ *
         (∫ T : ℝ, saddleSourceGaussianKernel ε ℓ u T) := by
-  have hvalue : 0 < beta ε + (1 - u) ^ 2 * (1 + u) := by
+  have hvalue : 0 < (ε / 4) + (1 - u) ^ 2 * (1 + u) := by
     have h := plusPolynomial_imaginary_re_pos hε hu
     rw [plusPolynomial_imaginary, Complex.ofReal_re] at h
     exact h
@@ -47514,7 +47434,7 @@ theorem saddleSourceGaussianMinusIntegrand_neg_integral_re_eq_norm
     -(∫ T : ℝ, saddleSourceGaussianMinusIntegrand ε ℓ u T).re =
       ‖minusPolynomial ε (Complex.I * (u : ℂ))‖ *
         (∫ T : ℝ, saddleSourceGaussianKernel ε ℓ u T) := by
-  have hvalue : beta ε + (1 - u) * (1 + u) ^ 2 < 0 := by
+  have hvalue : (ε / 4) + (1 - u) * (1 + u) ^ 2 < 0 := by
     have h := minusPolynomial_imaginary_re_neg hε hu
     rw [minusPolynomial_imaginary, Complex.ofReal_re] at h
     exact h
@@ -47883,10 +47803,6 @@ theorem manuscriptQuotientRootInf_div_sqrt_tendsto
       (fun d : ℕ =>
         sInf (manuscriptQuotientRootSet d) / Real.sqrt (d : ℝ))
       atTop (nhds ((Real.pi)⁻¹)) := by
-  change Tendsto
-    (fun d : ℕ =>
-      sInf (manuscriptQuotientRootSet d) / Real.sqrt (d : ℝ))
-    atTop (nhds criticalRadius)
   unfold SharpQuotientAsymptotic at hquotient
   exact hquotient.congr'
     (Filter.Eventually.of_forall fun d =>
@@ -48030,16 +47946,16 @@ theorem manuscriptLinearProgram_eq_binary_error_rpow
   exact (Real.rpow_logb (by norm_num) (by norm_num) hpositive).symm
 
 def manuscriptQuotientRootError (d : ℕ) : ℝ :=
-  normalizedProgram d - criticalRadius
+  normalizedProgram d - Real.pi⁻¹
 
 theorem tendsto_manuscriptQuotientRootError :
     Tendsto manuscriptQuotientRootError atTop (nhds (0 : ℝ)) := by
   have hquotient :
-      Tendsto normalizedProgram atTop (nhds criticalRadius) :=
+      Tendsto normalizedProgram atTop (nhds Real.pi⁻¹) :=
     sharpQuotientAsymptotic
   have hconstant :
-      Tendsto (fun _ : ℕ => criticalRadius) atTop
-        (nhds criticalRadius) := tendsto_const_nhds
+      Tendsto (fun _ : ℕ => Real.pi⁻¹) atTop
+        (nhds Real.pi⁻¹) := tendsto_const_nhds
   simpa only [sub_self] using!
     hquotient.sub hconstant
 
@@ -48064,7 +47980,7 @@ theorem manuscriptQuotientRootInf_eq_critical_add_error
         normalizedProgram d * Real.sqrt (d : ℝ) := hroot
     _ = ((Real.pi)⁻¹ + manuscriptQuotientRootError d) *
         Real.sqrt (d : ℝ) := by
-          unfold manuscriptQuotientRootError criticalRadius
+          unfold manuscriptQuotientRootError
           ring
 
 theorem exists_manuscriptQuotientRootIsLittleO :

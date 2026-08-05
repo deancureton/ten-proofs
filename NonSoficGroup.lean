@@ -12596,19 +12596,26 @@ def secondMultiplicity {V : Type*} [DecidableEq V]
     (U : Finset (V × V)) (x : V) : ℕ :=
   (secondFiber U x).card
 
+def projFiber {V : Type*} [DecidableEq V] (π : V × V → V)
+    (U : Finset (V × V)) (x : V) : Finset (V × V) :=
+  U.filter (fun z => π z = x)
+
+theorem sum_projFiber_card {V : Type*} [Fintype V] [DecidableEq V]
+    (π : V × V → V) (U : Finset (V × V)) :
+    (∑ x : V, (projFiber π U x).card) = U.card := by
+  classical
+  simpa only [projFiber] using
+    (Finset.card_eq_sum_card_fiberwise (f := π) (s := U) (t := Finset.univ) (fun _ _ => Finset.mem_univ _)).symm
+
 theorem sum_firstFiber_card {V : Type*} [Fintype V] [DecidableEq V]
     (U : Finset (V × V)) :
-    (∑ x : V, (firstFiber U x).card) = U.card := by
-  classical
-  simpa only [firstFiber] using
-    (Finset.card_eq_sum_card_fiberwise (f := Prod.fst) (s := U) (t := Finset.univ) (fun _ _ => Finset.mem_univ _)).symm
+    (∑ x : V, (firstFiber U x).card) = U.card :=
+  sum_projFiber_card Prod.fst U
 
 theorem sum_secondFiber_card {V : Type*} [Fintype V] [DecidableEq V]
     (U : Finset (V × V)) :
-    (∑ x : V, (secondFiber U x).card) = U.card := by
-  classical
-  simpa only [secondFiber] using
-    (Finset.card_eq_sum_card_fiberwise (f := Prod.snd) (s := U) (t := Finset.univ) (fun _ _ => Finset.mem_univ _)).symm
+    (∑ x : V, (secondFiber U x).card) = U.card :=
+  sum_projFiber_card Prod.snd U
 
 theorem natDist_card_le_sdiff {α : Type*} [DecidableEq α]
     (A B : Finset α) :
@@ -12623,67 +12630,62 @@ theorem natDist_card_le_sdiff {α : Type*} [DecidableEq α]
   · rw [Nat.dist_eq_sub_of_le_right (Nat.le_of_not_ge h)]
     omega
 
-theorem firstFiber_sdiff {V : Type*} [DecidableEq V]
-    (U W : Finset (V × V)) (x : V) :
-    firstFiber (U \ W) x = firstFiber U x \ firstFiber W x := by
+theorem projFiber_sdiff {V : Type*} [DecidableEq V]
+    (π : V × V → V) (U W : Finset (V × V)) (x : V) :
+    projFiber π (U \ W) x = projFiber π U x \ projFiber π W x := by
   classical
   ext z
-  simp only [firstFiber, Finset.mem_filter, Finset.mem_sdiff]
+  simp only [projFiber, Finset.mem_filter, Finset.mem_sdiff]
   aesop
+
+theorem firstFiber_sdiff {V : Type*} [DecidableEq V]
+    (U W : Finset (V × V)) (x : V) :
+    firstFiber (U \ W) x = firstFiber U x \ firstFiber W x :=
+  projFiber_sdiff Prod.fst U W x
 
 theorem secondFiber_sdiff {V : Type*} [DecidableEq V]
     (U W : Finset (V × V)) (x : V) :
-    secondFiber (U \ W) x = secondFiber U x \ secondFiber W x := by
+    secondFiber (U \ W) x = secondFiber U x \ secondFiber W x :=
+  projFiber_sdiff Prod.snd U W x
+
+theorem projMultiplicity_variation_le_relation_difference
+    {V : Type*} [Fintype V] [DecidableEq V]
+    (π : V × V → V) (U W : Finset (V × V)) :
+    (∑ x : V, Nat.dist (projFiber π U x).card
+      (projFiber π W x).card) ≤
+        (U \ W).card + (W \ U).card := by
   classical
-  ext z
-  simp only [secondFiber, Finset.mem_filter, Finset.mem_sdiff]
-  aesop
+  calc
+    (∑ x : V, Nat.dist (projFiber π U x).card
+      (projFiber π W x).card) ≤
+        ∑ x : V,
+          ((projFiber π U x \ projFiber π W x).card +
+            (projFiber π W x \ projFiber π U x).card) := by
+          apply Finset.sum_le_sum
+          intro x _
+          exact natDist_card_le_sdiff (projFiber π U x) (projFiber π W x)
+    _ = (∑ x : V, (projFiber π (U \ W) x).card) +
+          (∑ x : V, (projFiber π (W \ U) x).card) := by
+          simp_rw [projFiber_sdiff]
+          rw [Finset.sum_add_distrib]
+    _ = (U \ W).card + (W \ U).card := by
+          rw [sum_projFiber_card, sum_projFiber_card]
 
 theorem firstMultiplicity_variation_le_relation_difference
     {V : Type*} [Fintype V] [DecidableEq V]
     (U W : Finset (V × V)) :
     (∑ x : V, Nat.dist (firstMultiplicity U x)
       (firstMultiplicity W x)) ≤
-        (U \ W).card + (W \ U).card := by
-  classical
-  calc
-    (∑ x : V, Nat.dist (firstMultiplicity U x)
-      (firstMultiplicity W x)) ≤
-        ∑ x : V,
-          ((firstFiber U x \ firstFiber W x).card +
-            (firstFiber W x \ firstFiber U x).card) := by
-          apply Finset.sum_le_sum
-          intro x _
-          exact natDist_card_le_sdiff (firstFiber U x) (firstFiber W x)
-    _ = (∑ x : V, (firstFiber (U \ W) x).card) +
-          (∑ x : V, (firstFiber (W \ U) x).card) := by
-          simp_rw [firstFiber_sdiff]
-          rw [Finset.sum_add_distrib]
-    _ = (U \ W).card + (W \ U).card := by
-          rw [sum_firstFiber_card, sum_firstFiber_card]
+        (U \ W).card + (W \ U).card :=
+  projMultiplicity_variation_le_relation_difference Prod.fst U W
 
 theorem secondMultiplicity_variation_le_relation_difference
     {V : Type*} [Fintype V] [DecidableEq V]
     (U W : Finset (V × V)) :
     (∑ x : V, Nat.dist (secondMultiplicity U x)
       (secondMultiplicity W x)) ≤
-        (U \ W).card + (W \ U).card := by
-  classical
-  calc
-    (∑ x : V, Nat.dist (secondMultiplicity U x)
-      (secondMultiplicity W x)) ≤
-        ∑ x : V,
-          ((secondFiber U x \ secondFiber W x).card +
-            (secondFiber W x \ secondFiber U x).card) := by
-          apply Finset.sum_le_sum
-          intro x _
-          exact natDist_card_le_sdiff (secondFiber U x) (secondFiber W x)
-    _ = (∑ x : V, (secondFiber (U \ W) x).card) +
-          (∑ x : V, (secondFiber (W \ U) x).card) := by
-          simp_rw [secondFiber_sdiff]
-          rw [Finset.sum_add_distrib]
-    _ = (U \ W).card + (W \ U).card := by
-          rw [sum_secondFiber_card, sum_secondFiber_card]
+        (U \ W).card + (W \ U).card :=
+  projMultiplicity_variation_le_relation_difference Prod.snd U W
 
 def diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) : Finset (V × V) :=
@@ -12698,57 +12700,58 @@ theorem diagonalImage_card {V : Type*} [DecidableEq V]
     (diagonalImage p U).card = U.card := by
   exact Finset.card_image_of_injective U (p.prodCongr p).injective
 
+theorem projFiber_diagonalImage {V : Type*} [DecidableEq V]
+    (π : V × V → V) (p : Equiv.Perm V)
+    (hπ : ∀ z : V × V, π ((p.prodCongr p) z) = p (π z))
+    (U : Finset (V × V)) (x : V) :
+    projFiber π (diagonalImage p U) (p x) =
+      (projFiber π U x).image (p.prodCongr p) := by
+  classical
+  ext z
+  simp only [projFiber, diagonalImage, Finset.mem_filter,
+    Finset.mem_image]
+  constructor
+  · rintro ⟨⟨w, hw, hzw⟩, hzproj⟩
+    refine ⟨w, ⟨hw, ?_⟩, hzw⟩
+    apply p.injective
+    rw [← hπ w, hzw]
+    exact hzproj
+  · rintro ⟨w, ⟨hw, hwproj⟩, hzw⟩
+    refine ⟨⟨w, hw, hzw⟩, ?_⟩
+    rw [← hzw, hπ w, hwproj]
+
 theorem firstFiber_diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) (x : V) :
     firstFiber (diagonalImage p U) (p x) =
-      (firstFiber U x).image (p.prodCongr p) := by
-  classical
-  ext z
-  simp only [firstFiber, diagonalImage, Finset.mem_filter,
-    Finset.mem_image]
-  constructor
-  · rintro ⟨⟨w, hw, hzw⟩, hzfirst⟩
-    refine ⟨w, ⟨hw, ?_⟩, hzw⟩
-    apply p.injective
-    simpa only [EmbeddingLike.apply_eq_iff_eq, ← hzw, Equiv.prodCongr_apply, Prod.map_fst] using hzfirst
-  · rintro ⟨w, ⟨hw, hwfirst⟩, hzw⟩
-    refine ⟨⟨w, hw, hzw⟩, ?_⟩
-    simpa only [← hzw, Equiv.prodCongr_apply, Prod.map_fst, EmbeddingLike.apply_eq_iff_eq] using
-      congrArg p hwfirst
+      (firstFiber U x).image (p.prodCongr p) :=
+  projFiber_diagonalImage Prod.fst p (fun _ => rfl) U x
 
 theorem secondFiber_diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) (x : V) :
     secondFiber (diagonalImage p U) (p x) =
-      (secondFiber U x).image (p.prodCongr p) := by
-  classical
-  ext z
-  simp only [secondFiber, diagonalImage, Finset.mem_filter,
-    Finset.mem_image]
-  constructor
-  · rintro ⟨⟨w, hw, hzw⟩, hzsecond⟩
-    refine ⟨w, ⟨hw, ?_⟩, hzw⟩
-    apply p.injective
-    simpa only [EmbeddingLike.apply_eq_iff_eq, ← hzw, Equiv.prodCongr_apply, Prod.map_snd] using hzsecond
-  · rintro ⟨w, ⟨hw, hwsecond⟩, hzw⟩
-    refine ⟨⟨w, hw, hzw⟩, ?_⟩
-    simpa only [← hzw, Equiv.prodCongr_apply, Prod.map_snd, EmbeddingLike.apply_eq_iff_eq] using
-      congrArg p hwsecond
+      (secondFiber U x).image (p.prodCongr p) :=
+  projFiber_diagonalImage Prod.snd p (fun _ => rfl) U x
+
+theorem projMultiplicity_diagonalImage {V : Type*} [DecidableEq V]
+    (π : V × V → V) (p : Equiv.Perm V)
+    (hπ : ∀ z : V × V, π ((p.prodCongr p) z) = p (π z))
+    (U : Finset (V × V)) (x : V) :
+    (projFiber π (diagonalImage p U) (p x)).card =
+      (projFiber π U x).card := by
+  rw [projFiber_diagonalImage π p hπ U x]
+  exact Finset.card_image_of_injective _ (p.prodCongr p).injective
 
 theorem firstMultiplicity_diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) (x : V) :
     firstMultiplicity (diagonalImage p U) (p x) =
-      firstMultiplicity U x := by
-  unfold firstMultiplicity
-  rw [firstFiber_diagonalImage]
-  exact Finset.card_image_of_injective _ (p.prodCongr p).injective
+      firstMultiplicity U x :=
+  projMultiplicity_diagonalImage Prod.fst p (fun _ => rfl) U x
 
 theorem secondMultiplicity_diagonalImage {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) (x : V) :
     secondMultiplicity (diagonalImage p U) (p x) =
-      secondMultiplicity U x := by
-  unfold secondMultiplicity
-  rw [secondFiber_diagonalImage]
-  exact Finset.card_image_of_injective _ (p.prodCongr p).injective
+      secondMultiplicity U x :=
+  projMultiplicity_diagonalImage Prod.snd p (fun _ => rfl) U x
 
 theorem diagonalImage_sdiff_eq_image_exit {V : Type*} [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) :
@@ -12780,61 +12783,76 @@ theorem diagonalImage_sdiff_cards {V : Type*} [DecidableEq V]
   have hcard := diagonalImage_card p U
   exact ⟨hforward, by omega⟩
 
-theorem firstMultiplicity_diagonal_variation_le_twice_exit
+theorem projMultiplicity_diagonal_variation_le_twice_exit
     {V : Type*} [Fintype V] [DecidableEq V]
-    (p : Equiv.Perm V) (U : Finset (V × V)) :
-    (∑ x : V, Nat.dist (firstMultiplicity U (p x))
-      (firstMultiplicity U x)) ≤ 2 * diagonalExit p U := by
+    (π : V × V → V) (p : Equiv.Perm V)
+    (hπ : ∀ z : V × V, π ((p.prodCongr p) z) = p (π z))
+    (U : Finset (V × V)) :
+    (∑ x : V, Nat.dist (projFiber π U (p x)).card
+      (projFiber π U x).card) ≤ 2 * diagonalExit p U := by
   classical
   calc
-    (∑ x : V, Nat.dist (firstMultiplicity U (p x))
-      (firstMultiplicity U x)) =
-        ∑ x : V, Nat.dist (firstMultiplicity U (p x))
-          (firstMultiplicity (diagonalImage p U) (p x)) := by
+    (∑ x : V, Nat.dist (projFiber π U (p x)).card
+      (projFiber π U x).card) =
+        ∑ x : V, Nat.dist (projFiber π U (p x)).card
+          (projFiber π (diagonalImage p U) (p x)).card := by
           apply Finset.sum_congr rfl
           intro x _
-          rw [firstMultiplicity_diagonalImage]
-    _ = ∑ x : V, Nat.dist (firstMultiplicity U x)
-          (firstMultiplicity (diagonalImage p U) x) :=
+          rw [projMultiplicity_diagonalImage π p hπ U x]
+    _ = ∑ x : V, Nat.dist (projFiber π U x).card
+          (projFiber π (diagonalImage p U) x).card :=
           Equiv.sum_comp p (fun x =>
-            Nat.dist (firstMultiplicity U x)
-              (firstMultiplicity (diagonalImage p U) x))
+            Nat.dist (projFiber π U x).card
+              (projFiber π (diagonalImage p U) x).card)
     _ ≤ (U \ diagonalImage p U).card +
           (diagonalImage p U \ U).card :=
-          firstMultiplicity_variation_le_relation_difference
-            U (diagonalImage p U)
+          projMultiplicity_variation_le_relation_difference
+            π U (diagonalImage p U)
     _ = 2 * diagonalExit p U := by
           obtain ⟨hforward, hbackward⟩ := diagonalImage_sdiff_cards p U
           rw [hforward, hbackward]
           omega
 
+theorem firstMultiplicity_diagonal_variation_le_twice_exit
+    {V : Type*} [Fintype V] [DecidableEq V]
+    (p : Equiv.Perm V) (U : Finset (V × V)) :
+    (∑ x : V, Nat.dist (firstMultiplicity U (p x))
+      (firstMultiplicity U x)) ≤ 2 * diagonalExit p U :=
+  projMultiplicity_diagonal_variation_le_twice_exit
+    Prod.fst p (fun _ => rfl) U
+
 theorem secondMultiplicity_diagonal_variation_le_twice_exit
     {V : Type*} [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) (U : Finset (V × V)) :
     (∑ x : V, Nat.dist (secondMultiplicity U (p x))
-      (secondMultiplicity U x)) ≤ 2 * diagonalExit p U := by
+      (secondMultiplicity U x)) ≤ 2 * diagonalExit p U :=
+  projMultiplicity_diagonal_variation_le_twice_exit
+    Prod.snd p (fun _ => rfl) U
+
+theorem projMultiplicity_totalVariation_le_twice_diagonalBoundary
+    {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
+    (π : V × V → V) (σ : ι → Equiv.Perm V)
+    (hπ : ∀ (p : Equiv.Perm V) (z : V × V),
+      π ((p.prodCongr p) z) = p (π z))
+    (U : Finset (V × V)) :
+    (∑ i : ι, ∑ x : V,
+      Nat.dist (projFiber π U (σ i x)).card
+        (projFiber π U x).card) ≤
+          2 * SoficGroups.boundary
+            (fun i => (σ i).prodCongr (σ i)) U := by
   classical
   calc
-    (∑ x : V, Nat.dist (secondMultiplicity U (p x))
-      (secondMultiplicity U x)) =
-        ∑ x : V, Nat.dist (secondMultiplicity U (p x))
-          (secondMultiplicity (diagonalImage p U) (p x)) := by
-          apply Finset.sum_congr rfl
-          intro x _
-          rw [secondMultiplicity_diagonalImage]
-    _ = ∑ x : V, Nat.dist (secondMultiplicity U x)
-          (secondMultiplicity (diagonalImage p U) x) :=
-          Equiv.sum_comp p (fun x =>
-            Nat.dist (secondMultiplicity U x)
-              (secondMultiplicity (diagonalImage p U) x))
-    _ ≤ (U \ diagonalImage p U).card +
-          (diagonalImage p U \ U).card :=
-          secondMultiplicity_variation_le_relation_difference
-            U (diagonalImage p U)
-    _ = 2 * diagonalExit p U := by
-          obtain ⟨hforward, hbackward⟩ := diagonalImage_sdiff_cards p U
-          rw [hforward, hbackward]
-          omega
+    (∑ i : ι, ∑ x : V,
+      Nat.dist (projFiber π U (σ i x)).card
+        (projFiber π U x).card) ≤
+        ∑ i : ι, 2 * diagonalExit (σ i) U := by
+          apply Finset.sum_le_sum
+          intro i _
+          exact projMultiplicity_diagonal_variation_le_twice_exit
+            π (σ i) (hπ (σ i)) U
+    _ = 2 * SoficGroups.boundary
+          (fun i => (σ i).prodCongr (σ i)) U := by
+          simp only [diagonalExit, Equiv.prodCongr_apply, boundary, Finset.mul_sum]
 
 theorem firstMultiplicity_totalVariation_le_twice_diagonalBoundary
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -12843,20 +12861,9 @@ theorem firstMultiplicity_totalVariation_le_twice_diagonalBoundary
       Nat.dist (firstMultiplicity U (σ i x))
         (firstMultiplicity U x)) ≤
           2 * SoficGroups.boundary
-            (fun i => (σ i).prodCongr (σ i)) U := by
-  classical
-  calc
-    (∑ i : ι, ∑ x : V,
-      Nat.dist (firstMultiplicity U (σ i x))
-        (firstMultiplicity U x)) ≤
-        ∑ i : ι, 2 * diagonalExit (σ i) U := by
-          apply Finset.sum_le_sum
-          intro i _
-          exact firstMultiplicity_diagonal_variation_le_twice_exit
-            (σ i) U
-    _ = 2 * SoficGroups.boundary
-          (fun i => (σ i).prodCongr (σ i)) U := by
-          simp only [diagonalExit, Equiv.prodCongr_apply, boundary, Finset.mul_sum]
+            (fun i => (σ i).prodCongr (σ i)) U :=
+  projMultiplicity_totalVariation_le_twice_diagonalBoundary
+    Prod.fst σ (fun _ _ => rfl) U
 
 theorem secondMultiplicity_totalVariation_le_twice_diagonalBoundary
     {V ι : Type*} [Fintype V] [Fintype ι] [DecidableEq V]
@@ -12865,20 +12872,9 @@ theorem secondMultiplicity_totalVariation_le_twice_diagonalBoundary
       Nat.dist (secondMultiplicity U (σ i x))
         (secondMultiplicity U x)) ≤
           2 * SoficGroups.boundary
-            (fun i => (σ i).prodCongr (σ i)) U := by
-  classical
-  calc
-    (∑ i : ι, ∑ x : V,
-      Nat.dist (secondMultiplicity U (σ i x))
-        (secondMultiplicity U x)) ≤
-        ∑ i : ι, 2 * diagonalExit (σ i) U := by
-          apply Finset.sum_le_sum
-          intro i _
-          exact secondMultiplicity_diagonal_variation_le_twice_exit
-            (σ i) U
-    _ = 2 * SoficGroups.boundary
-          (fun i => (σ i).prodCongr (σ i)) U := by
-          simp only [diagonalExit, Equiv.prodCongr_apply, boundary, Finset.mul_sum]
+            (fun i => (σ i).prodCongr (σ i)) U :=
+  projMultiplicity_totalVariation_le_twice_diagonalBoundary
+    Prod.snd σ (fun _ _ => rfl) U
 
 def permutationVariation {V ι : Type*} [Fintype V] [Fintype ι]
     (σ : ι → Equiv.Perm V) (f : V → ℕ) : ℕ :=
@@ -14144,62 +14140,50 @@ theorem hasAlmostCentralizerImprovement_of_expanding_diagonal_cuts
     exact_mod_cast hdistance_real
   exact ⟨q, hdefect, hdistance⟩
 
+theorem projMultiplicity_permutationGraph
+    {V : Type*} [Fintype V] [DecidableEq V]
+    (π : V × V → V) (p : Equiv.Perm V) (w : V → V × V)
+    (hmem : ∀ x, w x ∈ SoficGroups.permutationGraph p)
+    (hproj : ∀ x, π (w x) = x)
+    (hpoint : ∀ z ∈ SoficGroups.permutationGraph p, w (π z) = z)
+    (x : V) :
+    (projFiber π (SoficGroups.permutationGraph p) x).card = 1 := by
+  classical
+  have hset :
+      projFiber π (SoficGroups.permutationGraph p) x = {w x} := by
+    ext z
+    simp only [projFiber, Finset.mem_filter, Finset.mem_singleton]
+    constructor
+    · rintro ⟨hz, hzx⟩
+      rw [← hpoint z hz, hzx]
+    · rintro rfl
+      exact ⟨hmem x, hproj x⟩
+  rw [hset, Finset.card_singleton]
+
 theorem firstMultiplicity_permutationGraph
     {V : Type*} [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) (x : V) :
-    firstMultiplicity (SoficGroups.permutationGraph p) x = 1 := by
-  classical
-  have hset :
-      firstFiber (SoficGroups.permutationGraph p) x =
-        {(x, p x)} := by
-    ext z
-    constructor
-    · intro hz
-      obtain ⟨hzgraph, hzfirst⟩ := Finset.mem_filter.mp hz
-      have hzsecond :=
-        (SoficGroups.mem_permutationGraph p z.1 z.2).mp hzgraph
-      apply Finset.mem_singleton.mpr
-      apply Prod.ext hzfirst
-      exact hzsecond.trans (congrArg p hzfirst)
-    · intro hz
-      have heq := Finset.mem_singleton.mp hz
-      subst z
-      apply Finset.mem_filter.mpr
-      exact ⟨(SoficGroups.mem_permutationGraph p x (p x)).mpr rfl,
-        rfl⟩
-  unfold firstMultiplicity
-  rw [hset]
-  simp only [Finset.card_singleton]
+    firstMultiplicity (SoficGroups.permutationGraph p) x = 1 :=
+  projMultiplicity_permutationGraph Prod.fst p (fun y => (y, p y))
+    (fun y => (SoficGroups.mem_permutationGraph p y (p y)).mpr rfl)
+    (fun _ => rfl)
+    (fun z hz => Prod.ext rfl
+      ((SoficGroups.mem_permutationGraph p z.1 z.2).mp hz).symm)
+    x
 
 theorem secondMultiplicity_permutationGraph
     {V : Type*} [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) (x : V) :
-    secondMultiplicity (SoficGroups.permutationGraph p) x = 1 := by
-  classical
-  have hset :
-      secondFiber (SoficGroups.permutationGraph p) x =
-        {(p.symm x, x)} := by
-    ext z
-    constructor
-    · intro hz
-      obtain ⟨hzgraph, hzsecond⟩ := Finset.mem_filter.mp hz
-      have hgraph :=
-        (SoficGroups.mem_permutationGraph p z.1 z.2).mp hzgraph
-      apply Finset.mem_singleton.mpr
-      apply Prod.ext
-      · apply p.injective
-        simpa only [Equiv.apply_symm_apply] using hgraph.symm.trans hzsecond
-      · exact hzsecond
-    · intro hz
-      have heq := Finset.mem_singleton.mp hz
-      subst z
-      apply Finset.mem_filter.mpr
-      refine ⟨?_, rfl⟩
-      exact (SoficGroups.mem_permutationGraph p (p.symm x) x).mpr
-        (p.apply_symm_apply x).symm
-  unfold secondMultiplicity
-  rw [hset]
-  simp only [Finset.card_singleton]
+    secondMultiplicity (SoficGroups.permutationGraph p) x = 1 :=
+  projMultiplicity_permutationGraph Prod.snd p (fun y => (p.symm y, y))
+    (fun y => (SoficGroups.mem_permutationGraph p (p.symm y) y).mpr
+      (p.apply_symm_apply y).symm)
+    (fun _ => rfl)
+    (fun z hz => Prod.ext
+      (by rw [(SoficGroups.mem_permutationGraph p z.1 z.2).mp hz,
+        p.symm_apply_apply])
+      rfl)
+    x
 
 theorem card_nonSingletonMultiplicity_le_total_distance
     {V : Type*} [Fintype V]
@@ -18493,55 +18477,52 @@ theorem goodPermutationGraph_subset {V : Type*}
     goodPermutationGraph p B ⊆ SoficGroups.permutationGraph p :=
   Finset.filter_subset _ _
 
+theorem card_filter_permutationGraph_proj_mem {V : Type*}
+    [Fintype V] [DecidableEq V]
+    (π : V × V → V) (p : Equiv.Perm V) (w : V → V × V)
+    (hmem : ∀ x, w x ∈ SoficGroups.permutationGraph p)
+    (hproj : ∀ x, π (w x) = x)
+    (hpoint : ∀ z ∈ SoficGroups.permutationGraph p, w (π z) = z)
+    (B : Finset V) :
+    ((SoficGroups.permutationGraph p).filter
+      fun z => π z ∈ B).card = B.card := by
+  classical
+  apply Finset.card_bij (fun z _ => π z)
+  · intro z hz
+    exact (Finset.mem_filter.mp hz).2
+  · intro z hz w' hw' hproj'
+    rw [← hpoint z (Finset.mem_filter.mp hz).1,
+      ← hpoint w' (Finset.mem_filter.mp hw').1, hproj']
+  · intro x hx
+    exact ⟨w x, Finset.mem_filter.mpr
+      ⟨hmem x, by rw [hproj x]; exact hx⟩, hproj x⟩
+
 theorem card_filter_permutationGraph_fst_mem {V : Type*}
     [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) (B : Finset V) :
     ((SoficGroups.permutationGraph p).filter
-      fun z => z.1 ∈ B).card = B.card := by
-  classical
-  apply Finset.card_bij (fun z _ => z.1)
-  · intro z hz
-    exact (Finset.mem_filter.mp hz).2
-  · intro z hz w hw hfirst
-    have hzgraph := (Finset.mem_filter.mp hz).1
-    have hwgraph := (Finset.mem_filter.mp hw).1
-    have hzsecond :=
-      (SoficGroups.mem_permutationGraph p z.1 z.2).mp hzgraph
-    have hwsecond :=
-      (SoficGroups.mem_permutationGraph p w.1 w.2).mp hwgraph
-    apply Prod.ext hfirst
-    simpa only [hzsecond, hwsecond, EmbeddingLike.apply_eq_iff_eq] using congrArg p hfirst
-  · intro x hx
-    refine ⟨(x, p x), ?_, rfl⟩
-    exact Finset.mem_filter.mpr
-      ⟨(SoficGroups.mem_permutationGraph p x (p x)).mpr rfl, hx⟩
+      fun z => z.1 ∈ B).card = B.card :=
+  card_filter_permutationGraph_proj_mem Prod.fst p (fun y => (y, p y))
+    (fun y => (SoficGroups.mem_permutationGraph p y (p y)).mpr rfl)
+    (fun _ => rfl)
+    (fun z hz => Prod.ext rfl
+      ((SoficGroups.mem_permutationGraph p z.1 z.2).mp hz).symm)
+    B
 
 theorem card_filter_permutationGraph_snd_mem {V : Type*}
     [Fintype V] [DecidableEq V]
     (p : Equiv.Perm V) (B : Finset V) :
     ((SoficGroups.permutationGraph p).filter
-      fun z => z.2 ∈ B).card = B.card := by
-  classical
-  apply Finset.card_bij (fun z _ => z.2)
-  · intro z hz
-    exact (Finset.mem_filter.mp hz).2
-  · intro z hz w hw hsecond
-    have hzgraph := (Finset.mem_filter.mp hz).1
-    have hwgraph := (Finset.mem_filter.mp hw).1
-    have hzsecond :=
-      (SoficGroups.mem_permutationGraph p z.1 z.2).mp hzgraph
-    have hwsecond :=
-      (SoficGroups.mem_permutationGraph p w.1 w.2).mp hwgraph
-    apply Prod.ext
-    · apply p.injective
-      simpa only [EmbeddingLike.apply_eq_iff_eq, hzsecond, hwsecond] using hsecond
-    · exact hsecond
-  · intro y hy
-    refine ⟨(p.symm y, y), ?_, rfl⟩
-    apply Finset.mem_filter.mpr
-    refine ⟨?_, hy⟩
-    apply (SoficGroups.mem_permutationGraph p (p.symm y) y).mpr
-    simp only [Equiv.apply_symm_apply]
+      fun z => z.2 ∈ B).card = B.card :=
+  card_filter_permutationGraph_proj_mem Prod.snd p (fun y => (p.symm y, y))
+    (fun y => (SoficGroups.mem_permutationGraph p (p.symm y) y).mpr
+      (p.apply_symm_apply y).symm)
+    (fun _ => rfl)
+    (fun z hz => Prod.ext
+      (by rw [(SoficGroups.mem_permutationGraph p z.1 z.2).mp hz,
+        p.symm_apply_apply])
+      rfl)
+    B
 
 theorem permutationGraph_sdiff_goodPermutationGraph_subset {V : Type*}
     [Fintype V] [DecidableEq V]

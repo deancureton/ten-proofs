@@ -4072,8 +4072,6 @@ variable {K : Type*} [CommRing K]
 def symmetricQuadratic (a b c x y : K) : K :=
   a * x ^ 2 + (2 : K) * b * x * y + c * y ^ 2
 
-def symmetricDet (a b c : K) : K := a * c - b ^ 2
-
 lemma symmetricQuadratic_eq_bilinear
     (a b c x y : K) :
     symmetricQuadratic a b c x y =
@@ -4082,8 +4080,8 @@ lemma symmetricQuadratic_eq_bilinear
   ring
 
 lemma symmetricDet_zero_diagonal_sub (b b' : K) :
-    symmetricDet (0 : K) (b - b') 0 = -((b - b') ^ 2) := by
-  simp only [symmetricDet, mul_zero, zero_sub]
+    ((0 : K) * 0 - (b - b') ^ 2) = -((b - b') ^ 2) := by
+  simp only [mul_zero, zero_sub]
 
 end CommutativeRing
 
@@ -4203,7 +4201,7 @@ lemma symmetricQuadratic_no_three_independent_roots
 lemma symmetricQuadratic_no_three_roots_of_det_ne_zero
     (htwo : (2 : K) ≠ 0)
     {a b c x₀ y₀ x₁ y₁ x₂ y₂ : K}
-    (hdet : symmetricDet a b c ≠ 0)
+    (hdet : (a * c - b ^ 2) ≠ 0)
     (h01 : x₀ * y₁ - x₁ * y₀ ≠ 0)
     (h02 : x₀ * y₂ - x₂ * y₀ ≠ 0)
     (h12 : x₁ * y₂ - x₂ * y₁ ≠ 0)
@@ -4219,12 +4217,12 @@ lemma symmetricQuadratic_no_three_roots_of_det_ne_zero
   push Not at h
   obtain ⟨ha, hb, hc⟩ := h
   apply hdet
-  simp only [symmetricDet, ha, hc, mul_zero, hb, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+  simp only [ha, hc, mul_zero, hb, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
     sub_self]
 
 lemma symmetricDet_zero_diagonal_sub_ne_zero
     {b b' : K} (h : b ≠ b') :
-    symmetricDet (0 : K) (b - b') 0 ≠ 0 := by
+    ((0 : K) * 0 - (b - b') ^ 2) ≠ 0 := by
   rw [symmetricDet_zero_diagonal_sub]
   exact neg_ne_zero.mpr (pow_ne_zero 2 (sub_ne_zero.mpr h))
 
@@ -6661,7 +6659,7 @@ lemma projectiveDirection_nonzero_right
 lemma symmetricGraphLine_odd_no_three_actual_centers
     (htwo : (2 : K) ≠ 0)
     {a b c x₀ y₀ x₁ y₁ x₂ y₂ : K}
-    (hdet : symmetricDet a b c ≠ 0)
+    (hdet : (a * c - b ^ 2) ≠ 0)
     (h01 : x₀ * y₁ - x₁ * y₀ ≠ 0)
     (h02 : x₀ * y₂ - x₂ * y₀ ≠ 0)
     (h12 : x₁ * y₂ - x₂ * y₁ ≠ 0)
@@ -6692,7 +6690,7 @@ lemma symmetricGraphLine_odd_no_three_actual_centers
 
 lemma symmetricGraphLines_disjoint_of_difference_det
     {a b c a' b' c' : K}
-    (hdet : symmetricDet (a - a') (b - b') (c - c') ≠ 0) :
+    (hdet : ((a - a') * (c - c') - (b - b') ^ 2) ≠ 0) :
     Disjoint (symmetricGraphLine K a b c).1
       (symmetricGraphLine K a' b' c').1 := by
   apply Submodule.disjoint_def.mpr
@@ -6717,12 +6715,10 @@ lemma symmetricGraphLines_disjoint_of_difference_det
   simp only [symmetricGraphVector, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_zero,
     Matrix.cons_val] at hone hthree
   have hdetx :
-      symmetricDet (a - a') (b - b') (c - c') * u 0 = 0 := by
-    unfold symmetricDet
+      ((a - a') * (c - c') - (b - b') ^ 2) * u 0 = 0 := by
     linear_combination (c - c') * hone - (b - b') * hthree
   have hdety :
-      symmetricDet (a - a') (b - b') (c - c') * u 1 = 0 := by
-    unfold symmetricDet
+      ((a - a') * (c - c') - (b - b') ^ 2) * u 1 = 0 := by
     linear_combination -(b - b') * hone + (a - a') * hthree
   have hx : u 0 = 0 :=
     (mul_eq_zero.mp hdetx).resolve_left hdet
@@ -7622,7 +7618,7 @@ lemma symmetricGraphLine_det_ne_zero_of_disjoint_horizontal
     (hhorizontal :
       Disjoint (symmetricGraphLine K a b c).1
         (symmetricGraphLine K 0 0 0).1) :
-    symmetricDet a b c ≠ 0 := by
+    (a * c - b ^ 2) ≠ 0 := by
   intro hdet
   have hkernel :
       ∃ x y : K,
@@ -7632,15 +7628,14 @@ lemma symmetricGraphLine_det_ne_zero_of_disjoint_horizontal
     by_cases ha : a = 0
     · have hb : b = 0 := by
         have hsq : b ^ 2 = 0 := by
-          simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, symmetricDet, ha, zero_mul,
+          simpa only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, ha, zero_mul,
             zero_sub, neg_eq_zero] using hdet
         exact eq_zero_of_pow_eq_zero hsq
       exact ⟨1, 0, Or.inl one_ne_zero, by simp only [ha, mul_one, hb, mul_zero, add_zero],
         by simp only [hb, mul_one, mul_zero, add_zero]⟩
     · refine ⟨b, -a, Or.inr (neg_ne_zero.mpr ha), ?_, ?_⟩
       · ring
-      · unfold symmetricDet at hdet
-        linear_combination -hdet
+      · linear_combination -hdet
   obtain ⟨x, y, hnonzero, hfirst, hsecond⟩ := hkernel
   let w := symmetricGraphVector K a b c x y
   have hwgraph : w ∈ (symmetricGraphLine K a b c).1 := by
@@ -7670,7 +7665,7 @@ lemma symplecticLine_eq_invertible_symmetricGraphLine
       Disjoint L.1 (symmetricGraphLine K 0 0 0).1) :
     ∃ a b c : K,
       L = symmetricGraphLine K a b c ∧
-        symmetricDet a b c ≠ 0 := by
+        (a * c - b ^ 2) ≠ 0 := by
   obtain ⟨a, b, c, hL⟩ :=
     symplecticLine_eq_symmetricGraphLine_of_disjoint_vertical
       K L hvertical
@@ -9432,17 +9427,15 @@ open scoped Topology
 
 section BinaryEntropy
 
-noncomputable def logTwo (x : ℝ) : ℝ := Real.log x / Real.log 2
-
 noncomputable def binaryEntropy (x : ℝ) : ℝ :=
   Real.binEntropy x / Real.log 2
 
 noncomputable def tau : ℝ := (Real.sqrt 3 - 1) / 2
 
-noncomputable def kappa : ℝ := 3 / 2 - (3 / 4) * logTwo 3
+noncomputable def kappa : ℝ := 3 / 2 - (3 / 4) * Real.logb 2 3
 
 noncomputable def certifiedWindowWidth : ℝ :=
-  logTwo ((97 + 56 * Real.sqrt 3) / 192) / 4
+  Real.logb 2 ((97 + 56 * Real.sqrt 3) / 192) / 4
 
 theorem twelve_sevenths_lt_sqrt_three : (12 : ℝ) / 7 < Real.sqrt 3 := by
   have hsqrt_nonneg : 0 ≤ Real.sqrt (3 : ℝ) := Real.sqrt_nonneg 3
@@ -9982,7 +9975,7 @@ theorem binaryConditionalLogPotential_le_kappa
       kappa * Real.log 2 =
         (3 / 2 : ℝ) * Real.log 2 -
           (3 / 4 : ℝ) * Real.log 3 := by
-    unfold kappa logTwo
+    unfold kappa Real.logb
     field_simp [log_two_pos.ne']
   rw [hkappa]
   nlinarith [sq_nonneg (2 * q - 1)]
@@ -10328,7 +10321,7 @@ theorem conditionalEntropy_bound_of_marginal_interior
     (hmarginal_zero : 0 < kernel.childMarginal)
     (hmarginal_one : kernel.childMarginal < 1) :
     kernel.conditionalEntropy ≤
-      kappa + logTwo 3 * kernel.averageDisagreement +
+      kappa + Real.logb 2 3 * kernel.averageDisagreement +
         (binaryEntropy kernel.childMarginal -
           binaryEntropy kernel.parentProbability) / 2 := by
   have hzeroAmplitude :
@@ -10351,18 +10344,18 @@ theorem conditionalEntropy_bound_of_marginal_interior
   have hreduction := conditionalEntropy_logsum_reduction kernel
     hmarginal_zero hmarginal_one
   have hright :
-      (kappa + logTwo 3 * kernel.averageDisagreement +
+      (kappa + Real.logb 2 3 * kernel.averageDisagreement +
         (binaryEntropy kernel.childMarginal -
           binaryEntropy kernel.parentProbability) / 2) * Real.log 2 =
         kappa * Real.log 2 +
           Real.log 3 * kernel.averageDisagreement +
           (Real.binEntropy kernel.childMarginal -
             Real.binEntropy kernel.parentProbability) / 2 := by
-    unfold binaryEntropy logTwo
+    unfold binaryEntropy Real.logb
     field_simp [log_two_pos.ne']
   have hscaled :
       kernel.conditionalEntropy * Real.log 2 ≤
-        (kappa + logTwo 3 * kernel.averageDisagreement +
+        (kappa + Real.logb 2 3 * kernel.averageDisagreement +
           (binaryEntropy kernel.childMarginal -
             binaryEntropy kernel.parentProbability) / 2) * Real.log 2 := by
     rw [hright]
@@ -10371,7 +10364,7 @@ theorem conditionalEntropy_bound_of_marginal_interior
 
 theorem conditionalEntropy_bound (kernel : BinaryPairKernel) :
     kernel.conditionalEntropy ≤
-      kappa + logTwo 3 * kernel.averageDisagreement +
+      kappa + Real.logb 2 3 * kernel.averageDisagreement +
         (binaryEntropy kernel.childMarginal -
           binaryEntropy kernel.parentProbability) / 2 := by
   let mixing : ℕ → ℝ := fun n => 1 / ((n : ℝ) + 1)
@@ -10466,17 +10459,17 @@ theorem conditionalEntropy_bound (kernel : BinaryPairKernel) :
   have hright_tendsto :
       Filter.Tendsto
         (fun n =>
-          kappa + logTwo 3 * (approximation n).averageDisagreement +
+          kappa + Real.logb 2 3 * (approximation n).averageDisagreement +
             (binaryEntropy (approximation n).childMarginal -
               binaryEntropy (approximation n).parentProbability) / 2)
         Filter.atTop
         (nhds
-          (kappa + logTwo 3 * kernel.averageDisagreement +
+          (kappa + Real.logb 2 3 * kernel.averageDisagreement +
             (binaryEntropy kernel.childMarginal -
               binaryEntropy kernel.parentProbability) / 2)) := by
     simp_rw [hparent]
     have hdisagreement_term :=
-      (tendsto_const_nhds (x := logTwo 3)).mul hdisagreement_tendsto
+      (tendsto_const_nhds (x := Real.logb 2 3)).mul hdisagreement_tendsto
     have hentropy_term :=
       (hchildentropy_tendsto.sub
         (tendsto_const_nhds (x :=
@@ -11419,7 +11412,7 @@ theorem certificate_ratio_one_lt :
   nlinarith
 
 theorem certifiedWindowWidth_pos : 0 < certifiedWindowWidth := by
-  unfold certifiedWindowWidth logTwo
+  unfold certifiedWindowWidth Real.logb
   exact div_pos
     (div_pos (Real.log_pos certificate_ratio_one_lt)
       log_two_pos)
@@ -11465,12 +11458,12 @@ theorem log_three_eq_twice_log_sqrt_three :
       ring
 
 theorem entropy_tau_identity :
-    2 * binaryEntropy tau - tau * logTwo 3 =
-      2 * logTwo (1 + 1 / Real.sqrt 3) := by
+    2 * binaryEntropy tau - tau * Real.logb 2 3 =
+      2 * Real.logb 2 (1 + 1 / Real.sqrt 3) := by
   have hlog_complement :
       Real.log (1 - tau) = Real.log (Real.sqrt 3) + Real.log tau := by
     rw [tau_complement, Real.log_mul sqrt_three_pos.ne' tau_pos.ne']
-  unfold binaryEntropy logTwo Real.binEntropy
+  unfold binaryEntropy Real.logb Real.binEntropy
   rw [Real.log_inv, Real.log_inv, tau_reciprocal_identity, Real.log_inv,
     hlog_complement, log_three_eq_twice_log_sqrt_three]
   ring
@@ -11512,7 +11505,7 @@ theorem log_certificate_ratio_identity :
     Real.log_pow, hlog27, hlog1024]
   ring
 
-noncomputable def entropyLowerEndpoint : ℝ := kappa + tau * logTwo 3
+noncomputable def entropyLowerEndpoint : ℝ := kappa + tau * Real.logb 2 3
 
 noncomputable def entropyUpperEndpoint : ℝ := 2 * binaryEntropy tau - 1
 
@@ -11523,13 +11516,13 @@ theorem entropyWindow_eq_certifiedWindowWidth :
     entropyUpperEndpoint - entropyLowerEndpoint = certifiedWindowWidth := by
   have hentropy := entropy_tau_identity
   have hlog := log_certificate_ratio_identity
-  unfold logTwo at hentropy
+  unfold Real.logb at hentropy
   have hlog_argument :
       (Real.sqrt 3 + 1) / Real.sqrt 3 =
         1 + 1 / Real.sqrt 3 := by
     field_simp [sqrt_three_pos.ne']
   unfold entropyUpperEndpoint entropyLowerEndpoint kappa
-    certifiedWindowWidth logTwo
+    certifiedWindowWidth Real.logb
   field_simp [log_two_pos.ne'] at hentropy ⊢
   rw [hlog_argument] at hentropy
   ring_nf at hentropy hlog ⊢
@@ -11560,18 +11553,18 @@ theorem midpointBeta_lt_upper_unconditional :
     midpointBeta < entropyUpperEndpoint :=
   midpointBeta_lt_upper entropyWindow_pos
 
-theorem logTwo_three_pos : 0 < logTwo 3 := by
-  unfold logTwo
+theorem logTwo_three_pos : 0 < Real.logb 2 3 := by
+  unfold Real.logb
   exact div_pos (Real.log_pos (by norm_num)) log_two_pos
 
-theorem logTwo_three_lt_two : logTwo 3 < 2 := by
+theorem logTwo_three_lt_two : Real.logb 2 3 < 2 := by
   have hlog : Real.log (3 : ℝ) < Real.log 4 :=
     Real.log_lt_log (by norm_num) (by norm_num)
   have hlog_four : Real.log (4 : ℝ) = 2 * Real.log 2 := by
     calc
       Real.log (4 : ℝ) = Real.log ((2 : ℝ) ^ (2 : ℕ)) := by norm_num
       _ = 2 * Real.log 2 := by rw [Real.log_pow]; norm_num
-  unfold logTwo
+  unfold Real.logb
   apply (div_lt_iff₀ log_two_pos).mpr
   nlinarith [hlog]
 
@@ -11618,7 +11611,7 @@ theorem exponentGain_pos : 0 < exponentGain := by
     (mul_pos (by norm_num) (sub_pos.mpr midpointBeta_lt_one))
 
 noncomputable def empiricalEntropyError (layerSize : ℕ) : ℝ :=
-  (1 + logTwo 3) / (layerSize : ℝ) +
+  (1 + Real.logb 2 3) / (layerSize : ℝ) +
     binaryEntropy (1 / (layerSize : ℝ)) / 2
 
 theorem empiricalChildMarginal_entropy_error
@@ -11666,7 +11659,7 @@ theorem empiricalConditionalEntropy_bound
       kernel.parentProbability =
         (oneCount : ℝ) / (parentCount : ℝ)) :
     empiricalConditionalEntropy parentCount oneCount kernel ≤
-      kappa + logTwo 3 *
+      kappa + Real.logb 2 3 *
           empiricalAverageDisagreement parentCount oneCount kernel +
         (binaryEntropy
             (empiricalChildMarginal parentCount oneCount kernel) -
@@ -11702,7 +11695,7 @@ theorem empiricalConditionalEntropy_bound
     linarith
   have herror :
       1 / (parentCount : ℝ) +
-          logTwo 3 * (1 / (parentCount : ℝ)) +
+          Real.logb 2 3 * (1 / (parentCount : ℝ)) +
           binaryEntropy (1 / (parentCount : ℝ)) / 2 =
         empiricalEntropyError parentCount := by
     unfold empiricalEntropyError
@@ -11711,16 +11704,16 @@ theorem empiricalConditionalEntropy_bound
     empiricalConditionalEntropy parentCount oneCount kernel ≤
         kernel.conditionalEntropy + 1 / (parentCount : ℝ) :=
       hconditional_upper
-    _ ≤ kappa + logTwo 3 *
+    _ ≤ kappa + Real.logb 2 3 *
           empiricalAverageDisagreement parentCount oneCount kernel +
         (binaryEntropy
             (empiricalChildMarginal parentCount oneCount kernel) -
           binaryEntropy kernel.parentProbability) / 2 +
         (1 / (parentCount : ℝ) +
-          logTwo 3 * (1 / (parentCount : ℝ)) +
+          Real.logb 2 3 * (1 / (parentCount : ℝ)) +
           binaryEntropy (1 / (parentCount : ℝ)) / 2) := by
       nlinarith
-    _ = kappa + logTwo 3 *
+    _ = kappa + Real.logb 2 3 *
           empiricalAverageDisagreement parentCount oneCount kernel +
         (binaryEntropy
             (empiricalChildMarginal parentCount oneCount kernel) -
@@ -11735,11 +11728,11 @@ theorem empiricalEntropyError_tendsto_zero :
     tendsto_one_div_atTop_nhds_zero_nat
   have hfirst :
       Filter.Tendsto
-        (fun L : ℕ => (1 + logTwo 3) / (L : ℝ))
+        (fun L : ℕ => (1 + Real.logb 2 3) / (L : ℝ))
         Filter.atTop (nhds 0) := by
     have hconst :
-        Filter.Tendsto (fun _ : ℕ => 1 + logTwo 3)
-          Filter.atTop (nhds (1 + logTwo 3)) :=
+        Filter.Tendsto (fun _ : ℕ => 1 + Real.logb 2 3)
+          Filter.atTop (nhds (1 + Real.logb 2 3)) :=
       tendsto_const_nhds
     simpa only [div_eq_mul_inv, one_mul, mul_zero] using hconst.mul hinv
   have hentropy :
@@ -11752,13 +11745,13 @@ theorem empiricalEntropyError_tendsto_zero :
     filter_upwards [] with L
     rfl
   change Filter.Tendsto
-    (fun L : ℕ => (1 + logTwo 3) / (L : ℝ) +
+    (fun L : ℕ => (1 + Real.logb 2 3) / (L : ℝ) +
       binaryEntropy (1 / (L : ℝ)) / 2)
     Filter.atTop (nhds 0)
   simpa only [one_div, zero_div, add_zero] using hfirst.add (hentropy.div_const 2)
 
 theorem logTwo_pairLayer_card_add_one_le (L : ℕ) (hL : 2 ≤ L) :
-    logTwo ((L.choose 2 + 1 : ℕ) : ℝ) ≤
+    Real.logb 2 ((L.choose 2 + 1 : ℕ) : ℝ) ≤
       2 * (L : ℝ) / Real.log 2 := by
   let x : ℝ := ((L.choose 2 + 1 : ℕ) : ℝ)
   have hxpos : 0 < x := by
@@ -11805,7 +11798,7 @@ theorem exists_entropy_exclusion_base :
       ∀ L : ℕ, L₀ ≤ L →
         empiricalEntropyError L < entropySlack ∧
         (L : ℝ) +
-            3 * logTwo ((L.choose 2 + 1 : ℕ) : ℝ) -
+            3 * Real.logb 2 ((L.choose 2 + 1 : ℕ) : ℝ) -
               entropySlack * (L.choose 2 : ℝ) < -1 := by
   obtain ⟨Lerror, _, herror⟩ := exists_empiricalEntropyError_base
   let C : ℝ := 1 + 6 / Real.log 2
@@ -11833,10 +11826,10 @@ theorem exists_entropy_exclusion_base :
   have hscaled := mul_lt_mul_of_pos_right hbig hLpos
   have hlog := logTwo_pairLayer_card_add_one_le L (by omega)
   have hlinear :
-      (L : ℝ) + 3 * logTwo ((L.choose 2 + 1 : ℕ) : ℝ) ≤
+      (L : ℝ) + 3 * Real.logb 2 ((L.choose 2 + 1 : ℕ) : ℝ) ≤
         C * (L : ℝ) := by
     calc
-      (L : ℝ) + 3 * logTwo ((L.choose 2 + 1 : ℕ) : ℝ) ≤
+      (L : ℝ) + 3 * Real.logb 2 ((L.choose 2 + 1 : ℕ) : ℝ) ≤
           (L : ℝ) + 3 * (2 * (L : ℝ) / Real.log 2) := by
             gcongr
       _ = C * (L : ℝ) := by
@@ -14155,7 +14148,7 @@ theorem pairCoordinateConditionalEntropy_empirical_bound
     (coordinate : Fin dimension) :
     pairCoordinateConditionalEntropy parents children coordinate ≤
       kappa +
-        logTwo 3 *
+        Real.logb 2 3 *
           empiricalAverageDisagreement parentCount
             (pairParentCoordinateOneCount parents coordinate)
             (pairCoordinateKernel (by omega)
@@ -14187,7 +14180,7 @@ theorem pairCoordinateConditionalEntropy_empirical_bound
   change
     pairCoordinateConditionalEntropy parents children coordinate ≤
       kappa +
-        logTwo 3 *
+        Real.logb 2 3 *
           empiricalAverageDisagreement parentCount
             (pairParentCoordinateOneCount parents coordinate)
             (pairCoordinateKernel (by omega)
@@ -14302,7 +14295,7 @@ theorem pairChildArrayEntropy_empirical_bound
     (children : PairLayer parentCount 1 → HammingWord dimension) :
     pairChildArrayEntropy parents children ≤
       kappa +
-        logTwo 3 *
+        Real.logb 2 3 *
           pairChildArrayAverageDisagreement hparents parents children +
         (pairChildArrayEntropyPotential children -
           pairParentArrayEntropyPotential parents) / 2 +
@@ -14314,7 +14307,7 @@ theorem pairChildArrayEntropy_empirical_bound
         pairCoordinateConditionalEntropy parents children coordinate) ≤
       ∑ coordinate : Fin dimension,
         (kappa +
-          logTwo 3 *
+          Real.logb 2 3 *
             empiricalAverageDisagreement parentCount
               (pairParentCoordinateOneCount parents coordinate)
               (pairCoordinateKernel (by omega)
@@ -14363,7 +14356,7 @@ theorem pairChildArrayEntropy_empirical_bound
   have hsum_formula :
       (∑ coordinate : Fin dimension,
         (kappa +
-          logTwo 3 *
+          Real.logb 2 3 *
             empiricalAverageDisagreement parentCount
               (pairParentCoordinateOneCount parents coordinate)
               (pairCoordinateKernel (by omega)
@@ -14376,13 +14369,13 @@ theorem pairChildArrayEntropy_empirical_bound
                 (parentCount : ℝ))) / 2 +
           empiricalEntropyError parentCount)) =
         (dimension : ℝ) * kappa +
-          logTwo 3 * disagreementSum +
+          Real.logb 2 3 * disagreementSum +
           (childEntropySum - parentEntropySum) / 2 +
           (dimension : ℝ) * empiricalEntropyError parentCount := by
     calc
       (∑ coordinate : Fin dimension,
         (kappa +
-          logTwo 3 *
+          Real.logb 2 3 *
             empiricalAverageDisagreement parentCount
               (pairParentCoordinateOneCount parents coordinate)
               (pairCoordinateKernel (by omega)
@@ -14396,7 +14389,7 @@ theorem pairChildArrayEntropy_empirical_bound
           empiricalEntropyError parentCount)) =
         (∑ _coordinate : Fin dimension, kappa) +
           (∑ coordinate : Fin dimension,
-            logTwo 3 *
+            Real.logb 2 3 *
               empiricalAverageDisagreement parentCount
                 (pairParentCoordinateOneCount parents coordinate)
                 (pairCoordinateKernel (by omega)
@@ -14412,7 +14405,7 @@ theorem pairChildArrayEntropy_empirical_bound
             empiricalEntropyError parentCount) := by
             simp only [Finset.sum_add_distrib]
       _ = (dimension : ℝ) * kappa +
-          logTwo 3 * disagreementSum +
+          Real.logb 2 3 * disagreementSum +
           (childEntropySum - parentEntropySum) / 2 +
           (dimension : ℝ) * empiricalEntropyError parentCount := by
         rw [hentropy_sum]
@@ -14423,7 +14416,7 @@ theorem pairChildArrayEntropy_empirical_bound
     pairChildArrayEntropy parents children ≤
       (∑ coordinate : Fin dimension,
         (kappa +
-          logTwo 3 *
+          Real.logb 2 3 *
             empiricalAverageDisagreement parentCount
               (pairParentCoordinateOneCount parents coordinate)
               (pairCoordinateKernel (by omega)
@@ -14437,7 +14430,7 @@ theorem pairChildArrayEntropy_empirical_bound
           empiricalEntropyError parentCount)) /
             (dimension : ℝ) := hnormalized
     _ = kappa +
-        logTwo 3 *
+        Real.logb 2 3 *
           pairChildArrayAverageDisagreement hparents parents children +
         (pairChildArrayEntropyPotential children -
           pairParentArrayEntropyPotential parents) / 2 +
@@ -14445,7 +14438,7 @@ theorem pairChildArrayEntropy_empirical_bound
       change
         (∑ coordinate : Fin dimension,
           (kappa +
-            logTwo 3 *
+            Real.logb 2 3 *
               empiricalAverageDisagreement parentCount
                 (pairParentCoordinateOneCount parents coordinate)
                 (pairCoordinateKernel (by omega)
@@ -14459,7 +14452,7 @@ theorem pairChildArrayEntropy_empirical_bound
             empiricalEntropyError parentCount)) /
               (dimension : ℝ) =
           kappa +
-            logTwo 3 * (disagreementSum / (dimension : ℝ)) +
+            Real.logb 2 3 * (disagreementSum / (dimension : ℝ)) +
             (childEntropySum / (dimension : ℝ) -
               parentEntropySum / (dimension : ℝ)) / 2 +
             empiricalEntropyError parentCount
@@ -15666,7 +15659,7 @@ theorem badPairLayerRetentionBound_eq_exp
       Real.exp
         ((dimension : ℝ) * Real.log 2 *
           ((parentCount : ℝ) +
-            3 * logTwo ((parentCount.choose 2 + 1 : ℕ) : ℝ) -
+            3 * Real.logb 2 ((parentCount.choose 2 + 1 : ℕ) : ℝ) -
               entropySlack * (parentCount.choose 2 : ℝ))) := by
   have hparent :
       (((2 ^ (dimension * parentCount) : ℕ) : ℝ)) =
@@ -15704,7 +15697,7 @@ theorem badPairLayerRetentionBound_eq_exp
   rw [hparent, hprofile, hretention,
     ← Real.exp_add, ← Real.exp_add, ← Real.exp_add]
   apply congrArg Real.exp
-  unfold logTwo
+  unfold Real.logb
   push_cast
   field_simp [log_two_pos.ne']
   ring
@@ -15715,7 +15708,7 @@ theorem badPairLayerRetentionEvent_real_lt_exp_neg
     (hdimension : 0 < dimension)
     (hbase :
       (parentCount : ℝ) +
-        3 * logTwo ((parentCount.choose 2 + 1 : ℕ) : ℝ) -
+        3 * Real.logb 2 ((parentCount.choose 2 + 1 : ℕ) : ℝ) -
           entropySlack * (parentCount.choose 2 : ℝ) < -1)
     (side : Bool) :
     (hammingRetentionMeasure dimension).real
@@ -15740,7 +15733,7 @@ theorem badPairLayerRetentionEvent_real_lt_exp_neg
     _ = Real.exp
         ((dimension : ℝ) * Real.log 2 *
           ((parentCount : ℝ) +
-            3 * logTwo ((parentCount.choose 2 + 1 : ℕ) : ℝ) -
+            3 * Real.logb 2 ((parentCount.choose 2 + 1 : ℕ) : ℝ) -
               entropySlack * (parentCount.choose 2 : ℝ))) :=
         badPairLayerRetentionBound_eq_exp parentCount dimension
     _ < Real.exp (-(dimension : ℝ) * Real.log 2) := by
@@ -15764,7 +15757,7 @@ theorem badPairLayersRetentionEvent_real_le
     (hparents : ∀ layer, 4 ≤ layerSizes layer)
     (hbase : ∀ layer,
       (layerSizes layer : ℝ) +
-        3 * logTwo
+        3 * Real.logb 2
           (((layerSizes layer).choose 2 + 1 : ℕ) : ℝ) -
           entropySlack * ((layerSizes layer).choose 2 : ℝ) < -1) :
     (hammingRetentionMeasure dimension).real
@@ -15873,7 +15866,7 @@ theorem exists_actualPairLayer_exclusion_parameters :
         4 ≤ layerSize ∧
         empiricalEntropyError layerSize < entropySlack ∧
         (layerSize : ℝ) +
-          3 * logTwo ((layerSize.choose 2 + 1 : ℕ) : ℝ) -
+          3 * Real.logb 2 ((layerSize.choose 2 + 1 : ℕ) : ℝ) -
             entropySlack * (layerSize.choose 2 : ℝ) < -1 := by
   obtain ⟨baseSize, hbase, hbase_conditions⟩ :=
     exists_entropy_exclusion_base
@@ -17924,7 +17917,7 @@ theorem manuscriptSamplingFailureEvent_real_le
     (hparents : ∀ layer, 4 ≤ layerSizes layer)
     (hbase : ∀ layer,
       (layerSizes layer : ℝ) +
-        3 * logTwo
+        3 * Real.logb 2
           (((layerSizes layer).choose 2 + 1 : ℕ) : ℝ) -
           entropySlack * ((layerSizes layer).choose 2 : ℝ) < -1) :
     (hammingRetentionMeasure dimension).real
@@ -18035,7 +18028,7 @@ theorem eventually_exists_pairGraph_free_dense_retainedHost :
   have hfirst_moment :
       ∀ layer,
         (layerSizes layer : ℝ) +
-          3 * logTwo
+          3 * Real.logb 2
             (((layerSizes layer).choose 2 + 1 : ℕ) : ℝ) -
             entropySlack * ((layerSizes layer).choose 2 : ℝ) < -1 :=
     fun layer => (hlayers layer).2.2

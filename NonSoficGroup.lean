@@ -5853,57 +5853,55 @@ theorem prefixElementaryGroup_le_corner
   rintro _ ⟨u, _, rfl⟩
   exact ⟨(Units.mapEquiv (binaryPrefixCornerEquiv E).toMulEquiv) u, rfl⟩
 
-def sourceLocalWord : List (Fin 2) := [0, 0, 0, 1]
-
 theorem alphaZeroWord_incomparable_local (i : Fin 3) :
-    ¬ alphaZeroPrefixCode.word i <+: sourceLocalWord := by
+    ¬ alphaZeroPrefixCode.word i <+: [0, 0, 0, 1] := by
   fin_cases i <;> decide
 
 theorem localWord_incomparable_alphaZero (i : Fin 3) :
-    ¬ sourceLocalWord <+: alphaZeroPrefixCode.word i := by
+    ¬ [0, 0, 0, 1] <+: alphaZeroPrefixCode.word i := by
   fin_cases i <;> decide
 
 theorem alphaZeroCode_mul_localCylinder :
     prefixCodeIdempotent alphaZeroPrefixCode *
-        leavittCylinder sourceLocalWord = 0 := by
+        leavittCylinder [0, 0, 0, 1] = 0 := by
   change
     (∑ i : Fin 3, leavittCylinder (alphaZeroPrefixCode.word i)) *
-        leavittCylinder sourceLocalWord = 0
+        leavittCylinder [0, 0, 0, 1] = 0
   rw [Finset.sum_mul]
   apply Finset.sum_eq_zero
   intro i hi
   exact leavittCylinder_mul_eq_zero_of_incomparable
-    (alphaZeroPrefixCode.word i) sourceLocalWord
+    (alphaZeroPrefixCode.word i) [0, 0, 0, 1]
     (alphaZeroWord_incomparable_local i)
     (localWord_incomparable_alphaZero i)
 
 theorem localCylinder_mul_alphaZeroCode :
-    leavittCylinder sourceLocalWord *
+    leavittCylinder [0, 0, 0, 1] *
         prefixCodeIdempotent alphaZeroPrefixCode = 0 := by
   change
-    leavittCylinder sourceLocalWord *
+    leavittCylinder [0, 0, 0, 1] *
         (∑ i : Fin 3, leavittCylinder (alphaZeroPrefixCode.word i)) = 0
   rw [Finset.mul_sum]
   apply Finset.sum_eq_zero
   intro i hi
   exact leavittCylinder_mul_eq_zero_of_incomparable
-    sourceLocalWord (alphaZeroPrefixCode.word i)
+    [0, 0, 0, 1] (alphaZeroPrefixCode.word i)
     (localWord_incomparable_alphaZero i)
     (alphaZeroWord_incomparable_local i)
 
 theorem localCylinderCorner_le_centralizer_alphaZero :
-    cylinderCornerGroup sourceLocalWord ≤
+    cylinderCornerGroup [0, 0, 0, 1] ≤
       Subgroup.centralizer
         (prefixElementaryGroup alphaZeroPrefixCode : Set BinaryLeavittˣ) := by
   let he := MatrixCorner.codeIdempotent_isIdempotent
     (fun i => leavittWordS (alphaZeroPrefixCode.word i))
     (fun i => leavittWordT (alphaZeroPrefixCode.word i))
     (binaryPrefixCode_orthogonal alphaZeroPrefixCode)
-  let hf := leavittCylinder_isIdempotent sourceLocalWord
+  let hf := leavittCylinder_isIdempotent [0, 0, 0, 1]
   have hef : prefixCodeIdempotent alphaZeroPrefixCode *
-      leavittCylinder sourceLocalWord = 0 :=
+      leavittCylinder [0, 0, 0, 1] = 0 :=
     alphaZeroCode_mul_localCylinder
-  have hfe : leavittCylinder sourceLocalWord *
+  have hfe : leavittCylinder [0, 0, 0, 1] *
       prefixCodeIdempotent alphaZeroPrefixCode = 0 :=
     localCylinder_mul_alphaZeroCode
   intro z hz
@@ -5916,12 +5914,12 @@ theorem localCylinderCorner_le_centralizer_alphaZero :
 
 theorem alphaZero_inf_localCylinderCorner_eq_bot :
     prefixElementaryGroup alphaZeroPrefixCode ⊓
-        cylinderCornerGroup sourceLocalWord = ⊥ := by
+        cylinderCornerGroup [0, 0, 0, 1] = ⊥ := by
   let he := MatrixCorner.codeIdempotent_isIdempotent
     (fun i => leavittWordS (alphaZeroPrefixCode.word i))
     (fun i => leavittWordT (alphaZeroPrefixCode.word i))
     (binaryPrefixCode_orthogonal alphaZeroPrefixCode)
-  let hf := leavittCylinder_isIdempotent sourceLocalWord
+  let hf := leavittCylinder_isIdempotent [0, 0, 0, 1]
   have hzero := idempotentCornerGroup_inf_eq_bot he hf
     alphaZeroCode_mul_localCylinder
   apply le_antisymm
@@ -7198,43 +7196,43 @@ theorem sourceLocalPrefixTranspositionGroup_le_alpha :
   exact sourceLocal_cylinderSwap_mem_alpha a b hab hba
 
 theorem sourceLocalPrefixTranspositionGroup_le_alpha_sourceWord :
-    localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord ≤
+    localPrefixTranspositionGroup [0, 0, 0, 1] ≤
       prefixElementaryGroup alphaPrefixCode := by
   exact sourceLocalPrefixTranspositionGroup_le_alpha
 
 theorem sourceLocalPrefixTranspositionGroup_le_nine :
-    localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord ≤
+    localPrefixTranspositionGroup [0, 0, 0, 1] ≤
       prefixElementaryGroup ninePrefixCode :=
   sourceLocalPrefixTranspositionGroup_le_alpha_sourceWord.trans
     SourceGeneration.alphaPrefixElementaryGroup_le_nine
 
 theorem sourceLocalPrefixTranspositionGroup_le_centralizer_alphaZero :
-    localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord ≤
+    localPrefixTranspositionGroup [0, 0, 0, 1] ≤
       Subgroup.centralizer
         (prefixElementaryGroup alphaZeroPrefixCode : Set BinaryLeavittˣ) :=
   (localPrefixTranspositionGroup_le_sourceCylinderCorner
-    ThompsonPrefixLocal.sourceLocalWord).trans
+    [0, 0, 0, 1]).trans
     ThompsonPrefixLocal.localCylinderCorner_le_centralizer_alphaZero
 
 theorem alphaZero_inf_sourceLocalPrefixTranspositionGroup_eq_bot :
     prefixElementaryGroup alphaZeroPrefixCode ⊓
-        localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord = ⊥ := by
+        localPrefixTranspositionGroup [0, 0, 0, 1] = ⊥ := by
   apply le_antisymm
   · calc
       prefixElementaryGroup alphaZeroPrefixCode ⊓
-          localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord ≤
+          localPrefixTranspositionGroup [0, 0, 0, 1] ≤
         prefixElementaryGroup alphaZeroPrefixCode ⊓
           ThompsonPrefixLocal.cylinderCornerGroup
-            ThompsonPrefixLocal.sourceLocalWord :=
+            [0, 0, 0, 1] :=
           inf_le_inf_left _
             (localPrefixTranspositionGroup_le_sourceCylinderCorner
-              ThompsonPrefixLocal.sourceLocalWord)
+              [0, 0, 0, 1])
       _ = ⊥ := ThompsonPrefixLocal.alphaZero_inf_localCylinderCorner_eq_bot
   · exact bot_le
 
 def sourceCompressedLocalProductHom :
     (prefixElementaryGroup alphaZeroPrefixCode ×
-      localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord) →*
+      localPrefixTranspositionGroup [0, 0, 0, 1]) →*
         BinaryLeavittˣ where
   toFun x := (x.1 : BinaryLeavittˣ) * (x.2 : BinaryLeavittˣ)
   map_one' := by simp only [Prod.fst_one, OneMemClass.coe_one, Prod.snd_one, mul_one]
@@ -7273,15 +7271,15 @@ theorem sourceCompressedLocalProductHom_injective :
     eq_inv_of_mul_eq_one_left hone
   have hkJ :
       (k : BinaryLeavittˣ) ∈
-        localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord := by
+        localPrefixTranspositionGroup [0, 0, 0, 1] := by
     rw [hkinv]
     exact (localPrefixTranspositionGroup
-      ThompsonPrefixLocal.sourceLocalWord).inv_mem j.property
+      [0, 0, 0, 1]).inv_mem j.property
   have hkbot :
       (k : BinaryLeavittˣ) ∈
         prefixElementaryGroup alphaZeroPrefixCode ⊓
           localPrefixTranspositionGroup
-            ThompsonPrefixLocal.sourceLocalWord :=
+            [0, 0, 0, 1] :=
     ⟨k.property, hkJ⟩
   rw [alphaZero_inf_sourceLocalPrefixTranspositionGroup_eq_bot] at hkbot
   have hkone : (k : BinaryLeavittˣ) = 1 := by
@@ -7303,7 +7301,7 @@ theorem sourceCompressedLocalProductHom_range_le_nine :
 
 def sourceCompressedLocalProductEmbedding :
     (prefixElementaryGroup alphaZeroPrefixCode ×
-      localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord) →*
+      localPrefixTranspositionGroup [0, 0, 0, 1]) →*
         prefixElementaryGroup ninePrefixCode :=
   sourceCompressedLocalProductHom.codRestrict
     (prefixElementaryGroup ninePrefixCode)
@@ -29078,15 +29076,15 @@ theorem sourceLocalPrefixTranspositionGroup_lef_of_source_finite_models
         Tendsto (fun n => (A.model n).size) atTop atTop →
           ∀ F : Finset
               (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-                  SoficGroups.ThompsonPrefixLocal.sourceLocalWord),
+                  [0, 0, 0, 1]),
             Nonempty (SoficGroups.ExpandingCentralizerFiniteModel
               (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-                  SoficGroups.ThompsonPrefixLocal.sourceLocalWord) F))
+                  [0, 0, 0, 1]) F))
     (hsource : SoficGroups.Sofic
       (SoficGroups.prefixElementaryGroup SoficGroups.ninePrefixCode)) :
     SoficGroups.LEF
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord) := by
+        [0, 0, 0, 1]) := by
   letI : SoficGroups.Sofic
       (SoficGroups.prefixElementaryGroup SoficGroups.ninePrefixCode) :=
     hsource
@@ -29381,10 +29379,6 @@ def rootRotation : BinaryLeavittˣ :=
 def rightRotation : BinaryLeavittˣ :=
   prefixInsertionHom [1] rootRotation
 
-def generatorA : BinaryLeavittˣ := rootRotation⁻¹
-
-def generatorB : BinaryLeavittˣ := rightRotation⁻¹
-
 theorem rootRotation_action_zero_zero :
     PrefixWordAction rootRotation [0, 0] [0] := by
   unfold rootRotation
@@ -29425,46 +29419,46 @@ theorem rootRotation_action_one :
         (by decide) (by decide) (by decide)
 
 theorem generatorB_eq_prefixInsertion :
-    generatorB = prefixInsertionHom [1] generatorA := by
+    rightRotation⁻¹ = prefixInsertionHom [1] rootRotation⁻¹ := by
   change
     (prefixInsertionHom [1] rootRotation)⁻¹ =
       prefixInsertionHom [1] rootRotation⁻¹
   exact ((prefixInsertionHom [1]).map_inv rootRotation).symm
 
 theorem generator_two_eq_prefixInsertion :
-    generatorA⁻¹ * generatorB * generatorA =
-      prefixInsertionHom [1, 1] generatorA := by
+    rootRotation⁻¹⁻¹ * rightRotation⁻¹ * rootRotation⁻¹ =
+      prefixInsertionHom [1, 1] rootRotation⁻¹ := by
   calc
-    generatorA⁻¹ * generatorB * generatorA =
-        rootRotation * prefixInsertionHom [1] generatorA *
+    rootRotation⁻¹⁻¹ * rightRotation⁻¹ * rootRotation⁻¹ =
+        rootRotation * prefixInsertionHom [1] rootRotation⁻¹ *
           rootRotation⁻¹ := by
             rw [generatorB_eq_prefixInsertion]
-            simp only [generatorA, inv_inv, Fin.isValue, map_inv]
-    _ = prefixInsertionHom [1, 1] generatorA :=
+            simp only [inv_inv, Fin.isValue, map_inv]
+    _ = prefixInsertionHom [1, 1] rootRotation⁻¹ :=
       prefixInsertionHom_conjugate_of_prefixWordAction
-        rootRotation [1] [1, 1] rootRotation_action_one generatorA
+        rootRotation [1] [1, 1] rootRotation_action_one rootRotation⁻¹
 
 theorem generator_three_eq_prefixInsertion :
-    (generatorA ^ 2)⁻¹ * generatorB * generatorA ^ 2 =
-      prefixInsertionHom [1, 1, 1] generatorA := by
+    (rootRotation⁻¹ ^ 2)⁻¹ * rightRotation⁻¹ * rootRotation⁻¹ ^ 2 =
+      prefixInsertionHom [1, 1, 1] rootRotation⁻¹ := by
   have hrotation :
       PrefixWordAction rootRotation [1, 1] [1, 1, 1] := by
     simpa only [Fin.isValue, List.cons_append, List.nil_append] using
       prefixWordAction_append rootRotation_action_one [1]
   calc
-    (generatorA ^ 2)⁻¹ * generatorB * generatorA ^ 2 =
+    (rootRotation⁻¹ ^ 2)⁻¹ * rightRotation⁻¹ * rootRotation⁻¹ ^ 2 =
         rootRotation *
-          (generatorA⁻¹ * generatorB * generatorA) *
+          (rootRotation⁻¹⁻¹ * rightRotation⁻¹ * rootRotation⁻¹) *
           rootRotation⁻¹ := by
-            simp only [generatorA, pow_two, mul_inv_rev, inv_inv, mul_assoc]
-    _ = rootRotation * prefixInsertionHom [1, 1] generatorA *
+            simp only [pow_two, mul_inv_rev, inv_inv, mul_assoc]
+    _ = rootRotation * prefixInsertionHom [1, 1] rootRotation⁻¹ *
           rootRotation⁻¹ := by rw [generator_two_eq_prefixInsertion]
-    _ = prefixInsertionHom [1, 1, 1] generatorA :=
+    _ = prefixInsertionHom [1, 1, 1] rootRotation⁻¹ :=
       prefixInsertionHom_conjugate_of_prefixWordAction
-        rootRotation [1, 1] [1, 1, 1] hrotation generatorA
+        rootRotation [1, 1] [1, 1, 1] hrotation rootRotation⁻¹
 
 theorem generator_difference_action_one_one :
-    PrefixWordAction (generatorA * generatorB⁻¹) [1, 1] [1, 1] := by
+    PrefixWordAction (rootRotation⁻¹ * rightRotation⁻¹⁻¹) [1, 1] [1, 1] := by
   have hrotation :
       PrefixWordAction rootRotation [1, 1] [1, 1, 1] := by
     simpa only [Fin.isValue, List.cons_append, List.nil_append] using
@@ -29493,19 +29487,19 @@ theorem commute_prefixInsertion_of_prefixWordAction_fixed
     _ = prefixInsertionHom w u * g := by rw [hconjugate]
 
 theorem relator_one :
-    Commute (generatorA * generatorB⁻¹)
-      (generatorA⁻¹ * generatorB * generatorA) := by
+    Commute (rootRotation⁻¹ * rightRotation⁻¹⁻¹)
+      (rootRotation⁻¹⁻¹ * rightRotation⁻¹ * rootRotation⁻¹) := by
   rw [generator_two_eq_prefixInsertion]
   exact commute_prefixInsertion_of_prefixWordAction_fixed
-    (generatorA * generatorB⁻¹) [1, 1]
-    generator_difference_action_one_one generatorA
+    (rootRotation⁻¹ * rightRotation⁻¹⁻¹) [1, 1]
+    generator_difference_action_one_one rootRotation⁻¹
 
 theorem relator_two :
-    Commute (generatorA * generatorB⁻¹)
-      ((generatorA ^ 2)⁻¹ * generatorB * generatorA ^ 2) := by
+    Commute (rootRotation⁻¹ * rightRotation⁻¹⁻¹)
+      ((rootRotation⁻¹ ^ 2)⁻¹ * rightRotation⁻¹ * rootRotation⁻¹ ^ 2) := by
   rw [generator_three_eq_prefixInsertion]
   apply commute_prefixInsertion_of_prefixWordAction_fixed
-    (generatorA * generatorB⁻¹) [1, 1, 1] _ generatorA
+    (rootRotation⁻¹ * rightRotation⁻¹⁻¹) [1, 1, 1] _ rootRotation⁻¹
   simpa only [Fin.isValue, List.cons_append, List.nil_append] using
     prefixWordAction_append generator_difference_action_one_one [1]
 
@@ -29528,46 +29522,43 @@ theorem rootRotation_mem_binaryPrefixTranspositionGroup :
       [0] [1] (by decide) (by decide))
 
 theorem generatorA_mem_binaryPrefixTranspositionGroup :
-    generatorA ∈ binaryPrefixTranspositionGroup :=
+    rootRotation⁻¹ ∈ binaryPrefixTranspositionGroup :=
   binaryPrefixTranspositionGroup.inv_mem
     rootRotation_mem_binaryPrefixTranspositionGroup
 
 theorem generatorB_mem_binaryPrefixTranspositionGroup :
-    generatorB ∈ binaryPrefixTranspositionGroup := by
+    rightRotation⁻¹ ∈ binaryPrefixTranspositionGroup := by
   rw [generatorB_eq_prefixInsertion]
   exact prefixInsertionHom_mem_binaryPrefixTranspositionGroup
-    [1] generatorA generatorA_mem_binaryPrefixTranspositionGroup
+    [1] rootRotation⁻¹ generatorA_mem_binaryPrefixTranspositionGroup
 
-theorem generators_not_commute : ¬ Commute generatorA generatorB := by
+theorem generators_not_commute : ¬ Commute rootRotation⁻¹ rightRotation⁻¹ := by
   have ha_zero_one :
-      PrefixWordAction generatorA [1, 0] [0, 1] :=
+      PrefixWordAction rootRotation⁻¹ [1, 0] [0, 1] :=
     prefixWordAction_inv rootRotation_action_zero_one
   have ha_one :
-      PrefixWordAction generatorA [1, 1] [1] :=
+      PrefixWordAction rootRotation⁻¹ [1, 1] [1] :=
     prefixWordAction_inv rootRotation_action_one
   have hb_one_one_zero :
-      PrefixWordAction generatorB [1, 1, 0] [1, 0, 1] := by
-    change
-      PrefixWordAction rightRotation⁻¹ [1, 1, 0] [1, 0, 1]
+      PrefixWordAction rightRotation⁻¹ [1, 1, 0] [1, 0, 1] := by
     apply prefixWordAction_inv
     unfold rightRotation
     simpa only [Fin.isValue, List.cons_append, List.nil_append] using
       prefixWordAction_prefixInsertion [1] rootRotation_action_zero_one
   have hb_one_zero :
-      PrefixWordAction generatorB [1, 0] [1, 0, 0] := by
-    change PrefixWordAction rightRotation⁻¹ [1, 0] [1, 0, 0]
+      PrefixWordAction rightRotation⁻¹ [1, 0] [1, 0, 0] := by
     apply prefixWordAction_inv
     unfold rightRotation
     simpa only [Fin.isValue, List.cons_append, List.nil_append] using
       prefixWordAction_prefixInsertion [1] rootRotation_action_zero_zero
   have hab :
-      PrefixWordAction (generatorA * generatorB)
+      PrefixWordAction (rootRotation⁻¹ * rightRotation⁻¹)
         [1, 1, 0] [0, 1, 1] :=
     prefixWordAction_mul
       (by simpa only [Fin.isValue, List.cons_append, List.nil_append] using prefixWordAction_append ha_zero_one [1])
       hb_one_one_zero
   have hba :
-      PrefixWordAction (generatorB * generatorA)
+      PrefixWordAction (rightRotation⁻¹ * rootRotation⁻¹)
         [1, 1, 0] [1, 0, 0] :=
     prefixWordAction_mul hb_one_zero
       (by simpa only [Fin.isValue, List.cons_append, List.nil_append] using prefixWordAction_append ha_one [0])
@@ -29576,9 +29567,9 @@ theorem generators_not_commute : ¬ Commute generatorA generatorB := by
       leavittWordS [0, 1, 1] = leavittWordS [1, 0, 0] := by
     calc
       leavittWordS [0, 1, 1] =
-          (↑(generatorA * generatorB) : BinaryLeavitt) *
+          (↑(rootRotation⁻¹ * rightRotation⁻¹) : BinaryLeavitt) *
             leavittWordS [1, 1, 0] := hab.prefixing.symm
-      _ = (↑(generatorB * generatorA) : BinaryLeavitt) *
+      _ = (↑(rightRotation⁻¹ * rootRotation⁻¹) : BinaryLeavitt) *
             leavittWordS [1, 1, 0] := by rw [hcommute.eq]
       _ = leavittWordS [1, 0, 0] := hba.prefixing
   apply (one_ne_zero : (1 : BinaryLeavitt) ≠ 0)
@@ -29592,14 +29583,14 @@ theorem generators_not_commute : ¬ Commute generatorA generatorB := by
       [0, 1, 1] [1, 0, 0] (by decide) (by decide)
 
 def sourceGeneratorA :
-    localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord :=
-  ⟨prefixInsertionHom ThompsonPrefixLocal.sourceLocalWord generatorA,
-    ⟨generatorA, generatorA_mem_binaryPrefixTranspositionGroup, rfl⟩⟩
+    localPrefixTranspositionGroup [0, 0, 0, 1] :=
+  ⟨prefixInsertionHom [0, 0, 0, 1] rootRotation⁻¹,
+    ⟨rootRotation⁻¹, generatorA_mem_binaryPrefixTranspositionGroup, rfl⟩⟩
 
 def sourceGeneratorB :
-    localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord :=
-  ⟨prefixInsertionHom ThompsonPrefixLocal.sourceLocalWord generatorB,
-    ⟨generatorB, generatorB_mem_binaryPrefixTranspositionGroup, rfl⟩⟩
+    localPrefixTranspositionGroup [0, 0, 0, 1] :=
+  ⟨prefixInsertionHom [0, 0, 0, 1] rightRotation⁻¹,
+    ⟨rightRotation⁻¹, generatorB_mem_binaryPrefixTranspositionGroup, rfl⟩⟩
 
 theorem source_relator_one :
     Commute (sourceGeneratorA * sourceGeneratorB⁻¹)
@@ -29609,7 +29600,7 @@ theorem source_relator_one :
   simpa only [sourceGeneratorA, sourceGeneratorB,
     Subgroup.coe_mul, Subgroup.coe_inv, map_mul, map_inv] using
     (relator_one.map
-      (prefixInsertionHom ThompsonPrefixLocal.sourceLocalWord)).eq
+      (prefixInsertionHom [0, 0, 0, 1])).eq
 
 theorem source_relator_two :
     Commute (sourceGeneratorA * sourceGeneratorB⁻¹)
@@ -29621,18 +29612,18 @@ theorem source_relator_two :
     Subgroup.coe_mul, Subgroup.coe_inv, Subgroup.coe_pow,
     map_mul, map_inv, map_pow] using
     (relator_two.map
-      (prefixInsertionHom ThompsonPrefixLocal.sourceLocalWord)).eq
+      (prefixInsertionHom [0, 0, 0, 1])).eq
 
 theorem source_generators_not_commute :
     ¬ Commute sourceGeneratorA sourceGeneratorB := by
   intro hcommute
   apply generators_not_commute
   apply Commute.of_map
-    (prefixInsertionHom_injective ThompsonPrefixLocal.sourceLocalWord)
+    (prefixInsertionHom_injective [0, 0, 0, 1])
   apply (commute_iff_eq _ _).2
   have heq := congrArg
     (fun x :
-      localPrefixTranspositionGroup ThompsonPrefixLocal.sourceLocalWord =>
+      localPrefixTranspositionGroup [0, 0, 0, 1] =>
       (x : BinaryLeavittˣ)) hcommute.eq
   simpa only [sourceGeneratorA, sourceGeneratorB, Subgroup.coe_mul]
     using heq
@@ -29644,7 +29635,7 @@ section
 theorem sourceLocalPrefixTranspositionGroup_notLEF :
     ¬ LEF
       (ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        ThompsonPrefixLocal.sourceLocalWord) := by
+        [0, 0, 0, 1]) := by
   apply ThompsonFTwoRelatorLEF.not_lef_of_thompsonF_two_relations
     ThompsonFLocalWitness.sourceGeneratorA
     ThompsonFLocalWitness.sourceGeneratorB
@@ -30579,7 +30570,7 @@ theorem exists_sourceCompressedKazhdanPair_with_same_generators
 def sourceCompressedLocalProductToAlpha :
     (SoficGroups.prefixElementaryGroup SoficGroups.alphaZeroPrefixCode ×
       SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord) →*
+        [0, 0, 0, 1]) →*
       SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode :=
   SoficGroups.ThompsonPrefixInsertion.sourceCompressedLocalProductHom.codRestrict
       (SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode)
@@ -30630,7 +30621,7 @@ theorem source_compressed_local_product_word_crossing_density_tendsto_zero
     (z : SoficGroups.prefixElementaryGroup
           SoficGroups.alphaZeroPrefixCode ×
         SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-            SoficGroups.ThompsonPrefixLocal.sourceLocalWord) :
+            [0, 0, 0, 1]) :
     Tendsto
       (fun n =>
         ((SoficGroups.partitionWordCrossing (Q n)
@@ -30679,7 +30670,7 @@ theorem source_compressed_local_product_ball_crossing_density_tendsto_zero
       (SoficGroups.prefixElementaryGroup
           SoficGroups.alphaZeroPrefixCode ×
         SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-            SoficGroups.ThompsonPrefixLocal.sourceLocalWord))
+            [0, 0, 0, 1]))
     (k : ℕ) :
     Tendsto
       (fun n =>
@@ -30713,7 +30704,7 @@ def sourceCompressedLocalProductApproximation
       (SoficGroups.prefixElementaryGroup
           SoficGroups.alphaZeroPrefixCode ×
         SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-            SoficGroups.ThompsonPrefixLocal.sourceLocalWord) :=
+            [0, 0, 0, 1]) :=
   SoficGroups.pullbackSoficApproximation
     SoficGroups.ThompsonPrefixInsertion.sourceCompressedLocalProductEmbedding
     SoficGroups.ThompsonPrefixInsertion.sourceCompressedLocalProductEmbedding_injective
@@ -30734,7 +30725,7 @@ theorem source_canonical_product_radius_crossing_density_tendsto_zero
         SoficGroups.alphaZeroPrefixCode)]
     [DecidableEq
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-          SoficGroups.ThompsonPrefixLocal.sourceLocalWord)]
+          [0, 0, 0, 1])]
     (A : SoficGroups.SoficApproximation
       (SoficGroups.prefixElementaryGroup SoficGroups.ninePrefixCode))
     (SΓ : Finset
@@ -30758,7 +30749,7 @@ theorem source_canonical_product_radius_crossing_density_tendsto_zero
       atTop (𝓝 0))
     (F : Finset
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-          SoficGroups.ThompsonPrefixLocal.sourceLocalWord))
+          [0, 0, 0, 1]))
     (k : ℕ) :
     Tendsto
       (fun n =>
@@ -32119,7 +32110,7 @@ noncomputable def sourceSelectedRadiusBad
           SoficGroups.alphaPrefixCode)) = ⊤)
     (F : Finset
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord))
+        [0, 0, 0, 1]))
     (n k : ℕ) : Finset (Fin (A.model n).size) := by
   classical
   let SK :=
@@ -32147,7 +32138,7 @@ abbrev SourceK :=
 
 abbrev SourceJ :=
   SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-    SoficGroups.ThompsonPrefixLocal.sourceLocalWord
+    [0, 0, 0, 1]
 
 noncomputable def guardedCanonicalProductRadiusBad
     [DecidableEq SourceK] [DecidableEq SourceJ]
@@ -32675,12 +32666,12 @@ noncomputable def sourceSelectedProductRadiusLabels
       (SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode))
     (F : Finset
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord))
+        [0, 0, 0, 1]))
     (k : ℕ) :
     Finset
       (SoficGroups.prefixElementaryGroup SoficGroups.alphaZeroPrefixCode ×
         SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-          SoficGroups.ThompsonPrefixLocal.sourceLocalWord) := by
+          [0, 0, 0, 1]) := by
   classical
   exact
     SoficGroups.CanonicalProductRadiusBadMatchedCapture.sourceProductRadiusLabels
@@ -32692,7 +32683,7 @@ theorem exists_source_selected_components
       (SoficGroups.prefixElementaryGroup SoficGroups.ninePrefixCode))
     (F : Finset
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord)) :
+        [0, 0, 0, 1])) :
     ∃ (S : Finset
           (SoficGroups.prefixElementaryGroup SoficGroups.alphaPrefixCode))
       (hsymmetric : ∀ g ∈ S, g⁻¹ ∈ S)
@@ -34150,7 +34141,7 @@ theorem exists_vanishing_completed_first_factor_additive_expansion_of_selected_s
       Finpartition (Finset.univ : Finset (Fin (A.model n).size)))
     (F : Finset
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord))
+        [0, 0, 0, 1]))
     (N : ℕ) (r : ℕ → ℕ)
     (C : (n : ℕ) → Finset (Fin (A.model (n + N)).size))
     (gamma : ℝ)
@@ -34302,11 +34293,11 @@ theorem source_ambient_nonempty_expandingCentralizerFiniteModel
       (SoficGroups.prefixElementaryGroup SoficGroups.ninePrefixCode))
     (F : Finset
       (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-        SoficGroups.ThompsonPrefixLocal.sourceLocalWord)) :
+        [0, 0, 0, 1])) :
     Nonempty
       (SoficGroups.ExpandingCentralizerFiniteModel
         (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-          SoficGroups.ThompsonPrefixLocal.sourceLocalWord) F) := by
+          [0, 0, 0, 1]) F) := by
   classical
   obtain ⟨S, hsymmetric, hgenerates, Q, gamma, N, r, C,
       hone, hgamma, _hsource, hr, hC, hCnonempty,
@@ -34317,7 +34308,7 @@ theorem source_ambient_nonempty_expandingCentralizerFiniteModel
     SoficGroups.prefixElementaryGroup SoficGroups.alphaZeroPrefixCode
   let J : Type :=
     SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-      SoficGroups.ThompsonPrefixLocal.sourceLocalWord
+      [0, 0, 0, 1]
   let AP : SoficGroups.SoficApproximation (K × J) :=
     SoficGroups.SourceProductThroughAlpha.sourceCompressedLocalProductApproximation
       A
@@ -34421,7 +34412,7 @@ theorem sourceLocalPrefixTranspositionGroup_lef_of_sofic :
         (SoficGroups.prefixElementaryGroup SoficGroups.ninePrefixCode) →
       SoficGroups.LEF
         (SoficGroups.ThompsonPrefixInsertion.localPrefixTranspositionGroup
-          SoficGroups.ThompsonPrefixLocal.sourceLocalWord) := by
+          [0, 0, 0, 1]) := by
   intro hsource
   exact sourceLocalPrefixTranspositionGroup_lef_of_source_finite_models
     (fun A _ F =>

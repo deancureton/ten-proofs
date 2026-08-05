@@ -875,9 +875,7 @@ def modThreeGroupHom : IntegralSpecialLinearGroup →* TernarySpecialLinearGroup
     (g : IntegralSpecialLinearGroup) (i j : Index) :
     modThreeGroupHom g i j = modThreeAtZero (g i j) := rfl
 
-def KSubgroup : Subgroup IntegralSpecialLinearGroup := modThreeGroupHom.ker
-
-abbrev K := KSubgroup
+abbrev K := modThreeGroupHom.ker
 
 instance : Countable K := inferInstance
 
@@ -891,7 +889,7 @@ def actingGroup : ConnesRigidity.CountableDiscreteGroup where
   group := inferInstance
   countable := inferInstance
 
-instance : KSubgroup.FiniteIndex := Subgroup.finiteIndex_ker modThreeGroupHom
+instance : modThreeGroupHom.ker.FiniteIndex := Subgroup.finiteIndex_ker modThreeGroupHom
 
 def modTwoPolynomial : IntegralPolynomial →+* BinaryPolynomial :=
   Polynomial.mapRingHom (Int.castRingHom (ZMod 2))
@@ -914,7 +912,7 @@ def modTwoGroupHom : IntegralSpecialLinearGroup →* Q :=
     (g : IntegralSpecialLinearGroup) (i j : Index) :
     modTwoGroupHom g i j = modTwoPolynomial (g i j) := rfl
 
-def pi₂ : K →* Q := modTwoGroupHom.comp KSubgroup.subtype
+def pi₂ : K →* Q := modTwoGroupHom.comp modThreeGroupHom.ker.subtype
 
 @[simp] theorem pi₂_apply (g : K) :
     pi₂ g = modTwoGroupHom (g : IntegralSpecialLinearGroup) := rfl
@@ -941,7 +939,7 @@ theorem specialLinear_map_transvection_baseChange
 theorem integralTransvection_mem_KSubgroup
     {i j : Index} (hij : i ≠ j) (a : IntegralPolynomial) :
     Matrix.SpecialLinearGroup.transvection hij ((3 : IntegralPolynomial) * a) ∈
-      KSubgroup := by
+      modThreeGroupHom.ker := by
   change modThreeGroupHom
     (Matrix.SpecialLinearGroup.transvection hij ((3 : IntegralPolynomial) * a)) = 1
   rw [show modThreeGroupHom
@@ -1404,18 +1402,18 @@ def ErshovJaikinUniversalLatticePropertyT : Prop :=
   HasKazhdanPropertyT integralGroup
 
 theorem actingGroup_eq_integralGroup_subgroup :
-    actingGroup = integralGroup.subgroup KSubgroup := by
+    actingGroup = integralGroup.subgroup modThreeGroupHom.ker := by
   rfl
 
 theorem actingGroup_hasKazhdanPropertyT
     (hUniversalLattice : ErshovJaikinUniversalLatticePropertyT) :
     HasKazhdanPropertyT actingGroup := by
-  letI : (show Subgroup integralGroup from KSubgroup).FiniteIndex := by
-    change KSubgroup.FiniteIndex
+  letI : (show Subgroup integralGroup from modThreeGroupHom.ker).FiniteIndex := by
+    change modThreeGroupHom.ker.FiniteIndex
     infer_instance
   rw [actingGroup_eq_integralGroup_subgroup]
   exact hasKazhdanPropertyT_subgroup_of_finiteIndex
-    integralGroup KSubgroup hUniversalLattice
+    integralGroup modThreeGroupHom.ker hUniversalLattice
 
 end
 
@@ -10578,7 +10576,7 @@ theorem actingGroup_conjugacyClass_infinite (g : K) (hg : g ≠ 1) :
     (ConnesRigidity.conjugacyClass actingGroup g).Infinite := by
   have hclass := specialLinear_subgroup_conjugacy_infinite
     (ι := Index) (A := IntegralPolynomial)
-    KSubgroup (3 : IntegralPolynomial) (by norm_num)
+    modThreeGroupHom.ker (3 : IntegralPolynomial) (by norm_num)
     (fun hij a => integralTransvection_mem_KSubgroup hij a)
     K_no_nontrivial_torsion g hg
   apply hclass.mono
@@ -26066,22 +26064,18 @@ open ConnesRigidity MeasureTheory
 
 abbrev IntegerRankTwo := Fin 2 → ℤ
 
-def integerDualCoordinateZero : IntegerRankTwo := Pi.single 0 1
-
-def integerDualCoordinateOne : IntegerRankTwo := Pi.single 1 1
-
 private theorem integerRankTwo_basis_decomposition (v : IntegerRankTwo) :
-    v = v 0 • integerDualCoordinateZero +
-      v 1 • integerDualCoordinateOne := by
+    v = v 0 • (Pi.single 0 1) +
+      v 1 • (Pi.single 1 1) := by
   funext i
   fin_cases i <;>
-    simp [integerDualCoordinateZero, integerDualCoordinateOne]
+    simp
 
 theorem integerDual_eq_one_iff_coordinate_values
     (χ : DiscreteCharacterSpace IntegerRankTwo) :
     χ = 1 ↔
-      χ (Multiplicative.ofAdd integerDualCoordinateZero) = 1 ∧
-        χ (Multiplicative.ofAdd integerDualCoordinateOne) = 1 := by
+      χ (Multiplicative.ofAdd (Pi.single 0 1)) = 1 ∧
+        χ (Multiplicative.ofAdd (Pi.single 1 1)) = 1 := by
   constructor
   · rintro rfl
     simp only [PontryaginDual.one_apply, and_self]
@@ -26092,8 +26086,8 @@ theorem integerDual_eq_one_iff_coordinate_values
     change χ (Multiplicative.ofAdd v) = 1
     rw [integerRankTwo_basis_decomposition v]
     change
-      χ ((Multiplicative.ofAdd integerDualCoordinateZero) ^ (v 0) *
-        (Multiplicative.ofAdd integerDualCoordinateOne) ^ (v 1)) = 1
+      χ ((Multiplicative.ofAdd (Pi.single 0 1)) ^ (v 0) *
+        (Multiplicative.ofAdd (Pi.single 1 1)) ^ (v 1)) = 1
     simp only [Fin.isValue, map_mul, map_zpow, hzero, one_zpow, hone, mul_one]
 
 local instance integerDualMeasurable :
@@ -26105,20 +26099,20 @@ local instance integerDualBorel :
 
 theorem integerDual_spectralArgCoordinates_eq_zero_iff
     (χ : DiscreteCharacterSpace IntegerRankTwo) :
-    spectralArgCoordinates integerDualCoordinateZero
-      integerDualCoordinateOne χ = (0, 0) ↔ χ = 1 := by
+    spectralArgCoordinates (Pi.single 0 1)
+      (Pi.single 1 1) χ = (0, 0) ↔ χ = 1 := by
   rw [Prod.ext_iff]
   change
-    (Complex.arg ((χ (Multiplicative.ofAdd integerDualCoordinateZero) : Circle) : ℂ)
+    (Complex.arg ((χ (Multiplicative.ofAdd (Pi.single 0 1)) : Circle) : ℂ)
         = 0 ∧
-      Complex.arg ((χ (Multiplicative.ofAdd integerDualCoordinateOne) : Circle) : ℂ)
+      Complex.arg ((χ (Multiplicative.ofAdd (Pi.single 1 1)) : Circle) : ℂ)
         = 0) ↔ χ = 1
   rw [Circle.arg_eq_zero, Circle.arg_eq_zero]
   exact (integerDual_eq_one_iff_coordinate_values χ).symm
 
 theorem integerDual_spectralArgCoordinates_origin_preimage :
-    spectralArgCoordinates integerDualCoordinateZero
-      integerDualCoordinateOne ⁻¹' {(0, 0)} =
+    spectralArgCoordinates (Pi.single 0 1)
+      (Pi.single 1 1) ⁻¹' {(0, 0)} =
         ({1} : Set (DiscreteCharacterSpace IntegerRankTwo)) := by
   ext χ
   simp only [Set.mem_preimage, Set.mem_singleton_iff,
@@ -26760,16 +26754,8 @@ private theorem abs_add_of_mul_nonneg {x y : ℝ} (h : 0 ≤ x * y) :
   · rw [abs_of_nonpos hx, abs_of_nonpos hy, abs_of_nonpos (by linarith)]
     ring
 
-def shalomTpos (p : ℝ × ℝ) : ℝ × ℝ := (p.1, p.2 - p.1)
-
-def shalomSpos (p : ℝ × ℝ) : ℝ × ℝ := (p.1 - p.2, p.2)
-
-def shalomTneg (p : ℝ × ℝ) : ℝ × ℝ := (p.1, p.2 + p.1)
-
-def shalomSneg (p : ℝ × ℝ) : ℝ × ℝ := (p.1 + p.2, p.2)
-
 theorem shalomTpos_sector_inclusion :
-    shalomTpos '' (shalomSectorA ∪ shalomSectorB) ⊆ shalomSectorA := by
+    (fun p : ℝ × ℝ => (p.1, p.2 - p.1)) '' (shalomSectorA ∪ shalomSectorB) ⊆ shalomSectorA := by
   rintro _ ⟨⟨x, y⟩, hxy, rfl⟩
   have hnonpos : x * y ≤ 0 := by
     rcases hxy with h | h
@@ -26787,7 +26773,7 @@ theorem shalomTpos_sector_inclusion :
     linarith [abs_pos.mpr hy]
 
 theorem shalomSpos_sector_inclusion :
-    shalomSpos '' (shalomSectorA ∪ shalomSectorB) ⊆ shalomSectorB := by
+    (fun p : ℝ × ℝ => (p.1 - p.2, p.2)) '' (shalomSectorA ∪ shalomSectorB) ⊆ shalomSectorB := by
   rintro _ ⟨⟨x, y⟩, hxy, rfl⟩
   have hnonpos : x * y ≤ 0 := by
     rcases hxy with h | h
@@ -26805,7 +26791,7 @@ theorem shalomSpos_sector_inclusion :
     linarith [abs_nonneg x]
 
 theorem shalomTneg_sector_inclusion :
-    shalomTneg '' (shalomSectorD ∪ shalomSectorC) ⊆ shalomSectorD := by
+    (fun p : ℝ × ℝ => (p.1, p.2 + p.1)) '' (shalomSectorD ∪ shalomSectorC) ⊆ shalomSectorD := by
   rintro _ ⟨⟨x, y⟩, hxy, rfl⟩
   have hnonneg : 0 ≤ x * y := by
     rcases hxy with h | h
@@ -26823,7 +26809,7 @@ theorem shalomTneg_sector_inclusion :
     linarith [abs_nonneg y]
 
 theorem shalomSneg_sector_inclusion :
-    shalomSneg '' (shalomSectorD ∪ shalomSectorC) ⊆ shalomSectorC := by
+    (fun p : ℝ × ℝ => (p.1 + p.2, p.2)) '' (shalomSectorD ∪ shalomSectorC) ⊆ shalomSectorC := by
   rintro _ ⟨⟨x, y⟩, hxy, rfl⟩
   have hnonneg : 0 ≤ x * y := by
     rcases hxy with h | h
@@ -26876,14 +26862,14 @@ theorem spectralArgCoordinates_dualCharacterAction_tpos
     (χ : DiscreteCharacterSpace A)
     (hχ : χ ∈ spectralTorusWindow a b) :
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
-      shalomTpos (spectralArgCoordinates a b χ) := by
+      ((spectralArgCoordinates a b χ).1, (spectralArgCoordinates a b χ).2 - (spectralArgCoordinates a b χ).1) := by
   calc
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
         spectralArgCoordinates a (b - a) χ := by
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
-    _ = shalomTpos (spectralArgCoordinates a b χ) := by
-      simpa only [shalomTpos] using spectralArgCoordinates_tpos a b χ hχ
+    _ = ((spectralArgCoordinates a b χ).1, (spectralArgCoordinates a b χ).2 - (spectralArgCoordinates a b χ).1) := by
+      exact spectralArgCoordinates_tpos a b χ hχ
 
 omit [MeasurableSpace (DiscreteCharacterSpace A)] [BorelSpace (DiscreteCharacterSpace A)]
   in
@@ -26895,14 +26881,14 @@ theorem spectralArgCoordinates_dualCharacterAction_spos
     (χ : DiscreteCharacterSpace A)
     (hχ : χ ∈ spectralTorusWindow a b) :
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
-      shalomSpos (spectralArgCoordinates a b χ) := by
+      ((spectralArgCoordinates a b χ).1 - (spectralArgCoordinates a b χ).2, (spectralArgCoordinates a b χ).2) := by
   calc
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
         spectralArgCoordinates (a - b) b χ := by
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
-    _ = shalomSpos (spectralArgCoordinates a b χ) := by
-      simpa only [shalomSpos] using spectralArgCoordinates_spos a b χ hχ
+    _ = ((spectralArgCoordinates a b χ).1 - (spectralArgCoordinates a b χ).2, (spectralArgCoordinates a b χ).2) := by
+      exact spectralArgCoordinates_spos a b χ hχ
 
 omit [MeasurableSpace (DiscreteCharacterSpace A)] [BorelSpace (DiscreteCharacterSpace A)]
   in
@@ -26914,14 +26900,14 @@ theorem spectralArgCoordinates_dualCharacterAction_tneg
     (χ : DiscreteCharacterSpace A)
     (hχ : χ ∈ spectralTorusWindow a b) :
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
-      shalomTneg (spectralArgCoordinates a b χ) := by
+      ((spectralArgCoordinates a b χ).1, (spectralArgCoordinates a b χ).2 + (spectralArgCoordinates a b χ).1) := by
   calc
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
         spectralArgCoordinates a (b + a) χ := by
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
-    _ = shalomTneg (spectralArgCoordinates a b χ) := by
-      simpa only [shalomTneg] using spectralArgCoordinates_tneg a b χ hχ
+    _ = ((spectralArgCoordinates a b χ).1, (spectralArgCoordinates a b χ).2 + (spectralArgCoordinates a b χ).1) := by
+      exact spectralArgCoordinates_tneg a b χ hχ
 
 omit [MeasurableSpace (DiscreteCharacterSpace A)] [BorelSpace (DiscreteCharacterSpace A)]
   in
@@ -26933,14 +26919,14 @@ theorem spectralArgCoordinates_dualCharacterAction_sneg
     (χ : DiscreteCharacterSpace A)
     (hχ : χ ∈ spectralTorusWindow a b) :
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
-      shalomSneg (spectralArgCoordinates a b χ) := by
+      ((spectralArgCoordinates a b χ).1 + (spectralArgCoordinates a b χ).2, (spectralArgCoordinates a b χ).2) := by
   calc
     spectralArgCoordinates a b (dualCharacterAction action h χ) =
         spectralArgCoordinates (a + b) b χ := by
       rw [spectralArgCoordinates_dualCharacterAction, ha, hb]
       rfl
-    _ = shalomSneg (spectralArgCoordinates a b χ) := by
-      simpa only [shalomSneg] using spectralArgCoordinates_sneg a b χ hχ
+    _ = ((spectralArgCoordinates a b χ).1 + (spectralArgCoordinates a b χ).2, (spectralArgCoordinates a b χ).2) := by
+      exact spectralArgCoordinates_sneg a b χ hχ
 
 end
 
@@ -27895,10 +27881,10 @@ theorem integerShalomShears_inv_mem
   rcases hg with rfl | rfl | rfl | rfl <;> simp
 
 @[simp] theorem integerTranslationZero_eq_dualCoordinate :
-    integerTranslationZero = integerDualCoordinateZero := rfl
+    integerTranslationZero = (Pi.single 0 1) := rfl
 
 @[simp] theorem integerTranslationOne_eq_dualCoordinate :
-    integerTranslationOne = integerDualCoordinateOne := rfl
+    integerTranslationOne = (Pi.single 1 1) := rfl
 
 theorem integerShalom_spectralArgCoordinates_zero_preimage :
     spectralArgCoordinates integerTranslationZero integerTranslationOne ⁻¹'
@@ -31705,7 +31691,7 @@ def integralOrbitTransvection {i j : Index} (hij : i ≠ j) (n : ℕ) :
     (Polynomial.C (3 : ℤ) * (Polynomial.X : IntegralPolynomial) ^ n)
 
 theorem integralOrbitTransvection_mem_K {i j : Index} (hij : i ≠ j) (n : ℕ) :
-    integralOrbitTransvection hij n ∈ KSubgroup := by
+    integralOrbitTransvection hij n ∈ modThreeGroupHom.ker := by
   change modThreeGroupHom (integralOrbitTransvection hij n) = 1
   rw [integralOrbitTransvection, modThreeGroupHom,
     specialLinear_map_transvection]
@@ -33636,21 +33622,15 @@ def gammaSplitAbelianExtension (n : ℕ) :
       (SemidirectProduct.inl_aut (φ := kEAction n) k
         (Multiplicative.ofAdd η)).symm
 
-def gammaLinearDetector (n : ℕ) : E n := iota n e
-
-def gammaQuadraticDetector (n : ℕ) : E n := epsilon n e
-
 theorem gamma_detectors_ne (n : ℕ) :
-    gammaLinearDetector n ≠ gammaQuadraticDetector n := by
+    (iota n e) ≠ (epsilon n e) := by
   intro h
-  have htwo : (2 : ℕ) • gammaLinearDetector n = 0 := by
-    change (2 : ℕ) • iota n e = 0
+  have htwo : (2 : ℕ) • (iota n e) = 0 := by
     calc
       (2 : ℕ) • iota n e = iota n (e + e) := by
         simp only [two_nsmul, map_add]
       _ = 0 := by rw [add_self_eq_zero]; exact map_zero _
   have hquadratic : (2 : ℕ) • epsilon n e = 0 := by
-    change (2 : ℕ) • gammaQuadraticDetector n = 0
     rw [← h]
     exact htwo
   exact epsilon_two_nsmul_ne_zero n hquadratic
@@ -33788,23 +33768,23 @@ theorem gammaTwoMulDetectedMass_le_energy (n : ℕ)
     _ = spectralDetectionEnergy μ η := rfl
 
 def gammaDetectedSet (n : ℕ) : Set (DiscreteCharacterSpace (E n)) :=
-  gammaDetectionSet n (gammaLinearDetector n) ∪
-    gammaDetectionSet n (gammaQuadraticDetector n)
+  gammaDetectionSet n ((iota n e)) ∪
+    gammaDetectionSet n ((epsilon n e))
 
 theorem gammaTwoMulDetectedUnionMass_le_energy (n : ℕ)
     (μ : ProbabilityMeasure (DiscreteCharacterSpace (E n))) :
     2 * (μ : Measure (DiscreteCharacterSpace (E n))).real
       (gammaDetectedSet n) ≤
-      spectralDetectionEnergy μ (gammaLinearDetector n) +
-        spectralDetectionEnergy μ (gammaQuadraticDetector n) := by
+      spectralDetectionEnergy μ ((iota n e)) +
+        spectralDetectionEnergy μ ((epsilon n e)) := by
   have hlinear := gammaTwoMulDetectedMass_le_energy n μ
-    (gammaLinearDetector n)
+    ((iota n e))
   have hquadratic := gammaTwoMulDetectedMass_le_energy n μ
-    (gammaQuadraticDetector n)
+    ((epsilon n e))
   have hunion := measureReal_union_le
     (μ := (μ : Measure (DiscreteCharacterSpace (E n))))
-    (gammaDetectionSet n (gammaLinearDetector n))
-    (gammaDetectionSet n (gammaQuadraticDetector n))
+    (gammaDetectionSet n ((iota n e)))
+    (gammaDetectionSet n ((epsilon n e)))
   change (μ : Measure (DiscreteCharacterSpace (E n))).real
     (gammaDetectedSet n) ≤ _ at hunion
   linarith
@@ -33816,13 +33796,13 @@ theorem gamma_hasFiniteSpectralDetection_of_measureGap (n : ℕ)
           (μ : Measure (DiscreteCharacterSpace (E n))).real
             (gammaDetectedSet n)) :
     HasFiniteSpectralDetection (gammaSplitAbelianExtension n)
-      {gammaLinearDetector n, gammaQuadraticDetector n} (2 / 7 : ℝ) := by
+      {(iota n e), (epsilon n e)} (2 / 7 : ℝ) := by
   intro μ hμ
   have hmass := hgap μ hμ
   have henergy := gammaTwoMulDetectedUnionMass_le_energy n μ
   have hcombined : (2 / 7 : ℝ) * (1 - spectralTrivialAtom μ) ≤
-      spectralDetectionEnergy μ (gammaLinearDetector n) +
-        spectralDetectionEnergy μ (gammaQuadraticDetector n) := by
+      spectralDetectionEnergy μ ((iota n e)) +
+        spectralDetectionEnergy μ ((epsilon n e)) := by
     linarith
   simpa only [Finset.mem_singleton, gamma_detectors_ne n, not_false_eq_true, Finset.sum_insert,
     Finset.sum_singleton, ge_iff_le] using hcombined
@@ -33868,11 +33848,8 @@ theorem card_binaryPolynomialVector (N : ℕ) :
   rw [Fintype.card_fun, Fintype.card_fin, card_boundedPolynomial]
   simp only [Nat.mul_comm, pow_mul]
 
-def countingScale (N : ℕ) : ℕ := 2 ^ (4 * N - 3)
-
 theorem eight_mul_countingScale (N : ℕ) (hN : 0 < N) :
-    8 * countingScale N = 2 ^ (4 * N) := by
-  unfold countingScale
+    8 * (2 ^ (4 * N - 3)) = 2 ^ (4 * N) := by
   have hexp : 4 * N - 3 + 3 = 4 * N := by omega
   calc
     8 * 2 ^ (4 * N - 3) = 2 ^ (4 * N - 3) * 2 ^ 3 := by
@@ -33881,8 +33858,7 @@ theorem eight_mul_countingScale (N : ℕ) (hN : 0 < N) :
     _ = 2 ^ (4 * N) := by rw [hexp]
 
 theorem two_mul_previous_box (N : ℕ) (hN : 0 < N) :
-    2 * 2 ^ (4 * (N - 1)) = countingScale N := by
-  unfold countingScale
+    2 * 2 ^ (4 * (N - 1)) = (2 ^ (4 * N - 3)) := by
   have hexp : 4 * (N - 1) + 1 = 4 * N - 3 := by omega
   calc
     2 * 2 ^ (4 * (N - 1)) = 2 ^ (4 * (N - 1)) * 2 ^ 1 := by
@@ -33891,14 +33867,14 @@ theorem two_mul_previous_box (N : ℕ) (hN : 0 < N) :
     _ = 2 ^ (4 * N - 3) := by rw [hexp]
 
 def primitiveCount (N : ℕ) : ℕ :=
-  if N = 0 then 0 else 7 * countingScale N + 1
+  if N = 0 then 0 else 7 * (2 ^ (4 * N - 3)) + 1
 
 @[simp] theorem primitiveCount_zero : primitiveCount 0 = 0 := by
   simp only [primitiveCount, ↓reduceIte]
 
 theorem primitiveCount_eq (N : ℕ) (hN : 0 < N) :
     primitiveCount N = 7 * 2 ^ (4 * N - 3) + 1 := by
-  simp only [primitiveCount, Nat.ne_of_gt hN, ↓reduceIte, countingScale]
+  simp only [primitiveCount, Nat.ne_of_gt hN, ↓reduceIte]
 
 theorem primitiveCount_subtraction (N : ℕ) (hN : 0 < N) :
     (2 ^ (4 * N) - 1) - 2 * (2 ^ (4 * (N - 1)) - 1) =
@@ -33908,7 +33884,7 @@ theorem primitiveCount_subtraction (N : ℕ) (hN : 0 < N) :
   have hpositive : 0 < 2 ^ (4 * (N - 1)) := pow_pos (by omega) _
   rw [primitiveCount_eq N hN]
   change (2 ^ (4 * N) - 1) - 2 * (2 ^ (4 * (N - 1)) - 1) =
-    7 * countingScale N + 1
+    7 * (2 ^ (4 * N - 3)) + 1
   omega
 
 end
@@ -34401,20 +34377,16 @@ theorem primitiveVector_actingGroup_completion
     ∃ k : K, kLinear k e = v :=
   primitiveVector_actingGroup_completion_of_surjective pi₂_surjective v hv
 
-def linearDetectorAt (v : V) : D := (v, 0)
-
-def quadraticDetectorAt (v : V) : D := (0, diagonal v)
-
 @[simp] theorem kDLinear_linearDetectorAt (k : K) (v : V) :
-    kDLinear k (linearDetectorAt v) =
-      linearDetectorAt (kLinear k v) := by
+    kDLinear k ((v, 0)) =
+      ((kLinear k v), 0) := by
   apply Prod.ext
   · rfl
   · exact map_zero (kDividedSquareLinear k).toLinearMap
 
 @[simp] theorem kDLinear_quadraticDetectorAt (k : K) (v : V) :
-    kDLinear k (quadraticDetectorAt v) =
-      quadraticDetectorAt (kLinear k v) := by
+    kDLinear k ((0, diagonal v)) =
+      (0, diagonal (kLinear k v)) := by
   apply Prod.ext
   · exact map_zero (kLinear k).toLinearMap
   · exact kDividedSquareLinear_diagonal k v
@@ -35286,7 +35258,7 @@ theorem gamma_probability_detection_gap (n : ℕ)
 
 theorem gamma_hasFiniteSpectralDetection (n : ℕ) :
     HasFiniteSpectralDetection (gammaSplitAbelianExtension n)
-      {gammaLinearDetector n, gammaQuadraticDetector n} (2 / 7 : ℝ) :=
+      {(iota n e), (epsilon n e)} (2 / 7 : ℝ) :=
   gamma_hasFiniteSpectralDetection_of_measureGap n
     (gamma_probability_detection_gap n)
 
@@ -35300,7 +35272,7 @@ theorem gamma_hasKazhdanPropertyT_unconditional (n : ℕ)
   exact spectral_criterion_unconditional
     (gammaSplitAbelianExtension n)
     (actingGroup_hasKazhdanPropertyT hUniversalLattice)
-    {gammaLinearDetector n, gammaQuadraticDetector n}
+    {(iota n e), (epsilon n e)}
     (by norm_num)
     (gamma_hasFiniteSpectralDetection n)
 
@@ -36933,12 +36905,8 @@ def lambdaSplitAbelianExtension :
     rw [← lambda_conjugation k (Multiplicative.ofAdd d)]
     rfl
 
-def lambdaLinearDetector : D := (e, 0)
-
-def lambdaQuadraticDetector : D := (0, diagonal e)
-
 theorem lambda_detectors_ne :
-    lambdaLinearDetector ≠ lambdaQuadraticDetector := by
+    (e, 0) ≠ (0, diagonal e) := by
   intro h
   apply e_ne_zero
   exact congrArg Prod.fst h
@@ -36994,21 +36962,21 @@ theorem lambdaSpectralEnergy_eq_four_mul_measure
   simp only [ProbabilityMeasure.measureReal_eq_coe_coeFn, smul_eq_mul, mul_comm]
 
 def lambdaDetectedSet : Set (DiscreteCharacterSpace D) :=
-  lambdaDetectionSet lambdaLinearDetector ∪
-    lambdaDetectionSet lambdaQuadraticDetector
+  lambdaDetectionSet (e, 0) ∪
+    lambdaDetectionSet (0, diagonal e)
 
 theorem lambdaFourMulDetectedMass_le_energy
     (μ : ProbabilityMeasure (DiscreteCharacterSpace D)) :
     4 * (μ : Measure (DiscreteCharacterSpace D)).real lambdaDetectedSet ≤
-      spectralDetectionEnergy μ lambdaLinearDetector +
-        spectralDetectionEnergy μ lambdaQuadraticDetector := by
+      spectralDetectionEnergy μ (e, 0) +
+        spectralDetectionEnergy μ (0, diagonal e) := by
   let μ' : Measure (DiscreteCharacterSpace D) := μ
-  let S₁ := lambdaDetectionSet lambdaLinearDetector
-  let S₂ := lambdaDetectionSet lambdaQuadraticDetector
+  let S₁ := lambdaDetectionSet (e, 0)
+  let S₂ := lambdaDetectionSet (0, diagonal e)
   have hs₁ : MeasurableSet S₁ :=
-    lambdaDetectionSet_measurable lambdaLinearDetector
+    lambdaDetectionSet_measurable (e, 0)
   have hs₂ : MeasurableSet S₂ :=
-    lambdaDetectionSet_measurable lambdaQuadraticDetector
+    lambdaDetectionSet_measurable (0, diagonal e)
   have h₁ : Integrable (S₁.indicator (fun _ ↦ (4 : ℝ))) μ' :=
     (integrable_const (μ := μ') (4 : ℝ)).indicator hs₁
   have h₂ : Integrable (S₂.indicator (fun _ ↦ (4 : ℝ))) μ' :=
@@ -37027,8 +36995,8 @@ theorem lambdaFourMulDetectedMass_le_energy
           intro χ
           by_cases hχ₁ : χ ∈ S₁ <;> by_cases hχ₂ : χ ∈ S₂ <;>
             simp [hχ₁, hχ₂]
-    _ = spectralDetectionEnergy μ lambdaLinearDetector +
-          spectralDetectionEnergy μ lambdaQuadraticDetector := by
+    _ = spectralDetectionEnergy μ (e, 0) +
+          spectralDetectionEnergy μ (0, diagonal e) := by
           rw [integral_add h₁ h₂,
             integral_indicator_const _ hs₁,
             integral_indicator_const _ hs₂,
@@ -37049,14 +37017,14 @@ theorem lambda_spectral_detection_gap
 
 theorem lambda_hasFiniteSpectralDetection :
     HasFiniteSpectralDetection lambdaSplitAbelianExtension
-      {lambdaLinearDetector, lambdaQuadraticDetector} (4 / 7 : ℝ) := by
+      {(e, 0), (0, diagonal e)} (4 / 7 : ℝ) := by
   intro μ hμ
   have hgap := lambda_spectral_detection_gap μ hμ
   have henergy := lambdaFourMulDetectedMass_le_energy μ
   have hcombined :
       (4 / 7 : ℝ) * (1 - spectralTrivialAtom μ) ≤
-        spectralDetectionEnergy μ lambdaLinearDetector +
-          spectralDetectionEnergy μ lambdaQuadraticDetector := by
+        spectralDetectionEnergy μ (e, 0) +
+          spectralDetectionEnergy μ (0, diagonal e) := by
     linarith
   simpa only [Finset.mem_singleton, lambda_detectors_ne, not_false_eq_true, Finset.sum_insert,
     Finset.sum_singleton, ge_iff_le] using hcombined
@@ -37067,7 +37035,7 @@ theorem lambda_hasKazhdanPropertyT_unconditional
   spectral_criterion_unconditional
     lambdaSplitAbelianExtension
     (actingGroup_hasKazhdanPropertyT hUniversalLattice)
-    {lambdaLinearDetector, lambdaQuadraticDetector} (by norm_num)
+    {(e, 0), (0, diagonal e)} (by norm_num)
     lambda_hasFiniteSpectralDetection
 
 end
@@ -37682,8 +37650,6 @@ theorem exists_nonisomorphic_propertyT_icc_groups_with_isomorphic_factors :
   let _ := @ConnesRigidity.IsPrimitiveVector.ne_zero
   let _ := @ConnesRigidity.divX_X_mul_add_C
   let _ := @ConnesRigidity.coeff_zero_X_mul_add_C
-  let _ := @ConnesRigidity.linearDetectorAt
-  let _ := @ConnesRigidity.quadraticDetectorAt
   let _ := @ConnesRigidity.kDLinear_linearDetectorAt
   let _ := @ConnesRigidity.kDLinear_quadraticDetectorAt
   let _ := @ConnesRigidity.boundedVectorLinearDirect_apply

@@ -13472,11 +13472,9 @@ local instance : IsProbabilityMeasure
     (volume : Measure UnitAddCircle) :=
   inferInstanceAs (IsProbabilityMeasure AddCircle.haarAddCircle)
 
-def logarithmicPeriod : ℂ := 2 * (Real.pi : ℂ) * Complex.I
-
 theorem periodic_holomorphic_vertical_integral_eq
     {f : ℂ → ℂ} (hf : Differentiable ℂ f)
-    (hperiod : Function.Periodic f logarithmicPeriod)
+    (hperiod : Function.Periodic f (2 * (Real.pi : ℂ) * Complex.I))
     (a b : ℝ) :
     (∫ t : ℝ in 0..2 * Real.pi,
       f ((b : ℂ) + (t : ℂ) * Complex.I)) =
@@ -13492,7 +13490,7 @@ theorem periodic_holomorphic_vertical_integral_eq
         ∫ x : ℝ in a..b, f (x : ℂ) := by
     apply intervalIntegral.integral_congr
     intro x hx
-    simpa only [ofReal_mul, ofReal_ofNat, logarithmicPeriod] using hperiod (x : ℂ)
+    simpa only [ofReal_mul, ofReal_ofNat] using hperiod (x : ℂ)
   have heq :
       Complex.I *
           (∫ t : ℝ in 0..2 * Real.pi,
@@ -13681,21 +13679,21 @@ theorem periodic_coordinateHolomorphicSlice {n : ℕ}
     (ζ : TorusCharacters.LogSpace n)
     (i : Fin n) :
     Function.Periodic (coordinateHolomorphicSlice F ζ i)
-      logarithmicPeriod := by
+      (2 * (Real.pi : ℂ) * Complex.I) := by
   intro w
   change
-    F (fun j => if j = i then w + logarithmicPeriod else ζ j) =
+    F (fun j => if j = i then w + (2 * (Real.pi : ℂ) * Complex.I) else ζ j) =
       F (fun j => if j = i then w else ζ j)
   have hshift :
       (fun j : Fin n =>
-        if j = i then w + logarithmicPeriod else ζ j) =
+        if j = i then w + (2 * (Real.pi : ℂ) * Complex.I) else ζ j) =
         (fun j : Fin n => if j = i then w else ζ j) +
           TorusCharacters.imaginaryShift
             (Pi.single i (1 : ℤ)) := by
     funext j
     by_cases hji : j = i
     · subst j
-      simp only [↓reduceIte, logarithmicPeriod, Pi.add_apply, TorusCharacters.imaginaryShift,
+      simp only [↓reduceIte, Pi.add_apply, TorusCharacters.imaginaryShift,
         Pi.single_eq_same, Int.cast_one, one_mul]
     · simp only [hji, ↓reduceIte, Pi.add_apply, TorusCharacters.imaginaryShift, ne_eq,
         not_false_eq_true, Pi.single_eq_of_ne, Int.cast_zero, zero_mul, add_zero]
@@ -14046,8 +14044,7 @@ theorem continuous_twistedAngularIntegrand {n : ℕ}
 
 theorem unit_interval_vertical_integral_eq
     {f : ℂ → ℂ} (hf : Differentiable ℂ f)
-    (hperiod : Function.Periodic f
-      HolomorphicLaurentFourierCompletenessBridge.logarithmicPeriod)
+    (hperiod : Function.Periodic f (2 * (Real.pi : ℂ) * Complex.I))
     (a b : ℝ) :
     (∫ t : ℝ in 0..1,
       f ((b : ℂ) +
